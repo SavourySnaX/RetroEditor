@@ -9,6 +9,11 @@ public class MameRemoteCommandWindow : IWindow
 {
     public class DView
     {
+        public DView()
+        {
+            state = Array.Empty<byte>();
+        }
+
         public int x, y, w, h;
         public byte[] state;
     }
@@ -18,7 +23,7 @@ public class MameRemoteCommandWindow : IWindow
 
     DView state;
     DView disasm;
-    byte[] screen;      // Obviously specific to the system we are using... hardwired for now
+    byte[] screen=Array.Empty<byte>();      // Obviously specific to the system we are using... hardwired for now
 
     float lastSeconds;
     string log;
@@ -159,14 +164,21 @@ public class MameRemoteCommandWindow : IWindow
         return open;
     }
 
-    public bool Initialise(ImGuiController controller, GraphicsDevice graphicsDevice)
+    public MameRemoteCommandWindow()
     {
         state=new DView();
+        disasm=new DView();
+        client = new MameRemoteClient();
+        inputBuffer="";
+        log="";
+    }
+
+    public bool Initialise(ImGuiController controller, GraphicsDevice graphicsDevice)
+    {
         state.x = 0;
         state.y = 0;
         state.w = 20;
         state.h = 25;
-        disasm=new DView();
         disasm.x = 0;
         disasm.y = 0;
         disasm.w = 100;
@@ -175,7 +187,6 @@ public class MameRemoteCommandWindow : IWindow
         log = "";
         inputBuffer = "";
         forceRefresh = true;
-        client = new MameRemoteClient();
 
         bitmap[0]=graphicsDevice.ResourceFactory.CreateTexture(TextureDescription.Texture2D(256, 192, 1, 1, PixelFormat.R8_G8_B8_A8_UNorm, TextureUsage.Sampled));
         bitmap[0].Name = $"Screen-SpectrumPlane";

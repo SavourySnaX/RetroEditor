@@ -7,8 +7,8 @@ using System.Net.Sockets;
 public class MameRemoteClient
 {
     TcpClient gdb;
-    BinaryReader reader;
-    BinaryWriter writer;
+    BinaryReader? reader;
+    BinaryWriter? writer;
 
     public MameRemoteClient()
     {
@@ -60,7 +60,7 @@ public class MameRemoteClient
         var checkSize=RecieveSize();
         if (checkSize==data.Length)
         {
-            writer.Write(data);
+            writer?.Write(data);
             return Recieve_Binary();
         }
         return Array.Empty<byte>();
@@ -71,13 +71,15 @@ public class MameRemoteClient
     {
         Send("");   // disconnect
 
-        reader.Close();
-        writer.Close();
+        reader?.Close();
+        writer?.Close();
         gdb.Close();
     }
 
     private void Send(string command)
     {
+        if (reader == null || writer == null)
+            return;
         byte b = (byte)((command.Length >> 8) & 0xFF);
         writer.Write(b);
         b = (byte)(command.Length & 0xFF);
@@ -88,12 +90,16 @@ public class MameRemoteClient
 
     private int RecieveSize()
     {
+        if (reader == null)
+            return 0;
         var b = reader.ReadBytes(2);
         return (b[0] << 8) | b[1];
     }
 
     private string RecieveString()
     {
+        if (reader==null)
+            return "";
         var size = RecieveSize();
         if (size == 0)
             return "";
@@ -103,6 +109,8 @@ public class MameRemoteClient
 
     private string[] Recieve()
     {
+        if (reader == null)
+            return Array.Empty<string>();
         var size = RecieveSize();
         if (size == 0)
             return Array.Empty<string>();
@@ -116,6 +124,8 @@ public class MameRemoteClient
 
     private byte[] Recieve_Binary()
     {
+        if (reader == null)
+            return Array.Empty<byte>();
         var size = RecieveSize();
         if (size == 0)
             return Array.Empty<byte>();

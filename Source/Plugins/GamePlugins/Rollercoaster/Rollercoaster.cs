@@ -1,13 +1,11 @@
 
-using SharpGen.Runtime.Win32;
-using TextCopy;
-
 public class Rollercoaster : IRetroPlugin, IImages
 {
     private byte[] RollercoasterInMem = new byte[] { 239, 164, 65, 60, 2, 160, 26, 129, 136, 128, 247, 75, 160, 47, 7, 9 };
 
     public string Name => "Rollercoaster";
     IRomPlugin rom;
+
 
     public Rollercoaster()
     {
@@ -42,7 +40,6 @@ public class Rollercoaster : IRetroPlugin, IImages
 
     public void Close()
     {
-        //rom.Save("C:\\work\\editor\\jsw_patched.tap","TAP");
     }
 
     public IImages GetImageInterface()
@@ -92,11 +89,7 @@ public class RollercoasterImage : IImage
     string mapName;
     int mapIndex;
 
-    bool flashSwap;
-    int conveyorOffset;
-
-    int frameCounter;
-    int animFrameCounter;
+    ZXSpectrum48ImageHelper imageHelper;
 
     public RollercoasterImage(Rollercoaster main, int mapIndex, byte[] data)
     {
@@ -104,6 +97,7 @@ public class RollercoasterImage : IImage
         this.mapData = data;
         this.mapIndex = mapIndex;
         this.mapName = GetMapName();
+        imageHelper=new ZXSpectrum48ImageHelper(Width, Height);
     }
 
     public string GetMapName()
@@ -138,91 +132,30 @@ public class RollercoasterImage : IImage
         return RenderMap(seconds);
     }
 
-    // Might Make sense to move some of the graphics functionality into a common class, 
-    //where you can request a virtual screen size (ie to hold the scrollable screen for the platform)
-    //and then have functions to draw tiles. This would allow for colour clash and flash and things
-    //to be handled. Think on it...
-
-    static readonly Pixel[] palette = new Pixel[]
+    private byte[] GetTile(int code)
     {
-        new Pixel() { Red = 0, Green = 0, Blue = 0 },
-        new Pixel() { Red = 0, Green = 0, Blue = 192 },
-        new Pixel() { Red = 192, Green = 0, Blue = 0 },
-        new Pixel() { Red = 192, Green = 0, Blue = 192 },
-        new Pixel() { Red = 0, Green = 192, Blue = 0 },
-        new Pixel() { Red = 0, Green = 192, Blue = 192 },
-        new Pixel() { Red = 192, Green = 192, Blue = 0 },
-        new Pixel() { Red = 192, Green = 192, Blue = 192 },
-        new Pixel() { Red = 0, Green = 0, Blue = 0 },
-        new Pixel() { Red = 0, Green = 0, Blue = 255 },
-        new Pixel() { Red = 255, Green = 0, Blue = 0 },
-        new Pixel() { Red = 255, Green = 0, Blue = 255 },
-        new Pixel() { Red = 0, Green = 255, Blue = 0 },
-        new Pixel() { Red = 0, Green = 255, Blue = 255 },
-        new Pixel() { Red = 255, Green = 255, Blue = 0 },
-        new Pixel() { Red = 255, Green = 255, Blue = 255 }
-    };
-
-    private Pixel[] GetTile(int code, byte colour=0)
-    {
-        var tile = new Pixel[8 * 8];
-
-        var tileData = main.GetLevelTile(code);
-
-        var ink = colour & 7;
-        var paper = (colour >> 3) & 7;
-        var flash = (colour & 128) != 0;
-        var bright = (colour & 64) != 0;
-
-        if (flash && flashSwap)
-        {
-            var temp = paper;
-            paper = ink;
-            ink = temp;
-        }
-
-        var tileBytes = tileData;
-
-        var paperColour = palette[paper + (bright ? 8 : 0)];
-        var inkColour = palette[ink + (bright ? 8 : 0)];
-
-        for (int y = 0; y < 8; y++)
-        {
-            var row = tileBytes[y];
-            for (int x = 0; x < 8; x++)
-            {
-                var bit = (row >> (7 - x)) & 1;
-                tile[y * 8 + x] = bit == 0 ? paperColour : inkColour;
-            }
-        }
-
-        return tile;
+        return main.GetLevelTile(code);
     }
 
     private Pixel[] RenderMap(float seconds)
     {
-        var bitmap = new Pixel[Width * Height];
-
-        flashSwap = ((int)(seconds*2.0f)&1)==1;
-        conveyorOffset=(int)(seconds*20);
-        frameCounter=(int)(seconds*25);
-        animFrameCounter=(int)(seconds*10);
-
         uint levelDataOffset = 0x7F;
 
-        levelDataOffset = RenderCoasterTrack(bitmap, levelDataOffset);
-        levelDataOffset = RenderTileRow16(bitmap, levelDataOffset);
-        levelDataOffset = RenderPlatforms(bitmap, levelDataOffset, 0, 1);
-        levelDataOffset = RenderPlatforms(bitmap, levelDataOffset, 1, 0);
-        levelDataOffset = RenderPlatforms(bitmap, levelDataOffset, 1, 1);
-        levelDataOffset = RenderPlatforms(bitmap, levelDataOffset, 1, -1);
-        levelDataOffset = RenderLargeTiles(bitmap, levelDataOffset, false);
-        levelDataOffset = RenderLargeTiles(bitmap, levelDataOffset, true);
+        imageHelper.Clear(0x40);
+        levelDataOffset = RenderCoasterTrack(levelDataOffset);
+        levelDataOffset = RenderTileRow16(levelDataOffset);
+        levelDataOffset = RenderPlatforms(levelDataOffset, 0, 1);
+        levelDataOffset = RenderPlatforms(levelDataOffset, 1, 0);
+        levelDataOffset = RenderPlatforms(levelDataOffset, 1, 1);
+        levelDataOffset = RenderPlatforms(levelDataOffset, 1, -1);
+        levelDataOffset = RenderLargeTiles(levelDataOffset, false);
+        levelDataOffset = RenderLargeTiles(levelDataOffset, true);
+        levelDataOffset = PaintAttributeBlocks(levelDataOffset);
 
-        return bitmap;
+        return imageHelper.Render(seconds);
     }
 
-    private uint RenderCoasterTrack(Pixel[] bitmap, uint mapOffset)
+    private uint RenderCoasterTrack(uint mapOffset)
     {
         var numTracks = mapData[mapOffset];
         mapOffset += 2;
@@ -236,13 +169,13 @@ public class RollercoasterImage : IImage
             {
                 var c = mapData[mapOffset++];
                 var b = mapData[mapOffset++];
-                RenderTrackSegment(bitmap, b, c, ref x, ref y, colour);
+                RenderTrackSegment(b, c, ref x, ref y, colour);
             }
         };
         return mapOffset;
     }
 
-    private void RenderTrackSegment(Pixel[] bitmap, byte deltaY, byte deltaX, ref byte x, ref byte y, byte colour)
+    private void RenderTrackSegment(byte deltaY, byte deltaX, ref byte x, ref byte y, byte colour)
     {
         var a = 0;
         if (a != deltaY)
@@ -251,11 +184,11 @@ public class RollercoasterImage : IImage
             {
                 if ((deltaY & 0x80) == 0x80)
                 {
-                    RenderCoasterTrackSegmentHorizontal(bitmap, ref x, ref y, deltaY & 0x7F, 0xFF, colour);
+                    RenderCoasterTrackSegmentHorizontal(ref x, ref y, deltaY & 0x7F, 0xFF, colour);
                 }
                 else
                 {
-                    RenderCoasterTrackSegmentHorizontal(bitmap, ref x, ref y, deltaY & 0x7F, 0x01, colour);
+                    RenderCoasterTrackSegmentHorizontal(ref x, ref y, deltaY & 0x7F, 0x01, colour);
                 }
                 return;
             }
@@ -263,92 +196,80 @@ public class RollercoasterImage : IImage
             {
                 if ((deltaY & 0x80) == 0x80)
                 {
-                    RenderCoasterTrackSegmentVertical(bitmap, ref x, ref y, deltaY & 0x7F, 0xFF, colour);
+                    RenderCoasterTrackSegmentVertical(ref x, ref y, deltaY & 0x7F, 0xFF, colour);
                 }
                 else
                 {
-                    RenderCoasterTrackSegmentVertical(bitmap, ref x, ref y, deltaY & 0x7F, 0x01, colour);
+                    RenderCoasterTrackSegmentVertical(ref x, ref y, deltaY & 0x7F, 0x01, colour);
                 }
             }
         }
         else
         {
-            RenderCoasterTrackSegmentHorizontal(bitmap, ref x, ref y, deltaX, 0x00, colour);
+            RenderCoasterTrackSegmentHorizontal(ref x, ref y, deltaX, 0x00, colour);
         }
     }
 
-    private void RenderCoasterTrackSegmentHorizontal(Pixel[] bitmap, ref byte x, ref byte y, int length, byte dy, int colour)
+    private void RenderCoasterTrackSegmentHorizontal(ref byte x, ref byte y, int length, byte dy, byte colour)
     {
         for (int a = 0; a < length; a++)
         {
-            Render4PixelWideVertical(bitmap, x, y, colour);
+            Render4PixelWideVertical(x, y, colour);
             x++;
             y+=dy;
         }
     }
     
-    private void RenderCoasterTrackSegmentVertical(Pixel[] bitmap, ref byte x, ref byte y, int length, byte dy, int colour)
+    private void RenderCoasterTrackSegmentVertical(ref byte x, ref byte y, int length, byte dy, byte colour)
     {
         for (int a = 0; a < length; a++)
         {
-            Render4PixelWideHorizontal(bitmap, x, y, colour);
+            Render4PixelWideHorizontal(x, y, colour);
             y+=dy;
         }
     }
 
 
-    private void Render4PixelWideVertical(Pixel[] bitmap, int x, int y, int colour)
+    private void Render4PixelWideVertical(uint x, uint y, byte colour)
     {
-        var ink = colour & 7;
-        var bright = (colour & 64) != 0;
-        var inkColour = palette[ink + (bright ? 8 : 0)];
-        for (int yy = 0; yy < 4; yy++)
+        for (uint yy = 0; yy < 4; yy++)
         {
-            bitmap[x + (y + yy) * 256] = inkColour;
+            imageHelper.DrawBit(x, y + yy, true, colour);
         }
     }
     
-    private void Render4PixelWideHorizontal(Pixel[] bitmap, int x, int y, int colour)
+    private void Render4PixelWideHorizontal(uint x, uint y, byte colour)
     {
-        var ink = colour & 7;
-        var bright = (colour & 64) != 0;
-        var inkColour = palette[ink + (bright ? 8 : 0)];
-        for (int xx = 0; xx < 4; xx++)
+        for (uint xx = 0; xx < 4; xx++)
         {
-            bitmap[x + xx + y * 256] = inkColour;
+            imageHelper.DrawBit(x + xx, y, true, colour);
         }
     }
 
-    private uint RenderTileRow16(Pixel[] bitmap, uint mapOffset)
+    private uint RenderTileRow16(uint mapOffset)
     {
         int tile = mapData[mapOffset];
         if (tile != 0)
         {
-            var tileData = GetTile(tile, mapData[0x14]);
-            for (int a = 0; a < 32; a++)
+            var tileData = GetTile(tile);
+            for (uint a = 0; a < 32; a++)
             {
-                RenderTile(a, 16, bitmap, tileData);
+                RenderTile(a, 16, tileData, mapData[0x14]);
             }
         }
 
         return mapOffset;
     }
 
-    private uint RenderLargeTiles(Pixel[] bitmap, uint mapOffset, bool vertical)
+    private uint RenderLargeTiles(uint mapOffset, bool vertical)
     {
         mapOffset++;
         uint cnt = mapData[mapOffset];  //Number of sets of large tiles to draw
 
-        while (true)
+        for (uint a = 0; a < cnt; a++)
         {
-            if (cnt==0)
-                return mapOffset;
-            cnt--;
-
-
             // 8 bytes :     [0x21=lowbyte of graphic address][0x22=highbyte of graphic address][0x23=FlipY|FlipX|NumCopies][0x24=NumTilesX]
             //               [0x25=NumLinesY][0x26=PixelsX][0x27=PixelsY][0x28=Attribute]
-
             uint srcGfx = mapData[++mapOffset];
             srcGfx |= (uint)(mapData[++mapOffset] << 8);
             byte numCopies = mapData[++mapOffset];
@@ -361,11 +282,11 @@ public class RollercoasterImage : IImage
             byte pixelsY = mapData[++mapOffset];
             byte attribute = mapData[++mapOffset];
 
-            while (true)
+            for (uint b = 0; b < numCopies; b++)
             {
-                DrawBigTileXor(bitmap, pixelsY, pixelsX, numLinesY, numTilesX, srcGfx, attribute, flipX, flipY);
+                DrawBigTileXor(pixelsY, pixelsX, numLinesY, numTilesX, srcGfx, attribute, flipX, flipY);
 
-                //func -- attribute application - todo has some sort of skip if colour matches logic.. ( we probably need spectrum rendering for this to be obvious )
+                PaintAttributes(pixelsY, pixelsX, numLinesY, numTilesX, attribute);
 
                 if (vertical)
                 {
@@ -375,53 +296,76 @@ public class RollercoasterImage : IImage
                 {
                     pixelsX += (byte)(numTilesX*8);
                 }
-                if ((--numCopies) == 0)
-                    break;
+            }
+        }
+
+        return mapOffset;
+    }
+
+    private uint PaintAttributeBlocks(uint mapOffset)
+    {
+        mapOffset++;
+        uint cnt = mapData[mapOffset];
+
+        for (uint a = 0; a < cnt; a++)
+        {
+            uint attrPos = mapData[++mapOffset];
+            attrPos |= (uint)(mapData[++mapOffset] << 8);
+            var innercnt = mapData[++mapOffset];
+            var outercnt = mapData[++mapOffset];
+            var x = mapData[++mapOffset];
+            var y = mapData[++mapOffset];
+
+            for (uint yy = 0; yy < outercnt; yy++)
+            {
+                for (uint xx = 0; xx < innercnt; xx++)
+                {
+                    uint cx = (xx + x) * 8;
+                    uint cy = (yy + y) * 8;
+                    var curAttribute = imageHelper.GetAttribute(cx, cy);
+                    if (curAttribute != mapData[0x12] && curAttribute != mapData[0x13])
+                    {
+                        var newAttr = main.GetByte(attrPos++);
+                        imageHelper.SetAttribute(cx, cy, newAttr);
+                    }
+                }
+            }
+        }
+        return mapOffset;
+    }
+
+    private void DrawBigTileXor(byte y,byte x,byte numLines,byte numTiles,uint srcGfx, byte attribute,bool flipX,bool flipY)
+    {
+        for (uint yy = 0; yy < numLines; yy++)
+        {
+            uint yyy = (uint)(flipY ? (numLines - 1) - yy : yy);
+            for (uint xx = 0; xx < numTiles; xx++)
+            {
+                uint xxx = (uint)(flipX ? (numTiles - 1) - xx : xx);
+                var tileByte = main.GetByte(srcGfx++);
+
+                imageHelper.Xor8BitsNoAttribute(xxx*8+x,yyy+y,tileByte,flipX);
             }
         }
     }
 
-    private void DrawBigTileXor(Pixel[] bitmap,byte y,byte x,byte numLines,byte numTiles,uint srcGfx, byte attribute,bool flipX,bool flipY)
+    private void PaintAttributes(byte y,byte x,byte numLines,byte numTiles,byte attribute)
     {
-        var ink = attribute & 7;
-        var paper = (attribute >> 3) & 7;
-        var flash = (attribute & 128) != 0;
-        var bright = (attribute & 64) != 0;
-
-        if (flash && flashSwap)
+        for (uint yy = 0; yy < numLines; yy+=8)
         {
-            var temp = paper;
-            paper = ink;
-            ink = temp;
-        }
-
-        var paperColour = palette[paper + (bright ? 8 : 0)];
-        var inkColour = palette[ink + (bright ? 8 : 0)];
-
-        for (int yy = 0; yy < numLines; yy++)
-        {
-            int yyy = flipY ? (numLines - 1) - yy : yy;
-            for (int xx = 0; xx < numTiles; xx++)
+            for (uint xx = 0; xx < numTiles; xx++)
             {
-                int xxx = flipX ? (numTiles - 1) - xx : xx;
-                var tileByte = main.GetByte(srcGfx++);
-                for (int bb = 0; bb < 8; bb++)
+                var curAttribute = imageHelper.GetAttribute(xx * 8 + x, yy + y);
+                if (curAttribute != mapData[0x12] && curAttribute != mapData[0x13])
                 {
-                    int bbb = flipX ? 7 - bb : bb;
-                    if ((tileByte & (1 << (7 - bb))) != 0)
-                    {
-                        bitmap[xxx * 8 + x + bbb + ((yyy + y) * 256)] = inkColour;
-                    }
-                    else
-                    {
-                        bitmap[xxx * 8 + x + bbb + ((yyy + y) * 256)] = paperColour;
-                    }
+                    imageHelper.SetAttribute(xx * 8 + x, yy + y, attribute);
                 }
             }
         }
     }
 
-    private uint RenderPlatforms(Pixel[] bitmap, uint mapOffset, int colDelta,int rowDelta)
+
+    private uint RenderPlatforms(uint mapOffset, int colDelta,int rowDelta)
     {
         mapOffset++;
         uint cnt = mapData[mapOffset];
@@ -429,7 +373,7 @@ public class RollercoasterImage : IImage
         {
             var tile = mapData[++mapOffset];
             var colour = mapData[++mapOffset];
-            var tileData = GetTile(tile, colour);
+            var tileData = GetTile(tile);
             var len = mapData[++mapOffset];
             var row = mapData[++mapOffset];
             var col = mapData[++mapOffset];
@@ -438,28 +382,25 @@ public class RollercoasterImage : IImage
             int y = row;
             for (int a=0;a<len;a++)
             {
-                RenderTile(x, y, bitmap, tileData);
-                x+=colDelta;
-                y+=rowDelta;
+                RenderTile((uint)x, (uint)y, tileData, colour);
+                x += colDelta;
+                y += rowDelta;
             }
             cnt--;
         }
         return mapOffset;
     }
 
-    private void RenderTile(int xpos, int ypos, Pixel[] bitmap, Pixel[] tile)
+    private void RenderTile(uint xpos, uint ypos, byte[] tile, byte attribute)
     {
         xpos &= 31;
-        ypos = Math.Abs(ypos);
-        ypos %= 18;
+        //ypos = Math.Abs(ypos);
+        //ypos %= 18;
         xpos *= 8;
         ypos *= 8;
-        for (int ty = 0; ty < 8; ty++)
+        for (uint ty = 0; ty < 8; ty++)
         {
-            for (int tx = 0; tx < 8; tx++)
-            {
-                bitmap[(ypos + ty) * 256 + (xpos + tx)] = tile[ty * 8 + tx];
-            }
+            imageHelper.Draw8Bits(xpos, ypos + ty, tile[ty], attribute, false);
         }
     }
     
