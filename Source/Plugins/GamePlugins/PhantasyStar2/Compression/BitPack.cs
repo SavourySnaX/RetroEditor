@@ -1,0 +1,67 @@
+ public class BitPack
+{
+
+    public byte[] Decompress(IRomPlugin rom, uint sourceAddress)
+    {
+        byte[] scratch = new byte[32];
+        List<byte> output = new List<byte>();
+
+        while (true)
+        {
+            uint bitsUsed = 0;
+            int packedDataCounter = (sbyte)rom.ReadByte(sourceAddress++);
+            uint UnpackedBitsRemain = 0xFFFFFFFF;
+            if (packedDataCounter != 0)
+            {
+                if (packedDataCounter<0)
+                {
+                    return output.ToArray();
+                }
+                packedDataCounter--;
+
+                while (packedDataCounter >= 0)
+                {
+                    var splatByte = rom.ReadByte(sourceAddress++);
+                    uint bitsToUnpack = rom.ReadByte(sourceAddress++);
+                    bitsToUnpack <<= 8;
+                    bitsToUnpack |= rom.ReadByte(sourceAddress++);
+                    bitsToUnpack <<= 8;
+                    bitsToUnpack |= rom.ReadByte(sourceAddress++);
+                    bitsToUnpack <<= 8;
+                    bitsToUnpack |= rom.ReadByte(sourceAddress++);
+                    bitsUsed |= bitsToUnpack;
+
+                    for (int a=0;a<32;a++)
+                    {
+                        if ((bitsToUnpack & 0x80000000) == 0x80000000)
+                        {
+                            scratch[a] = splatByte;
+                        }
+                        bitsToUnpack <<= 1;
+                    }
+                    packedDataCounter--;
+                }
+                UnpackedBitsRemain ^= bitsUsed;
+            }
+            if (UnpackedBitsRemain != 0)
+            {
+                for (int a=0;a<32;a++)
+                {
+                    if ((bitsUsed & 0x80000000) == 0x00000000)
+                    {
+                        scratch[a] = rom.ReadByte(sourceAddress++);
+                    }
+                    bitsUsed <<= 1;
+                }
+            }
+            for (int a = 0; a < 32; a++)
+            {
+                output.Add(scratch[a]);
+            }
+
+        }
+
+    }
+}
+
+
