@@ -94,8 +94,7 @@ public class ZXSpectrum48ImageHelper
     public void DrawBit(uint x, uint y, bool ink, byte attribute)
     {
         DrawBitNoAttribute(x, y, ink);
-        uint attributeOffset = ((y / 8) * attributeWidth) + (x / 8);
-        attributes[attributeOffset] = attribute;
+        SetAttribute(ConvertXBitmapPosToYAttribute(x), ConvertYBitmapPosToYAttribute(y), attribute);
     }
 
     public void Draw8BitsNoAttribute(uint x, uint y, byte bits, bool flipX)
@@ -143,24 +142,34 @@ public class ZXSpectrum48ImageHelper
     public void Draw8Bits(uint x, uint y, byte bits, byte attribute, bool flipX)
     {
         Draw8BitsNoAttribute(x, y, bits, flipX);
-        SetAttribute(x, y, attribute);
+        SetAttribute(ConvertXBitmapPosToYAttribute(x), ConvertYBitmapPosToYAttribute(y), attribute);
     }
     
     public void Xor8Bits(uint x, uint y, byte bits, byte attribute, bool flipX)
     {
         Xor8BitsNoAttribute(x, y, bits, flipX);
-        SetAttribute(x, y, attribute);
+        SetAttribute(ConvertXBitmapPosToYAttribute(x), ConvertYBitmapPosToYAttribute(y), attribute);
     }
 
-    public void SetAttribute(uint x, uint y, byte attribute)
+    public uint ConvertYBitmapPosToYAttribute(uint y)
     {
-        uint attributeOffset = ((y / 8) * attributeWidth) + (x / 8);
+        return y / 8;
+    }
+
+    public uint ConvertXBitmapPosToYAttribute(uint x)
+    {
+        return x / 8;
+    }
+
+    public void SetAttribute(uint ax, uint ay, byte attribute)
+    {
+        uint attributeOffset = ay * attributeWidth + ax;
         attributes[attributeOffset] = attribute;
     }
     
-    public byte GetAttribute(uint x, uint y)
+    public byte GetAttribute(uint ax, uint ay)
     {
-        uint attributeOffset = ((y / 8) * attributeWidth) + (x / 8);
+        uint attributeOffset = ay * attributeWidth + ax;
         return attributes[attributeOffset];
     }
 }

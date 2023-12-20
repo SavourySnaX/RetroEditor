@@ -151,8 +151,45 @@ public class RollercoasterImage : IImage
         levelDataOffset = RenderLargeTiles(levelDataOffset, false);
         levelDataOffset = RenderLargeTiles(levelDataOffset, true);
         levelDataOffset = PaintAttributeBlocks(levelDataOffset);
+        levelDataOffset = RenderSign(levelDataOffset);
 
         return imageHelper.Render(seconds);
+    }
+
+    private uint RenderSign(uint mapOffset)
+    {
+        mapOffset++;
+        var cnt = mapData[mapOffset];
+
+        if (cnt==0)
+        {
+            return mapOffset;
+        }
+
+        if ((cnt&0x80)==0x80)
+        {
+            cnt&=0x7F;
+            var attr=mapData[++mapOffset];
+            var outer = mapData[++mapOffset];
+            var c = mapData[++mapOffset];
+            var a = mapData[++mapOffset];
+
+            for (uint y=0;y<outer;y++)
+            {
+                for (uint x=0;x<cnt;x++)
+                {
+                    var e = mapData[++mapOffset];
+
+                    RenderTile(c+x,a+y,GetTile(e),attr);
+                }
+            }
+        }
+        else
+        {
+            throw new Exception("Not implemented - not used in levels - cut ? looks like it might display T H E  ");
+
+        }
+        return ++mapOffset;
     }
 
     private uint RenderCoasterTrack(uint mapOffset)
@@ -320,8 +357,8 @@ public class RollercoasterImage : IImage
             {
                 for (uint xx = 0; xx < innercnt; xx++)
                 {
-                    uint cx = (xx + x) * 8;
-                    uint cy = (yy + y) * 8;
+                    uint cx = xx + x;
+                    uint cy = yy + y;
                     var curAttribute = imageHelper.GetAttribute(cx, cy);
                     if (curAttribute != mapData[0x12] && curAttribute != mapData[0x13])
                     {
@@ -349,21 +386,41 @@ public class RollercoasterImage : IImage
         }
     }
 
+    // Its sort of a weird boundary fill
     private void PaintAttributes(byte y,byte x,byte numLines,byte numTiles,byte attribute)
     {
-        for (uint yy = 0; yy < numLines; yy+=8)
+        var ax = imageHelper.ConvertXBitmapPosToYAttribute(x);
+        var ay = imageHelper.ConvertYBitmapPosToYAttribute(y);
+
+        var yTiles = numLines / 8;
+
+        if ((x&7)!=0)
         {
-            for (uint xx = 0; xx < numTiles; xx++)
+            numTiles++;
+        }
+
+        if ((y & 0x07) != 0)
+        {
+            yTiles++;
+        }
+        if ((numLines&7)!=0)
+        {
+            ay--;
+            yTiles++;
+        }
+
+        for (y=0;y<yTiles;y++)
+        {
+            for (x=0;x<numTiles;x++)
             {
-                var curAttribute = imageHelper.GetAttribute(xx * 8 + x, yy + y);
+                var curAttribute = imageHelper.GetAttribute(ax + x, ay + y);
                 if (curAttribute != mapData[0x12] && curAttribute != mapData[0x13])
                 {
-                    imageHelper.SetAttribute(xx * 8 + x, yy + y, attribute);
+                    imageHelper.SetAttribute(ax + x, ay + y, attribute);
                 }
             }
         }
     }
-
 
     private uint RenderPlatforms(uint mapOffset, int colDelta,int rowDelta)
     {
@@ -394,7 +451,7 @@ public class RollercoasterImage : IImage
     private void RenderTile(uint xpos, uint ypos, byte[] tile, byte attribute)
     {
         xpos &= 31;
-        //ypos = Math.Abs(ypos);
+        //ypos = Math.Abs(ypos);    // To check, is this built in, need to modify the map data`
         //ypos %= 18;
         xpos *= 8;
         ypos *= 8;
