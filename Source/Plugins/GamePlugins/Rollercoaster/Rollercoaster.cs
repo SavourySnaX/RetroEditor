@@ -153,7 +153,24 @@ public class RollercoasterImage : IImage
         levelDataOffset = PaintAttributeBlocks(levelDataOffset);
         levelDataOffset = RenderSign(levelDataOffset);
 
+        RenderPickups();
+
         return imageHelper.Render(seconds);
+    }
+
+    private void RenderPickups()
+    {
+        uint pickupOffset = (int)RollerCoaster_MapDataOffsets.PickupsStart;
+        for (int a=0;a<4;a++)
+        {
+            var pickupX = mapData[pickupOffset++];
+            if ((pickupX&0xC0)==0)
+            {
+                pickupX &= 0x3F;
+                var pickupY = mapData[pickupOffset++];
+                RenderTile(pickupX, pickupY, GetTile(24), mapData[(int)RollerCoaster_MapDataOffsets.CoinBagColour]);
+            }
+        }
     }
 
     private uint RenderSign(uint mapOffset)
@@ -198,7 +215,7 @@ public class RollercoasterImage : IImage
         mapOffset += 2;
         for (int t = 0; t < numTracks; t++)
         {
-            var colour = mapData[0x26];
+            var colour = mapData[(int)RollerCoaster_MapDataOffsets.TrackColour];
             var x = mapData[mapOffset++];
             var y = mapData[mapOffset++];
             var numSegments = mapData[mapOffset++];
@@ -291,7 +308,7 @@ public class RollercoasterImage : IImage
             var tileData = GetTile(tile);
             for (uint a = 0; a < 32; a++)
             {
-                RenderTile(a, 16, tileData, mapData[0x14]);
+                RenderTile(a, 16, tileData, mapData[(int)RollerCoaster_MapDataOffsets.Row16Attr]);
             }
         }
 
@@ -360,7 +377,7 @@ public class RollercoasterImage : IImage
                     uint cx = xx + x;
                     uint cy = yy + y;
                     var curAttribute = imageHelper.GetAttribute(cx, cy);
-                    if (curAttribute != mapData[0x12] && curAttribute != mapData[0x13])
+                    if (curAttribute != mapData[(int)RollerCoaster_MapDataOffsets.PaintIgnoreAttr1] && curAttribute != mapData[(int)RollerCoaster_MapDataOffsets.PaintIgnoreAttr2])
                     {
                         var newAttr = main.GetByte(attrPos++);
                         imageHelper.SetAttribute(cx, cy, newAttr);
@@ -414,7 +431,7 @@ public class RollercoasterImage : IImage
             for (x=0;x<numTiles;x++)
             {
                 var curAttribute = imageHelper.GetAttribute(ax + x, ay + y);
-                if (curAttribute != mapData[0x12] && curAttribute != mapData[0x13])
+                if (curAttribute != mapData[(int)RollerCoaster_MapDataOffsets.PaintIgnoreAttr1] && curAttribute != mapData[(int)RollerCoaster_MapDataOffsets.PaintIgnoreAttr2])
                 {
                     imageHelper.SetAttribute(ax + x, ay + y, attribute);
                 }
@@ -460,5 +477,49 @@ public class RollercoasterImage : IImage
             imageHelper.Draw8Bits(xpos, ypos + ty, tile[ty], attribute, false);
         }
     }
-    
+
+
+    enum RollerCoaster_MapDataOffsets
+    {
+        CoinBagColour = 0x0C,
+        PaintIgnoreAttr1 = 0x12,
+        PaintIgnoreAttr2 = 0x13,
+        Row16Attr = 0x14,
+        FillColour = 0x1D,
+        TrackColour = 0x26,
+        BorderColour = 0x30,
+        PickupsStart = 0x31,
+        StartOfLevelData = 0x7F,
+    }
+
 }
+
+
+// Roller Coaster MapData (per room 256 bytes)
+
+// Start|End   | Description
+
+// 0x00 | 0x04 | Overwritten by the game with data from AFF5
+// 0x0C | 0x0C | Coin Bag Colour
+// 0x12 | 0x12 | Attribute to ignore when painting attributes
+// 0x13 | 0x13 | Attribute to ignore when painting attributes
+// 0x14 | 0x14 | Attribute for tile row 16
+// 0x15 | 0x19 | Overwritten by the game with data from AFFA
+// 0x1A | 0x1A | Level flags of some sort,   Level1Room1 bits  0=clear, 1=clear, 4=clear
+// 0x1C | 0x1C | Level flags of some sort,   Level1Room1 bits  3=set (draw ferris wheel thing) 
+// 0x1D | 0x1D | Fill Colour for empty tiles in the room
+// 0x26 | 0x26 | Colour for the track
+// 0x30 | 0x30 | Border Colour for the room
+// 0x31 | 0x38 | Pickups (space for 4, if bit 6/7 set, then pickup skipped? otherwise, its the y co-ordinate, x follows in next byte (tile coords))
+// 0x43 | 0x43 | Level flags of some sort,   Level1Room1 bits  7=clear, 6=set (possibly indicates start room - initialise stuff)
+// 0x44 | 0x45 | used in routine 9024  ()
+// 0x7F | 0xFF | Platforms/Tracks/Signs/BigTiles/Attributes
+//
+
+
+// 0x7DC0 | 0x7DC7 | Money Bag Graphic  (index 24)
+
+// 0x8272 - low byte of score to trigger end   (original game has 24000 as the trigger score  (93 coin bags) )
+// 0x8276 - hi byte of score to trigger end
+
+// end condition adds 10000 to score, then restarts the game.. (this restart only triggers on an exact score of 24000 so reset can only happen once)
