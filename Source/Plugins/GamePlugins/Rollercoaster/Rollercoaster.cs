@@ -1,6 +1,7 @@
 
 public class Rollercoaster : IRetroPlugin, IImages
 {
+    // This is MD5 of a ram dump of the game, will update with tap/tzx version later 
     private byte[] RollercoasterInMem = new byte[] { 239, 164, 65, 60, 2, 160, 26, 129, 136, 128, 247, 75, 160, 47, 7, 9 };
 
     public string Name => "Rollercoaster";
@@ -80,6 +81,11 @@ public class Rollercoaster : IRetroPlugin, IImages
     {
         return rom.ReadByte(address);
     }
+
+    public byte[] GetBytes(uint address, uint length)
+    {
+        return rom.ReadBytes(address, length);
+    }
 }
 
 public class RollercoasterImage : IImage
@@ -155,7 +161,48 @@ public class RollercoasterImage : IImage
 
         RenderPickups();
 
+        RenderMapSprites();
+
         return imageHelper.Render(seconds);
+    }
+
+    private void RenderMapSprites()
+    {
+        var cnt = mapData[(int)RollerCoaster_MapDataOffsets.NumberOfSprites];
+        uint spriteData=mapData[(int)RollerCoaster_MapDataOffsets.SpriteDataHigh];
+        spriteData <<= 8;
+        spriteData |= mapData[(int)RollerCoaster_MapDataOffsets.SpriteDataLow];
+
+        for (int a=0;a<cnt;a++)
+        {
+            var sprite = main.GetBytes(spriteData, 15);
+            spriteData += 15;
+            var unknown = sprite[0];
+            uint spriteGfx = sprite[2];
+            spriteGfx <<= 8;
+            spriteGfx |= sprite[1];
+            var x = sprite[3];
+            var y = sprite[4];
+            var attr = sprite[5];
+            var unknown2 = sprite[6];
+            var frame = sprite[7];
+            var width = sprite[8];
+            var height = sprite[9];
+            uint frameOffset = sprite[11];
+            frameOffset <<= 8;
+            frameOffset |= sprite[10];
+            //12,13,14 are unknown
+
+            uint gfxToRender = (uint)(frame * frameOffset) + spriteGfx;
+
+            DrawBigTileXor(y, x, height, width, gfxToRender, attr, false, false);
+
+            if (attr != 0x63)
+            {
+                PaintAttributes(y, x, height, width, attr);
+            }
+        }
+
     }
 
     private void RenderPickups()
@@ -176,35 +223,48 @@ public class RollercoasterImage : IImage
     private uint RenderSign(uint mapOffset)
     {
         mapOffset++;
-        var cnt = mapData[mapOffset];
+        var width = mapData[mapOffset];
 
-        if (cnt==0)
+        if (width==0)
         {
             return mapOffset;
         }
 
-        if ((cnt&0x80)==0x80)
+        if ((width&0x80)==0x80)
         {
-            cnt&=0x7F;
+            width&=0x7F;
             var attr=mapData[++mapOffset];
-            var outer = mapData[++mapOffset];
-            var c = mapData[++mapOffset];
-            var a = mapData[++mapOffset];
+            var height = mapData[++mapOffset];
+            var column = mapData[++mapOffset];
+            var row = mapData[++mapOffset];
 
-            for (uint y=0;y<outer;y++)
+            for (uint y=0;y<height;y++)
             {
-                for (uint x=0;x<cnt;x++)
+                for (uint x=0;x<width;x++)
                 {
                     var e = mapData[++mapOffset];
 
-                    RenderTile(c+x,a+y,GetTile(e),attr);
+                    RenderTile(column+x,row+y,GetTile(e),attr);
                 }
             }
         }
         else
         {
-            throw new Exception("Not implemented - not used in levels - cut ? looks like it might display T H E  ");
+            width &= 0x7F;
+            var attr = mapData[++mapOffset];
+            width += 4;
+            byte x = (byte)(16 - width / 2);
+            byte y = 17;
 
+            RenderTile(x++, y, GetTile(0x54), attr);        // T
+            RenderTile(x++, y, GetTile(0x48), attr);        // H
+            RenderTile(x++, y, GetTile(0x45), attr);        // E
+            RenderTile(x++, y, GetTile(0x20), attr);        //  
+            for (uint a=4;a<width;a++)
+            {
+                var e = mapData[++mapOffset];
+                RenderTile(x++, y, GetTile(e), attr);
+            }
         }
         return ++mapOffset;
     }
@@ -374,7 +434,7 @@ public class RollercoasterImage : IImage
             {
                 for (uint xx = 0; xx < innercnt; xx++)
                 {
-                    uint cx = xx + x;
+                    uint cx = (xx + x)&0x1F;
                     uint cy = yy + y;
                     var curAttribute = imageHelper.GetAttribute(cx, cy);
                     if (curAttribute != mapData[(int)RollerCoaster_MapDataOffsets.PaintIgnoreAttr1] && curAttribute != mapData[(int)RollerCoaster_MapDataOffsets.PaintIgnoreAttr2])
@@ -465,11 +525,10 @@ public class RollercoasterImage : IImage
         return mapOffset;
     }
 
+    // Wrapping in Y is not supported (in fact writing to 18 to 22 will overwrite the score area)
     private void RenderTile(uint xpos, uint ypos, byte[] tile, byte attribute)
     {
         xpos &= 31;
-        //ypos = Math.Abs(ypos);    // To check, is this built in, need to modify the map data`
-        //ypos %= 18;
         xpos *= 8;
         ypos *= 8;
         for (uint ty = 0; ty < 8; ty++)
@@ -481,6 +540,9 @@ public class RollercoasterImage : IImage
 
     enum RollerCoaster_MapDataOffsets
     {
+        NumberOfSprites = 0x09,
+        SpriteDataLow = 0x0A,
+        SpriteDataHigh = 0x0B,
         CoinBagColour = 0x0C,
         PaintIgnoreAttr1 = 0x12,
         PaintIgnoreAttr2 = 0x13,
@@ -493,33 +555,3 @@ public class RollercoasterImage : IImage
     }
 
 }
-
-
-// Roller Coaster MapData (per room 256 bytes)
-
-// Start|End   | Description
-
-// 0x00 | 0x04 | Overwritten by the game with data from AFF5
-// 0x0C | 0x0C | Coin Bag Colour
-// 0x12 | 0x12 | Attribute to ignore when painting attributes
-// 0x13 | 0x13 | Attribute to ignore when painting attributes
-// 0x14 | 0x14 | Attribute for tile row 16
-// 0x15 | 0x19 | Overwritten by the game with data from AFFA
-// 0x1A | 0x1A | Level flags of some sort,   Level1Room1 bits  0=clear, 1=clear, 4=clear
-// 0x1C | 0x1C | Level flags of some sort,   Level1Room1 bits  3=set (draw ferris wheel thing) 
-// 0x1D | 0x1D | Fill Colour for empty tiles in the room
-// 0x26 | 0x26 | Colour for the track
-// 0x30 | 0x30 | Border Colour for the room
-// 0x31 | 0x38 | Pickups (space for 4, if bit 6/7 set, then pickup skipped? otherwise, its the y co-ordinate, x follows in next byte (tile coords))
-// 0x43 | 0x43 | Level flags of some sort,   Level1Room1 bits  7=clear, 6=set (possibly indicates start room - initialise stuff)
-// 0x44 | 0x45 | used in routine 9024  ()
-// 0x7F | 0xFF | Platforms/Tracks/Signs/BigTiles/Attributes
-//
-
-
-// 0x7DC0 | 0x7DC7 | Money Bag Graphic  (index 24)
-
-// 0x8272 - low byte of score to trigger end   (original game has 24000 as the trigger score  (93 coin bags) )
-// 0x8276 - hi byte of score to trigger end
-
-// end condition adds 10000 to score, then restarts the game.. (this restart only triggers on an exact score of 24000 so reset can only happen once)
