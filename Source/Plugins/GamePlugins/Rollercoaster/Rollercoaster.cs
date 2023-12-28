@@ -94,6 +94,7 @@ public class RollercoasterImage : IImage
     byte[] mapData;
     string mapName;
     int mapIndex;
+    int frameCounter;
 
     ZXSpectrum48ImageHelper imageHelper;
 
@@ -103,33 +104,38 @@ public class RollercoasterImage : IImage
         this.mapData = data;
         this.mapIndex = mapIndex;
         this.mapName = GetMapName();
-        imageHelper=new ZXSpectrum48ImageHelper(Width, Height);
+        imageHelper = new ZXSpectrum48ImageHelper(Width, Height);
+
+        var cnt = mapData[(int)RollerCoaster_MapDataOffsets.NumberOfSprites];
+        uint spriteData = mapData[(int)RollerCoaster_MapDataOffsets.SpriteDataHigh];
+        spriteData <<= 8;
+        spriteData |= mapData[(int)RollerCoaster_MapDataOffsets.SpriteDataLow];
     }
 
     public string GetMapName()
     {
-        if (mapIndex<12)
+        if (mapIndex < 12)
         {
             return $"Level 0 Room {mapIndex}";
         }
-        if (mapIndex<12+16)
+        if (mapIndex < 12 + 16)
         {
-            return $"Level 1 Room {mapIndex-12}";
+            return $"Level 1 Room {mapIndex - 12}";
         }
-        if (mapIndex<12+16+16)
+        if (mapIndex < 12 + 16 + 16)
         {
-            return $"Level 2 Room {mapIndex-12-16}";
+            return $"Level 2 Room {mapIndex - 12 - 16}";
         }
         else
         {
-            return $"Level 3 Room {mapIndex-12-16-16}";
+            return $"Level 3 Room {mapIndex - 12 - 16 - 16}";
         }
     }
 
 
     public uint Width => 256;
 
-    public uint Height => 18*8;
+    public uint Height => 18 * 8;
 
     public string Name => mapName;
 
@@ -145,6 +151,7 @@ public class RollercoasterImage : IImage
 
     private Pixel[] RenderMap(float seconds)
     {
+        frameCounter = (int)(seconds * 25);
         uint levelDataOffset = 0x7F;
 
         imageHelper.Clear(0x40);
@@ -166,6 +173,52 @@ public class RollercoasterImage : IImage
         return imageHelper.Render(seconds);
     }
 
+    private byte ComputePositionPos(byte start, byte limitA, byte limitB)
+    {
+        var remainA = limitA - start;
+        var B = limitA - limitB;
+        var remainC = start - limitB;
+
+        remainA /= 2;
+        B /= 2;
+        remainC /= 2;
+
+        var t = frameCounter % (remainA + B + remainC);
+        if (t < remainA)
+        {
+            return (byte)(start + t * 2);
+        }
+        else if (t < (remainA + B))
+        {
+            return (byte)(limitA - (t - remainA) * 2);
+        }
+        else
+        {
+            return (byte)(limitB + (t - remainA - B) * 2);
+        }
+    }
+    
+    private byte ComputePositionNeg(byte start, byte limitA, byte limitB)
+    {
+        var remainA = start - limitA;
+        var B = limitB - limitA;
+        var remainC = limitB - start;
+
+        var t = frameCounter % (remainA + B + remainC);
+        if (t < remainA)
+        {
+            return (byte)(start - t);
+        }
+        else if (t < (remainA + B))
+        {
+            return (byte)(limitA + (t - remainA));
+        }
+        else
+        {
+            return (byte)(limitB - (t - remainA - B));
+        }
+    }
+
     private void RenderMapSprites()
     {
         var cnt = mapData[(int)RollerCoaster_MapDataOffsets.NumberOfSprites];
@@ -177,21 +230,45 @@ public class RollercoasterImage : IImage
         {
             var sprite = main.GetBytes(spriteData, 15);
             spriteData += 15;
-            var unknown = sprite[0];
+            var spriteFlags = sprite[0];
             uint spriteGfx = sprite[2];
             spriteGfx <<= 8;
             spriteGfx |= sprite[1];
             var x = sprite[3];
             var y = sprite[4];
             var attr = sprite[5];
-            var unknown2 = sprite[6];
+            var spriteAnim = sprite[6];
             var frame = sprite[7];
             var width = sprite[8];
             var height = sprite[9];
             uint frameOffset = sprite[11];
             frameOffset <<= 8;
             frameOffset |= sprite[10];
-            //12,13,14 are unknown
+            var frameDelay = sprite[12];
+            var limitA = sprite[13];
+            var limitB = sprite[14];
+
+            // compute path of sprite
+            if (limitA!=0 || limitB!=0)
+            {
+                if ((spriteFlags & 0x10)==0x10) // Left-Right
+                {
+                    x = ComputePositionPos(x, (byte)(limitA - width * 8), limitB);
+                }
+                else if ((spriteFlags & 0x20)==0x20) // Right-Left
+                {
+                    x = ComputePositionNeg(x, limitB, (byte)(limitA - width * 8));
+                }
+                else if ((spriteFlags & 0x40)==0x40)
+                {
+                    y = ComputePositionPos(y, limitB, limitA);
+                }
+                else
+                {
+                    y = ComputePositionNeg(y, limitA, limitB);
+                }
+            }
+
 
             uint gfxToRender = (uint)(frame * frameOffset) + spriteGfx;
 
@@ -482,7 +559,8 @@ public class RollercoasterImage : IImage
         }
         if ((numLines&7)!=0)
         {
-            ay--;
+            if (ay>0)
+                ay--;
             yTiles++;
         }
 
@@ -551,6 +629,15 @@ public class RollercoasterImage : IImage
         TrackColour = 0x26,
         BorderColour = 0x30,
         PickupsStart = 0x31,
+        Pickup1X = 0x31,
+        Pickup1Y = 0x32,
+        Pickup2X = 0x33,
+        Pickup2Y = 0x34,
+        Pickup3X = 0x35,
+        Pickup3Y = 0x36,
+        Pickup4X = 0x37,
+        Pickup4Y = 0x38,
+        PickupsLast = 0x38,
         StartOfLevelData = 0x7F,
     }
 
