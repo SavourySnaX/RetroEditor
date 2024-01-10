@@ -78,7 +78,7 @@ class ZXSpectrum : IRomPlugin
 
     public ushort ReadWord(uint address)
     {
-        return (ushort)(ReadByte(address+1) | (ReadByte(address+0) << 8));
+        return (ushort)(ReadByte(address+0) | (ReadByte(address+1) << 8));
     }
 
     public uint ReadLong(uint address)

@@ -1,13 +1,5 @@
 
 
-using System.Data.SqlTypes;
-using System.Reflection.Metadata.Ecma335;
-using System.Security.Cryptography;
-using Emgu.CV;
-using Emgu.CV.CvEnum;
-using Emgu.CV.Dnn;
-using Veldrid.OpenGLBinding;
-
 public class JetSetWilly48 : IRetroPlugin, IImages, ITileMaps
 {
     private byte[] JetSetWilly48Tap = new byte[] { 78, 94, 213, 56, 235, 159, 86, 89, 143, 175, 248, 41, 6, 68, 201, 215 };

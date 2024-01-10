@@ -97,6 +97,12 @@ public class ZXSpectrum48ImageHelper
         SetAttribute(ConvertXBitmapPosToYAttribute(x), ConvertYBitmapPosToYAttribute(y), attribute);
     }
 
+    public bool GetBit(uint x, uint y)
+    {
+        uint pixelOffset = (y * pixelWidth) + x;
+        return bitmap[pixelOffset] != 0;
+    }
+
     public void Draw8BitsNoAttribute(uint x, uint y, byte bits, bool flipX)
     {
         uint pixelOffset = (y * pixelWidth) + x;
@@ -171,5 +177,26 @@ public class ZXSpectrum48ImageHelper
     {
         uint attributeOffset = ay * attributeWidth + ax;
         return attributes[attributeOffset];
+    }
+
+    public void CopyBitmapFrom(ZXSpectrum48ImageHelper source)
+    {
+        for (int a=0;a<bitmap.Length;a++)
+        {
+            bitmap[a] = source.bitmap[a];
+        }
+    }
+
+    public void FlipVertical()
+    {
+        for (int y=0;y<pixelHeight/2;y++)
+        {
+            for (int x=0;x<pixelWidth;x++)
+            {
+                var temp = bitmap[y * pixelWidth + x];
+                bitmap[y * pixelWidth + x] = bitmap[(pixelHeight - y - 1) * pixelWidth + x];
+                bitmap[(pixelHeight - y - 1) * pixelWidth + x] = temp;
+            }
+        }
     }
 }

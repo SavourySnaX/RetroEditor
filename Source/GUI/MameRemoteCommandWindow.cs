@@ -206,9 +206,23 @@ public class MameRemoteCommandWindow : IWindow
             //client.SendMemory(0x890A, new byte[] { 0x01, 0x00 }); 
             client.SendMemory(0x8C7C, new byte[] { 0x01 });     //screen
             client.SendMemory(0x8C81, new byte[] { 0x01 });     //floor
-            client.SendCommand("bpclear");
-            client.SendCommand("bp 0xa269");                        // for tracing level setup
-            //client.SendCommand("bp 0x8270");
+
+            // Sprite Experiments
+            //client.SendMemory(0xC2B8, new byte[] { 0x2D });
+            //client.SendMemory(0xC2B8 + 5, new byte[] { 0x07, 0x43 });
+            //client.SendMemory(0xC2B8 + 12, new byte[] { 0x30 });
+            //client.SendMemory(0xC2B8 + 4, new byte[] { 0x30, 0x07 });
+            //client.SendMemory(0x6283, new byte[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 });
+            //client.SendCommand("bpclear");
+            //client.SendCommand("bp 0xa269");                        // for tracing level setup
+            //client.SendCommand("bp 0xADE6");
+
+            // Cheats
+            client.SendMemory(36056, new byte[] { 195 });   // Fall any height
+            client.SendMemory(36595, new byte[] { 182 });    // Infinite Lives
+            client.SendMemory(38342, new byte[] { 0 });    // Infinite Energy
+            client.SendMemory(39950, new byte[] { 201 });   // Infinite Energy
+
         }
         return connected;
     }
