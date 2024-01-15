@@ -74,6 +74,11 @@ class Editor : IEditor
             OpenFile(arg);
         }
 
+        // Testing
+        var pluginWindow = new JSWTest(LibRetroPluginFactory.Create("C:\\work\\spectrum\\fuse-libretro\\fuse_libretro.windows_x86_64.dll"));
+        pluginWindow.Initialise(controller, graphicsDevice);
+        activeWindows.Add(pluginWindow);
+
         float totalTime=0.0f;
         while (window.Exists)
         {
