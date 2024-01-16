@@ -1,7 +1,7 @@
-
 using System.Numerics;
 using ImGuiNET;
-using Veldrid;
+using Raylib_cs;
+using rlImGui_cs;
 
 // At present, this is hardwired to the Spectrum - make it a plugin, generic later - see MameRemote.cs for mame changes needed
 
@@ -30,8 +30,7 @@ public class MameRemoteCommandWindow : IWindow
     bool forceRefresh;
     bool running = false;
 
-    Texture[] bitmap = new Texture[3];
-    nint[] bitmapId = new nint[3];
+    Texture2D[] bitmap = new Texture2D[3];
 
     private void FetchColourForStyle(byte attr,out Vector4 fg,out Vector4 bg)
     {
@@ -78,7 +77,7 @@ public class MameRemoteCommandWindow : IWindow
         ImGui.PushStyleVar(ImGuiStyleVar.ItemSpacing, new Vector2(0,0));
     
         var sizeOfMonoText=ImGui.CalcTextSize("A");
-        ImGui.BeginChild($"State - {title}", new Vector2(sizeOfMonoText.X*(view.w+2),sizeOfMonoText.Y*(view.h+2)), true, 0);
+        ImGui.BeginChild($"State - {title}", new Vector2(sizeOfMonoText.X*(view.w+2),sizeOfMonoText.Y*(view.h+2)), 0, 0);
 
         var drawList = ImGui.GetWindowDrawList();
         var convCode = new byte[] { 0, 0 };
@@ -110,11 +109,11 @@ public class MameRemoteCommandWindow : IWindow
         ImGui.SameLine();
         DrawDView(disasm,"Disasm");
         
-        ImGui.Image(bitmapId[0], new Vector2(256 * 1.0f, 192 * 1.0f));
+        rlImGui.ImageSize(bitmap[0], 256, 192);
         ImGui.SameLine();
-        ImGui.Image(bitmapId[1], new Vector2(256 * 1.0f, 192 * 1.0f));
+        rlImGui.ImageSize(bitmap[1], 256, 192);
         ImGui.SameLine();
-        ImGui.Image(bitmapId[2], new Vector2(256 * 1.0f, 192 * 1.0f));
+        rlImGui.ImageSize(bitmap[2], 256, 192);
 
         if (ImGui.InputText("Command",ref inputBuffer, 256, ImGuiInputTextFlags.EnterReturnsTrue))
         {
@@ -128,7 +127,7 @@ public class MameRemoteCommandWindow : IWindow
             inputBuffer = "";
         }
 
-        ImGui.BeginChild("Log", new Vector2(0, 0), true, ImGuiWindowFlags.HorizontalScrollbar|ImGuiWindowFlags.AlwaysVerticalScrollbar);
+        ImGui.BeginChild("Log", new Vector2(0, 0), 0, ImGuiWindowFlags.HorizontalScrollbar|ImGuiWindowFlags.AlwaysVerticalScrollbar);
         ImGui.Text(log);
         ImGui.EndChild();
 
@@ -173,7 +172,7 @@ public class MameRemoteCommandWindow : IWindow
         log="";
     }
 
-    public bool Initialise(ImGuiController controller, GraphicsDevice graphicsDevice)
+    public bool Initialise()
     {
         state.x = 0;
         state.y = 0;
@@ -188,15 +187,15 @@ public class MameRemoteCommandWindow : IWindow
         inputBuffer = "";
         forceRefresh = true;
 
-        bitmap[0]=graphicsDevice.ResourceFactory.CreateTexture(TextureDescription.Texture2D(256, 192, 1, 1, PixelFormat.R8_G8_B8_A8_UNorm, TextureUsage.Sampled));
-        bitmap[0].Name = $"Screen-SpectrumPlane";
-        bitmapId[0] = controller.GetOrCreateImGuiBinding(graphicsDevice.ResourceFactory, bitmap[0]);
-        bitmap[1]=graphicsDevice.ResourceFactory.CreateTexture(TextureDescription.Texture2D(256, 192, 1, 1, PixelFormat.R8_G8_B8_A8_UNorm, TextureUsage.Sampled));
-        bitmap[1].Name = $"Screen-SpectrumAttr";
-        bitmapId[1] = controller.GetOrCreateImGuiBinding(graphicsDevice.ResourceFactory, bitmap[1]);
-        bitmap[2]=graphicsDevice.ResourceFactory.CreateTexture(TextureDescription.Texture2D(256, 192, 1, 1, PixelFormat.R8_G8_B8_A8_UNorm, TextureUsage.Sampled));
-        bitmap[2].Name = $"Screen-SpectrumCombined";
-        bitmapId[2] = controller.GetOrCreateImGuiBinding(graphicsDevice.ResourceFactory, bitmap[2]);
+        var image = new Image {
+            Width = 256,
+            Height = 192,
+            Mipmaps = 1,
+            Format = PixelFormat.PIXELFORMAT_UNCOMPRESSED_R8G8B8A8
+        };
+        bitmap[0] = Raylib.LoadTextureFromImage(image);
+        bitmap[1] = Raylib.LoadTextureFromImage(image);
+        bitmap[2] = Raylib.LoadTextureFromImage(image);
 
         var connected= client.Connect();
         if (connected)
@@ -227,7 +226,7 @@ public class MameRemoteCommandWindow : IWindow
         return connected;
     }
 
-    public void Update(ImGuiController controller, GraphicsDevice graphicsDevice, float seconds)
+    public void Update(float seconds)
     {
         if ((forceRefresh) || (seconds - lastSeconds > 1.0f))
         {
@@ -237,9 +236,9 @@ public class MameRemoteCommandWindow : IWindow
             disasm.state = client.RequestDisasm(disasm.x, disasm.y, disasm.w, disasm.h);
 
             screen = client.RequestMemory(16384, 8192+768);
-            RgbaByte[] bitmapData = new RgbaByte[256*192];
-            RgbaByte[] attrData = new RgbaByte[256*192];
-            RgbaByte[] combinedData = new RgbaByte[256*192];
+            var bitmapData = new byte[4 * 256 * 192];
+            var attrData = new byte[4 * 256 * 192];
+            var combinedData = new byte[4 * 256 * 192];
 
             int originalScreenPos = 0;
             for (int block = 0; block < 3; block++)
@@ -265,20 +264,31 @@ public class MameRemoteCommandWindow : IWindow
                             {
                                 if ((bits & (1 << (7 - b))) == 0)
                                 {
-                                    bitmapData[linearY * 256 + linearX + b] = new RgbaByte(0, 0, 0, 255);
-                                    combinedData[linearY * 256 + linearX + b] = paperCol;
+                                    bitmapData[(linearY * 256 + linearX + b) * 4 + 0] = 0;
+                                    bitmapData[(linearY * 256 + linearX + b) * 4 + 1] = 0;
+                                    bitmapData[(linearY * 256 + linearX + b) * 4 + 2] = 0;
+                                    bitmapData[(linearY * 256 + linearX + b) * 4 + 3] = 255;
+                                    combinedData[(linearY * 256 + linearX + b) * 4 + 0] = paperCol.Red;
+                                    combinedData[(linearY * 256 + linearX + b) * 4 + 1] = paperCol.Green;
+                                    combinedData[(linearY * 256 + linearX + b) * 4 + 2] = paperCol.Blue;
+                                    combinedData[(linearY * 256 + linearX + b) * 4 + 3] = paperCol.Alpha;
                                 }
                                 else
                                 {
-                                    bitmapData[linearY * 256 + linearX + b] = new RgbaByte(255, 255, 255, 255);
-                                    combinedData[linearY * 256 + linearX + b] = inkCol;
+                                    bitmapData[(linearY * 256 + linearX + b) * 4 + 0] = 255;
+                                    bitmapData[(linearY * 256 + linearX + b) * 4 + 1] = 255;
+                                    bitmapData[(linearY * 256 + linearX + b) * 4 + 2] = 255;
+                                    bitmapData[(linearY * 256 + linearX + b) * 4 + 3] = 255;
+                                    combinedData[(linearY * 256 + linearX + b) * 4 + 0] = inkCol.Red;
+                                    combinedData[(linearY * 256 + linearX + b) * 4 + 1] = inkCol.Green;
+                                    combinedData[(linearY * 256 + linearX + b) * 4 + 2] = inkCol.Blue;
+                                    combinedData[(linearY * 256 + linearX + b) * 4 + 3] = inkCol.Alpha;
                                 }
                             }
                         }
                     }
                 }
             }
-            graphicsDevice.UpdateTexture(bitmap[0], bitmapData, 0, 0, 0, 256, 192, 1, 0, 0);
             originalScreenPos = 0x1800;
             for (int row = 0; row < 24; row++)
             {
@@ -297,41 +307,54 @@ public class MameRemoteCommandWindow : IWindow
                         {
                             //flash ignored for now
                             if (y >= 2 && y <= 5 && x >= 2 && x <= 5)
-                                attrData[(row * 8 + y) * 256 + (col * 8 + x)] = inkCol;
+                            {
+                                attrData[((row * 8 + y) * 256 + (col * 8 + x)) * 4 + 0] = inkCol.Red;
+                                attrData[((row * 8 + y) * 256 + (col * 8 + x)) * 4 + 1] = inkCol.Green;
+                                attrData[((row * 8 + y) * 256 + (col * 8 + x)) * 4 + 2] = inkCol.Blue;
+                                attrData[((row * 8 + y) * 256 + (col * 8 + x)) * 4 + 3] = inkCol.Alpha;
+                            }
                             else
-                                attrData[(row * 8 + y) * 256 + (col * 8 + x)] = paperCol;
+                            {
+                                attrData[((row * 8 + y) * 256 + (col * 8 + x)) * 4 + 0] = paperCol.Red;
+                                attrData[((row * 8 + y) * 256 + (col * 8 + x)) * 4 + 1] = paperCol.Green;
+                                attrData[((row * 8 + y) * 256 + (col * 8 + x)) * 4 + 2] = paperCol.Blue;
+                                attrData[((row * 8 + y) * 256 + (col * 8 + x)) * 4 + 3] = paperCol.Alpha;
+                            }
                         }
                     }
                 }
             }
-            graphicsDevice.UpdateTexture(bitmap[1], attrData, 0, 0, 0, 256, 192, 1, 0, 0);
-            graphicsDevice.UpdateTexture(bitmap[2], combinedData, 0, 0, 0, 256, 192, 1, 0, 0);
+            Raylib.UpdateTexture(bitmap[0], bitmapData);
+            Raylib.UpdateTexture(bitmap[1], attrData);
+            Raylib.UpdateTexture(bitmap[2], combinedData);
         }
         forceRefresh = false;
     }
 
-    static readonly RgbaByte[] palette = new RgbaByte[]
+    public float UpdateInterval => 1.0f / 60.0f;
+
+    static readonly Pixel[] palette = new Pixel[]
     {
-        new RgbaByte(0, 0, 0 ,255),
-        new RgbaByte(0, 0, 192 ,255),
-        new RgbaByte(192, 0, 0 ,255),
-        new RgbaByte(192, 0, 192 ,255),
-        new RgbaByte(0, 192, 0 ,255),
-        new RgbaByte(0, 192, 192 ,255),
-        new RgbaByte(192, 192, 0 ,255),
-        new RgbaByte(192, 192, 192 ,255),
-        new RgbaByte(0, 0, 0 ,255),
-        new RgbaByte(0, 0, 255 ,255),
-        new RgbaByte(255, 0, 0 ,255),
-        new RgbaByte(255, 0, 255 ,255),
-        new RgbaByte(0, 255, 0 ,255),
-        new RgbaByte(0, 255, 255 ,255),
-        new RgbaByte(255, 255, 0 ,255),
-        new RgbaByte(255, 255, 255 ,255)
+        new Pixel{Red=0, Green=0, Blue=0 ,Alpha=255 },
+        new Pixel{Red=0, Green=0, Blue=192 ,Alpha=255 },
+        new Pixel{Red=192, Green=0, Blue=0 ,Alpha=255 },
+        new Pixel{Red=192, Green=0, Blue=192 ,Alpha=255 },
+        new Pixel{Red=0, Green=192, Blue=0 ,Alpha=255 },
+        new Pixel{Red=0, Green=192, Blue=192 ,Alpha=255 },
+        new Pixel{Red=192, Green=192, Blue=0 ,Alpha=255 },
+        new Pixel{Red=192, Green=192, Blue=192 ,Alpha=255 },
+        new Pixel{Red=0, Green=0, Blue=0 ,Alpha=255 },
+        new Pixel{Red=0, Green=0, Blue=255 ,Alpha=255 },
+        new Pixel{Red=255, Green=0, Blue=0 ,Alpha=255 },
+        new Pixel{Red=255, Green=0, Blue=255 ,Alpha=255 },
+        new Pixel{Red=0, Green=255, Blue=0 ,Alpha=255 },
+        new Pixel{Red=0, Green=255, Blue=255 ,Alpha=255 },
+        new Pixel{Red=255, Green=255, Blue=0 ,Alpha=255 },
+        new Pixel{Red=255, Green=255, Blue=255 ,Alpha=255 }
     };
 
 
-    public void Close(ImGuiController controller, GraphicsDevice graphicsDevice)
+    public void Close()
     {
         client.Disconnect();
     }

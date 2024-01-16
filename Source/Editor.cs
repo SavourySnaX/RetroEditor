@@ -1,8 +1,7 @@
-
-using System.Diagnostics;
-using Veldrid;
-using Veldrid.StartupUtilities;
+using Raylib_cs;
+using rlImGui_cs;
 using ImGuiNET;
+using System.Diagnostics;
 using System.Security.Cryptography;
 
 class Editor : IEditor
@@ -12,7 +11,6 @@ class Editor : IEditor
     private List<IRetroPlugin> activePlugins;
 
     private List<IWindow> activeWindows;
-    private bool[] keystate = new bool[65536];
 
 
     public Editor(IRetroPlugin[] plugins, IRomPlugin[] romPlugins)
@@ -33,93 +31,76 @@ class Editor : IEditor
         activeWindows = new List<IWindow>();
     }
 
+
     public void RenderRun()
     {
-        ImGuiController controller;
-
-        var windowInfo = new WindowCreateInfo();
-        windowInfo.WindowTitle = "Editor";
-        windowInfo.WindowWidth=1024+512;
-        windowInfo.WindowHeight=800;
-        windowInfo.X = 50;
-        windowInfo.Y = 50;
-        //windowInfo.WindowInitialState = WindowState.Maximized;
-
-        VeldridStartup.CreateWindowAndGraphicsDevice(
-            windowInfo,
-            new GraphicsDeviceOptions(true, null, true, ResourceBindingModel.Improved, true, true),
-            out var window,
-            out var graphicsDevice
-        );
-        
-        var commandList = graphicsDevice.ResourceFactory.CreateCommandList();
-        controller = new ImGuiController(graphicsDevice, graphicsDevice.MainSwapchain.Framebuffer.OutputDescription, window.Width, window.Height);
-
-        window.Resized += () =>
+        Raylib.SetConfigFlags(ConfigFlags.FLAG_WINDOW_RESIZABLE);
+        Raylib.SetConfigFlags(ConfigFlags.FLAG_VSYNC_HINT);
+        Raylib.InitWindow(800, 600, "Retro Editor");
+        if (Raylib.IsWindowFullscreen())
         {
-            graphicsDevice.MainSwapchain.Resize((uint)window.Width, (uint)window.Height);
-            controller.WindowResized(window.Width, window.Height);
-        };
+            Raylib.ToggleFullscreen();
+        }
+        if (!Raylib.IsWindowMaximized())
+        {
+            Raylib.MaximizeWindow();
+        }
+        rlImGui.Setup(darkTheme: true, enableDocking: true);
 
-        var stopwatch = Stopwatch.StartNew();
-        float deltaTime = 0f;
         // Main application loop
 
-        var timer = new Stopwatch();
-        timer.Start();
-
         var args = Environment.GetCommandLineArgs();
+
         foreach (var arg in args)
         {
             OpenFile(arg);
         }
 
+        totalTime=0.0f;
+        
         // Testing
         var pluginWindow = new JSWTest(LibRetroPluginFactory.Create("C:\\work\\spectrum\\fuse-libretro\\fuse_libretro.windows_x86_64.dll"));
-        pluginWindow.Initialise(controller, graphicsDevice);
-        activeWindows.Add(pluginWindow);
+        pluginWindow.Initialise();
+        AddWindow(pluginWindow);
 
-        float totalTime=0.0f;
-        while (window.Exists)
+        while (!Raylib.WindowShouldClose())
         {
-            deltaTime = stopwatch.ElapsedTicks / (float)Stopwatch.Frequency;
-            stopwatch.Restart();
-            InputSnapshot snapshot = window.PumpEvents();
-            if (!window.Exists) { break; }
-            controller.Update(deltaTime, snapshot);
-
-            if (timer.ElapsedMilliseconds>1500)
+            if (Raylib.IsWindowResized())
             {
-                timer.Restart();
+                rlImGui.Shutdown();
+                rlImGui.Setup(darkTheme: true, enableDocking: true);
             }
+            Raylib.BeginDrawing();
+            Raylib.ClearBackground(Color.BLANK);
 
-            DrawUI(controller,graphicsDevice,totalTime);
+            rlImGui.Begin();
+
+            DrawUI();
+
+            rlImGui.End();
+
+            Raylib.EndDrawing();
+            var deltaTime = Raylib.GetFrameTime();
             totalTime += deltaTime;
-
-            commandList.Begin();
-            commandList.SetFramebuffer(graphicsDevice.MainSwapchain.Framebuffer);
-            commandList.ClearColorTarget(0, new RgbaFloat(0.0f, 0.0f, 0.0f, 1f));
-            controller.Render(graphicsDevice, commandList);
-            commandList.End();
-            graphicsDevice.SubmitCommands(commandList);
-            graphicsDevice.SwapBuffers(graphicsDevice.MainSwapchain);
         }
 
         foreach (var mWindow in activeWindows)
         {
-            mWindow.Close(controller, graphicsDevice);
+            mWindow.Close();
         }
-        // Clean up Veldrid resources
-        graphicsDevice.WaitForIdle();
-        controller.Dispose();
-        commandList.Dispose();
-        graphicsDevice.Dispose();
 
         activeWindows.Clear();
         foreach (var active in activePlugins)
         {
             active.Close();
         }
+    }
+
+    private void AddWindow(IWindow window)
+    {
+        activeWindows.Add(window);
+        var newTime = totalTime + window.UpdateInterval;
+        priorityQueue.Enqueue((window, newTime),newTime);
     }
 
     private void OpenFile(string path)
@@ -139,7 +120,7 @@ class Editor : IEditor
         }
     }
 
-    private void DrawUI(ImGuiController controller, GraphicsDevice graphicsDevice, float totalTime)
+    private void DrawUI()
     {
         if (ImGui.BeginMainMenuBar())
         {
@@ -168,8 +149,8 @@ class Editor : IEditor
                 if (ImGui.MenuItem("Mame Remote"))
                 {
                     var mame = new MameRemoteCommandWindow();
-                    mame.Initialise(controller, graphicsDevice);
-                    activeWindows.Add(mame);
+                    mame.Initialise();
+                    AddWindow(mame);
                 }
                 ImGui.EndMenu();
             }
@@ -191,8 +172,8 @@ class Editor : IEditor
                                     if (ImGui.MenuItem(mapName))
                                     {
                                         var window = new ImageWindow(active, map);
-                                        window.Initialise(controller, graphicsDevice);
-                                        activeWindows.Add(window);
+                                        window.Initialise();
+                                        AddWindow(window);
                                     }
                                 }
                                 ImGui.EndMenu();
@@ -210,8 +191,8 @@ class Editor : IEditor
                                     if (ImGui.MenuItem(mapName))
                                     {
                                         var window = new TileMapEditorWindow(active, map);
-                                        window.Initialise(controller, graphicsDevice);
-                                        activeWindows.Add(window);
+                                        window.Initialise();
+                                        AddWindow(window);
                                     }
                                 }
                                 ImGui.EndMenu();
@@ -225,17 +206,31 @@ class Editor : IEditor
             ImGui.EndMainMenuBar();
         }
 
+        if (priorityQueue.Count > 0)
+        {
+            while (priorityQueue.Peek().Item2 <= totalTime)
+            {
+                var lastTick = priorityQueue.Dequeue();
+                var diff = Math.Min(lastTick.Item2, totalTime - lastTick.Item2);
+                lastTick.Item1.Update(totalTime);
+                var newTime = totalTime + lastTick.Item1.UpdateInterval - diff;
+                priorityQueue.Enqueue((lastTick.Item1, newTime),newTime);
+            }
+        }
+
         foreach (var window in activeWindows)
         {
-            window.Update(controller, graphicsDevice, totalTime);
             if (!window.Draw())
             {
-                window.Close(controller, graphicsDevice);
+                window.Close();
                 activeWindows.Remove(window);
                 break;
             }
         }
     }
+
+    private PriorityQueue<(IWindow, float), float> priorityQueue = new PriorityQueue<(IWindow, float), float>();
+    private float totalTime;
 
     public IRomPlugin? GetRomInstance(string romKind)
     {

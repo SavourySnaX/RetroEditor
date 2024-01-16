@@ -1,6 +1,5 @@
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Security.Cryptography.X509Certificates;
+using Raylib_cs;
 
 public static class LibRetroPluginFactory
 {
@@ -79,9 +78,166 @@ public class LibRetroPlugin : IDisposable
         public string addressSpace;
     }
 
+    public enum RetroKey
+    {
+        RETROK_UNKNOWN = 0,
+        RETROK_FIRST = 0,
+        RETROK_BACKSPACE = 8,
+        RETROK_TAB = 9,
+        RETROK_CLEAR = 12,
+        RETROK_RETURN = 13,
+        RETROK_PAUSE = 19,
+        RETROK_ESCAPE = 27,
+        RETROK_SPACE = 32,
+        RETROK_EXCLAIM = 33,
+        RETROK_QUOTEDBL = 34,
+        RETROK_HASH = 35,
+        RETROK_DOLLAR = 36,
+        RETROK_AMPERSAND = 38,
+        RETROK_QUOTE = 39,
+        RETROK_LEFTPAREN = 40,
+        RETROK_RIGHTPAREN = 41,
+        RETROK_ASTERISK = 42,
+        RETROK_PLUS = 43,
+        RETROK_COMMA = 44,
+        RETROK_MINUS = 45,
+        RETROK_PERIOD = 46,
+        RETROK_SLASH = 47,
+        RETROK_0 = 48,
+        RETROK_1 = 49,
+        RETROK_2 = 50,
+        RETROK_3 = 51,
+        RETROK_4 = 52,
+        RETROK_5 = 53,
+        RETROK_6 = 54,
+        RETROK_7 = 55,
+        RETROK_8 = 56,
+        RETROK_9 = 57,
+        RETROK_COLON = 58,
+        RETROK_SEMICOLON = 59,
+        RETROK_LESS = 60,
+        RETROK_EQUALS = 61,
+        RETROK_GREATER = 62,
+        RETROK_QUESTION = 63,
+        RETROK_AT = 64,
+        RETROK_LEFTBRACKET = 91,
+        RETROK_BACKSLASH = 92,
+        RETROK_RIGHTBRACKET = 93,
+        RETROK_CARET = 94,
+        RETROK_UNDERSCORE = 95,
+        RETROK_BACKQUOTE = 96,
+        RETROK_a = 97,
+        RETROK_b = 98,
+        RETROK_c = 99,
+        RETROK_d = 100,
+        RETROK_e = 101,
+        RETROK_f = 102,
+        RETROK_g = 103,
+        RETROK_h = 104,
+        RETROK_i = 105,
+        RETROK_j = 106,
+        RETROK_k = 107,
+        RETROK_l = 108,
+        RETROK_m = 109,
+        RETROK_n = 110,
+        RETROK_o = 111,
+        RETROK_p = 112,
+        RETROK_q = 113,
+        RETROK_r = 114,
+        RETROK_s = 115,
+        RETROK_t = 116,
+        RETROK_u = 117,
+        RETROK_v = 118,
+        RETROK_w = 119,
+        RETROK_x = 120,
+        RETROK_y = 121,
+        RETROK_z = 122,
+        RETROK_LEFTBRACE = 123,
+        RETROK_BAR = 124,
+        RETROK_RIGHTBRACE = 125,
+        RETROK_TILDE = 126,
+        RETROK_DELETE = 127,
+
+        RETROK_KP0 = 256,
+        RETROK_KP1 = 257,
+        RETROK_KP2 = 258,
+        RETROK_KP3 = 259,
+        RETROK_KP4 = 260,
+        RETROK_KP5 = 261,
+        RETROK_KP6 = 262,
+        RETROK_KP7 = 263,
+        RETROK_KP8 = 264,
+        RETROK_KP9 = 265,
+        RETROK_KP_PERIOD = 266,
+        RETROK_KP_DIVIDE = 267,
+        RETROK_KP_MULTIPLY = 268,
+        RETROK_KP_MINUS = 269,
+        RETROK_KP_PLUS = 270,
+        RETROK_KP_ENTER = 271,
+        RETROK_KP_EQUALS = 272,
+
+        RETROK_UP = 273,
+        RETROK_DOWN = 274,
+        RETROK_RIGHT = 275,
+        RETROK_LEFT = 276,
+        RETROK_INSERT = 277,
+        RETROK_HOME = 278,
+        RETROK_END = 279,
+        RETROK_PAGEUP = 280,
+        RETROK_PAGEDOWN = 281,
+
+        RETROK_F1 = 282,
+        RETROK_F2 = 283,
+        RETROK_F3 = 284,
+        RETROK_F4 = 285,
+        RETROK_F5 = 286,
+        RETROK_F6 = 287,
+        RETROK_F7 = 288,
+        RETROK_F8 = 289,
+        RETROK_F9 = 290,
+        RETROK_F10 = 291,
+        RETROK_F11 = 292,
+        RETROK_F12 = 293,
+        RETROK_F13 = 294,
+        RETROK_F14 = 295,
+        RETROK_F15 = 296,
+
+        RETROK_NUMLOCK = 300,
+        RETROK_CAPSLOCK = 301,
+        RETROK_SCROLLOCK = 302,
+        RETROK_RSHIFT = 303,
+        RETROK_LSHIFT = 304,
+        RETROK_RCTRL = 305,
+        RETROK_LCTRL = 306,
+        RETROK_RALT = 307,
+        RETROK_LALT = 308,
+        RETROK_RMETA = 309,
+        RETROK_LMETA = 310,
+        RETROK_LSUPER = 311,
+        RETROK_RSUPER = 312,
+        RETROK_MODE = 313,
+        RETROK_COMPOSE = 314,
+
+        RETROK_HELP = 315,
+        RETROK_PRINT = 316,
+        RETROK_SYSREQ = 317,
+        RETROK_BREAK = 318,
+        RETROK_MENU = 319,
+        RETROK_POWER = 320,
+        RETROK_EURO = 321,
+        RETROK_UNDO = 322,
+        RETROK_OEM_102 = 323,
+
+        RETROK_LAST,
+    }
+
+    public const int RetroKeyArrayCount = 512;
 
     public LibRetroPlugin(string path)
     {
+        keyArray=new bool[RetroKeyArrayCount];
+        keyMap=new int[RetroKeyArrayCount];
+        InitKeyboardToRetroKeyMap();
         disableVideo = false;
         frameBuffer = Array.Empty<byte>();
         pixelFormat = PixelFormat.RGB1555;
@@ -330,6 +486,15 @@ public class LibRetroPlugin : IDisposable
         return result != 0;
     }
 
+
+    public void UpdateKey(KeyboardKey key, bool pressed)
+    {
+        if ((int)key < RetroKeyArrayCount)
+        {
+            keyArray[keyMap[(int)key]] = pressed;
+        }
+    }
+
     public void Reset()
     {
         nativeReset.Invoke();
@@ -366,6 +531,8 @@ public class LibRetroPlugin : IDisposable
     private IntPtr libraryHandle;
     private byte[] frameBuffer;
     private MemoryMap[] memoryMaps;
+    private bool[] keyArray;
+    private int[] keyMap;
 
     private delegate byte retro_environment_t(uint cmd, IntPtr data);
     private delegate void retro_audio_sample_t(short left, short right);
@@ -429,9 +596,14 @@ public class LibRetroPlugin : IDisposable
     private enum EnvironmentCommand
     {
         ENVIRONMENT_SET_PIXEL_FORMAT = 10,
+        ENVIRONMENT_SET_INPUT_DESCRIPTORS = 11,
+        ENVIRONMENT_GET_VARIABLE = 15,
+        ENVIRONMENT_SET_VARIABLES = 16,
         ENVIRONMENT_GET_VARIABLE_UPDATE = 17,
         ENVIRONMENT_GET_LOG_INTERFACE = 27,
+        ENVIRONMENT_SET_CONTROLLER_INFO = 35,
         ENVIRONMENT_SET_MEMORY_MAPS = 36,
+        ENVIRONMENT_GET_MESSAGE_INTERFACE_VERSION = 59,
     }
 
     private struct retro_system_info
@@ -495,6 +667,46 @@ public class LibRetroPlugin : IDisposable
         public uint num_descriptors;
     }
 
+    private struct retro_variable
+    {
+        public IntPtr key;
+        public IntPtr value;
+    }
+
+    private struct retro_input_descriptor
+    {
+        public uint port;
+        public uint device;
+        public uint index;
+        public uint id;
+        public IntPtr description;
+    }
+    
+    private struct retro_controller_description
+    {
+        public IntPtr description;
+        public uint id;
+    }
+
+    private struct retro_controller_info
+    {
+        public IntPtr types;
+        public uint num_types;
+    }
+
+    private void InitKeyboardToRetroKeyMap()
+    {
+        for (int a=(int)KeyboardKey.KEY_A;a<=(int)KeyboardKey.KEY_Z;a++)
+        {
+            keyMap[a] = (a - (int)KeyboardKey.KEY_A) + (int)RetroKey.RETROK_a;
+        }
+        for (int a=(int)KeyboardKey.KEY_ZERO;a<=(int)KeyboardKey.KEY_NINE;a++)
+        {
+            keyMap[a] = (a - (int)KeyboardKey.KEY_ZERO) + (int)RetroKey.RETROK_0;
+        }
+        keyMap[(int)KeyboardKey.KEY_SPACE] = (int)RetroKey.RETROK_SPACE;
+    }
+
     private void LogCallback(int level, IntPtr fmt)
     {
         var fmtString = Marshal.PtrToStringAnsi(fmt);
@@ -515,6 +727,50 @@ public class LibRetroPlugin : IDisposable
                     pixelFormat = (PixelFormat)Marshal.ReadInt32(data);
                     return 1;
                 }
+            case EnvironmentCommand.ENVIRONMENT_SET_INPUT_DESCRIPTORS:
+                {
+                    var descSize = Marshal.SizeOf<retro_input_descriptor>();
+                    while (true)
+                    {
+                        var descriptor = Marshal.PtrToStructure<retro_input_descriptor>(data);
+                        if (descriptor.description==IntPtr.Zero)
+                        {
+                            break;
+                        }
+                        var port = descriptor.port;
+                        var device = descriptor.device;
+                        var index = descriptor.index;
+                        var id = descriptor.id;
+                        var description = Marshal.PtrToStringAnsi(descriptor.description);
+                        Console.WriteLine($"INPUT DESCRIPTOR : {port}, {device}, {index}, {id}, {description}");
+                        data += descSize;
+                    }
+                    return 1;
+                }
+            case EnvironmentCommand.ENVIRONMENT_GET_VARIABLE:
+                {
+                    var variable = Marshal.PtrToStructure<retro_variable>(data);
+                    var key = Marshal.PtrToStringAnsi(variable.key);
+                    Console.WriteLine($"Get variable: {key}");
+                    return 0;
+                }
+            case EnvironmentCommand.ENVIRONMENT_SET_VARIABLES:
+                {
+                    var varSize = Marshal.SizeOf<retro_variable>();
+                    while (true)
+                    {
+                        var variable = Marshal.PtrToStructure<retro_variable>(data);
+                        if (variable.key==IntPtr.Zero && variable.value==IntPtr.Zero)
+                        {
+                            break;
+                        }
+                        var key = Marshal.PtrToStringAnsi(variable.key);
+                        var value = Marshal.PtrToStringAnsi(variable.value);
+                        Console.WriteLine($"VARIABLES NOTIFY : {key}, {value}");
+                        data += varSize;
+                    }
+                    return 1;
+                }
             case EnvironmentCommand.ENVIRONMENT_GET_VARIABLE_UPDATE:
                 {
                     return 0;   // no variables updated since last run
@@ -527,6 +783,29 @@ public class LibRetroPlugin : IDisposable
                         log = logCallback
                     };
                     Marshal.StructureToPtr(logInterface, data, false);
+                    return 1;
+                }
+            case EnvironmentCommand.ENVIRONMENT_SET_CONTROLLER_INFO:
+                {
+                    var controllerSize = Marshal.SizeOf<retro_controller_info>();
+                    while (true)
+                    {
+                        var controller = Marshal.PtrToStructure<retro_controller_info>(data);
+                        if (controller.types==IntPtr.Zero && controller.num_types==0)
+                        {
+                            break;
+                        }
+                        var descSize = Marshal.SizeOf<retro_controller_description>();
+                        for (int a=0;a<controller.num_types;a++)
+                        {
+                            var controllerDesc = Marshal.PtrToStructure<retro_controller_description>(controller.types + (a * descSize));
+                            var description = Marshal.PtrToStringAnsi(controllerDesc.description);
+                            var id = controllerDesc.id;
+                            Console.WriteLine($"CONTROLLER INFO : {description}, {id}");
+                        }
+                        data += controllerSize;
+                    }
+
                     return 1;
                 }
             case EnvironmentCommand.ENVIRONMENT_SET_MEMORY_MAPS:
@@ -552,6 +831,12 @@ public class LibRetroPlugin : IDisposable
                     }
                     return 0;
                 }
+            case EnvironmentCommand.ENVIRONMENT_GET_MESSAGE_INTERFACE_VERSION:
+                {
+                    Marshal.WriteInt32(data, 1);    // We support version 1
+
+                    return 1;
+                }
             default:
                 {
                     System.Console.WriteLine($"Environment callback :  {cmd} {(experimental?"Experimental":"")} {(frontendPrivate?"Private":"")}");
@@ -573,11 +858,15 @@ public class LibRetroPlugin : IDisposable
 
     private void InputPollCallback()
     {
-        //System.Console.WriteLine($"Input poll callback");
     }
 
     private short InputStateCallback(uint port, uint device, uint index, uint id)
     {
+        // return results for inputs requested here
+        if (device == 3 && id < RetroKeyArrayCount)
+        {
+            return (short)(keyArray[id] == true ? 1 : 0);
+        }
         //System.Console.WriteLine($"Input state callback: {port}, {device}, {index}, {id}");
         return 0;
     }
@@ -605,9 +894,9 @@ public class LibRetroPlugin : IDisposable
                         for (int x=0;x<width;x++)
                         {
                             var pixel = *src++;
-                            var b = (byte)((pixel & 0xF800) >> 11);
+                            var r = (byte)((pixel & 0xF800) >> 11);
                             var g = (byte)((pixel & 0x07E0) >> 5);
-                            var r = (byte)((pixel & 0x001F) >> 0);
+                            var b = (byte)((pixel & 0x001F) >> 0);
                             frameBuffer[frameBufferPos++] = (byte)((r << 3) | (r >> 2));
                             frameBuffer[frameBufferPos++] = (byte)((g << 2) | (g >> 4));
                             frameBuffer[frameBufferPos++] = (byte)((b << 3) | (b >> 2));
