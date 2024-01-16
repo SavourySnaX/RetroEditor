@@ -1,6 +1,4 @@
 
-using Emgu.CV.CvEnum;
-
 public struct Pixel
 {
     public Pixel(byte r, byte g, byte b)

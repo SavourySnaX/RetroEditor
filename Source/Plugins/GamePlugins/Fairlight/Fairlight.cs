@@ -86,7 +86,6 @@ public class FairlightImage : IImage
     string mapName;
     int mapIndex;
     ushort mapAddress;
-    int frameCounter;
 
     ZXSpectrum48ImageHelper screen;
     ZXSpectrum48ImageHelper fillScreen;
@@ -186,8 +185,6 @@ public class FairlightImage : IImage
     bool iy37bit0;
     private Pixel[] RenderMap(float seconds)
     {
-        frameCounter = (int)(seconds * 25);
-
         stateStack.Clear();
 
         var currentState = new State(mapAddress);

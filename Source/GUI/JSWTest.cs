@@ -1,12 +1,11 @@
-using System.Numerics;
 using System.Security.Cryptography;
 using ImGuiNET;
-using Veldrid;
+using Raylib_cs;
+using rlImGui_cs;
 
 public class JSWTest : IWindow
 {
-    Texture? bitmap;
-    nint bitmapId;
+    Texture2D bitmap;
 
     LibRetroPlugin plugin;
     LibRetroPlugin.RetroSystemAVInfo aVInfo;
@@ -17,7 +16,7 @@ public class JSWTest : IWindow
         this.plugin = plugin; 
     }
 
-    public bool Initialise(ImGuiController controller,GraphicsDevice graphicsDevice)
+    public bool Initialise()
     {
         if (plugin.Version() != 1)
         {
@@ -31,7 +30,7 @@ public class JSWTest : IWindow
         {
             var memory = plugin.GetMemory(0x4000, 0x1800);  // Load until screen memory contains the pattern...
             var hash = MD5.Create().ComputeHash(memory);
-            return (hash.SequenceEqual(screenHash));
+            return hash.SequenceEqual(screenHash);
         });
 
         // We should save snapshot, so we don't need to load from tape again...
@@ -40,9 +39,16 @@ public class JSWTest : IWindow
         plugin.SaveState(state);
 
         aVInfo = plugin.GetSystemAVInfo();
-        bitmap = graphicsDevice.ResourceFactory.CreateTexture(TextureDescription.Texture2D(aVInfo.geometry.baseWidth, aVInfo.geometry.baseHeight, 1, 1, PixelFormat.B8_G8_R8_A8_UNorm, TextureUsage.Sampled));
-        bitmap.Name = $"JSWTest";
-        bitmapId = controller.GetOrCreateImGuiBinding(graphicsDevice.ResourceFactory, bitmap);
+        var image = Raylib.GenImageColor((int)aVInfo.geometry.baseWidth, (int)aVInfo.geometry.baseHeight, Color.BLACK);
+        image = new Image
+        {
+            Width = (int)aVInfo.geometry.baseWidth,
+            Height = (int)aVInfo.geometry.baseHeight,
+            Mipmaps = 1,
+            Format = PixelFormat.PIXELFORMAT_UNCOMPRESSED_R8G8B8A8
+        };
+
+        bitmap = Raylib.LoadTextureFromImage(image);
 
 // FROM HERE
         plugin.RestoreState(state);
@@ -67,25 +73,35 @@ public class JSWTest : IWindow
 
     public readonly byte[] screenHash = { 17, 6, 168, 144, 11, 145, 236, 80, 76, 26, 162, 160, 98, 1, 0, 211 };
 
-    public void Update(ImGuiController controller,GraphicsDevice graphicsDevice, float seconds)
+    public void Update(float seconds)
     {
         plugin.Run();
-        graphicsDevice.UpdateTexture(bitmap, plugin.GetFrameBuffer(), 0, 0, 0, aVInfo.geometry.baseWidth, aVInfo.geometry.baseHeight, 1, 0, 0);
+        Raylib.UpdateTexture(bitmap, plugin.GetFrameBuffer());
     }
+
+    public float UpdateInterval => 1.0f / 50.0f;
 
     public bool Draw()
     {
         bool open = true;
         ImGui.Begin($"JSW Player",ref open);
 
-        ImGui.Image(bitmapId, new Vector2(aVInfo.geometry.maxWidth * scale, aVInfo.geometry.maxHeight * scale));
+        rlImGui.ImageSize(bitmap, (int)(aVInfo.geometry.maxWidth * scale), (int)(aVInfo.geometry.maxHeight * scale));
+
+        if (ImGui.IsWindowFocused())
+        {
+            plugin.UpdateKey(KeyboardKey.KEY_SPACE, ImGui.IsKeyDown(ImGuiKey.Space));
+            plugin.UpdateKey(KeyboardKey.KEY_O, ImGui.IsKeyDown(ImGuiKey.O));
+            plugin.UpdateKey(KeyboardKey.KEY_P, ImGui.IsKeyDown(ImGuiKey.P));
+        }
 
         ImGui.End();
 
         return open;
     }
 
-    public void Close(ImGuiController controller,GraphicsDevice graphicsDevice)
+    public void Close()
     {
     }
+
 }

@@ -1,16 +1,13 @@
-
-
 using System.Numerics;
 using ImGuiNET;
-using Veldrid;
-using Vulkan.Xcb;
+using Raylib_cs;
+using rlImGui_cs;
 
 public class TileMapEditorWindow : IWindow
 {
-    Texture[] bitmaps;
+    Texture2D[] bitmaps;
     ITileMap map;
     IRetroPlugin plugin;
-    nint[] bitmapIds;
 
     float scale = 2.0f;
 
@@ -19,28 +16,36 @@ public class TileMapEditorWindow : IWindow
     {
         this.plugin = plugin;
         this.map = map;
-        bitmaps = Array.Empty<Texture>();
-        bitmapIds = Array.Empty<nint>();
+        bitmaps = Array.Empty<Texture2D>();
     }
 
-    public bool Initialise(ImGuiController controller,GraphicsDevice graphicsDevice)
+    public bool Initialise()
     {
-        bitmaps = new Texture[map.MaxTiles+1];
-        bitmapIds = new nint[map.MaxTiles+1];
-        bitmaps[0]=graphicsDevice.ResourceFactory.CreateTexture(TextureDescription.Texture2D(map.Width, map.Height, 1, 1, PixelFormat.R8_G8_B8_A8_UNorm, TextureUsage.Sampled));
-        bitmaps[0].Name = $"TestMap{plugin.Name}{map.Name}";
-        bitmapIds[0] = controller.GetOrCreateImGuiBinding(graphicsDevice.ResourceFactory, bitmaps[0]);
+        bitmaps = new Texture2D[map.MaxTiles+1];
+        var image = new Image
+        {
+            Width = (int)map.Width,
+            Height = (int)map.Height,
+            Mipmaps = 1,
+            Format = PixelFormat.PIXELFORMAT_UNCOMPRESSED_R8G8B8A8
+        };
+        bitmaps[0]=Raylib.LoadTextureFromImage(image);
         var tiles = map.FetchTiles(0);
         for (int a=0;a<tiles.Length;a++)
         {
-            bitmaps[a+1] = graphicsDevice.ResourceFactory.CreateTexture(TextureDescription.Texture2D(tiles[a].Width, tiles[a].Height, 1, 1, PixelFormat.R8_G8_B8_A8_UNorm, TextureUsage.Sampled));
-            bitmaps[a+1].Name = $"TestMap{plugin.Name}{map.Name}_Tile{a}";
-            bitmapIds[a+1] = controller.GetOrCreateImGuiBinding(graphicsDevice.ResourceFactory, bitmaps[a+1]);
+            image = new Image
+            {
+                Width = (int)tiles[a].Width,
+                Height = (int)tiles[a].Height,
+                Mipmaps = 1,
+                Format = PixelFormat.PIXELFORMAT_UNCOMPRESSED_R8G8B8A8
+            };
+            bitmaps[a+1] = Raylib.LoadTextureFromImage(image);
         }
         return true;
     }
 
-    public void Update(ImGuiController controller,GraphicsDevice graphicsDevice, float seconds)
+    public void Update(float seconds)
     {
         map.Update(seconds);
 
@@ -50,47 +55,20 @@ public class TileMapEditorWindow : IWindow
         {
             var pixels = tiles[a].GetImageData();
 
-            RgbaByte[] bitmapData = new RgbaByte[pixels.Length];
-            for (int b=0;b<pixels.Length;b++)
+            byte[] bitmapData = new byte[pixels.Length*4];
+            for (int b = 0; b < pixels.Length; b++)
             {
-                bitmapData[b] = new RgbaByte(pixels[b].Red, pixels[b].Green, pixels[b].Blue, pixels[b].Alpha);
+                bitmapData[b * 4 + 0] = pixels[b].Red;
+                bitmapData[b * 4 + 1] = pixels[b].Green;
+                bitmapData[b * 4 + 2] = pixels[b].Blue;
+                bitmapData[b * 4 + 3] = pixels[b].Alpha;
             }
 
-            graphicsDevice.UpdateTexture(bitmaps[a+1], bitmapData, 0, 0, 0, tiles[a].Width, tiles[a].Height, 1, 0, 0);
+            Raylib.UpdateTexture(bitmaps[a+1], bitmapData);
         }
-/*
-        // Grab latest version of map data?
-        for (int a=0;a<map.NumLayers;a++)
-        {
-            var layer = map.FetchLayer((uint)a);
-
-            var mapData = layer.GetMapData();
-
-            var bitmap = new RgbaByte[map.Width * map.Height];
-
-            for (uint y = 0; y < layer.Height; y++)
-            {
-                for (uint x = 0; x < layer.Width; x++)
-                {
-                    var tileData = tiles[mapData[y * layer.Width + x]];
-                    var tile = tileData.GetImageData();
-
-                    uint xpos = x * tileData.Width;
-                    uint ypos = y * tileData.Height;
-
-                    for (uint ty = 0; ty < tileData.Height; ty++)
-                    {
-                        for (uint tx = 0; tx < tileData.Width; tx++)
-                        {
-                            var tilePixel = tile[ty * tileData.Width + tx];
-                            bitmap[(ypos + ty) * 256 + (xpos + tx)] = new RgbaByte(tilePixel.Red, tilePixel.Green, tilePixel.Blue, tilePixel.Alpha);
-                        }
-                    }
-                }
-            }
-            graphicsDevice.UpdateTexture(bitmaps[0], bitmap, 0, 0, 0, map.Width, map.Height, 1, 0, 0);
-        }*/
     }
+    
+    public float UpdateInterval => 1.0f / 60.0f;
 
     public bool Draw()
     {
@@ -101,7 +79,7 @@ public class TileMapEditorWindow : IWindow
         for (int a=0;a<tiles.Length;a++)
         {
             ImGui.BeginGroup();
-            ImGui.Image(bitmapIds[a + 1], new Vector2(tiles[a].Width * scale, tiles[a].Height * scale));
+            rlImGui.ImageSize(bitmaps[a + 1], (int)(tiles[a].Width * scale), (int)(tiles[a].Height * scale));
             if (ImGui.IsItemHovered())
             {
                 ImGui.BeginTooltip();
@@ -122,8 +100,6 @@ public class TileMapEditorWindow : IWindow
             ImGui.EndGroup();
         }
 
-//        ImGui.Image(bitmapIds[0], new Vector2(map.Width * scale, map.Height * scale));
-
         var currentPos = ImGui.GetCursorPos();
         // Grab latest version of map data?
         for (int a=0;a<map.NumLayers;a++)
@@ -131,8 +107,6 @@ public class TileMapEditorWindow : IWindow
             var layer = map.FetchLayer((uint)a);
 
             var mapData = layer.GetMapData();
-
-            var bitmap = new RgbaByte[map.Width * map.Height];
 
             for (uint y = 0; y < layer.Height; y++)
             {
@@ -146,7 +120,7 @@ public class TileMapEditorWindow : IWindow
                     uint ypos = y * tileData.Height;
 
                     ImGui.SetCursorPos(new Vector2((currentPos.X + xpos) * scale, (currentPos.Y + ypos) * scale));
-                    ImGui.Image(bitmapIds[1+tilenum], new Vector2(tileData.Width * scale, tileData.Height * scale));
+                    rlImGui.ImageSize(bitmaps[1+tilenum], (int)(tileData.Width * scale), (int)(tileData.Height * scale));
 
                     if (ImGui.IsItemHovered() && ImGui.IsMouseDown(ImGuiMouseButton.Left))
                     {
@@ -165,9 +139,8 @@ public class TileMapEditorWindow : IWindow
 
         return open;
     }
-    public void Close(ImGuiController controller,GraphicsDevice graphicsDevice)
+    public void Close()
     {
         map.Close();
     }
 }
-
