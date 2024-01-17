@@ -12,6 +12,8 @@ public class JSWTest : IWindow
     float scale = 2.0f;
     string name;
 
+    uint frameWidth, frameHeight;
+
     public JSWTest(LibRetroPlugin plugin, string name)
     {
         this.plugin = plugin;
@@ -43,7 +45,7 @@ public class JSWTest : IWindow
                 return hash.SequenceEqual(screenHash);
             });
         }
-        else
+        else if (name == "FCEU")
         {
             var name = "C:\\work\\editor\\nes\\metroid.nes";
             var game = File.ReadAllBytes(name);
@@ -67,10 +69,26 @@ public class JSWTest : IWindow
 
             //game[16 + 0x253E + (14 * 32) + 3] = 0x17;   // Modify map room number....
             plugin.LoadGame(name,game);
+        }
+        else if (name == "Genesis")
+        {
+            var name = "C:\\work\\editor\\Phantasy Star II Rev 02 (1990-01)(Sega)(EU-US).bin";
+            var game = File.ReadAllBytes(name);
 
+            game[0x2b2] = 0x73;     // Skip Sega logo
+            game[0x2b3] = 0x48;
 
+            // need to fix checksum
+            ushort chk= 0;
+            for (uint a=0x200;a<game.Length;a+=2)
+            {
+                ushort word = (ushort)(game[a+1] | (game[a] << 8));
+                chk += word;
+            }
+            game[0x18e] = (byte)(chk >> 8);
+            game[0x18f] = (byte)(chk & 0xFF);
 
-
+            plugin.LoadGame(name, game);
         }
 
         // We should save snapshot, so we don't need to load from tape again...
@@ -79,11 +97,13 @@ public class JSWTest : IWindow
         plugin.SaveState(state);
 
         aVInfo = plugin.GetSystemAVInfo();
-        var image = Raylib.GenImageColor((int)aVInfo.geometry.baseWidth, (int)aVInfo.geometry.baseHeight, Color.BLACK);
+        frameHeight= aVInfo.geometry.maxHeight;
+        frameWidth = aVInfo.geometry.maxWidth;
+        var image = Raylib.GenImageColor((int)aVInfo.geometry.maxWidth, (int)aVInfo.geometry.maxHeight, Color.BLACK);
         image = new Image
         {
-            Width = (int)aVInfo.geometry.baseWidth,
-            Height = (int)aVInfo.geometry.baseHeight,
+            Width = (int)aVInfo.geometry.maxWidth,
+            Height = (int)aVInfo.geometry.maxHeight,
             Mipmaps = 1,
             Format = PixelFormat.PIXELFORMAT_UNCOMPRESSED_R8G8B8A8
         };
@@ -119,7 +139,7 @@ public class JSWTest : IWindow
     public void Update(float seconds)
     {
         plugin.Run();
-        Raylib.UpdateTexture(bitmap, plugin.GetFrameBuffer());
+        Raylib.UpdateTexture(bitmap, plugin.GetFrameBuffer(out frameWidth, out frameHeight));
     }
 
     public float UpdateInterval => (float)(1.0 / aVInfo.timing.fps);
@@ -129,7 +149,7 @@ public class JSWTest : IWindow
         bool open = true;
         ImGui.Begin($"Player {name}",ref open);
 
-        rlImGui.ImageSize(bitmap, (int)(aVInfo.geometry.baseWidth * scale), (int)(aVInfo.geometry.baseHeight * scale));
+        rlImGui.ImageRect(bitmap, (int)(aVInfo.geometry.baseWidth * scale), (int)(aVInfo.geometry.baseHeight * scale), new Rectangle(0,0,frameWidth,frameHeight));
 
         if (ImGui.IsWindowFocused())
         {

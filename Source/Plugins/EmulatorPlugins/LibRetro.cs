@@ -241,6 +241,8 @@ public class LibRetroPlugin : IDisposable
         InitKeyboardToRetroKeyMap();
         disableVideo = false;
         frameBuffer = Array.Empty<byte>();
+        frameBufferWidth = 0;
+        frameBufferHeight = 0;
         pixelFormat = PixelFormat.RGB1555;
         libraryHandle = NativeLibrary.Load(path);
         nativeVersion = Marshal.GetDelegateForFunctionPointer<retro_api_version>(NativeLibrary.GetExport(libraryHandle, "retro_api_version"));
@@ -338,6 +340,7 @@ public class LibRetroPlugin : IDisposable
 
     private void InternalLoad(string path, byte[] data)
     {
+        loadedPath = path;
         loadedRom = Marshal.AllocHGlobal(data.Length);
         loadedRomSize=(UIntPtr)data.Length;
         Marshal.Copy(data, 0, loadedRom, data.Length);
@@ -356,7 +359,9 @@ public class LibRetroPlugin : IDisposable
 
         // Should be able to allocate our framebuffer here
         var aVInfo=GetSystemAVInfo();
-        frameBuffer = new byte[aVInfo.geometry.baseWidth * aVInfo.geometry.baseHeight * 4];
+        frameBufferWidth=width=aVInfo.geometry.maxWidth;
+        frameBufferHeight=height=aVInfo.geometry.maxHeight;
+        frameBuffer = new byte[width * height * 4];
 
     }
 
@@ -529,8 +534,10 @@ public class LibRetroPlugin : IDisposable
         disableVideo = false;
     }
 
-    public byte[] GetFrameBuffer()
+    public byte[] GetFrameBuffer(out uint width, out uint height)
     {
+        width = this.width;
+        height = this.height;
         return frameBuffer;
     }
 
@@ -541,6 +548,7 @@ public class LibRetroPlugin : IDisposable
     }
 
     private bool disableVideo;
+    private string loadedPath;
 
     private nint nativeGameInfo;
     private nint loadedRom;
@@ -549,6 +557,8 @@ public class LibRetroPlugin : IDisposable
     private PixelFormat pixelFormat;
     private IntPtr libraryHandle;
     private byte[] frameBuffer;
+    private uint frameBufferWidth, frameBufferHeight;
+    private uint width, height; // Last rendered width/height
     private MemoryMap[] memoryMaps;
     private bool[] keyArray;
     private int[] keyMap;
@@ -622,6 +632,7 @@ public class LibRetroPlugin : IDisposable
         ENVIRONMENT_GET_LOG_INTERFACE = 27,
         ENVIRONMENT_SET_CONTROLLER_INFO = 35,
         ENVIRONMENT_SET_MEMORY_MAPS = 36,
+        ENVIRONMENT_GET_AUDIO_VIDEO_ENABLE = 47,
         ENVIRONMENT_GET_MESSAGE_INTERFACE_VERSION = 59,
         ENVIRONMENT_GET_GAME_INFO_EXT = 66,
     }
@@ -871,6 +882,12 @@ public class LibRetroPlugin : IDisposable
                     }
                     return 1;
                 }
+            case EnvironmentCommand.ENVIRONMENT_GET_AUDIO_VIDEO_ENABLE:
+                {
+                    // Just want video for now
+                    Marshal.WriteInt32(data, 1);    // bits 3-0 HardAudioDisable|FastSave|AudioDisable|VideoDisable
+                    return 1;
+                }
             case EnvironmentCommand.ENVIRONMENT_GET_MESSAGE_INTERFACE_VERSION:
                 {
                     Marshal.WriteInt32(data, 1);    // We support version 1
@@ -882,11 +899,11 @@ public class LibRetroPlugin : IDisposable
                     var gameInfo = new retro_game_info_ext
                     {
                         full_path = Marshal.StringToHGlobalAnsi(""),
-                        archive_path = Marshal.StringToHGlobalAnsi("c:\\work\\editor\\nes\\metroid.nes"),
-                        archive_file = Marshal.StringToHGlobalAnsi("metroid.nes"),
-                        dir = Marshal.StringToHGlobalAnsi("c:\\work\\editor\\nes\\"),
-                        name = Marshal.StringToHGlobalAnsi("metroid"),
-                        ext = Marshal.StringToHGlobalAnsi("nes"),
+                        archive_path = Marshal.StringToHGlobalAnsi(loadedPath),
+                        archive_file = Marshal.StringToHGlobalAnsi(Path.GetFileName(loadedPath)),
+                        dir = Marshal.StringToHGlobalAnsi(Path.GetDirectoryName(loadedPath)),
+                        name = Marshal.StringToHGlobalAnsi(Path.GetFileNameWithoutExtension(loadedPath)),
+                        ext = Marshal.StringToHGlobalAnsi(Path.GetExtension(loadedPath).ToLower().TrimStart('.')),
                         meta = Marshal.StringToHGlobalAnsi(""),
                         data = loadedRom,
                         size = loadedRomSize,
@@ -990,7 +1007,10 @@ public class LibRetroPlugin : IDisposable
             return;
         }
 
-        // Perform pixel format conversion here
+        this.width = width;
+        this.height = height;
+        var frameBufferPitch = (frameBufferWidth-width)*4;
+        // Perform pixel format conversion here - todo avoid need to do this, make texture correct format in rendering and share it with libretro
         switch (pixelFormat)
         {
             case PixelFormat.RGB565:
@@ -998,7 +1018,7 @@ public class LibRetroPlugin : IDisposable
                 unsafe 
                 {
                     var src = (ushort*)data;
-                    var frameBufferPos = 0;
+                    uint frameBufferPos = 0;
                     var srcNextLine=(pitch.ToUInt32() / 2) - width;
                     for (int y=0;y<height;y++)
                     {
@@ -1013,7 +1033,8 @@ public class LibRetroPlugin : IDisposable
                             frameBuffer[frameBufferPos++] = (byte)((b << 3) | (b >> 2));
                             frameBuffer[frameBufferPos++] = 255;
                         }
-                        src+=srcNextLine;
+                        src += srcNextLine;
+                        frameBufferPos += frameBufferPitch;
                     }
                 }
                 break;
