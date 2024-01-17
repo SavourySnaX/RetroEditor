@@ -235,6 +235,7 @@ public class LibRetroPlugin : IDisposable
 
     public LibRetroPlugin(string path)
     {
+        nativeGameInfo = Marshal.AllocHGlobal(Marshal.SizeOf<retro_game_info_ext>());   // we need to own this memory, dispose will free
         keyArray=new bool[RetroKeyArrayCount];
         keyMap=new int[RetroKeyArrayCount];
         InitKeyboardToRetroKeyMap();
@@ -327,11 +328,24 @@ public class LibRetroPlugin : IDisposable
     public void LoadGame(string path)
     {
         var data= File.ReadAllBytes(path);
-        var dataHandle = GCHandle.Alloc(data, GCHandleType.Pinned);
+        InternalLoad(path, data);
+    }
+
+    public void LoadGame(string path, byte[] data)
+    {
+        InternalLoad(path, data);
+    }
+
+    private void InternalLoad(string path, byte[] data)
+    {
+        loadedRom = Marshal.AllocHGlobal(data.Length);
+        loadedRomSize=(UIntPtr)data.Length;
+        Marshal.Copy(data, 0, loadedRom, data.Length);
+
         var info = new retro_game_info
         {
             path = Marshal.StringToHGlobalAnsi(path),
-            data = Marshal.UnsafeAddrOfPinnedArrayElement(data, 0),
+            data = loadedRom,
             size = (UIntPtr)data.Length,
             meta = IntPtr.Zero
         };
@@ -339,11 +353,11 @@ public class LibRetroPlugin : IDisposable
         {
             nativeLoadGame(&info);
         }
-        dataHandle.Free();
 
         // Should be able to allocate our framebuffer here
         var aVInfo=GetSystemAVInfo();
         frameBuffer = new byte[aVInfo.geometry.baseWidth * aVInfo.geometry.baseHeight * 4];
+
     }
 
     public UInt64 GetMemorySize(MemoryKind mem)
@@ -523,9 +537,14 @@ public class LibRetroPlugin : IDisposable
     public void Dispose()
     {
         NativeLibrary.Free(libraryHandle);
+        Marshal.FreeHGlobal(loadedRom);
     }
 
     private bool disableVideo;
+
+    private nint nativeGameInfo;
+    private nint loadedRom;
+    private UIntPtr loadedRomSize;
 
     private PixelFormat pixelFormat;
     private IntPtr libraryHandle;
@@ -604,6 +623,7 @@ public class LibRetroPlugin : IDisposable
         ENVIRONMENT_SET_CONTROLLER_INFO = 35,
         ENVIRONMENT_SET_MEMORY_MAPS = 36,
         ENVIRONMENT_GET_MESSAGE_INTERFACE_VERSION = 59,
+        ENVIRONMENT_GET_GAME_INFO_EXT = 66,
     }
 
     private struct retro_system_info
@@ -694,6 +714,21 @@ public class LibRetroPlugin : IDisposable
         public uint num_types;
     }
 
+    private struct retro_game_info_ext
+    {
+        public IntPtr full_path;
+        public IntPtr archive_path;
+        public IntPtr archive_file;
+        public IntPtr dir;
+        public IntPtr name;
+        public IntPtr ext;
+        public IntPtr meta;
+        public IntPtr data;
+        public UInt64 size;
+        public byte file_in_archive;
+        public byte persistent_data;
+    }
+
     private void InitKeyboardToRetroKeyMap()
     {
         for (int a=(int)KeyboardKey.KEY_A;a<=(int)KeyboardKey.KEY_Z;a++)
@@ -705,6 +740,10 @@ public class LibRetroPlugin : IDisposable
             keyMap[a] = (a - (int)KeyboardKey.KEY_ZERO) + (int)RetroKey.RETROK_0;
         }
         keyMap[(int)KeyboardKey.KEY_SPACE] = (int)RetroKey.RETROK_SPACE;
+        keyMap[(int)KeyboardKey.KEY_UP] = (int)RetroKey.RETROK_UP;
+        keyMap[(int)KeyboardKey.KEY_DOWN] = (int)RetroKey.RETROK_DOWN;
+        keyMap[(int)KeyboardKey.KEY_LEFT] = (int)RetroKey.RETROK_LEFT;
+        keyMap[(int)KeyboardKey.KEY_RIGHT] = (int)RetroKey.RETROK_RIGHT;
     }
 
     private void LogCallback(int level, IntPtr fmt)
@@ -828,13 +867,34 @@ public class LibRetroPlugin : IDisposable
                             len = (UInt64)descriptor.len,
                             addressSpace = Marshal.PtrToStringAnsi(descriptor.addressSpace)
                         };
+                        Console.WriteLine($"MEMORY MAP : {memoryMaps[a].flags}, {memoryMaps[a].ptr}, {memoryMaps[a].offset}, {memoryMaps[a].start}, {memoryMaps[a].select}, {memoryMaps[a].disconnect}, {memoryMaps[a].len}, {memoryMaps[a].addressSpace}");
                     }
-                    return 0;
+                    return 1;
                 }
             case EnvironmentCommand.ENVIRONMENT_GET_MESSAGE_INTERFACE_VERSION:
                 {
                     Marshal.WriteInt32(data, 1);    // We support version 1
 
+                    return 1;
+                }
+            case EnvironmentCommand.ENVIRONMENT_GET_GAME_INFO_EXT:
+                {
+                    var gameInfo = new retro_game_info_ext
+                    {
+                        full_path = Marshal.StringToHGlobalAnsi(""),
+                        archive_path = Marshal.StringToHGlobalAnsi("c:\\work\\editor\\nes\\metroid.nes"),
+                        archive_file = Marshal.StringToHGlobalAnsi("metroid.nes"),
+                        dir = Marshal.StringToHGlobalAnsi("c:\\work\\editor\\nes\\"),
+                        name = Marshal.StringToHGlobalAnsi("metroid"),
+                        ext = Marshal.StringToHGlobalAnsi("nes"),
+                        meta = Marshal.StringToHGlobalAnsi(""),
+                        data = loadedRom,
+                        size = loadedRomSize,
+                        file_in_archive = 1,
+                        persistent_data = 1
+                    };
+                    Marshal.StructureToPtr(gameInfo, nativeGameInfo, false);
+                    Marshal.WriteIntPtr(data, nativeGameInfo);
                     return 1;
                 }
             default:
@@ -860,8 +920,59 @@ public class LibRetroPlugin : IDisposable
     {
     }
 
+    private enum RetroJoyPad
+    {
+        RETRO_DEVICE_ID_JOYPAD_B = 0,
+        RETRO_DEVICE_ID_JOYPAD_Y = 1,
+        RETRO_DEVICE_ID_JOYPAD_SELECT = 2,
+        RETRO_DEVICE_ID_JOYPAD_START = 3,
+        RETRO_DEVICE_ID_JOYPAD_UP = 4,
+        RETRO_DEVICE_ID_JOYPAD_DOWN = 5,
+        RETRO_DEVICE_ID_JOYPAD_LEFT = 6,
+        RETRO_DEVICE_ID_JOYPAD_RIGHT = 7,
+        RETRO_DEVICE_ID_JOYPAD_A = 8,
+        RETRO_DEVICE_ID_JOYPAD_X = 9,
+        RETRO_DEVICE_ID_JOYPAD_L = 10,
+        RETRO_DEVICE_ID_JOYPAD_R = 11,
+        RETRO_DEVICE_ID_JOYPAD_L2 = 12,
+        RETRO_DEVICE_ID_JOYPAD_R2 = 13,
+        RETRO_DEVICE_ID_JOYPAD_L3 = 14,
+        RETRO_DEVICE_ID_JOYPAD_R3 = 15,
+    }
     private short InputStateCallback(uint port, uint device, uint index, uint id)
     {
+        if (device == 1)
+        {
+            // Joypad
+            switch (id)
+            {
+                case (int)RetroJoyPad.RETRO_DEVICE_ID_JOYPAD_B:
+                    return (short)(keyArray[(int)RetroKey.RETROK_x] ? 1 : 0);
+                case (int)RetroJoyPad.RETRO_DEVICE_ID_JOYPAD_Y:
+                    return (short)(keyArray[(int)RetroKey.RETROK_s] ? 1 : 0);
+                case (int)RetroJoyPad.RETRO_DEVICE_ID_JOYPAD_A:
+                    return (short)(keyArray[(int)RetroKey.RETROK_z] ? 1 : 0);
+                case (int)RetroJoyPad.RETRO_DEVICE_ID_JOYPAD_X:
+                    return (short)(keyArray[(int)RetroKey.RETROK_a] ? 1 : 0);
+                case (int)RetroJoyPad.RETRO_DEVICE_ID_JOYPAD_UP:
+                    return (short)(keyArray[(int)RetroKey.RETROK_UP] ? 1 : 0);
+                case (int)RetroJoyPad.RETRO_DEVICE_ID_JOYPAD_DOWN:
+                    return (short)(keyArray[(int)RetroKey.RETROK_DOWN] ? 1 : 0);
+                case (int)RetroJoyPad.RETRO_DEVICE_ID_JOYPAD_LEFT:
+                    return (short)(keyArray[(int)RetroKey.RETROK_LEFT] ? 1 : 0);
+                case (int)RetroJoyPad.RETRO_DEVICE_ID_JOYPAD_RIGHT:
+                    return (short)(keyArray[(int)RetroKey.RETROK_RIGHT] ? 1 : 0);
+                case (int)RetroJoyPad.RETRO_DEVICE_ID_JOYPAD_L:
+                    return (short)(keyArray[(int)RetroKey.RETROK_q] ? 1 : 0);
+                case (int)RetroJoyPad.RETRO_DEVICE_ID_JOYPAD_R:
+                    return (short)(keyArray[(int)RetroKey.RETROK_w] ? 1 : 0);
+                case (int)RetroJoyPad.RETRO_DEVICE_ID_JOYPAD_SELECT:
+                    return (short)(keyArray[(int)RetroKey.RETROK_n] ? 1 : 0);
+                case (int)RetroJoyPad.RETRO_DEVICE_ID_JOYPAD_START:
+                    return (short)(keyArray[(int)RetroKey.RETROK_m] ? 1 : 0);
+            }
+        }
+
         // return results for inputs requested here
         if (device == 3 && id < RetroKeyArrayCount)
         {
