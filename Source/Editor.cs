@@ -69,6 +69,10 @@ class Editor : IEditor
         pluginWindow.Initialise();
         pluginWindow.OtherStuff();
         AddWindow(pluginWindow);
+        pluginWindow = new JSWTest(LibRetroPluginFactory.Create("C:\\zidoo_flash\\retroarch\\cores\\genesis_plus_gx_libretro.dll"), "Genesis");
+        pluginWindow.Initialise();
+        pluginWindow.OtherStuff();
+        AddWindow(pluginWindow);
 
         while (!Raylib.WindowShouldClose())
         {
