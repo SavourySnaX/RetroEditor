@@ -59,8 +59,15 @@ class Editor : IEditor
         totalTime=0.0f;
         
         // Testing
-        var pluginWindow = new JSWTest(LibRetroPluginFactory.Create("C:\\work\\spectrum\\fuse-libretro\\fuse_libretro.windows_x86_64.dll"));
+
+        var pluginWindow = new JSWTest(LibRetroPluginFactory.Create("C:\\zidoo_flash\\retroarch\\cores\\fuse_libretro.dll"), "Fuse");
         pluginWindow.Initialise();
+        pluginWindow.OtherStuff();
+        AddWindow(pluginWindow);
+        pluginWindow = new JSWTest(LibRetroPluginFactory.Create("C:\\zidoo_flash\\retroarch\\cores\\fceumm_libretro.dll"), "FCEU");
+        //var pluginWindow = new JSWTest(LibRetroPluginFactory.Create("C:\\work\\editor\\nes\\libretro-fceumm\\fceumm_libretro.dll"), "FCEU");
+        pluginWindow.Initialise();
+        pluginWindow.OtherStuff();
         AddWindow(pluginWindow);
 
         while (!Raylib.WindowShouldClose())
