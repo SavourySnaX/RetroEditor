@@ -1,3 +1,4 @@
+
 public interface IWindow
 {
     bool Initialise();
@@ -8,4 +9,9 @@ public interface IWindow
     bool Draw();
 
     void Close();
+}
+
+internal interface IEditorWindow : IWindow
+{
+    bool SetEditor(Editor editor);
 }

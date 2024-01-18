@@ -1,31 +1,6 @@
 using System.Runtime.InteropServices;
 using Raylib_cs;
 
-public static class LibRetroPluginFactory
-{
-    public static LibRetroPlugin? Create(string path,string fname)
-    {
-        File.Copy($"C:\\zidoo_flash\\retroarch\\cores\\{path}.dll", fname, true);
-        // In the future, will track the plugins loaded and return the same instance if already loaded - assuming
-        //I can make it work.
-
-        // also in the future, should not be looking on my drive, but in a cores folder, and pull the plugin from the net
-        //if missing
-
-        // also needs to use correct extension etc
-        try 
-        {
-            return new LibRetroPlugin(fname);
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine($"Failed to load plugin {path}: {e.Message}");
-            return null;
-        }
-    }
-
-}
-
 public class LibRetroPlugin : IDisposable
 {
     public enum MemoryKind

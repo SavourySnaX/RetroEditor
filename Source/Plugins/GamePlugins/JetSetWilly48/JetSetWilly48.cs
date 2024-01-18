@@ -1,5 +1,7 @@
 
 
+using System.Security.Cryptography;
+
 public class JetSetWilly48 : IRetroPlugin, IImages, ITileMaps
 {
     private byte[] JetSetWilly48Tap = new byte[] { 78, 94, 213, 56, 235, 159, 86, 89, 143, 175, 248, 41, 6, 68, 201, 215 };
@@ -12,16 +14,21 @@ public class JetSetWilly48 : IRetroPlugin, IImages, ITileMaps
         rom = new NullRomPlugin();
     }
 
-    public bool CanHandle(byte[] md5, byte[] bytes, string filename)
+    public bool CanHandle(string filename)
     {
         // One issue with this approach, is we can't generically load hacks of the game..
         //But perhaps that doesn't matter...
         // MD5 Of Jet Set Willy 48K
-        
+        if (!File.Exists(filename))
+        {
+            return false;
+        }
+        var md5 = MD5.Create().ComputeHash(File.ReadAllBytes(filename));
+
         return JetSetWilly48Tap.SequenceEqual(md5);
     }
 
-    public bool Init(IEditor editorInterface, byte[] md5, byte[] bytes, string filename, out LibRetroPlugin? plugin)
+    public bool Init(IEditor editorInterface, ProjectSettings projectSettings, out LibRetroPlugin? plugin)
     {
         plugin = null;
         var spectrumRomInterface = editorInterface.GetRomInstance("ZXSpectrum");
@@ -30,12 +37,33 @@ public class JetSetWilly48 : IRetroPlugin, IImages, ITileMaps
             return false;
         }
         rom = spectrumRomInterface;
-        plugin=rom.Initialise();
+        plugin=rom.Initialise(projectSettings, editorInterface);
         if (plugin==null)
         {
             return false;
         }
-        if (rom.Load(filename))
+        if (rom.InitialLoad(projectSettings))
+        {
+            return true;
+        }
+        return false;
+    }
+
+    public bool Open(IEditor editorInterface, ProjectSettings projectSettings, out LibRetroPlugin? plugin)
+    {
+        plugin = null;
+        var spectrumRomInterface = editorInterface.GetRomInstance("ZXSpectrum");
+        if (spectrumRomInterface==null)
+        {
+            return false;
+        }
+        rom = spectrumRomInterface;
+        plugin=rom.Initialise(projectSettings, editorInterface);
+        if (plugin==null)
+        {
+            return false;
+        }
+        if (rom.Reload(projectSettings))
         {
             return true;
         }
@@ -49,7 +77,7 @@ public class JetSetWilly48 : IRetroPlugin, IImages, ITileMaps
 
     public void Close()
     {
-        rom.Save("C:\\work\\editor\\jsw_patched.tap","TAP");
+        //rom.Save("C:\\work\\editor\\jsw_patched.tap","TAP");
     }
 
     public IImages GetImageInterface()

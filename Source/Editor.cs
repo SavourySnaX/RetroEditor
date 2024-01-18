@@ -1,10 +1,11 @@
 using Raylib_cs;
 using rlImGui_cs;
 using ImGuiNET;
-using System.Diagnostics;
 using System.Security.Cryptography;
+using System.Text.Json;
+using System.Runtime.InteropServices;
 
-class Editor : IEditor
+internal class Editor : IEditor
 {
     private Dictionary<string, Type> romPlugins;
     private IRetroPlugin[] plugins;
@@ -12,6 +13,25 @@ class Editor : IEditor
 
     private List<IWindow> activeWindows;
 
+    internal class EditorSettings
+    {
+        public string ProjectLocation { get; set;}
+        public string LastImportedLocation { get; set;}
+        public string RetroCoreFolder { get; set;}
+
+        public EditorSettings()
+        {
+            ProjectLocation = Path.Combine(Directory.GetCurrentDirectory(), "Projects");
+            RetroCoreFolder = Path.Combine(Directory.GetCurrentDirectory(), "Data");
+            LastImportedLocation = "";
+        }
+    }
+
+    private EditorSettings settings;
+
+    internal EditorSettings Settings => settings;
+
+    internal IEnumerable<IRetroPlugin> Plugins => plugins;
 
     public Editor(IRetroPlugin[] plugins, IRomPlugin[] romPlugins)
     {
@@ -29,6 +49,14 @@ class Editor : IEditor
             }
         }
         activeWindows = new List<IWindow>();
+
+        settings = new EditorSettings();
+
+        if (File.Exists("settings`json"))
+        {
+            var json = File.ReadAllText("settings.json");
+            settings = JsonSerializer.Deserialize<EditorSettings>(json);
+        }
     }
 
 
@@ -53,17 +81,18 @@ class Editor : IEditor
 
         foreach (var arg in args)
         {
-            OpenFile(arg);
+            OpenProject(arg);
         }
 
         totalTime=0.0f;
         
         // Testing
+        /*
         var pluginWindow = new JSWTest(LibRetroPluginFactory.Create("fuse_libretro","C:\\work\\editor\\RetroEditor\\data\\1.dll"), "Flibble");
         pluginWindow.Initialise();
         pluginWindow.OtherStuff();
         pluginWindow.InitWindow();
-        AddWindow(pluginWindow);
+        AddWindow(pluginWindow);*/
         /*
         pluginWindow = new JSWTest(LibRetroPluginFactory.Create("C:\\zidoo_flash\\retroarch\\cores\\fceumm_libretro.dll"), "FCEU");
         //var pluginWindow = new JSWTest(LibRetroPluginFactory.Create("C:\\work\\editor\\nes\\libretro-fceumm\\fceumm_libretro.dll"), "FCEU");
@@ -106,6 +135,9 @@ class Editor : IEditor
         {
             active.Close();
         }
+
+        var json = JsonSerializer.Serialize<EditorSettings>(settings, new JsonSerializerOptions { WriteIndented = true });
+        File.WriteAllText("settings.json", json);
     }
 
     private void AddWindow(IWindow window)
@@ -115,39 +147,27 @@ class Editor : IEditor
         priorityQueue.Enqueue((window, newTime),newTime);
     }
 
-    private void OpenFile(string path)
-    {
-        var bytes = File.ReadAllBytes(path);
-        var md5 = MD5.Create().ComputeHash(bytes);
-        foreach (var plugin in plugins)
-        {
-            if (plugin.CanHandle(md5, bytes, path))
-            {
-                if (plugin.Init(this, md5, bytes, path, out var retroPlugin))
-                {
-                    var pluginWindow = new JSWTest(retroPlugin, "Fuse");
-                    pluginWindow.InitWindow();
-                    AddWindow(pluginWindow);
-                    activePlugins.Add(plugin);
-                }
-                break;
-            }
-        }
-    }
-
     private void DrawUI()
     {
         if (ImGui.BeginMainMenuBar())
         {
             if (ImGui.BeginMenu("File"))
             {
-                if (ImGui.MenuItem("Open"))
+                if (ImGui.MenuItem("Create New Project"))
                 {
-                    var result = NativeFileDialogSharp.Dialog.FileOpen();
+                    var window = new NewProjectDialog();
+                    window.SetEditor(this);
+                    window.Initialise();
+                    AddWindow(window);
+                }
+                ImGui.Separator();
+                if (ImGui.MenuItem("Open Existing Project"))
+                {
+                    var result = NativeFileDialogSharp.Dialog.FolderPicker();
 
                     if (result.IsOk)
                     {
-                        OpenFile(result.Path);
+                        OpenProject(result.Path);
                     }
                 }
                 ImGui.EndMenu();
@@ -255,4 +275,131 @@ class Editor : IEditor
         }
         return null;
     }
+
+    private void OpenProject(string projectPath)
+    {
+        // Todo Progress Dialog
+        var editorPath = Path.Combine(projectPath, "Editor");
+        if (!Directory.Exists(editorPath))
+        {
+            return;
+        }
+        var projectName = projectPath.Split(Path.DirectorySeparatorChar).Last();
+        var jsonPath = Path.Combine(editorPath, $"{projectName}.json");
+        var projectSettings = new ProjectSettings(projectPath,"","");
+        projectSettings.Load(jsonPath);
+
+        // Get Project File Settings
+        foreach (var plugin in plugins)
+        {
+            if (plugin.Name==projectSettings.RetroPluginName)
+            {
+                // Next we need to perform the initial import and save state, then we can begin editing (the player window will open)
+                if (!plugin.Open(this, projectSettings, out var retroPluginInstance))
+                {
+                    return;
+                }
+                if (retroPluginInstance == null)
+                {
+                    return;
+                }
+                var pluginWindow = new JSWTest(retroPluginInstance, projectName);
+                pluginWindow.InitWindow();
+                AddWindow(pluginWindow);
+                activePlugins.Add(plugin);
+            }
+        }
+    }
+
+
+    internal bool CreateNewProject(string projectName, string projectLocation, string importFile, IRetroPlugin retroPlugin)
+    {
+        // Todo Progress Dialog
+        var projectPath = Path.Combine(projectLocation, projectName);
+        Directory.CreateDirectory(projectPath);
+        Directory.CreateDirectory(Path.Combine(projectPath, "LibRetro"));
+        Directory.CreateDirectory(Path.Combine(projectPath, "Editor"));
+        var projectFile = Path.Combine(projectPath, "Editor", projectName + ".json");
+
+        // Generate hash for the plugin
+        var hash = MD5.Create().ComputeHash(File.ReadAllBytes(importFile));
+        var retroCoreName = string.Concat(hash.Select(x => x.ToString("X2")));
+        var retroPluginName = retroPlugin.Name;
+
+        var projectSettings = new ProjectSettings(projectPath, retroCoreName, retroPluginName);
+        projectSettings.Save(projectFile);
+        File.Copy(importFile, GetRomPath(projectSettings), true);
+
+        // Next we need to perform the initial import and save state, then we can begin editing (the player window will open)
+        if (!retroPlugin.Init(this, projectSettings, out var retroPluginInstance))
+        {
+            return false;
+        }
+        if (retroPluginInstance == null)
+        {
+            return false;
+        }
+        var pluginWindow = new JSWTest(retroPluginInstance, projectName);
+        pluginWindow.InitWindow();
+        AddWindow(pluginWindow);
+        activePlugins.Add(retroPlugin);
+        return true;
+    }
+
+    public void SaveState(byte[] state, ProjectSettings projectSettings)
+    {
+        var stateFile = Path.Combine(projectSettings.projectPath, "Editor", $"{projectSettings.RetroCoreName}_state.bin");
+        File.WriteAllBytes(stateFile, state);
+    }
+
+    public byte[] LoadState(ProjectSettings projectSettings)
+    {
+        var stateFile = Path.Combine(projectSettings.projectPath, "Editor", $"{projectSettings.RetroCoreName}_state.bin");
+        if (!File.Exists(stateFile))
+        {
+            return Array.Empty<byte>();
+        }
+        return File.ReadAllBytes(stateFile);
+    }
+
+    public string GetRomPath(ProjectSettings projectSettings)
+    {
+        return Path.Combine(projectSettings.projectPath, "Editor", $"{projectSettings.RetroCoreName}_rom.bin");
+    }
+
+    public LibRetroPlugin? GetLibRetroInstance(string pluginName, ProjectSettings projectSettings)
+    {
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        {
+            return null;
+        }
+        if (!RuntimeInformation.OSArchitecture.Equals(Architecture.X64))
+        {
+            return null;
+        }
+
+        var sourcePlugin = Path.Combine(settings.RetroCoreFolder, "win", "x64", $"{pluginName}.dll");
+        var destinationPlugin = Path.Combine(projectSettings.projectPath, "LibRetro", $"{projectSettings.RetroCoreName}_win_x64.dll");
+
+        if (!File.Exists(destinationPlugin))
+        {
+            if (!File.Exists(sourcePlugin))
+            {
+                // TODO DOWNLOAD
+            }
+
+            File.Copy(sourcePlugin, destinationPlugin, true);
+        }
+
+        try 
+        {
+            return new LibRetroPlugin(destinationPlugin);
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine($"Failed to load plugin {pluginName} from {destinationPlugin}: {e.Message}");
+            return null;
+        }
+    }
+
 }

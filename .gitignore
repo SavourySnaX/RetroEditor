@@ -5,3 +5,5 @@ obj/**
 *.sln
 *.ini
 Data/**
+Projects/**
+settings.json
