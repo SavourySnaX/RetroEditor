@@ -9,21 +9,31 @@ internal class Editor : IEditor
 {
     private Dictionary<string, Type> romPlugins;
     private IRetroPlugin[] plugins;
-    private List<IRetroPlugin> activePlugins;
+    private List<ActiveProject> activeProjects;   // Needs to become active projects, since we now allow multiple of the same plugin
 
     private List<IWindow> activeWindows;
+
+    internal struct ActiveProject
+    {
+        public IRetroPlugin Plugin;
+        public ProjectSettings Settings;
+
+        public string Name { get; internal set; }
+    }
 
     internal class EditorSettings
     {
         public string ProjectLocation { get; set;}
         public string LastImportedLocation { get; set;}
         public string RetroCoreFolder { get; set;}
+        public List<string> RecentProjects { get; set;}
 
         public EditorSettings()
         {
             ProjectLocation = Path.Combine(Directory.GetCurrentDirectory(), "Projects");
             RetroCoreFolder = Path.Combine(Directory.GetCurrentDirectory(), "Data");
             LastImportedLocation = "";
+            RecentProjects = new List<string>();
         }
     }
 
@@ -37,7 +47,7 @@ internal class Editor : IEditor
     {
         this.plugins = plugins;
 
-        this.activePlugins = new List<IRetroPlugin>();
+        this.activeProjects = new List<ActiveProject>();
         this.romPlugins = new Dictionary<string, Type>();
         foreach (var plugin in romPlugins)
         {
@@ -52,7 +62,7 @@ internal class Editor : IEditor
 
         settings = new EditorSettings();
 
-        if (File.Exists("settings`json"))
+        if (File.Exists("settings.json"))
         {
             var json = File.ReadAllText("settings.json");
             settings = JsonSerializer.Deserialize<EditorSettings>(json);
@@ -131,9 +141,9 @@ internal class Editor : IEditor
         }
 
         activeWindows.Clear();
-        foreach (var active in activePlugins)
+        foreach (var active in activeProjects)
         {
-            active.Close();
+            active.Plugin.Close();
         }
 
         var json = JsonSerializer.Serialize<EditorSettings>(settings, new JsonSerializerOptions { WriteIndented = true });
@@ -170,6 +180,23 @@ internal class Editor : IEditor
                         OpenProject(result.Path);
                     }
                 }
+                if (ImGui.BeginMenu("Open Recent Project"))
+                {
+                    string toOpen = "";
+                    foreach (var recent in settings.RecentProjects)
+                    {
+                        if (ImGui.MenuItem(recent))
+                        {
+                            toOpen=recent;
+                            break;
+                        }
+                    }
+                    if (toOpen != "")
+                    {
+                        OpenProject(toOpen);
+                    }
+                    ImGui.EndMenu();
+                }
                 ImGui.EndMenu();
             }
             if (ImGui.BeginMenu("Edit"))
@@ -191,11 +218,11 @@ internal class Editor : IEditor
             }
             if (ImGui.BeginMenu("Window"))
             {
-                foreach (var active in activePlugins)
+                foreach (var active in activeProjects)
                 {
                     if (ImGui.BeginMenu(active.Name))
                     {
-                        var imageInterface = active.GetImageInterface();
+                        var imageInterface = active.Plugin.GetImageInterface();
                         if (imageInterface != null)
                         {
                             if (ImGui.BeginMenu("Image Viewer"))
@@ -206,7 +233,7 @@ internal class Editor : IEditor
                                     var mapName = map.Name;
                                     if (ImGui.MenuItem(mapName))
                                     {
-                                        var window = new ImageWindow(active, map);
+                                        var window = new ImageWindow(active.Plugin, map);
                                         window.Initialise();
                                         AddWindow(window);
                                     }
@@ -214,7 +241,7 @@ internal class Editor : IEditor
                                 ImGui.EndMenu();
                             }
                         }
-                        var tileMapInterface = active.GetTileMapInterface();
+                        var tileMapInterface = active.Plugin.GetTileMapInterface();
                         if (tileMapInterface != null)
                         {
                             if (ImGui.BeginMenu("Tile Map Editor"))
@@ -225,7 +252,7 @@ internal class Editor : IEditor
                                     var mapName = map.Name;
                                     if (ImGui.MenuItem(mapName))
                                     {
-                                        var window = new TileMapEditorWindow(active, map);
+                                        var window = new TileMapEditorWindow(active.Plugin, map);
                                         window.Initialise();
                                         AddWindow(window);
                                     }
@@ -284,6 +311,14 @@ internal class Editor : IEditor
         {
             return;
         }
+        foreach (var activeProject in activeProjects)
+        {
+            if (activeProject.Settings.projectPath == projectPath)
+            {
+                return;
+            }
+        }
+
         var projectName = projectPath.Split(Path.DirectorySeparatorChar).Last();
         var jsonPath = Path.Combine(editorPath, $"{projectName}.json");
         var projectSettings = new ProjectSettings(projectPath,"","");
@@ -306,7 +341,15 @@ internal class Editor : IEditor
                 var pluginWindow = new JSWTest(retroPluginInstance, projectName);
                 pluginWindow.InitWindow();
                 AddWindow(pluginWindow);
-                activePlugins.Add(plugin);
+                activeProjects.Add(new ActiveProject { Plugin = plugin, Settings = projectSettings, Name = projectName });
+                if (!settings.RecentProjects.Contains(projectPath))
+                {
+                    if (settings.RecentProjects.Count>20)
+                    {
+                        settings.RecentProjects.RemoveAt(0);
+                    }
+                    settings.RecentProjects.Add(projectPath);
+                }
             }
         }
     }
@@ -342,7 +385,15 @@ internal class Editor : IEditor
         var pluginWindow = new JSWTest(retroPluginInstance, projectName);
         pluginWindow.InitWindow();
         AddWindow(pluginWindow);
-        activePlugins.Add(retroPlugin);
+        activeProjects.Add(new ActiveProject { Plugin = retroPlugin, Settings = projectSettings, Name = projectName });
+        if (!settings.RecentProjects.Contains(projectPath))
+        {
+            if (settings.RecentProjects.Count > 20)
+            {
+                settings.RecentProjects.RemoveAt(0);
+            }
+            settings.RecentProjects.Add(projectPath);
+        }
         return true;
     }
 

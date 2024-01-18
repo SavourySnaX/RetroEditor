@@ -4,7 +4,10 @@ using System.Security.Cryptography;
 
 public class JetSetWilly48 : IRetroPlugin, IImages, ITileMaps
 {
-    private byte[] JetSetWilly48Tap = new byte[] { 78, 94, 213, 56, 235, 159, 86, 89, 143, 175, 248, 41, 6, 68, 201, 215 };
+    private byte[][] supportedMD5s = new byte[][] {
+        new byte[] { 78, 94, 213, 56, 235, 159, 86, 89, 143, 175, 248, 41, 6, 68, 201, 215 },   // JetSetWillyTap
+        new byte[] { 36, 10, 231, 145, 153, 106, 87, 148, 249, 125, 144, 170, 8, 0, 78, 146 },  // JetSetWillyTzx
+    };
 
     public string Name => "Jet Set Willy 48K";
     IRomPlugin rom;
@@ -25,7 +28,14 @@ public class JetSetWilly48 : IRetroPlugin, IImages, ITileMaps
         }
         var md5 = MD5.Create().ComputeHash(File.ReadAllBytes(filename));
 
-        return JetSetWilly48Tap.SequenceEqual(md5);
+        foreach (var supported in supportedMD5s)
+        {
+            if (supported.SequenceEqual(md5))
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     public bool Init(IEditor editorInterface, ProjectSettings projectSettings, out LibRetroPlugin? plugin)
