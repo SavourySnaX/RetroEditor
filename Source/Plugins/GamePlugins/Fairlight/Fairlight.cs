@@ -1,4 +1,4 @@
-
+/*
 public class Fairlight : IRetroPlugin, IImages
 {
     // This is MD5 of a ram dump of the game, will update with tap/tzx version later 
@@ -604,3 +604,4 @@ public class FairlightImage : IImage
         }
     }
 }
+*/

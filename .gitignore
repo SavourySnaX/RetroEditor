@@ -4,3 +4,4 @@ obj/**
 *.swp
 *.sln
 *.ini
+Data/**

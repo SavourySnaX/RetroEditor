@@ -1,4 +1,4 @@
-
+/*
 public class PhantasyStar2 : IRetroPlugin, IImages
 {
     private byte[] PhantasyStarUSEURev2 = new byte[] { 15, 163, 139, 18, 207, 10, 176, 22, 61, 134, 86, 0, 172, 115, 26, 154 };
@@ -326,3 +326,4 @@ public class PhantasyStar2Map : IImage
     }
     
 }
+*/
