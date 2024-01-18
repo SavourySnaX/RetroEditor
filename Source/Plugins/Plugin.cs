@@ -1,3 +1,4 @@
+using System.Text.Json;
 
 public struct Pixel
 {
@@ -18,9 +19,10 @@ public interface IRomPlugin
 {
     static string? Name { get; }
 
-    public LibRetroPlugin? Initialise();
+    public LibRetroPlugin? Initialise(ProjectSettings projectSettings, IEditor editorInterface);
 
-    bool Load(string filename);
+    bool InitialLoad(ProjectSettings settings);
+    bool Reload(ProjectSettings settings);
     bool Save(string filename, string kind);
 
     byte ReadByte(uint address);
@@ -118,7 +120,60 @@ public interface ITileMaps
 public interface IEditor
 {
     public IRomPlugin? GetRomInstance(string romKind);
+    public LibRetroPlugin? GetLibRetroInstance(string pluginName, ProjectSettings settings);
+    public byte[] LoadState(ProjectSettings settings);
+    public void SaveState(byte[] state, ProjectSettings settings);
+    public string GetRomPath(ProjectSettings settings);
 }
+
+public sealed class ProjectSettings
+{
+    public sealed class SerializedSettings
+    {
+        public SerializedSettings(string version, string retroCoreName, string retroPluginName)
+        {
+            Version = version;
+            RetroCoreName = retroCoreName;
+            RetroPluginName = retroPluginName;
+        }
+        public string Version { get; set; }
+        public string RetroCoreName { get; set; }
+        public string RetroPluginName { get; set; }
+    }
+    
+    public ProjectSettings(string projectPath, string retroCoreName, string retroPluginName)
+    {
+        this.serializedSettings = new SerializedSettings("0.0.1", retroCoreName, retroPluginName);
+        this.projectPath = projectPath;
+    }
+
+    internal void Save(string projectFile)
+    {
+        var json = JsonSerializer.Serialize(serializedSettings, new JsonSerializerOptions { WriteIndented = true });
+        File.WriteAllText(projectFile, json);
+
+    }
+    internal void Load(string projectFile)
+    {
+        var temp = JsonSerializer.Deserialize<SerializedSettings>(File.ReadAllText(projectFile));
+        if (temp != null)
+        {
+            if (temp.Version != serializedSettings.Version)
+            {
+                // TODO - upgrade
+            }
+            serializedSettings = temp;
+        }
+    }
+
+    internal SerializedSettings serializedSettings;
+
+    public string Version => serializedSettings.Version;
+    public string RetroCoreName => serializedSettings.RetroCoreName;
+    public string RetroPluginName => serializedSettings.RetroPluginName;
+    internal readonly string projectPath;
+}
+
 
 
 public interface IRetroPlugin
@@ -130,10 +185,13 @@ public interface IRetroPlugin
     /// <param name="bytes">bytes of the input - in case plugin wishes to use alternate method of identifying supported file</param>
     /// <param name="filename">filename - in case plugin wishes to use alternate method of identifying supported file</param>
     /// <returns></returns>
-    bool CanHandle(byte[] md5, byte[] bytes, string filename);
+    bool CanHandle(string filename);
 
-    // for now just build all the plugin functionality into here, split it later
-    bool Init(IEditor editor,byte[] md5, byte[] bytes, string filename, out LibRetroPlugin? plugin);
+    // Called when creating project
+    bool Init(IEditor editor, ProjectSettings project, out LibRetroPlugin? plugin);
+
+    // Called when opening an existing project
+    bool Open(IEditor editorInterface, ProjectSettings projectSettings, out LibRetroPlugin? plugin);
 
     IImages? GetImageInterface() { return null; }
     ITileMaps? GetTileMapInterface() { return null; }
@@ -146,12 +204,12 @@ public interface IRetroPlugin
 // Null Plugins
 public class NullRomPlugin : IRomPlugin
 {
-    public LibRetroPlugin? Initialise()
+    public LibRetroPlugin? Initialise(ProjectSettings projectSettings, IEditor editorInterface)
     {
         return null;
     }
 
-    public bool Load(string filename)
+    public bool InitialLoad(ProjectSettings settings)
     {
         return false;
     }
@@ -169,6 +227,11 @@ public class NullRomPlugin : IRomPlugin
     public ushort ReadWord(uint address)
     {
         return 0;
+    }
+
+    public bool Reload(ProjectSettings settings)
+    {
+        return false;
     }
 
     public bool Save(string filename, string kind)

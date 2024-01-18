@@ -6,14 +6,22 @@ class ZXSpectrum : IRomPlugin
 {
     public static string Name => "ZXSpectrum";
 
-    private ZXSpectrumTape.Tape tape;   // For saving
+    private Tape tape;   // For saving
     private LibRetroPlugin plugin;      // For loading and testing
     private PlayableRom playableRom;    // For loading and testing
+    private IEditor editorInterface;
 
-    public LibRetroPlugin? Initialise()
+    private byte[] state;
+
+    public LibRetroPlugin? Initialise(ProjectSettings projectSettings, IEditor editorInterface)
     {
-        plugin = LibRetroPluginFactory.Create("fuse_libretro","C:\\work\\editor\\RetroEditor\\data\\2.dll");
-
+        this.editorInterface = editorInterface;
+        var plugin = editorInterface.GetLibRetroInstance("fuse_libretro", projectSettings); 
+        if (plugin == null)
+        {
+            return null;
+        }
+        this.plugin = plugin;
         if (plugin.Version() != 1)
         {
             return null;
@@ -25,9 +33,9 @@ class ZXSpectrum : IRomPlugin
         return plugin;
     }
 
-    public bool Load(string filename)
+    public bool InitialLoad(ProjectSettings settings)
     {
-        plugin.LoadGame(filename);//"c:\\work\\editor\\jsw\\Jet Set Willy (1984)(Software Projects).tzx");
+        plugin.LoadGame(editorInterface.GetRomPath(settings));
 
             // Load to a defined point (because we are loading from tape)
         plugin.AutoLoad(() =>
@@ -39,31 +47,49 @@ class ZXSpectrum : IRomPlugin
 
         // We should save snapshot, so we don't need to load from tape again...
         var saveSize = plugin.GetSaveStateSize();
-        var state = new byte[saveSize];
+        state = new byte[saveSize];
         plugin.SaveState(state);
+        editorInterface.SaveState(state, settings);
 
-    /// TODO MOVE
-            // FROM HERE
-            plugin.RestoreState(state);
+        TODOApplyJSW();
 
-            // Kill copy protection code, and jump to screen to test...
-            plugin.SetMemory(0x8785, new byte[] { 0xC9 });          // Store return to force out of cheat code key wait
-            plugin.SetMemory(0x872C, new byte[] { 0xCA, 0x87 });    // Jump to game start
-            plugin.SetMemory(0x88AC, new byte[] { 0xFC, 0x88 });    // start game
-
-            byte yPos = 13 * 8;
-            byte xPos = 1 * 8;
-            byte roomNumber = 0x22;
-
-            ushort attributeAddress = (ushort)(0x5C00 + ((yPos / 8) * 32) + (xPos / 8));
-
-            plugin.SetMemory(0x87E6, new byte[] { (byte)(yPos * 2) });          // willys y cordinate
-            plugin.SetMemory(0x87F0, new byte[] { (byte)(attributeAddress & 0xFF), (byte)(attributeAddress >> 8) });    // willys cordinate
-            plugin.SetMemory(0x87EB, new byte[] { (byte)(roomNumber) });
-            // TO HERE
         return true;
     }
 
+    private void TODOApplyJSW()
+    {
+        /// TODO MOVE to JSW
+        // FROM HERE
+        plugin.RestoreState(state);
+
+        // Kill copy protection code, and jump to screen to test...
+        plugin.SetMemory(0x8785, new byte[] { 0xC9 });          // Store return to force out of cheat code key wait
+        plugin.SetMemory(0x872C, new byte[] { 0xCA, 0x87 });    // Jump to game start
+        plugin.SetMemory(0x88AC, new byte[] { 0xFC, 0x88 });    // start game
+
+        byte yPos = 13 * 8;
+        byte xPos = 1 * 8;
+        byte roomNumber = 0x22;
+
+        ushort attributeAddress = (ushort)(0x5C00 + ((yPos / 8) * 32) + (xPos / 8));
+
+        plugin.SetMemory(0x87E6, new byte[] { (byte)(yPos * 2) });          // willys y cordinate
+        plugin.SetMemory(0x87F0, new byte[] { (byte)(attributeAddress & 0xFF), (byte)(attributeAddress >> 8) });    // willys cordinate
+        plugin.SetMemory(0x87EB, new byte[] { (byte)(roomNumber) });
+        // TO HERE
+
+    }
+
+    public bool Reload(ProjectSettings settings)
+    {
+        plugin.LoadGame(editorInterface.GetRomPath(settings));
+
+        state = editorInterface.LoadState(settings);
+
+        TODOApplyJSW();
+
+        return true;
+    }
 
     public void something()
     {
