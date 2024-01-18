@@ -21,15 +21,21 @@ public class JetSetWilly48 : IRetroPlugin, IImages, ITileMaps
         return JetSetWilly48Tap.SequenceEqual(md5);
     }
 
-    public bool Init(IEditor editorInterface, byte[] md5, byte[] bytes, string filename)
+    public bool Init(IEditor editorInterface, byte[] md5, byte[] bytes, string filename, out LibRetroPlugin? plugin)
     {
+        plugin = null;
         var spectrumRomInterface = editorInterface.GetRomInstance("ZXSpectrum");
         if (spectrumRomInterface==null)
         {
             return false;
         }
         rom = spectrumRomInterface;
-        if (rom.Load(bytes,"TAP"))
+        plugin=rom.Initialise();
+        if (plugin==null)
+        {
+            return false;
+        }
+        if (rom.Load(filename))
         {
             return true;
         }
@@ -152,6 +158,12 @@ public class JetSetWilly48 : IRetroPlugin, IImages, ITileMaps
         return ropeTable;
     }
 
+    public byte[] GetWilly()
+    {
+        var willy = rom.ReadBytes(0x9D00, 256);
+        return willy;
+    
+    }
 }
 
 public class JetSetWillyMap : IImage
@@ -191,6 +203,28 @@ public class JetSetWillyMap : IImage
     {
         return RenderMap(seconds);
     }
+
+    public Pixel[] GetSpriteData(float seconds)
+    {
+        var helper = new ZXSpectrum48ImageHelper(Width, Height);
+
+        helper.Clear(0x07);
+
+        var willy = main.GetWilly();
+
+        for (uint y=0;y<16;y++)
+        {
+            for (uint x=0;x<2;x++)
+            {
+                var gfx = willy[y * 2 + x];
+                helper.Draw8BitsNoAttribute(x * 8, y, gfx, false);
+            }
+        }
+
+        return helper.Render(seconds);
+        //return RenderMap(seconds);
+    }
+
 
     static readonly Pixel[] palette = new Pixel[]
     {
@@ -734,6 +768,9 @@ public class JetSetWilly48TileMap : ITileMap
         {
             tiles[a].Update(GetTile(a));
         }
+        
+        var data = layer.GetModifiedMap();
+        main.SetMap(mapIndex, data);
     }
 
     public void Close()

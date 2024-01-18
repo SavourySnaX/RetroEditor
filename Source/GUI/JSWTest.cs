@@ -36,13 +36,25 @@ public class JSWTest : IWindow
         if (name == "Fuse")
         {
             plugin.LoadGame("c:\\work\\editor\\jsw\\Jet Set Willy (1984)(Software Projects).tzx");
+            //plugin.LoadGame("C:\\work\\editor\\Jet Set Willy (1984)(Software Projects).tap");
 
             // Load to a defined point (because we are loading from tape)
             plugin.AutoLoad(() =>
             {
-                var memory = plugin.GetMemory(0x4000, 0x1800);  // Load until screen memory contains the pattern...
+                var memory = plugin.GetMemory(0x5800, 768);  // Load until attribute memory contains this pattern (so we match any colour code request)
                 var hash = MD5.Create().ComputeHash(memory);
-                return hash.SequenceEqual(screenHash);
+                return hash.SequenceEqual(jswAutoLoadHash);
+            });
+        }
+        else if (name == "Flibble")
+        {
+            plugin.LoadGame("C:\\work\\editor\\rollercoaster\\RollerCoaster.tzx");
+            
+            plugin.AutoLoad(() =>
+            {
+                var memory = plugin.GetMemory(0x4000, 0x800);  // Load until first third of screen contains title bitmap
+                var hash = MD5.Create().ComputeHash(memory);
+                return hash.SequenceEqual(rollerCoasterAutoLoadHash);
             });
         }
         else if (name == "FCEU")
@@ -96,21 +108,7 @@ public class JSWTest : IWindow
         var state = new byte[saveSize];
         plugin.SaveState(state);
 
-        aVInfo = plugin.GetSystemAVInfo();
-        frameHeight= aVInfo.geometry.maxHeight;
-        frameWidth = aVInfo.geometry.maxWidth;
-        var image = Raylib.GenImageColor((int)aVInfo.geometry.maxWidth, (int)aVInfo.geometry.maxHeight, Color.BLACK);
-        image = new Image
-        {
-            Width = (int)aVInfo.geometry.maxWidth,
-            Height = (int)aVInfo.geometry.maxHeight,
-            Mipmaps = 1,
-            Format = PixelFormat.PIXELFORMAT_UNCOMPRESSED_R8G8B8A8
-        };
-
-        bitmap = Raylib.LoadTextureFromImage(image);
-
-        if (name == "Fuse")
+        if (name == "1Fuse")
         {
             // FROM HERE
             plugin.RestoreState(state);
@@ -134,7 +132,25 @@ public class JSWTest : IWindow
         return true;
     }
 
-    public readonly byte[] screenHash = { 17, 6, 168, 144, 11, 145, 236, 80, 76, 26, 162, 160, 98, 1, 0, 211 };
+    public void InitWindow()
+    {
+        aVInfo = plugin.GetSystemAVInfo();
+        frameHeight= aVInfo.geometry.maxHeight;
+        frameWidth = aVInfo.geometry.maxWidth;
+        var image = Raylib.GenImageColor((int)aVInfo.geometry.maxWidth, (int)aVInfo.geometry.maxHeight, Color.BLACK);
+        image = new Image
+        {
+            Width = (int)aVInfo.geometry.maxWidth,
+            Height = (int)aVInfo.geometry.maxHeight,
+            Mipmaps = 1,
+            Format = PixelFormat.PIXELFORMAT_UNCOMPRESSED_R8G8B8A8
+        };
+
+        bitmap = Raylib.LoadTextureFromImage(image);
+    }
+
+    public readonly byte[] jswAutoLoadHash = { 27, 10, 249, 194, 93, 180, 162, 138, 198, 11, 210, 12, 245, 143, 226, 53 };
+    public readonly byte[] rollerCoasterAutoLoadHash = { 127, 247, 134, 25, 56, 220, 59, 199, 13, 96, 96, 187, 253, 12, 28, 200 };
 
     public void Update(float seconds)
     {

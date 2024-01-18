@@ -1,4 +1,4 @@
-
+/*
 class MasterSystem : IRomPlugin
 {
     public static string Name => "Master System";
@@ -42,3 +42,4 @@ class MasterSystem : IRomPlugin
     }
 
 }
+*/

@@ -18,7 +18,9 @@ public interface IRomPlugin
 {
     static string? Name { get; }
 
-    bool Load(byte[] bytes, string kind);
+    public LibRetroPlugin? Initialise();
+
+    bool Load(string filename);
     bool Save(string filename, string kind);
 
     byte ReadByte(uint address);
@@ -131,7 +133,7 @@ public interface IRetroPlugin
     bool CanHandle(byte[] md5, byte[] bytes, string filename);
 
     // for now just build all the plugin functionality into here, split it later
-    bool Init(IEditor editor,byte[] md5, byte[] bytes, string filename);
+    bool Init(IEditor editor,byte[] md5, byte[] bytes, string filename, out LibRetroPlugin? plugin);
 
     IImages? GetImageInterface() { return null; }
     ITileMaps? GetTileMapInterface() { return null; }
@@ -144,7 +146,12 @@ public interface IRetroPlugin
 // Null Plugins
 public class NullRomPlugin : IRomPlugin
 {
-    public bool Load(byte[] bytes, string kind)
+    public LibRetroPlugin? Initialise()
+    {
+        return null;
+    }
+
+    public bool Load(string filename)
     {
         return false;
     }

@@ -59,11 +59,12 @@ class Editor : IEditor
         totalTime=0.0f;
         
         // Testing
-
-        var pluginWindow = new JSWTest(LibRetroPluginFactory.Create("C:\\zidoo_flash\\retroarch\\cores\\fuse_libretro.dll"), "Fuse");
+        var pluginWindow = new JSWTest(LibRetroPluginFactory.Create("fuse_libretro","C:\\work\\editor\\RetroEditor\\data\\1.dll"), "Flibble");
         pluginWindow.Initialise();
         pluginWindow.OtherStuff();
+        pluginWindow.InitWindow();
         AddWindow(pluginWindow);
+        /*
         pluginWindow = new JSWTest(LibRetroPluginFactory.Create("C:\\zidoo_flash\\retroarch\\cores\\fceumm_libretro.dll"), "FCEU");
         //var pluginWindow = new JSWTest(LibRetroPluginFactory.Create("C:\\work\\editor\\nes\\libretro-fceumm\\fceumm_libretro.dll"), "FCEU");
         pluginWindow.Initialise();
@@ -73,7 +74,7 @@ class Editor : IEditor
         pluginWindow.Initialise();
         pluginWindow.OtherStuff();
         AddWindow(pluginWindow);
-
+*/
         while (!Raylib.WindowShouldClose())
         {
             if (Raylib.IsWindowResized())
@@ -122,8 +123,11 @@ class Editor : IEditor
         {
             if (plugin.CanHandle(md5, bytes, path))
             {
-                if (plugin.Init(this, md5, bytes, path))
+                if (plugin.Init(this, md5, bytes, path, out var retroPlugin))
                 {
+                    var pluginWindow = new JSWTest(retroPlugin, "Fuse");
+                    pluginWindow.InitWindow();
+                    AddWindow(pluginWindow);
                     activePlugins.Add(plugin);
                 }
                 break;
