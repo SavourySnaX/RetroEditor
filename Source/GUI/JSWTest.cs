@@ -3,7 +3,7 @@ using ImGuiNET;
 using Raylib_cs;
 using rlImGui_cs;
 
-public class JSWTest : IWindow
+public class LibRetroPlayerWindow : IWindow
 {
     Texture2D bitmap;
 
@@ -14,10 +14,10 @@ public class JSWTest : IWindow
 
     uint frameWidth, frameHeight;
 
-    public JSWTest(LibRetroPlugin plugin, string name)
+    public LibRetroPlayerWindow(LibRetroPlugin plugin, string uniqueName)
     {
         this.plugin = plugin;
-        this.name = name;
+        this.name = uniqueName;
     }
 
     public bool Initialise()
@@ -162,9 +162,6 @@ public class JSWTest : IWindow
 
     public bool Draw()
     {
-        bool open = true;
-        ImGui.Begin($"Player {name}",ref open);
-
         rlImGui.ImageRect(bitmap, (int)(aVInfo.geometry.baseWidth * scale), (int)(aVInfo.geometry.baseHeight * scale), new Rectangle(0,0,frameWidth,frameHeight));
 
         if (ImGui.IsWindowFocused())
@@ -189,7 +186,7 @@ public class JSWTest : IWindow
 
         ImGui.End();
 
-        return open;
+        return false;
     }
 
     public void Close()
