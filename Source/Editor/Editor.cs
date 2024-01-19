@@ -4,14 +4,15 @@ using ImGuiNET;
 using System.Security.Cryptography;
 using System.Text.Json;
 using System.Runtime.InteropServices;
+using System.Text;
+using System.IO.Compression;
 
 internal class Editor : IEditor
 {
     private Dictionary<string, Type> romPlugins;
     private IRetroPlugin[] plugins;
     private List<ActiveProject> activeProjects;   // Needs to become active projects, since we now allow multiple of the same plugin
-
-    private List<IWindow> activeWindows;
+    private WindowManager windowManager;
 
     internal struct ActiveProject
     {
@@ -58,7 +59,7 @@ internal class Editor : IEditor
                 this.romPlugins.Add(name, type);
             }
         }
-        activeWindows = new List<IWindow>();
+        windowManager = new WindowManager();
 
         settings = new EditorSettings();
 
@@ -66,6 +67,16 @@ internal class Editor : IEditor
         {
             var json = File.ReadAllText("settings.json");
             settings = JsonSerializer.Deserialize<EditorSettings>(json);
+        }
+
+        if (!Directory.Exists(settings.ProjectLocation))
+        {
+            Directory.CreateDirectory(settings.ProjectLocation);
+        }
+
+        if (!Directory.Exists(settings.RetroCoreFolder))
+        {
+            Directory.CreateDirectory(settings.RetroCoreFolder);
         }
     }
 
@@ -94,8 +105,6 @@ internal class Editor : IEditor
             OpenProject(arg);
         }
 
-        totalTime=0.0f;
-        
         // Testing
         /*
         var pluginWindow = new JSWTest(LibRetroPluginFactory.Create("fuse_libretro","C:\\work\\editor\\RetroEditor\\data\\1.dll"), "Flibble");
@@ -114,6 +123,7 @@ internal class Editor : IEditor
         pluginWindow.OtherStuff();
         AddWindow(pluginWindow);
 */
+        var deltaTime = 0.0f;
         while (!Raylib.WindowShouldClose())
         {
             if (Raylib.IsWindowResized())
@@ -126,21 +136,16 @@ internal class Editor : IEditor
 
             rlImGui.Begin();
 
-            DrawUI();
+            DrawUI(deltaTime);
 
             rlImGui.End();
 
             Raylib.EndDrawing();
-            var deltaTime = Raylib.GetFrameTime();
-            totalTime += deltaTime;
+            deltaTime = Raylib.GetFrameTime();
         }
 
-        foreach (var mWindow in activeWindows)
-        {
-            mWindow.Close();
-        }
+        windowManager.CloseAll();
 
-        activeWindows.Clear();
         foreach (var active in activeProjects)
         {
             active.Plugin.Close();
@@ -150,14 +155,7 @@ internal class Editor : IEditor
         File.WriteAllText("settings.json", json);
     }
 
-    private void AddWindow(IWindow window)
-    {
-        activeWindows.Add(window);
-        var newTime = totalTime + window.UpdateInterval;
-        priorityQueue.Enqueue((window, newTime),newTime);
-    }
-
-    private void DrawUI()
+    private void DrawUI(float deltaTime)
     {
         if (ImGui.BeginMainMenuBar())
         {
@@ -168,7 +166,7 @@ internal class Editor : IEditor
                     var window = new NewProjectDialog();
                     window.SetEditor(this);
                     window.Initialise();
-                    AddWindow(window);
+                    windowManager.AddBlockingPopup(window, "Create New Project");
                 }
                 ImGui.Separator();
                 if (ImGui.MenuItem("Open Existing Project"))
@@ -212,7 +210,7 @@ internal class Editor : IEditor
                 {
                     var mame = new MameRemoteCommandWindow();
                     mame.Initialise();
-                    AddWindow(mame);
+                    windowManager.AddWindow(mame, "Mame Remote");
                 }
                 ImGui.EndMenu();
             }
@@ -235,7 +233,7 @@ internal class Editor : IEditor
                                     {
                                         var window = new ImageWindow(active.Plugin, map);
                                         window.Initialise();
-                                        AddWindow(window);
+                                        windowManager.AddWindow(window, $"Image ({active.Name})");
                                     }
                                 }
                                 ImGui.EndMenu();
@@ -254,7 +252,7 @@ internal class Editor : IEditor
                                     {
                                         var window = new TileMapEditorWindow(active.Plugin, map);
                                         window.Initialise();
-                                        AddWindow(window);
+                                        windowManager.AddWindow(window, $"Tile ({active.Name})");
                                     }
                                 }
                                 ImGui.EndMenu();
@@ -268,31 +266,11 @@ internal class Editor : IEditor
             ImGui.EndMainMenuBar();
         }
 
-        if (priorityQueue.Count > 0)
-        {
-            while (priorityQueue.Peek().Item2 <= totalTime)
-            {
-                var lastTick = priorityQueue.Dequeue();
-                var diff = Math.Min(lastTick.Item2, totalTime - lastTick.Item2);
-                lastTick.Item1.Update(totalTime);
-                var newTime = totalTime + lastTick.Item1.UpdateInterval - diff;
-                priorityQueue.Enqueue((lastTick.Item1, newTime),newTime);
-            }
-        }
+        windowManager.Update(deltaTime);
 
-        foreach (var window in activeWindows)
-        {
-            if (!window.Draw())
-            {
-                window.Close();
-                activeWindows.Remove(window);
-                break;
-            }
-        }
+        windowManager.Draw();
     }
 
-    private PriorityQueue<(IWindow, float), float> priorityQueue = new PriorityQueue<(IWindow, float), float>();
-    private float totalTime;
 
     public IRomPlugin? GetRomInstance(string romKind)
     {
@@ -338,10 +316,11 @@ internal class Editor : IEditor
                 {
                     return;
                 }
-                var pluginWindow = new JSWTest(retroPluginInstance, projectName);
+                var activeProjectName = projectName + $" [{activeProjects.Count+1}]";
+                var pluginWindow = new LibRetroPlayerWindow(retroPluginInstance, activeProjectName);
                 pluginWindow.InitWindow();
-                AddWindow(pluginWindow);
-                activeProjects.Add(new ActiveProject { Plugin = plugin, Settings = projectSettings, Name = projectName });
+                windowManager.AddWindow(pluginWindow, $"LibRetro Player ({activeProjectName})");
+                activeProjects.Add(new ActiveProject { Plugin = plugin, Settings = projectSettings, Name = activeProjectName });
                 if (!settings.RecentProjects.Contains(projectPath))
                 {
                     if (settings.RecentProjects.Count>20)
@@ -365,7 +344,10 @@ internal class Editor : IEditor
         var projectFile = Path.Combine(projectPath, "Editor", projectName + ".json");
 
         // Generate hash for the plugin
-        var hash = MD5.Create().ComputeHash(File.ReadAllBytes(importFile));
+        var hashA = MD5.Create().ComputeHash(File.ReadAllBytes(importFile));
+        var hashB = MD5.Create().ComputeHash(System.Text.Encoding.UTF8.GetBytes(projectName));
+        var hashC = MD5.Create().ComputeHash(BitConverter.GetBytes(DateTime.Now.ToBinary()));
+        var hash = MD5.Create().ComputeHash(hashA.Concat(hashB).Concat(hashC).ToArray());
         var retroCoreName = string.Concat(hash.Select(x => x.ToString("X2")));
         var retroPluginName = retroPlugin.Name;
 
@@ -382,10 +364,11 @@ internal class Editor : IEditor
         {
             return false;
         }
-        var pluginWindow = new JSWTest(retroPluginInstance, projectName);
+        var activeProjectName = projectName + $" [{activeProjects.Count + 1}]";
+        var pluginWindow = new LibRetroPlayerWindow(retroPluginInstance, activeProjectName);
         pluginWindow.InitWindow();
-        AddWindow(pluginWindow);
-        activeProjects.Add(new ActiveProject { Plugin = retroPlugin, Settings = projectSettings, Name = projectName });
+        windowManager.AddWindow(pluginWindow, $"LibRetro Player ({activeProjectName})");
+        activeProjects.Add(new ActiveProject { Plugin = retroPlugin, Settings = projectSettings, Name = activeProjectName });
         if (!settings.RecentProjects.Contains(projectPath))
         {
             if (settings.RecentProjects.Count > 20)
@@ -428,15 +411,23 @@ internal class Editor : IEditor
         {
             return null;
         }
+        var platform = "windows";
+        var architecture = "x86_64";
+        var extension = ".dll";
 
-        var sourcePlugin = Path.Combine(settings.RetroCoreFolder, "win", "x64", $"{pluginName}.dll");
-        var destinationPlugin = Path.Combine(projectSettings.projectPath, "LibRetro", $"{projectSettings.RetroCoreName}_win_x64.dll");
+        var sourcePlugin = Path.Combine(settings.RetroCoreFolder, platform, architecture, $"{pluginName}{extension}");
+        var destinationPlugin = Path.Combine(projectSettings.projectPath, "LibRetro", $"{projectSettings.RetroCoreName}_{platform}_{architecture}{extension}");
 
         if (!File.Exists(destinationPlugin))
         {
             if (!File.Exists(sourcePlugin))
             {
-                // TODO DOWNLOAD
+                var task = Download(platform, architecture, extension, pluginName);
+                task.Wait();
+                if (task.Result!=true)
+                {
+                    return null;
+                }
             }
 
             File.Copy(sourcePlugin, destinationPlugin, true);
@@ -451,6 +442,41 @@ internal class Editor : IEditor
             Console.WriteLine($"Failed to load plugin {pluginName} from {destinationPlugin}: {e.Message}");
             return null;
         }
+    }
+
+    async Task<bool> Download(string platform, string architecture, string extension, string pluginName)
+    {
+        var url = $"http://buildbot.libretro.com/nightly/{platform}/{architecture}/latest/{pluginName}{extension}.zip";
+        var destination = Path.Combine(settings.RetroCoreFolder, platform, architecture, $"{pluginName}.dll");
+
+        using (var client = new HttpClient())
+        {
+            var response = await client.GetAsync(url);
+            if (response.IsSuccessStatusCode)
+            {
+                using (var stream = await response.Content.ReadAsStreamAsync())
+                {
+                    using (var memoryStream = new MemoryStream())
+                    {
+                        stream.CopyTo(memoryStream);
+                        ZipArchive archive = new ZipArchive(memoryStream);
+                        foreach (var entry in archive.Entries)
+                        {
+                            if (entry.Name == $"{pluginName}{extension}")
+                            {
+                                Directory.CreateDirectory(Path.GetDirectoryName(destination));  // Ensure destination folder exists
+                                using (var fileStream = File.Create(destination))
+                                {
+                                    entry.Open().CopyTo(fileStream);
+                                    return true;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return false;
     }
 
 }
