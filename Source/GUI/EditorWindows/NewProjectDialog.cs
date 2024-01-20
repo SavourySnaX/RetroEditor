@@ -125,7 +125,6 @@ class NewProjectDialog : IEditorWindow
         {
             ImGui.EndDisabled();
         }
-        ImGui.EndPopup();
         return false;
     }
 

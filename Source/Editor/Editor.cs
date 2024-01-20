@@ -17,6 +17,7 @@ internal class Editor : IEditor
     internal struct ActiveProject
     {
         public IRetroPlugin Plugin;
+        public LibRetroPlugin RetroPlugin;
         public ProjectSettings Settings;
 
         public string Name { get; internal set; }
@@ -220,44 +221,21 @@ internal class Editor : IEditor
                 {
                     if (ImGui.BeginMenu(active.Name))
                     {
-                        var imageInterface = active.Plugin.GetImageInterface();
-                        if (imageInterface != null)
+                        active.Plugin.Menu(this);
+                        bool playerOpen = windowManager.IsOpen($"LibRetro Player ({active.Name})");
+                        if (playerOpen)
                         {
-                            if (ImGui.BeginMenu("Image Viewer"))
-                            {
-                                for (int a = 0; a < imageInterface.GetImageCount(); a++)
-                                {
-                                    var map = imageInterface.GetImage(a);
-                                    var mapName = map.Name;
-                                    if (ImGui.MenuItem(mapName))
-                                    {
-                                        var window = new ImageWindow(active.Plugin, map);
-                                        window.Initialise();
-                                        windowManager.AddWindow(window, $"Image ({active.Name})");
-                                    }
-                                }
-                                ImGui.EndMenu();
-                            }
+                            ImGui.BeginDisabled();
                         }
-                        var tileMapInterface = active.Plugin.GetTileMapInterface();
-                        if (tileMapInterface != null)
+                        if (ImGui.MenuItem("Open Player"))
                         {
-                            if (ImGui.BeginMenu("Tile Map Editor"))
-                            {
-                                for (int a = 0; a < tileMapInterface.GetMapCount(); a++)
-                                {
-                                    var map = tileMapInterface.GetMap(a);
-                                    var mapName = map.Name;
-                                    if (ImGui.MenuItem(mapName))
-                                    {
-                                        var window = new TileMapEditorWindow(active.Plugin, map);
-                                        window.Initialise();
-                                        windowManager.AddWindow(window, $"Tile ({active.Name})");
-                                    }
-                                }
-                                ImGui.EndMenu();
-                            }
+                            OpenPlayerWindow(active);
                         }
+                        if (playerOpen)
+                        {
+                            ImGui.EndDisabled();
+                        }
+                        
                         ImGui.EndMenu();
                     }
                 }
@@ -283,12 +261,13 @@ internal class Editor : IEditor
 
     private void OpenProject(string projectPath)
     {
-        // Todo Progress Dialog
         var editorPath = Path.Combine(projectPath, "Editor");
+        // Bail if for some reason the editor directory is missing
         if (!Directory.Exists(editorPath))
         {
             return;
         }
+        // Bail if the project is already open
         foreach (var activeProject in activeProjects)
         {
             if (activeProject.Settings.projectPath == projectPath)
@@ -297,42 +276,51 @@ internal class Editor : IEditor
             }
         }
 
+        // Load the project settings
         var projectName = projectPath.Split(Path.DirectorySeparatorChar).Last();
         var jsonPath = Path.Combine(editorPath, $"{projectName}.json");
         var projectSettings = new ProjectSettings(projectPath,"","");
         projectSettings.Load(jsonPath);
 
-        // Get Project File Settings
+        // Locate the plugin this project needs
         foreach (var plugin in plugins)
         {
             if (plugin.Name==projectSettings.RetroPluginName)
             {
                 // Next we need to perform the initial import and save state, then we can begin editing (the player window will open)
-                if (!plugin.Open(this, projectSettings, out var retroPluginInstance))
-                {
-                    return;
-                }
+                var retroPluginInstance = InternalInitialisePlugin(plugin, projectSettings, false);
                 if (retroPluginInstance == null)
                 {
                     return;
                 }
-                var activeProjectName = projectName + $" [{activeProjects.Count+1}]";
-                var pluginWindow = new LibRetroPlayerWindow(retroPluginInstance, activeProjectName);
-                pluginWindow.InitWindow();
-                windowManager.AddWindow(pluginWindow, $"LibRetro Player ({activeProjectName})");
-                activeProjects.Add(new ActiveProject { Plugin = plugin, Settings = projectSettings, Name = activeProjectName });
-                if (!settings.RecentProjects.Contains(projectPath))
-                {
-                    if (settings.RecentProjects.Count>20)
-                    {
-                        settings.RecentProjects.RemoveAt(0);
-                    }
-                    settings.RecentProjects.Add(projectPath);
-                }
+
+                InternalAddDefaultWindowAndProject(projectPath, projectName, projectSettings, plugin, retroPluginInstance);
             }
         }
     }
 
+    private void OpenPlayerWindow(ActiveProject activeProject)
+    {
+        var pluginWindow = new LibRetroPlayerWindow(activeProject.RetroPlugin, activeProject.Name);
+        OpenWindow(pluginWindow, $"LibRetro Player ({activeProject.Name})");
+        pluginWindow.InitWindow();
+    }
+
+    private void InternalAddDefaultWindowAndProject(string projectPath, string projectName, ProjectSettings projectSettings, IRetroPlugin plugin, LibRetroPlugin retroPluginInstance)
+    {
+        var activeProjectName = projectName + $" [{activeProjects.Count + 1}]";
+        var project = new ActiveProject { Plugin = plugin, Settings = projectSettings, Name = activeProjectName, RetroPlugin = retroPluginInstance };
+        OpenPlayerWindow(project);
+        activeProjects.Add(project);
+        if (!settings.RecentProjects.Contains(projectPath))
+        {
+            if (settings.RecentProjects.Count > 20)
+            {
+                settings.RecentProjects.RemoveAt(0);
+            }
+            settings.RecentProjects.Add(projectPath);
+        }
+    }
 
     internal bool CreateNewProject(string projectName, string projectLocation, string importFile, IRetroPlugin retroPlugin)
     {
@@ -355,29 +343,47 @@ internal class Editor : IEditor
         projectSettings.Save(projectFile);
         File.Copy(importFile, GetRomPath(projectSettings), true);
 
-        // Next we need to perform the initial import and save state, then we can begin editing (the player window will open)
-        if (!retroPlugin.Init(this, projectSettings, out var retroPluginInstance))
+        var retroPluginInstance = InternalInitialisePlugin(retroPlugin, projectSettings, true);
+        if (retroPluginInstance==null)
         {
             return false;
         }
-        if (retroPluginInstance == null)
-        {
-            return false;
-        }
-        var activeProjectName = projectName + $" [{activeProjects.Count + 1}]";
-        var pluginWindow = new LibRetroPlayerWindow(retroPluginInstance, activeProjectName);
-        pluginWindow.InitWindow();
-        windowManager.AddWindow(pluginWindow, $"LibRetro Player ({activeProjectName})");
-        activeProjects.Add(new ActiveProject { Plugin = retroPlugin, Settings = projectSettings, Name = activeProjectName });
-        if (!settings.RecentProjects.Contains(projectPath))
-        {
-            if (settings.RecentProjects.Count > 20)
-            {
-                settings.RecentProjects.RemoveAt(0);
-            }
-            settings.RecentProjects.Add(projectPath);
-        }
+
+        InternalAddDefaultWindowAndProject(projectPath, projectName, projectSettings, retroPlugin, retroPluginInstance);
         return true;
+    }
+
+    private LibRetroPlugin? InternalInitialisePlugin(IRetroPlugin plugin, ProjectSettings projectSettings, bool firstTime)
+    {
+        // Initialise Rom
+        var romInterface = GetRomInstance(plugin.RomPluginName);
+        if (romInterface==null)
+        {
+            return null;
+        }
+        var emuPlugin = GetLibRetroInstance(romInterface.LibRetroPluginName, projectSettings); 
+        if (emuPlugin == null)
+        {
+            return null;
+        }
+        if (emuPlugin.Version() != 1)
+        {
+            return null;
+        }
+        emuPlugin.Init();
+
+        romInterface.Initialise(emuPlugin, this);
+        if (firstTime)
+        {
+            romInterface.InitialLoad(projectSettings);
+        }
+        else
+        {
+            romInterface.Reload(projectSettings);
+        }
+
+        plugin.Initialise(romInterface);
+        return emuPlugin;
     }
 
     public void SaveState(byte[] state, ProjectSettings projectSettings)
@@ -477,6 +483,21 @@ internal class Editor : IEditor
             }
         }
         return false;
+    }
+
+    public void OpenWindow(IWindow window, string name)
+    {
+        if (windowManager.IsOpen(name))
+        {
+            return;
+        }
+        window.Initialise();
+        windowManager.AddWindow(window, name);
+    }
+
+    public void CloseWindow(string name)
+    {
+        windowManager.Close(name);
     }
 
 }

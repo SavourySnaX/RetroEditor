@@ -72,9 +72,6 @@ public class TileMapEditorWindow : IWindow
 
     public bool Draw()
     {
-        bool open = true;
-        ImGui.Begin($"Tile Map Editor - {plugin.Name} - {map.Name}",ref open);
-
         var tiles = map.FetchTiles(0);
         for (int a=0;a<tiles.Length;a++)
         {
@@ -134,10 +131,7 @@ public class TileMapEditorWindow : IWindow
             }
         }
 
-
-        ImGui.End();
-
-        return open;
+        return false;
     }
     public void Close()
     {

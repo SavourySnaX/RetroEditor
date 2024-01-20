@@ -6,6 +6,8 @@ class ZXSpectrum : IRomPlugin
 {
     public static string Name => "ZXSpectrum";
 
+    public string LibRetroPluginName => "fuse_libretro";
+
     private Tape tape;   // For saving
     private LibRetroPlugin plugin;      // For loading and testing
     private PlayableRom playableRom;    // For loading and testing
@@ -13,24 +15,11 @@ class ZXSpectrum : IRomPlugin
 
     private byte[] state;
 
-    public LibRetroPlugin? Initialise(ProjectSettings projectSettings, IEditor editorInterface)
+    public void Initialise(LibRetroPlugin libRetroInterface, IEditor editorInterface)
     {
         this.editorInterface = editorInterface;
-        var plugin = editorInterface.GetLibRetroInstance("fuse_libretro", projectSettings); 
-        if (plugin == null)
-        {
-            return null;
-        }
-        this.plugin = plugin;
-        if (plugin.Version() != 1)
-        {
-            return null;
-        }
-        plugin.Init();
-
+        this.plugin = libRetroInterface;
         playableRom = new PlayableRom(plugin);
-
-        return plugin;
     }
 
     public bool InitialLoad(ProjectSettings settings)
