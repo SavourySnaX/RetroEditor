@@ -37,8 +37,7 @@ internal class WindowManager
             modalPopup = false
         };
         activeWindows.Add(newWindow);
-        var newTime = totalTime + window.UpdateInterval;
-        priorityQueue.Enqueue(new UpdateQueueWrapper { Window = newWindow, Action = InternalUpdate, Time = newTime }, newTime);
+        priorityQueue.Enqueue(new UpdateQueueWrapper { Window = newWindow, Action = InternalUpdate, Time = totalTime }, totalTime);
     }
 
     public void AddBlockingPopup(IWindow window, string name)
@@ -50,9 +49,8 @@ internal class WindowManager
             modalPopup = true
         };
         activeWindows.Add(newWindow);
-        var newTime = totalTime + window.UpdateInterval;
         priorityQueue.Enqueue(new UpdateQueueWrapper { Window = newWindow, Action = InternalPopup, Time = totalTime }, totalTime);
-        priorityQueue.Enqueue(new UpdateQueueWrapper { Window = newWindow, Action = InternalUpdate, Time = newTime }, newTime);
+        priorityQueue.Enqueue(new UpdateQueueWrapper { Window = newWindow, Action = InternalUpdate, Time = totalTime }, totalTime);
     }
 
     public void Update(float deltaTime)
@@ -66,8 +64,12 @@ internal class WindowManager
                 var next = priorityQueue.Dequeue();
                 if (!next.Action(next.Window, totalTime))
                 {
-                    var diff = Math.Min(next.Time, totalTime - next.Time);
-                    var newTime = totalTime + next.Window.Window.UpdateInterval - diff;
+                    var newTime = next.Time + next.Window.Window.UpdateInterval;
+                    if (newTime<totalTime)
+                    {
+                        // If we failed to keep up, just wait a whole upate now
+                        newTime = totalTime + next.Window.Window.UpdateInterval;
+                    }
                     next.Time = newTime;
                     priorityQueue.Enqueue(next, newTime);
                 }
@@ -138,4 +140,26 @@ internal class WindowManager
         activeWindows.Clear();
     }
 
+    internal bool IsOpen(string v)
+    {
+        foreach (var window in activeWindows)
+        {
+            if (window.Name == v)
+                return true;
+        }
+        return false;
+    }
+
+    internal void Close(string name)
+    {
+        foreach (var window in activeWindows)
+        {
+            if (window.Name == name)
+            {
+                window.Window.Close();
+                activeWindows.Remove(window);
+                break;
+            }
+        }
+    }
 }

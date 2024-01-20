@@ -1,6 +1,7 @@
 
 
 using System.Security.Cryptography;
+using ImGuiNET;
 
 public class JetSetWilly48 : IRetroPlugin, IImages, ITileMaps
 {
@@ -10,6 +11,9 @@ public class JetSetWilly48 : IRetroPlugin, IImages, ITileMaps
     };
 
     public string Name => "Jet Set Willy 48K";
+
+    public string RomPluginName => "ZXSpectrum";
+
     IRomPlugin rom;
 
     public JetSetWilly48()
@@ -38,46 +42,9 @@ public class JetSetWilly48 : IRetroPlugin, IImages, ITileMaps
         return false;
     }
 
-    public bool Init(IEditor editorInterface, ProjectSettings projectSettings, out LibRetroPlugin? plugin)
+    public void Initialise(IRomPlugin romInterface)
     {
-        plugin = null;
-        var spectrumRomInterface = editorInterface.GetRomInstance("ZXSpectrum");
-        if (spectrumRomInterface==null)
-        {
-            return false;
-        }
-        rom = spectrumRomInterface;
-        plugin=rom.Initialise(projectSettings, editorInterface);
-        if (plugin==null)
-        {
-            return false;
-        }
-        if (rom.InitialLoad(projectSettings))
-        {
-            return true;
-        }
-        return false;
-    }
-
-    public bool Open(IEditor editorInterface, ProjectSettings projectSettings, out LibRetroPlugin? plugin)
-    {
-        plugin = null;
-        var spectrumRomInterface = editorInterface.GetRomInstance("ZXSpectrum");
-        if (spectrumRomInterface==null)
-        {
-            return false;
-        }
-        rom = spectrumRomInterface;
-        plugin=rom.Initialise(projectSettings, editorInterface);
-        if (plugin==null)
-        {
-            return false;
-        }
-        if (rom.Reload(projectSettings))
-        {
-            return true;
-        }
-        return false;
+        rom = romInterface;
     }
 
     public int GetImageCount()
@@ -88,6 +55,36 @@ public class JetSetWilly48 : IRetroPlugin, IImages, ITileMaps
     public void Close()
     {
         //rom.Save("C:\\work\\editor\\jsw_patched.tap","TAP");
+    }
+
+    public void Menu(IEditor editorInterface)
+    {
+        if (ImGui.BeginMenu("Image Viewer"))
+        {
+            for (int a = 0; a < GetImageCount(); a++)
+            {
+                var map = GetImage(a);
+                var mapName = map.Name;
+                if (ImGui.MenuItem(mapName))
+                {
+                    editorInterface.OpenWindow(new ImageWindow(this,GetImage(a)), $"Image {{{mapName}}}");
+                }
+            }
+            ImGui.EndMenu();
+        }
+        if (ImGui.BeginMenu("Tile Map Editor"))
+        {
+            for (int a = 0; a < GetMapCount(); a++)
+            {
+                var map = GetMap(a);
+                var mapName = map.Name;
+                if (ImGui.MenuItem(mapName))
+                {
+                    editorInterface.OpenWindow(new TileMapEditorWindow(this, map), $"Tile Map {{{mapName}}}");
+                }
+            }
+            ImGui.EndMenu();
+        }
     }
 
     public IImages GetImageInterface()

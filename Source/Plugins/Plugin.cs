@@ -18,8 +18,9 @@ public struct Pixel
 public interface IRomPlugin
 {
     static string? Name { get; }
+    string LibRetroPluginName { get; } 
 
-    public LibRetroPlugin? Initialise(ProjectSettings projectSettings, IEditor editorInterface);
+    public void Initialise(LibRetroPlugin libRetroInterface, IEditor editorInterface);
 
     bool InitialLoad(ProjectSettings settings);
     bool Reload(ProjectSettings settings);
@@ -119,11 +120,13 @@ public interface ITileMaps
 
 public interface IEditor
 {
-    public IRomPlugin? GetRomInstance(string romKind);
     public LibRetroPlugin? GetLibRetroInstance(string pluginName, ProjectSettings settings);
     public byte[] LoadState(ProjectSettings settings);
     public void SaveState(byte[] state, ProjectSettings settings);
     public string GetRomPath(ProjectSettings settings);
+
+    public void OpenWindow(IWindow window, string name);
+    public void CloseWindow(string name);
 }
 
 public sealed class ProjectSettings
@@ -178,6 +181,9 @@ public sealed class ProjectSettings
 
 public interface IRetroPlugin
 {
+    string RomPluginName { get; }
+
+
     /// <summary>
     /// Returns true if the plugin can handle the file
     /// </summary>
@@ -187,11 +193,9 @@ public interface IRetroPlugin
     /// <returns></returns>
     bool CanHandle(string filename);
 
-    // Called when creating project
-    bool Init(IEditor editor, ProjectSettings project, out LibRetroPlugin? plugin);
+    void Initialise(IRomPlugin romInterface);
 
-    // Called when opening an existing project
-    bool Open(IEditor editorInterface, ProjectSettings projectSettings, out LibRetroPlugin? plugin);
+    void Menu(IEditor editorInterface);
 
     IImages? GetImageInterface() { return null; }
     ITileMaps? GetTileMapInterface() { return null; }
@@ -204,43 +208,46 @@ public interface IRetroPlugin
 // Null Plugins
 public class NullRomPlugin : IRomPlugin
 {
-    public LibRetroPlugin? Initialise(ProjectSettings projectSettings, IEditor editorInterface)
+    public string LibRetroPluginName => throw new NotImplementedException();
+
+    public void Initialise(LibRetroPlugin libRetroPlugin, IEditor editorInterface)
     {
-        return null;
+        throw new NotImplementedException();
     }
 
     public bool InitialLoad(ProjectSettings settings)
     {
-        return false;
+        throw new NotImplementedException();
     }
 
     public byte ReadByte(uint address)
     {
-        return 0;
+        throw new NotImplementedException();
     }
 
     public uint ReadLong(uint address)
     {
-        return 0;
+        throw new NotImplementedException();
     }
 
     public ushort ReadWord(uint address)
     {
-        return 0;
+        throw new NotImplementedException();
     }
 
     public bool Reload(ProjectSettings settings)
     {
-        return false;
+        throw new NotImplementedException();
     }
 
     public bool Save(string filename, string kind)
     {
-        return false;
+        throw new NotImplementedException();
     }
 
     public void WriteByte(uint address, byte value)
     {
+        throw new NotImplementedException();
     }
 }
 

@@ -51,14 +51,8 @@ public class ImageWindow : IWindow
 
     public bool Draw()
     {
-        bool open = true;
-        ImGui.Begin($"Image Viewer - {plugin.Name} - {map.Name}",ref open);
-
         rlImGui.ImageSize(bitmap, (int)(map.Width * scale), (int)(map.Height * scale));
-
-        ImGui.End();
-
-        return open;
+        return false;
     }
 
     public void Close()
