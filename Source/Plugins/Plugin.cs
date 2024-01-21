@@ -24,7 +24,8 @@ public interface IRomPlugin
 
     bool InitialLoad(ProjectSettings settings);
     bool Reload(ProjectSettings settings);
-    bool Save(string filename, string kind);
+    void Save(ProjectSettings settings);
+    bool Export(string filename, string kind);
 
     byte ReadByte(uint address);
     ushort ReadWord(uint address);
@@ -124,6 +125,7 @@ public interface IEditor
     public byte[] LoadState(ProjectSettings settings);
     public void SaveState(byte[] state, ProjectSettings settings);
     public string GetRomPath(ProjectSettings settings);
+    public string GetEditorDataPath(ProjectSettings settings, string name);
 
     public void OpenWindow(IWindow window, string name);
     public void CloseWindow(string name);
@@ -202,6 +204,8 @@ public interface IRetroPlugin
 
     public string Name { get; }
 
+    public void Export(string filename, string kind);
+
     void Close();
 }
 
@@ -240,7 +244,12 @@ public class NullRomPlugin : IRomPlugin
         throw new NotImplementedException();
     }
 
-    public bool Save(string filename, string kind)
+    public void Save(ProjectSettings settings)
+    {
+        throw new NotImplementedException();
+    }
+
+    public bool Export(string filename, string kind)
     {
         throw new NotImplementedException();
     }
