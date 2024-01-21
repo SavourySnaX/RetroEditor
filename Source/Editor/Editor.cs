@@ -137,12 +137,17 @@ internal class Editor : IEditor
 
             rlImGui.Begin();
 
-            DrawUI(deltaTime);
+            var quit= DrawUI(deltaTime);
 
             rlImGui.End();
 
             Raylib.EndDrawing();
             deltaTime = Raylib.GetFrameTime();
+
+            if (quit)
+            {
+                Raylib.CloseWindow(); 
+            }
         }
 
         windowManager.CloseAll();
@@ -156,7 +161,7 @@ internal class Editor : IEditor
         File.WriteAllText("settings.json", json);
     }
 
-    private void DrawUI(float deltaTime)
+    private bool DrawUI(float deltaTime)
     {
         if (ImGui.BeginMainMenuBar())
         {
@@ -179,6 +184,10 @@ internal class Editor : IEditor
                         OpenProject(result.Path);
                     }
                 }
+                if (settings.RecentProjects.Count == 0)
+                {
+                    ImGui.BeginDisabled();
+                }
                 if (ImGui.BeginMenu("Open Recent Project"))
                 {
                     string toOpen = "";
@@ -195,6 +204,40 @@ internal class Editor : IEditor
                         OpenProject(toOpen);
                     }
                     ImGui.EndMenu();
+                }
+                if (settings.RecentProjects.Count == 0)
+                {
+                    ImGui.EndDisabled();
+                }
+                ImGui.Separator();
+                if (activeProjects.Count == 0)
+                {
+                    ImGui.BeginDisabled();
+                }
+                if (ImGui.BeginMenu("Export Project"))
+                {
+                    foreach (var active in activeProjects)
+                    {
+                        if (ImGui.MenuItem(active.Name))
+                        {
+                            var result = NativeFileDialogSharp.Dialog.FileSave();
+
+                            if (result.IsOk)
+                            {
+                                active.Plugin.Export(result.Path, "TAP");
+                            }
+                        }
+                    }
+                    ImGui.EndMenu();
+                }
+                if (activeProjects.Count == 0)
+                {
+                    ImGui.EndDisabled();
+                }
+                ImGui.Separator();
+                if (ImGui.MenuItem("Exit"))
+                {
+                    return true;
                 }
                 ImGui.EndMenu();
             }
@@ -214,6 +257,10 @@ internal class Editor : IEditor
                     windowManager.AddWindow(mame, "Mame Remote");
                 }
                 ImGui.EndMenu();
+            }
+            if (activeProjects.Count == 0)
+            {
+                ImGui.BeginDisabled();
             }
             if (ImGui.BeginMenu("Window"))
             {
@@ -241,12 +288,18 @@ internal class Editor : IEditor
                 }
                 ImGui.EndMenu();
             }
+            if (activeProjects.Count == 0)
+            {
+                ImGui.EndDisabled();
+            }
             ImGui.EndMainMenuBar();
         }
 
         windowManager.Update(deltaTime);
 
         windowManager.Draw();
+
+        return false;
     }
 
 
@@ -405,6 +458,11 @@ internal class Editor : IEditor
     public string GetRomPath(ProjectSettings projectSettings)
     {
         return Path.Combine(projectSettings.projectPath, "Editor", $"{projectSettings.RetroCoreName}_rom.bin");
+    }
+
+    public string GetEditorDataPath(ProjectSettings projectSettings, string serialiseName)
+    {
+        return Path.Combine(projectSettings.projectPath, "Editor", $"{projectSettings.RetroCoreName}_{serialiseName}.json");
     }
 
     public LibRetroPlugin? GetLibRetroInstance(string pluginName, ProjectSettings projectSettings)

@@ -6,8 +6,10 @@ using ImGuiNET;
 public class JetSetWilly48 : IRetroPlugin, IImages, ITileMaps
 {
     private byte[][] supportedMD5s = new byte[][] {
-        new byte[] { 78, 94, 213, 56, 235, 159, 86, 89, 143, 175, 248, 41, 6, 68, 201, 215 },   // JetSetWillyTap
-        new byte[] { 36, 10, 231, 145, 153, 106, 87, 148, 249, 125, 144, 170, 8, 0, 78, 146 },  // JetSetWillyTzx
+        new byte[] { 0x4E, 0x5E, 0xD5, 0x38, 0xEB, 0x9F, 0x56, 0x59, 0x8F, 0xAF, 0xF8, 0x29, 0x06, 0x44, 0xC9, 0xD7 },  // JetSetWillyTap
+        new byte[] { 0x24, 0x0A, 0xE7, 0x91, 0x99, 0x6A, 0x57, 0x94, 0xF9, 0x7D, 0x90, 0xAA, 0x08, 0x00, 0x4E, 0x92 },  // JetSetWillyTzx
+        new byte[] { 0x87, 0x9c, 0x75, 0xe6, 0xe6, 0xac, 0x95, 0x75, 0x22, 0xdf, 0x21, 0x18, 0xbf, 0x3c, 0xe3, 0xbe },  // JetSetWillyTzxA
+        new byte[] { 0x0f, 0xdb, 0xe2, 0xba, 0x51, 0x8d, 0x70, 0x67, 0x7f, 0xd8, 0x93, 0x75, 0xae, 0x4c, 0x6f, 0xb3 },  // JetSetWillyTzxF
     };
 
     public string Name => "Jet Set Willy 48K";
@@ -51,10 +53,14 @@ public class JetSetWilly48 : IRetroPlugin, IImages, ITileMaps
     {
         return 61;
     }
+    
+    public void Export(string filename, string kind)
+    {
+        rom.Export(filename, kind);
+    }
 
     public void Close()
     {
-        //rom.Save("C:\\work\\editor\\jsw_patched.tap","TAP");
     }
 
     public void Menu(IEditor editorInterface)
