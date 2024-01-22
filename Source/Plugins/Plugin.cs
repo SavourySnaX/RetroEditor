@@ -206,6 +206,8 @@ public interface IRetroPlugin
 
     public void Export(string filename, string kind);
 
+    void Save(ProjectSettings settings);
+
     void Close();
 }
 
