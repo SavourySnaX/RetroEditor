@@ -154,6 +154,7 @@ internal class Editor : IEditor
 
         foreach (var active in activeProjects)
         {
+            active.Plugin.Save(active.Settings);
             active.Plugin.Close();
         }
 
@@ -467,17 +468,35 @@ internal class Editor : IEditor
 
     public LibRetroPlugin? GetLibRetroInstance(string pluginName, ProjectSettings projectSettings)
     {
-        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        var OS=RuntimeInformation.OSDescription;
+        var platform = "";
+        var extension = "";
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
+            platform = "windows";
+            extension = ".dll";
+        }
+        else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+        {
+            platform = "linux";
+            extension = ".so";
+        }
+        else
+        {
+            Console.WriteLine($"Unsupported OS: {OS}");
             return null;
         }
-        if (!RuntimeInformation.OSArchitecture.Equals(Architecture.X64))
+        var architecture = "";
+        switch (RuntimeInformation.OSArchitecture)
         {
-            return null;
+            case Architecture.X64:
+                architecture = "x86_64";
+                break;
+            default:
+                Console.WriteLine($"Unsupported Architecture: {RuntimeInformation.OSArchitecture}");
+                return null;
         }
-        var platform = "windows";
-        var architecture = "x86_64";
-        var extension = ".dll";
+
 
         var sourcePlugin = Path.Combine(settings.RetroCoreFolder, platform, architecture, $"{pluginName}{extension}");
         var destinationPlugin = Path.Combine(projectSettings.projectPath, "LibRetro", $"{projectSettings.RetroCoreName}_{platform}_{architecture}{extension}");
@@ -511,7 +530,7 @@ internal class Editor : IEditor
     async Task<bool> Download(string platform, string architecture, string extension, string pluginName)
     {
         var url = $"http://buildbot.libretro.com/nightly/{platform}/{architecture}/latest/{pluginName}{extension}.zip";
-        var destination = Path.Combine(settings.RetroCoreFolder, platform, architecture, $"{pluginName}.dll");
+        var destination = Path.Combine(settings.RetroCoreFolder, platform, architecture, $"{pluginName}{extension}");
 
         using (var client = new HttpClient())
         {

@@ -59,6 +59,11 @@ public class JetSetWilly48 : IRetroPlugin, IImages, ITileMaps
         rom.Export(filename, kind);
     }
 
+    public void Save(ProjectSettings settings)
+    {
+        rom.Save(settings);
+    }
+
     public void Close()
     {
     }
