@@ -12,7 +12,7 @@ public class JetSetWilly48 : IRetroPlugin, IImages, ITileMaps
         new byte[] { 0x0f, 0xdb, 0xe2, 0xba, 0x51, 0x8d, 0x70, 0x67, 0x7f, 0xd8, 0x93, 0x75, 0xae, 0x4c, 0x6f, 0xb3 },  // JetSetWillyTzxF
     };
 
-    public string Name => "Jet Set Willy 48K";
+    public static string? Name => "Jet Set Willy 48K";
 
     public string RomPluginName => "ZXSpectrum";
 

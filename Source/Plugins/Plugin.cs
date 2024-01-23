@@ -15,9 +15,10 @@ public struct Pixel
     public byte Alpha;
 }
 
+
 public interface IRomPlugin
 {
-    static string? Name { get; }
+    static abstract string? Name { get; }
     string LibRetroPluginName { get; } 
 
     public void Initialise(LibRetroPlugin libRetroInterface, IEditor editorInterface);
@@ -183,6 +184,8 @@ public sealed class ProjectSettings
 
 public interface IRetroPlugin
 {
+    static abstract string? Name { get; }
+
     string RomPluginName { get; }
 
 
@@ -202,8 +205,6 @@ public interface IRetroPlugin
     IImages? GetImageInterface() { return null; }
     ITileMaps? GetTileMapInterface() { return null; }
 
-    public string Name { get; }
-
     public void Export(string filename, string kind);
 
     void Save(ProjectSettings settings);
@@ -214,6 +215,7 @@ public interface IRetroPlugin
 // Null Plugins
 public class NullRomPlugin : IRomPlugin
 {
+    public static string? Name => null;
     public string LibRetroPluginName => throw new NotImplementedException();
 
     public void Initialise(LibRetroPlugin libRetroPlugin, IEditor editorInterface)
