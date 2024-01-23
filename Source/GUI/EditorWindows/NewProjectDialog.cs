@@ -9,7 +9,6 @@ class NewProjectDialog : IEditorWindow
     private string importFile;
     private int selectedPlugin;
     public string[] availablePluginNames;
-    public IRetroPlugin[] retroPlugins;
 
     private Editor editor;
     public void Close()
@@ -72,11 +71,11 @@ class NewProjectDialog : IEditorWindow
                     projectName = Path.GetFileNameWithoutExtension(importFile);
                 }
                 selectedPlugin = 0;
-                foreach (var plugin in retroPlugins)
+                foreach (var plugin in availablePluginNames)
                 {
-                    if (plugin.CanHandle(importFile))
+                    if (editor.IsPluginSuitable(plugin, importFile))
                     {
-                        selectedPlugin = Array.IndexOf(availablePluginNames, plugin.Name);
+                        selectedPlugin = Array.IndexOf(availablePluginNames, plugin);
                         break;
                     }
                 }
@@ -92,7 +91,7 @@ class NewProjectDialog : IEditorWindow
             ImGui.LabelText("", importFile);
         }
 
-        if (importFile == "" || !File.Exists(importFile) || selectedPlugin == 0 || !retroPlugins[selectedPlugin - 1].CanHandle(importFile))
+        if (importFile == "" || !File.Exists(importFile) || selectedPlugin == 0 || !editor.IsPluginSuitable(availablePluginNames[selectedPlugin], importFile))
         {
             disabledCounter++;
             if (disabledCounter == 1)
@@ -118,7 +117,7 @@ class NewProjectDialog : IEditorWindow
         {
             editor.Settings.ProjectLocation = projectLocation;
             ImGui.CloseCurrentPopup();
-            editor.CreateNewProject(projectName, projectLocation, importFile, retroPlugins[selectedPlugin - 1]);
+            editor.CreateNewProject(projectName, projectLocation, importFile, availablePluginNames[selectedPlugin]);
             return true;
         }
         if (disabledCounter > 0)
@@ -135,10 +134,9 @@ class NewProjectDialog : IEditorWindow
         projectLocation = editor.Settings.ProjectLocation;
         importFile = "";
 
-        var plugins = editor.Plugins.Select((a)=>a.Name).ToList();
+        var plugins = editor.Plugins.ToList();
         plugins.Insert(0, "");
         availablePluginNames = plugins.ToArray();
-        retroPlugins = editor.Plugins.ToArray();
         return true;
     }
 

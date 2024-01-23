@@ -10,7 +10,7 @@ using System.IO.Compression;
 internal class Editor : IEditor
 {
     private Dictionary<string, Type> romPlugins;
-    private IRetroPlugin[] plugins;
+    private Dictionary<string, Type> plugins;
     private List<ActiveProject> activeProjects;   // Needs to become active projects, since we now allow multiple of the same plugin
     private WindowManager windowManager;
 
@@ -43,12 +43,9 @@ internal class Editor : IEditor
 
     internal EditorSettings Settings => settings;
 
-    internal IEnumerable<IRetroPlugin> Plugins => plugins;
-
+    internal IEnumerable<string> Plugins => plugins.Keys;
     public Editor(IRetroPlugin[] plugins, IRomPlugin[] romPlugins)
     {
-        this.plugins = plugins;
-
         this.activeProjects = new List<ActiveProject>();
         this.romPlugins = new Dictionary<string, Type>();
         foreach (var plugin in romPlugins)
@@ -58,6 +55,16 @@ internal class Editor : IEditor
             if (name != null)
             {
                 this.romPlugins.Add(name, type);
+            }
+        }
+        this.plugins = new Dictionary<string, Type>();
+        foreach (var plugin in plugins)
+        {
+            var type = plugin.GetType();
+            var name = type.InvokeMember("Name", System.Reflection.BindingFlags.GetProperty, null, null, null) as string;
+            if (name != null)
+            {
+                this.plugins.Add(name, type);
             }
         }
         windowManager = new WindowManager();
@@ -304,13 +311,32 @@ internal class Editor : IEditor
     }
 
 
-    public IRomPlugin? GetRomInstance(string romKind)
+    internal IRomPlugin? GetRomInstance(string romKind)
     {
         if (romPlugins.TryGetValue(romKind, out var Type))
         {
             return Activator.CreateInstance(Type) as IRomPlugin;
         }
         return null;
+    }
+
+    internal IRetroPlugin? GetPluginInstance(string pluginName)
+    {
+        if (plugins.TryGetValue(pluginName, out var Type))
+        {
+            return Activator.CreateInstance(Type) as IRetroPlugin;
+        }
+        return null;
+    }
+
+    internal bool IsPluginSuitable(string pluginName, string fileName)
+    {
+        var tPlugin = GetPluginInstance(pluginName);
+        if (tPlugin!=null)
+        {
+            return tPlugin.CanHandle(fileName);
+        }
+        return false;
     }
 
     private void OpenProject(string projectPath)
@@ -337,19 +363,17 @@ internal class Editor : IEditor
         projectSettings.Load(jsonPath);
 
         // Locate the plugin this project needs
-        foreach (var plugin in plugins)
+        var plugin = GetPluginInstance(projectSettings.RetroPluginName);
+        if (plugin!=null)
         {
-            if (plugin.Name==projectSettings.RetroPluginName)
+            // Next we need to perform the initial import and save state, then we can begin editing (the player window will open)
+            var retroPluginInstance = InternalInitialisePlugin(plugin, projectSettings, false);
+            if (retroPluginInstance == null)
             {
-                // Next we need to perform the initial import and save state, then we can begin editing (the player window will open)
-                var retroPluginInstance = InternalInitialisePlugin(plugin, projectSettings, false);
-                if (retroPluginInstance == null)
-                {
-                    return;
-                }
-
-                InternalAddDefaultWindowAndProject(projectPath, projectName, projectSettings, plugin, retroPluginInstance);
+                return;
             }
+
+            InternalAddDefaultWindowAndProject(projectPath, projectName, projectSettings, plugin, retroPluginInstance);
         }
     }
 
@@ -376,7 +400,7 @@ internal class Editor : IEditor
         }
     }
 
-    internal bool CreateNewProject(string projectName, string projectLocation, string importFile, IRetroPlugin retroPlugin)
+    internal bool CreateNewProject(string projectName, string projectLocation, string importFile, string retroPluginName)
     {
         // Todo Progress Dialog
         var projectPath = Path.Combine(projectLocation, projectName);
@@ -391,12 +415,16 @@ internal class Editor : IEditor
         var hashC = MD5.Create().ComputeHash(BitConverter.GetBytes(DateTime.Now.ToBinary()));
         var hash = MD5.Create().ComputeHash(hashA.Concat(hashB).Concat(hashC).ToArray());
         var retroCoreName = string.Concat(hash.Select(x => x.ToString("X2")));
-        var retroPluginName = retroPlugin.Name;
 
         var projectSettings = new ProjectSettings(projectPath, retroCoreName, retroPluginName);
         projectSettings.Save(projectFile);
         File.Copy(importFile, GetRomPath(projectSettings), true);
 
+        var retroPlugin = GetPluginInstance(retroPluginName);
+        if (retroPlugin==null)
+        {
+            return false;
+        }
         var retroPluginInstance = InternalInitialisePlugin(retroPlugin, projectSettings, true);
         if (retroPluginInstance==null)
         {
