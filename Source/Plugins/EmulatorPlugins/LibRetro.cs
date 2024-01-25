@@ -378,9 +378,9 @@ public class LibRetroPlugin : IDisposable
         dataHandle.Free();
     }
 
-    public byte[] GetMemory(UInt64 start, UInt64 size)
+    public ReadOnlySpan<byte> GetMemory(UInt64 start, UInt64 size)
     {
-        // Gets memory from memory maps
+        // Gets memory from memory maps - TODO Better?
         var data = new byte[size];
         var dataHandle = GCHandle.Alloc(data, GCHandleType.Pinned);
         unsafe
@@ -424,10 +424,11 @@ public class LibRetroPlugin : IDisposable
         return data;
     }
 
-    public void SetMemory(UInt64 start, byte[] data)
+    public void SetMemory(UInt64 start, ReadOnlySpan<byte> toWrite)
     {
         // Sets memory in memory maps
-        var dataHandle = GCHandle.Alloc(data, GCHandleType.Pinned);
+        var data = toWrite.ToArray();   // TODO better?
+        var dataHandle = GCHandle.Alloc(data.Length, GCHandleType.Pinned);
         unsafe
         {
             foreach (var m in memoryMaps)
@@ -507,10 +508,10 @@ public class LibRetroPlugin : IDisposable
         nativeRun.Invoke();
     }
 
-    public void AutoLoad(Func<bool> condition)
+    public void AutoLoad(IRomAccess romAccess, Func<IRomAccess,bool> condition)
     {
         disableVideo = true;
-        while (!condition())
+        while (!condition(romAccess))
         {
             Run();
         }

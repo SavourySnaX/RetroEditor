@@ -54,15 +54,69 @@ public class JetSetWilly48 : IRetroPlugin, IImages, ITileMaps
         return 61;
     }
     
-    public void Export(string filename, string kind)
+    public ISave Export(IRomAccess romAccess)
     {
-        rom.Export(filename, kind);
+        // Make this easier (e.g. add BASIC code helpers)
+        // encode start address is spectrum basic format :
+        ushort clear = 25000;
+        var clearInteger = new byte [] { 0x0E,0x00,0x00, (byte)(clear & 0xFF), (byte)(clear >> 8), 0x00 };
+        var clearAscii = System.Text.Encoding.ASCII.GetBytes($"{clear}");
+        var start = 0x8400;
+        var integer = new byte[] { 0x0E, 0x00, 0x00, (byte)(start & 0xFF), (byte)(start >> 8), 0x00 };
+        var ascii = System.Text.Encoding.ASCII.GetBytes($"{start}");
+        var clearCode = new byte[] { 0xFD };
+        var loadCodeRandUsr = new byte[] { 0x3A, 0xEF, 0x22, 0x22, 0xAF, 0x3A, 0xF9, 0xC0 };
+        var endBasic= new byte[] { 0x0D };
+        ushort length = (ushort)(clearInteger.Length + clearAscii.Length + clearCode.Length + integer.Length + ascii.Length + loadCodeRandUsr.Length + endBasic.Length);
+        var loader = new byte[] { 0x00, 0x0A, (byte)(length & 0xFF), (byte)(length >> 8) }.
+            Concat(clearCode).Concat(clearAscii).Concat(clearInteger).
+            Concat(loadCodeRandUsr).Concat(ascii).Concat(integer).Concat(endBasic).ToArray();
+        var assembled = romAccess.ReadBytes(ReadKind.Ram, 0x8000, 0x8000);
+        var outTape = new ZXSpectrumTape.Tape();
+        var basicHeader = new ZXSpectrumTape.HeaderBlock(ZXSpectrumTape.HeaderKind.Program, "JSW", (UInt16)loader.Length, 10, (UInt16)loader.Length);
+        outTape.AddHeader(basicHeader);
+        var basicBlock = new ZXSpectrumTape.DataBlock(loader);
+        outTape.AddBlock(basicBlock);
+        var header = new ZXSpectrumTape.HeaderBlock(ZXSpectrumTape.HeaderKind.Code, "JSW", (UInt16)assembled.Length,0x8000, 0);
+        outTape.AddHeader(header);
+        var block = new ZXSpectrumTape.DataBlock(assembled);
+        outTape.AddBlock(block);
+
+        return outTape;
     }
 
     public void Save(ProjectSettings settings)
     {
         rom.Save(settings);
     }
+
+    public bool AutoLoadCondition(IRomAccess romAccess)
+    {
+        var checkMemory = romAccess.ReadBytes(ReadKind.Ram, 0x5800, 768);
+        var hash = IncrementalHash.CreateHash(HashAlgorithmName.MD5);
+        hash.AppendData(checkMemory);
+        return hash.GetCurrentHash().SequenceEqual(screenHash);
+    }
+
+    public void SetupGameTemporaryPatches(IRomAccess romAccess)
+    {
+        romAccess.WriteBytes(WriteKind.TemporaryRam, 0x8785, new byte[] { 0xC9 });          // Store return to force out of cheat code key wait
+        romAccess.WriteBytes(WriteKind.TemporaryRam, 0x872C, new byte[] { 0xCA, 0x87 });    // Jump to game start
+        romAccess.WriteBytes(WriteKind.TemporaryRam, 0x88AC, new byte[] { 0xFC, 0x88 });    // start game
+
+        byte yPos = 13 * 8;
+        byte xPos = 1 * 8;
+        byte roomNumber = 0x22;
+
+        ushort attributeAddress = (ushort)(0x5C00 + ((yPos / 8) * 32) + (xPos / 8));
+
+        romAccess.WriteBytes(WriteKind.TemporaryRam, 0x87E6, new byte[] { (byte)(yPos * 2) });          // willys y cordinate
+        romAccess.WriteBytes(WriteKind.TemporaryRam, 0x87F0, new byte[] { (byte)(attributeAddress & 0xFF), (byte)(attributeAddress >> 8) });    // willys cordinate
+        romAccess.WriteBytes(WriteKind.TemporaryRam, 0x87EB, new byte[] { (byte)(roomNumber) });
+    }
+
+
+    public readonly byte[] screenHash = { 27, 10, 249, 194, 93, 180, 162, 138, 198, 11, 210, 12, 245, 143, 226, 53 };
 
     public void Close()
     {

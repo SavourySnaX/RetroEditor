@@ -4,7 +4,7 @@
 
 */
 
-internal class PlayableRom
+internal class PlayableRom : IRomAccess
 {
     private LibRetroPlugin plugin;
     private IEditor editorInterface;
@@ -26,14 +26,14 @@ internal class PlayableRom
         state=Array.Empty<byte>();
     }
 
-    public bool Setup(ProjectSettings settings, string filename, Func<bool>? autoLoad = null)
+    public bool Setup(ProjectSettings settings, string filename, Func<IRomAccess,bool>? autoLoad = null)
     {
         plugin.LoadGame(filename);
 
         // Load to a defined point (because we are loading from tape)
         if (requiresLoad && autoLoad != null)
         {
-            plugin.AutoLoad(autoLoad);
+            plugin.AutoLoad(this,autoLoad);
         }
 
         // We should save snapshot, so we don't need to load from tape again...
@@ -85,12 +85,19 @@ internal class PlayableRom
         File.WriteAllText(path, json);
     }
 
-    public byte[] ReadMemory(MemoryRegion region, uint address, uint length)
+    public ReadOnlySpan<byte> ReadMemory(MemoryRegion region, uint address, uint length)
     {
+        switch (region)
+        {
+            case MemoryRegion.Rom:
+                throw new NotImplementedException($"Rom not done");
+            case MemoryRegion.Ram:
+                return plugin.GetMemory(address, length);
+        }
         return plugin.GetMemory(address, length);
     }
 
-    public void WriteTemporaryMemory(MemoryRegion region, uint address, byte[] data)
+    public void WriteTemporaryMemory(MemoryRegion region, uint address,ReadOnlySpan<byte> data)
     {
         if (region == MemoryRegion.Ram)
         {
@@ -102,7 +109,7 @@ internal class PlayableRom
         }
     }
 
-    public void WriteSerialisedMemory(MemoryRegion region, uint address, byte[] data)
+    public void WriteSerialisedMemory(MemoryRegion region, uint address, ReadOnlySpan<byte> data)
     {
         if (region == MemoryRegion.Ram)
         {
@@ -113,6 +120,38 @@ internal class PlayableRom
         {
             throw new Exception("Not implemented");
         }
+    }
+
+    public ReadOnlySpan<byte> ReadBytes(ReadKind kind, uint address, uint length)
+    {
+        switch (kind)
+        {
+            case ReadKind.Ram:
+                return ReadMemory(MemoryRegion.Ram, address, length);
+            case ReadKind.Rom:
+                return ReadMemory(MemoryRegion.Rom, address, length);
+        }
+        throw new Exception("Not implemented");
+    }
+
+    public void WriteBytes(WriteKind kind, uint address, ReadOnlySpan<byte> bytes)
+    {
+        switch (kind)
+        {
+            case WriteKind.TemporaryRam:
+                WriteTemporaryMemory(MemoryRegion.Ram, address, bytes.ToArray());
+                break;
+            case WriteKind.TemporaryRom:
+                WriteTemporaryMemory(MemoryRegion.Rom, address, bytes.ToArray());
+                break;
+            case WriteKind.SerialisedRam:
+                WriteSerialisedMemory(MemoryRegion.Ram, address, bytes.ToArray());
+                break;
+            case WriteKind.SerialisedRom:
+                WriteSerialisedMemory(MemoryRegion.Rom, address, bytes.ToArray());
+                break;
+        }
+        throw new Exception("Not implemented");
     }
 }
 

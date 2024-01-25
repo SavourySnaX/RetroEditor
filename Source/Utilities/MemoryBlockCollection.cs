@@ -18,7 +18,7 @@ public class MemoryblockCollection
 
     public IEnumerable<MemoryBlock> Blocks => memoryBlocks.Values;
 
-    private void InternalAddRegion(uint address, Span<byte> span)
+    private void InternalAddRegion(uint address, ReadOnlySpan<byte> span)
     {
         foreach (var block in memoryBlocks)
         {
@@ -97,14 +97,14 @@ public class MemoryblockCollection
         }
     }
 
-    public void AddRegion(uint address, byte[] data)
+    public void AddRegion(uint address, ReadOnlySpan<byte> data)
     {
         if (memoryBlocks.Count==0)
         {
-            memoryBlocks.Add(address, new MemoryBlock() { address = address, data = data });
+            memoryBlocks.Add(address, new MemoryBlock() { address = address, data = data.ToArray() });
             return;
         }
-        var span = data.AsSpan();
+        var span = data;
         InternalAddRegion(address, span);
         InternalJoinSegments();
     }

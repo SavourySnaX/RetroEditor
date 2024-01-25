@@ -15,6 +15,31 @@ public struct Pixel
     public byte Alpha;
 }
 
+public enum ReadKind
+{
+    Ram=0,
+    Rom=1,
+}
+
+public enum WriteKind
+{
+    TemporaryRam=0,
+    TemporaryRom=1,
+    SerialisedRam=0x1000,
+    SerialisedRom=0x1001,
+}
+
+public interface ISave
+{
+    public void Save(string filename);
+}
+
+public interface IRomAccess
+{
+    public ReadOnlySpan<byte> ReadBytes(ReadKind kind, uint address, uint length);
+    public void WriteBytes(WriteKind kind, uint address, ReadOnlySpan<byte> bytes);
+}
+
 
 public interface IRomPlugin
 {
@@ -23,10 +48,10 @@ public interface IRomPlugin
 
     public void Initialise(LibRetroPlugin libRetroInterface, IEditor editorInterface);
 
-    bool InitialLoad(ProjectSettings settings);
-    bool Reload(ProjectSettings settings);
+    bool InitialLoad(ProjectSettings settings,IRetroPlugin retroPlugin);
+    bool Reload(ProjectSettings settings, IRetroPlugin retroPlugin);
     void Save(ProjectSettings settings);
-    bool Export(string filename, string kind);
+    bool Export(string filename, IRetroPlugin retroPlugin);
 
     byte ReadByte(uint address);
     ushort ReadWord(uint address);
@@ -205,11 +230,19 @@ public interface IRetroPlugin
     IImages? GetImageInterface() { return null; }
     ITileMaps? GetTileMapInterface() { return null; }
 
-    public void Export(string filename, string kind);
 
     void Save(ProjectSettings settings);
 
     void Close();
+
+    // Rom/Ram handling
+
+    bool AutoLoadCondition(IRomAccess romAccess);
+
+    void SetupGameTemporaryPatches(IRomAccess romAccess);
+
+    ISave Export(IRomAccess romAcess);
+
 }
 
 // Null Plugins
@@ -223,11 +256,10 @@ public class NullRomPlugin : IRomPlugin
         throw new NotImplementedException();
     }
 
-    public bool InitialLoad(ProjectSettings settings)
+    public bool InitialLoad(ProjectSettings settings, IRetroPlugin retroPlugin)
     {
         throw new NotImplementedException();
     }
-
     public byte ReadByte(uint address)
     {
         throw new NotImplementedException();
@@ -243,7 +275,7 @@ public class NullRomPlugin : IRomPlugin
         throw new NotImplementedException();
     }
 
-    public bool Reload(ProjectSettings settings)
+    public bool Reload(ProjectSettings settings,IRetroPlugin retroPlugin)
     {
         throw new NotImplementedException();
     }
@@ -253,7 +285,7 @@ public class NullRomPlugin : IRomPlugin
         throw new NotImplementedException();
     }
 
-    public bool Export(string filename, string kind)
+    public bool Export(string filename, IRetroPlugin retroPlugin)
     {
         throw new NotImplementedException();
     }
