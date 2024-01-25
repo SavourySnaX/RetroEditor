@@ -85,11 +85,6 @@ public class JetSetWilly48 : IRetroPlugin, IImages, ITileMaps
         return outTape;
     }
 
-    public void Save(ProjectSettings settings)
-    {
-        rom.Save(settings);
-    }
-
     public bool AutoLoadCondition(IRomAccess romAccess)
     {
         var checkMemory = romAccess.ReadBytes(ReadKind.Ram, 0x5800, 768);
