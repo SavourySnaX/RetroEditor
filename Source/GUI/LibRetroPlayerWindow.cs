@@ -33,6 +33,7 @@ public class LibRetroPlayerWindow : IWindow
 
     public bool OtherStuff()
     {
+        /*
         if (name == "Fuse")
         {
             plugin.LoadGame("c:\\work\\editor\\jsw\\Jet Set Willy (1984)(Software Projects).tzx");
@@ -102,7 +103,7 @@ public class LibRetroPlayerWindow : IWindow
 
             plugin.LoadGame(name, game);
         }
-
+*/
         // We should save snapshot, so we don't need to load from tape again...
         var saveSize = plugin.GetSaveStateSize();
         var state = new byte[saveSize];

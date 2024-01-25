@@ -257,7 +257,7 @@ namespace ZXSpectrumTape
         Data
     }
 
-    public class Tape
+    public class Tape : ISave
     {
         private string filepath;
         private byte[]? tapeData;

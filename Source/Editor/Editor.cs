@@ -457,11 +457,11 @@ internal class Editor : IEditor
         romInterface.Initialise(emuPlugin, this);
         if (firstTime)
         {
-            romInterface.InitialLoad(projectSettings);
+            romInterface.InitialLoad(projectSettings, plugin);
         }
         else
         {
-            romInterface.Reload(projectSettings);
+            romInterface.Reload(projectSettings, plugin);
         }
 
         plugin.Initialise(romInterface);
