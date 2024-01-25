@@ -7,21 +7,38 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.IO.Compression;
 
+internal struct ActiveProject
+{
+    public ActiveProject(string name, IRetroPlugin retroPlugin, LibRetroPlugin libRetroPlugin, IRomPlugin romPlugin, ProjectSettings settings)
+    {
+        this.name = name;
+        this.retroPlugin = retroPlugin;
+        this.libRetroPlugin = libRetroPlugin;
+        this.romPlugin = romPlugin;
+        this.settings = settings;
+    }
+
+    private string name;
+    private IRetroPlugin retroPlugin;
+    private LibRetroPlugin libRetroPlugin;
+    private IRomPlugin romPlugin;
+    private ProjectSettings settings;
+
+    public readonly IRetroPlugin RetroPlugin => retroPlugin;
+    public readonly LibRetroPlugin LibRetroPlugin => libRetroPlugin;
+    public readonly IRomPlugin RomPlugin => romPlugin;
+    public readonly ProjectSettings Settings => settings;
+
+    public readonly string Name => name;
+}
+
+
 internal class Editor : IEditor
 {
     private Dictionary<string, Type> romPlugins;
     private Dictionary<string, Type> plugins;
     private List<ActiveProject> activeProjects;   // Needs to become active projects, since we now allow multiple of the same plugin
     private WindowManager windowManager;
-
-    internal struct ActiveProject
-    {
-        public IRetroPlugin Plugin;
-        public LibRetroPlugin RetroPlugin;
-        public ProjectSettings Settings;
-
-        public string Name { get; internal set; }
-    }
 
     internal class EditorSettings
     {
@@ -161,8 +178,8 @@ internal class Editor : IEditor
 
         foreach (var active in activeProjects)
         {
-            active.Plugin.Save(active.Settings);
-            active.Plugin.Close();
+            active.RomPlugin.Save(active.Settings);
+            active.RetroPlugin.Close();
         }
 
         var json = JsonSerializer.Serialize<EditorSettings>(settings, new JsonSerializerOptions { WriteIndented = true });
@@ -232,7 +249,7 @@ internal class Editor : IEditor
 
                             if (result.IsOk)
                             {
-                                active.Plugin.Export(result.Path, "TAP");
+                                active.RomPlugin.Export(result.Path, active.RetroPlugin);
                             }
                         }
                     }
@@ -276,7 +293,7 @@ internal class Editor : IEditor
                 {
                     if (ImGui.BeginMenu(active.Name))
                     {
-                        active.Plugin.Menu(this);
+                        active.RetroPlugin.Menu(this);
                         bool playerOpen = windowManager.IsOpen($"LibRetro Player ({active.Name})");
                         if (playerOpen)
                         {
@@ -359,7 +376,7 @@ internal class Editor : IEditor
         // Load the project settings
         var projectName = projectPath.Split(Path.DirectorySeparatorChar).Last();
         var jsonPath = Path.Combine(editorPath, $"{projectName}.json");
-        var projectSettings = new ProjectSettings(projectPath,"","");
+        var projectSettings = new ProjectSettings(projectName, projectPath, "", "");
         projectSettings.Load(jsonPath);
 
         // Locate the plugin this project needs
@@ -367,36 +384,31 @@ internal class Editor : IEditor
         if (plugin!=null)
         {
             // Next we need to perform the initial import and save state, then we can begin editing (the player window will open)
-            var retroPluginInstance = InternalInitialisePlugin(plugin, projectSettings, false);
-            if (retroPluginInstance == null)
-            {
-                return;
-            }
-
-            InternalAddDefaultWindowAndProject(projectPath, projectName, projectSettings, plugin, retroPluginInstance);
+            InternalInitialisePlugin(plugin, projectSettings, false);
         }
     }
 
     private void OpenPlayerWindow(ActiveProject activeProject)
     {
-        var pluginWindow = new LibRetroPlayerWindow(activeProject.RetroPlugin, activeProject.Name);
+        var pluginWindow = new LibRetroPlayerWindow(activeProject.LibRetroPlugin, activeProject.Name);
         OpenWindow(pluginWindow, $"LibRetro Player ({activeProject.Name})");
         pluginWindow.InitWindow();
     }
 
-    private void InternalAddDefaultWindowAndProject(string projectPath, string projectName, ProjectSettings projectSettings, IRetroPlugin plugin, LibRetroPlugin retroPluginInstance)
+    private void InternalAddDefaultWindowAndProject(ProjectSettings projectSettings, IRetroPlugin plugin, LibRetroPlugin retroPluginInstance, IRomPlugin romPlugin)
     {
-        var activeProjectName = projectName + $" [{activeProjects.Count + 1}]";
-        var project = new ActiveProject { Plugin = plugin, Settings = projectSettings, Name = activeProjectName, RetroPlugin = retroPluginInstance };
+        var activeProjectName = projectSettings.projectName + $" [{activeProjects.Count + 1}]";
+        var project = new ActiveProject(activeProjectName, plugin, retroPluginInstance, romPlugin, projectSettings);
+
         OpenPlayerWindow(project);
         activeProjects.Add(project);
-        if (!settings.RecentProjects.Contains(projectPath))
+        if (!settings.RecentProjects.Contains(projectSettings.projectPath))
         {
             if (settings.RecentProjects.Count > 20)
             {
                 settings.RecentProjects.RemoveAt(0);
             }
-            settings.RecentProjects.Add(projectPath);
+            settings.RecentProjects.Add(projectSettings.projectPath);
         }
     }
 
@@ -416,7 +428,7 @@ internal class Editor : IEditor
         var hash = MD5.Create().ComputeHash(hashA.Concat(hashB).Concat(hashC).ToArray());
         var retroCoreName = string.Concat(hash.Select(x => x.ToString("X2")));
 
-        var projectSettings = new ProjectSettings(projectPath, retroCoreName, retroPluginName);
+        var projectSettings = new ProjectSettings(projectName, projectPath, retroCoreName, retroPluginName);
         projectSettings.Save(projectFile);
         File.Copy(importFile, GetRomPath(projectSettings), true);
 
@@ -425,32 +437,25 @@ internal class Editor : IEditor
         {
             return false;
         }
-        var retroPluginInstance = InternalInitialisePlugin(retroPlugin, projectSettings, true);
-        if (retroPluginInstance==null)
-        {
-            return false;
-        }
-
-        InternalAddDefaultWindowAndProject(projectPath, projectName, projectSettings, retroPlugin, retroPluginInstance);
-        return true;
+        return InternalInitialisePlugin(retroPlugin, projectSettings, true);
     }
 
-    private LibRetroPlugin? InternalInitialisePlugin(IRetroPlugin plugin, ProjectSettings projectSettings, bool firstTime)
+    private bool InternalInitialisePlugin(IRetroPlugin plugin, ProjectSettings projectSettings, bool firstTime)
     {
         // Initialise Rom
         var romInterface = GetRomInstance(plugin.RomPluginName);
         if (romInterface==null)
         {
-            return null;
+            return false;
         }
         var emuPlugin = GetLibRetroInstance(romInterface.LibRetroPluginName, projectSettings); 
         if (emuPlugin == null)
         {
-            return null;
+            return false;
         }
         if (emuPlugin.Version() != 1)
         {
-            return null;
+            return false;
         }
         emuPlugin.Init();
 
@@ -465,7 +470,9 @@ internal class Editor : IEditor
         }
 
         plugin.Initialise(romInterface);
-        return emuPlugin;
+        
+        InternalAddDefaultWindowAndProject(projectSettings, plugin, emuPlugin, romInterface);
+        return true;
     }
 
     public void SaveState(byte[] state, ProjectSettings projectSettings)

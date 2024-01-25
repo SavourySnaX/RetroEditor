@@ -172,10 +172,11 @@ public sealed class ProjectSettings
         public string RetroPluginName { get; set; }
     }
     
-    public ProjectSettings(string projectPath, string retroCoreName, string retroPluginName)
+    public ProjectSettings(string projectName, string projectPath, string retroCoreName, string retroPluginName)
     {
         this.serializedSettings = new SerializedSettings("0.0.1", retroCoreName, retroPluginName);
         this.projectPath = projectPath;
+        this.projectName = projectName;
     }
 
     internal void Save(string projectFile)
@@ -202,6 +203,7 @@ public sealed class ProjectSettings
     public string Version => serializedSettings.Version;
     public string RetroCoreName => serializedSettings.RetroCoreName;
     public string RetroPluginName => serializedSettings.RetroPluginName;
+    internal readonly string projectName;
     internal readonly string projectPath;
 }
 
@@ -230,8 +232,6 @@ public interface IRetroPlugin
     IImages? GetImageInterface() { return null; }
     ITileMaps? GetTileMapInterface() { return null; }
 
-
-    void Save(ProjectSettings settings);
 
     void Close();
 
