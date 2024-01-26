@@ -1,7 +1,4 @@
-
-
-using System.Runtime.InteropServices;
-
+/*
 public struct PalettePtr
 {
     const uint fixedAddress = 0x1197C;
@@ -67,4 +64,4 @@ public struct PalettePtr
         return entries[index];
     }
 }
-
+*/

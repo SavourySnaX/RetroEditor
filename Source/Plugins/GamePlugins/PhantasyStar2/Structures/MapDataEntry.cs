@@ -1,3 +1,4 @@
+/*
 public struct MapDataEntry
 {
     byte data0;
@@ -37,3 +38,4 @@ public struct MapDataEntry
 
     public int SpriteDataTableOffset => (int)(data2 & 0x7F);
 }
+*/

@@ -1,4 +1,4 @@
-
+/*
 public struct PTR_ARRAY_9342
 {
     const uint EntriesInRom = 7;
@@ -30,3 +30,4 @@ public struct PTR_ARRAY_9342
         return ptrs[index].addressB;
     }
 }
+*/

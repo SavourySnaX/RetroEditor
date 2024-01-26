@@ -1,4 +1,5 @@
- public class BitPack
+/*
+public class BitPack
 {
 
     public byte[] Decompress(IRomPlugin rom, uint sourceAddress)
@@ -65,3 +66,4 @@
 }
 
 
+*/
