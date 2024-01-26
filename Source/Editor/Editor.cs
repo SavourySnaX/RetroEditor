@@ -271,9 +271,11 @@ internal class Editor : IEditor
             }
             if (ImGui.BeginMenu("Edit"))
             {
+                ImGui.BeginDisabled();
                 if (ImGui.MenuItem("Undo"))
                 {
                 }
+                ImGui.EndDisabled();
                 ImGui.EndMenu();
             }
             if (ImGui.BeginMenu("Remote"))
@@ -286,39 +288,40 @@ internal class Editor : IEditor
                 }
                 ImGui.EndMenu();
             }
-            if (activeProjects.Count == 0)
-            {
-                ImGui.BeginDisabled();
-            }
             if (ImGui.BeginMenu("Window"))
             {
-                foreach (var active in activeProjects)
+                if (activeProjects.Count==0)
                 {
-                    if (ImGui.BeginMenu(active.Name))
+                    ImGui.BeginDisabled();
+                    ImGui.MenuItem("No Projects Open");
+                    ImGui.EndDisabled();
+                }
+                else
+                {
+                    foreach (var active in activeProjects)
                     {
-                        active.RetroPlugin.Menu(active.PlayableRomPlugin,this);
-                        bool playerOpen = windowManager.IsOpen($"LibRetro Player ({active.Name})");
-                        if (playerOpen)
+                        if (ImGui.BeginMenu(active.Name))
                         {
-                            ImGui.BeginDisabled();
+                            active.RetroPlugin.Menu(active.PlayableRomPlugin, this);
+                            bool playerOpen = windowManager.IsOpen($"LibRetro Player ({active.Name})");
+                            if (playerOpen)
+                            {
+                                ImGui.BeginDisabled();
+                            }
+                            if (ImGui.MenuItem("Open Player"))
+                            {
+                                OpenPlayerWindow(active);
+                            }
+                            if (playerOpen)
+                            {
+                                ImGui.EndDisabled();
+                            }
+
+                            ImGui.EndMenu();
                         }
-                        if (ImGui.MenuItem("Open Player"))
-                        {
-                            OpenPlayerWindow(active);
-                        }
-                        if (playerOpen)
-                        {
-                            ImGui.EndDisabled();
-                        }
-                        
-                        ImGui.EndMenu();
                     }
                 }
                 ImGui.EndMenu();
-            }
-            if (activeProjects.Count == 0)
-            {
-                ImGui.EndDisabled();
             }
             ImGui.EndMainMenuBar();
         }
