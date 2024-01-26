@@ -8,15 +8,15 @@ class ZXSpectrum : IRomPlugin
 
     public string LibRetroPluginName => "fuse_libretro";
 
-    private LibRetroPlugin plugin;      // For loading and testing
+    public MemoryEndian Endian => MemoryEndian.Little;
+
     private PlayableRom playableRom;    // For loading and testing
     private IEditor editorInterface;
 
-    public void Initialise(LibRetroPlugin libRetroInterface, IEditor editorInterface)
+    public void Initialise(PlayableRom playableRom, IEditor editorInterface)
     {
         this.editorInterface = editorInterface;
-        this.plugin = libRetroInterface;
-        playableRom = new PlayableRom(editorInterface, plugin, true);
+        this.playableRom = playableRom;
     }
 
     public bool InitialLoad(ProjectSettings settings, IRetroPlugin retroPlugin)

@@ -4,23 +4,25 @@
 
 */
 
-internal class PlayableRom : IRomAccess
+public class PlayableRom : IRomAccess
 {
+    public MemoryEndian Endian => endian;
+
     private LibRetroPlugin plugin;
     private IEditor editorInterface;
-    private bool requiresLoad;
 
     private byte[] state;
+    private MemoryEndian endian;
 
     MemoryblockCollection temporaryBlocksRam;
     MemoryblockCollection serialisedBlocksRam { get; set; }
 
 
-    public PlayableRom(IEditor editorInterface,LibRetroPlugin plugin, bool requiresLoad)
+    public PlayableRom(IEditor editorInterface,LibRetroPlugin plugin, MemoryEndian endian)
     {
+        this.endian = endian;
         this.editorInterface = editorInterface;
         this.plugin = plugin;
-        this.requiresLoad = requiresLoad;
         temporaryBlocksRam = new MemoryblockCollection();
         serialisedBlocksRam = new MemoryblockCollection();
         state=Array.Empty<byte>();
@@ -31,7 +33,7 @@ internal class PlayableRom : IRomAccess
         plugin.LoadGame(filename);
 
         // Load to a defined point (because we are loading from tape)
-        if (requiresLoad && autoLoad != null)
+        if (autoLoad != null)
         {
             plugin.AutoLoad(this,autoLoad);
         }
@@ -140,16 +142,16 @@ internal class PlayableRom : IRomAccess
         {
             case WriteKind.TemporaryRam:
                 WriteTemporaryMemory(MemoryRegion.Ram, address, bytes.ToArray());
-                break;
+                return;
             case WriteKind.TemporaryRom:
                 WriteTemporaryMemory(MemoryRegion.Rom, address, bytes.ToArray());
-                break;
+                return;
             case WriteKind.SerialisedRam:
                 WriteSerialisedMemory(MemoryRegion.Ram, address, bytes.ToArray());
-                break;
+                return;
             case WriteKind.SerialisedRom:
                 WriteSerialisedMemory(MemoryRegion.Rom, address, bytes.ToArray());
-                break;
+                return;
         }
         throw new Exception("Not implemented");
     }

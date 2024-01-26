@@ -34,10 +34,124 @@ public interface ISave
     public void Save(string filename);
 }
 
+public enum MemoryEndian
+{
+    Little,
+    Big,
+}
+
 public interface IRomAccess
 {
     public ReadOnlySpan<byte> ReadBytes(ReadKind kind, uint address, uint length);
     public void WriteBytes(WriteKind kind, uint address, ReadOnlySpan<byte> bytes);
+
+    public MemoryEndian Endian {get;}
+
+    public UInt16 FetchMachineOrder16(int offset, ReadOnlySpan<byte> bytes)
+    {
+        if (Endian == MemoryEndian.Little)
+        {
+            return (UInt16)(bytes[offset] + (bytes[offset + 1] << 8));
+        }
+        else
+        {
+            return (UInt16)((bytes[offset] << 8) + bytes[offset + 1]);
+        }
+    }
+    public UInt32 FetchMachineOrder32(int offset, ReadOnlySpan<byte> bytes)
+    {
+        if (Endian == MemoryEndian.Little)
+        {
+            return (UInt32)(bytes[offset] + (bytes[offset + 1] << 8) + (bytes[offset + 2] << 16) + (bytes[offset + 3] << 24));
+        }
+        else
+        {
+            return (UInt32)((bytes[offset] << 24) + (bytes[offset + 1] << 16) + (bytes[offset + 2] << 8) + bytes[offset + 3]);
+        }
+    }
+    public void WriteMachineOrder16(int offset, Span<byte> bytes, UInt16 value)
+    {
+        if (Endian == MemoryEndian.Little)
+        {
+            bytes[offset] = (byte)(value & 0xff);
+            bytes[offset + 1] = (byte)((value >> 8) & 0xff);
+        }
+        else
+        {
+            bytes[offset] = (byte)((value >> 8) & 0xff);
+            bytes[offset + 1] = (byte)(value & 0xff);
+        }
+    }
+    public void WriteMachineOrder32(int offset, Span<byte> bytes, UInt32 value)
+    {
+        if (Endian == MemoryEndian.Little)
+        {
+            bytes[offset] = (byte)(value & 0xff);
+            bytes[offset + 1] = (byte)((value >> 8) & 0xff);
+            bytes[offset + 2] = (byte)((value >> 16) & 0xff);
+            bytes[offset + 3] = (byte)((value >> 24) & 0xff);
+        }
+        else
+        {
+            bytes[offset] = (byte)((value >> 24) & 0xff);
+            bytes[offset + 1] = (byte)((value >> 16) & 0xff);
+            bytes[offset + 2] = (byte)((value >> 8) & 0xff);
+            bytes[offset + 3] = (byte)(value & 0xff);
+        }
+    }
+
+    public UInt16 FetchOppositeMachineOrder16(int offset, ReadOnlySpan<byte> bytes)
+    {
+        if (Endian != MemoryEndian.Little)
+        {
+            return (UInt16)(bytes[offset] + (bytes[offset + 1] << 8));
+        }
+        else
+        {
+            return (UInt16)((bytes[offset] << 8) + bytes[offset + 1]);
+        }
+    }
+    public UInt32 FetchOppositeMachineOrder32(int offset, ReadOnlySpan<byte> bytes)
+    {
+        if (Endian != MemoryEndian.Little)
+        {
+            return (UInt32)(bytes[offset] + (bytes[offset + 1] << 8) + (bytes[offset + 2] << 16) + (bytes[offset + 3] << 24));
+        }
+        else
+        {
+            return (UInt32)((bytes[offset] << 24) + (bytes[offset + 1] << 16) + (bytes[offset + 2] << 8) + bytes[offset + 3]);
+        }
+    }
+    public void WriteOppositeMachineOrder16(int offset, Span<byte> bytes, UInt16 value)
+    {
+        if (Endian != MemoryEndian.Little)
+        {
+            bytes[offset] = (byte)(value & 0xff);
+            bytes[offset + 1] = (byte)((value >> 8) & 0xff);
+        }
+        else
+        {
+            bytes[offset] = (byte)((value >> 8) & 0xff);
+            bytes[offset + 1] = (byte)(value & 0xff);
+        }
+    }
+    public void WriteOppositeMachineOrder32(int offset, Span<byte> bytes, UInt32 value)
+    {
+        if (Endian != MemoryEndian.Little)
+        {
+            bytes[offset] = (byte)(value & 0xff);
+            bytes[offset + 1] = (byte)((value >> 8) & 0xff);
+            bytes[offset + 2] = (byte)((value >> 16) & 0xff);
+            bytes[offset + 3] = (byte)((value >> 24) & 0xff);
+        }
+        else
+        {
+            bytes[offset] = (byte)((value >> 24) & 0xff);
+            bytes[offset + 1] = (byte)((value >> 16) & 0xff);
+            bytes[offset + 2] = (byte)((value >> 8) & 0xff);
+            bytes[offset + 3] = (byte)(value & 0xff);
+        }
+    }
 }
 
 
@@ -46,7 +160,9 @@ public interface IRomPlugin
     static abstract string? Name { get; }
     string LibRetroPluginName { get; } 
 
-    public void Initialise(LibRetroPlugin libRetroInterface, IEditor editorInterface);
+    MemoryEndian Endian { get; }
+
+    void Initialise(PlayableRom playableRom, IEditor editorInterface);
 
     bool InitialLoad(ProjectSettings settings,IRetroPlugin retroPlugin);
     bool Reload(ProjectSettings settings, IRetroPlugin retroPlugin);
@@ -89,9 +205,9 @@ public interface IImage
 
 public interface IImages
 {
-    int GetImageCount();
+    int GetImageCount(IRomAccess rom);
 
-    IImage GetImage(int mapIndex);
+    IImage GetImage(IRomAccess rom, int mapIndex);
 }
 
 public interface ITile
@@ -139,9 +255,9 @@ public interface ITileMap
 
 public interface ITileMaps
 {
-    int GetMapCount();
+    int GetMapCount(IRomAccess rom);
 
-    ITileMap GetMap(int mapIndex);
+    ITileMap GetMap(IRomAccess rom, int mapIndex);
 }
 
 
@@ -225,9 +341,7 @@ public interface IRetroPlugin
     /// <returns></returns>
     bool CanHandle(string filename);
 
-    void Initialise(IRomPlugin romInterface);
-
-    void Menu(IEditor editorInterface);
+    void Menu(IRomAccess rom,IEditor editorInterface);
 
     IImages? GetImageInterface() { return null; }
     ITileMaps? GetTileMapInterface() { return null; }
@@ -237,6 +351,7 @@ public interface IRetroPlugin
 
     // Rom/Ram handling
 
+
     bool AutoLoadCondition(IRomAccess romAccess);
 
     void SetupGameTemporaryPatches(IRomAccess romAccess);
@@ -244,55 +359,3 @@ public interface IRetroPlugin
     ISave Export(IRomAccess romAcess);
 
 }
-
-// Null Plugins
-public class NullRomPlugin : IRomPlugin
-{
-    public static string? Name => null;
-    public string LibRetroPluginName => throw new NotImplementedException();
-
-    public void Initialise(LibRetroPlugin libRetroPlugin, IEditor editorInterface)
-    {
-        throw new NotImplementedException();
-    }
-
-    public bool InitialLoad(ProjectSettings settings, IRetroPlugin retroPlugin)
-    {
-        throw new NotImplementedException();
-    }
-    public byte ReadByte(uint address)
-    {
-        throw new NotImplementedException();
-    }
-
-    public uint ReadLong(uint address)
-    {
-        throw new NotImplementedException();
-    }
-
-    public ushort ReadWord(uint address)
-    {
-        throw new NotImplementedException();
-    }
-
-    public bool Reload(ProjectSettings settings,IRetroPlugin retroPlugin)
-    {
-        throw new NotImplementedException();
-    }
-
-    public void Save(ProjectSettings settings)
-    {
-        throw new NotImplementedException();
-    }
-
-    public bool Export(string filename, IRetroPlugin retroPlugin)
-    {
-        throw new NotImplementedException();
-    }
-
-    public void WriteByte(uint address, byte value)
-    {
-        throw new NotImplementedException();
-    }
-}
-

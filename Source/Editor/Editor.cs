@@ -9,12 +9,13 @@ using System.IO.Compression;
 
 internal struct ActiveProject
 {
-    public ActiveProject(string name, IRetroPlugin retroPlugin, LibRetroPlugin libRetroPlugin, IRomPlugin romPlugin, ProjectSettings settings)
+    public ActiveProject(string name, IRetroPlugin retroPlugin, LibRetroPlugin libRetroPlugin, IRomPlugin romPlugin, PlayableRom playableRom, ProjectSettings settings)
     {
         this.name = name;
         this.retroPlugin = retroPlugin;
         this.libRetroPlugin = libRetroPlugin;
         this.romPlugin = romPlugin;
+        this.playableRom = playableRom;
         this.settings = settings;
     }
 
@@ -22,12 +23,14 @@ internal struct ActiveProject
     private IRetroPlugin retroPlugin;
     private LibRetroPlugin libRetroPlugin;
     private IRomPlugin romPlugin;
+    private PlayableRom playableRom;
     private ProjectSettings settings;
 
     public readonly IRetroPlugin RetroPlugin => retroPlugin;
     public readonly LibRetroPlugin LibRetroPlugin => libRetroPlugin;
     public readonly IRomPlugin RomPlugin => romPlugin;
     public readonly ProjectSettings Settings => settings;
+    public readonly PlayableRom PlayableRomPlugin => playableRom;
 
     public readonly string Name => name;
 }
@@ -293,7 +296,7 @@ internal class Editor : IEditor
                 {
                     if (ImGui.BeginMenu(active.Name))
                     {
-                        active.RetroPlugin.Menu(this);
+                        active.RetroPlugin.Menu(active.PlayableRomPlugin,this);
                         bool playerOpen = windowManager.IsOpen($"LibRetro Player ({active.Name})");
                         if (playerOpen)
                         {
@@ -395,10 +398,10 @@ internal class Editor : IEditor
         pluginWindow.InitWindow();
     }
 
-    private void InternalAddDefaultWindowAndProject(ProjectSettings projectSettings, IRetroPlugin plugin, LibRetroPlugin retroPluginInstance, IRomPlugin romPlugin)
+    private void InternalAddDefaultWindowAndProject(ProjectSettings projectSettings, IRetroPlugin plugin, LibRetroPlugin retroPluginInstance, IRomPlugin romPlugin, PlayableRom playableRom)
     {
         var activeProjectName = projectSettings.projectName + $" [{activeProjects.Count + 1}]";
-        var project = new ActiveProject(activeProjectName, plugin, retroPluginInstance, romPlugin, projectSettings);
+        var project = new ActiveProject(activeProjectName, plugin, retroPluginInstance, romPlugin, playableRom, projectSettings);
 
         OpenPlayerWindow(project);
         activeProjects.Add(project);
@@ -459,7 +462,9 @@ internal class Editor : IEditor
         }
         emuPlugin.Init();
 
-        romInterface.Initialise(emuPlugin, this);
+        var playableRom = new PlayableRom(this, emuPlugin, romInterface.Endian);
+
+        romInterface.Initialise(playableRom, this);
         if (firstTime)
         {
             romInterface.InitialLoad(projectSettings, plugin);
@@ -468,10 +473,8 @@ internal class Editor : IEditor
         {
             romInterface.Reload(projectSettings, plugin);
         }
-
-        plugin.Initialise(romInterface);
         
-        InternalAddDefaultWindowAndProject(projectSettings, plugin, emuPlugin, romInterface);
+        InternalAddDefaultWindowAndProject(projectSettings, plugin, emuPlugin, romInterface, playableRom);
         return true;
     }
 
