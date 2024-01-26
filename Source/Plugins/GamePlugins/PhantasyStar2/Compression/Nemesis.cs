@@ -1,3 +1,5 @@
+/*
+
 public class Nemesis
 {
     ushort[] CodeTable = new ushort[256];
@@ -177,3 +179,4 @@ public class Nemesis
     }
 }
 
+*/
