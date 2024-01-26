@@ -16,13 +16,6 @@ public class JetSetWilly48 : IRetroPlugin, IImages, ITileMaps
 
     public string RomPluginName => "ZXSpectrum";
 
-    IRomPlugin rom;
-
-    public JetSetWilly48()
-    {
-        rom = new NullRomPlugin();
-    }
-
     public bool CanHandle(string filename)
     {
         // One issue with this approach, is we can't generically load hacks of the game..
@@ -44,12 +37,7 @@ public class JetSetWilly48 : IRetroPlugin, IImages, ITileMaps
         return false;
     }
 
-    public void Initialise(IRomPlugin romInterface)
-    {
-        rom = romInterface;
-    }
-
-    public int GetImageCount()
+    public int GetImageCount(IRomAccess rom)
     {
         return 61;
     }
@@ -117,26 +105,26 @@ public class JetSetWilly48 : IRetroPlugin, IImages, ITileMaps
     {
     }
 
-    public void Menu(IEditor editorInterface)
+    public void Menu(IRomAccess rom, IEditor editorInterface)
     {
         if (ImGui.BeginMenu("Image Viewer"))
         {
-            for (int a = 0; a < GetImageCount(); a++)
+            for (int a = 0; a < GetImageCount(rom); a++)
             {
-                var map = GetImage(a);
+                var map = GetImage(rom,a);
                 var mapName = map.Name;
                 if (ImGui.MenuItem(mapName))
                 {
-                    editorInterface.OpenWindow(new ImageWindow(this,GetImage(a)), $"Image {{{mapName}}}");
+                    editorInterface.OpenWindow(new ImageWindow(this,GetImage(rom,a)), $"Image {{{mapName}}}");
                 }
             }
             ImGui.EndMenu();
         }
         if (ImGui.BeginMenu("Tile Map Editor"))
         {
-            for (int a = 0; a < GetMapCount(); a++)
+            for (int a = 0; a < GetMapCount(rom); a++)
             {
-                var map = GetMap(a);
+                var map = GetMap(rom,a);
                 var mapName = map.Name;
                 if (ImGui.MenuItem(mapName))
                 {
@@ -157,40 +145,38 @@ public class JetSetWilly48 : IRetroPlugin, IImages, ITileMaps
         return this;
     }
 
-    public IImage GetImage(int mapIndex)
+    public IImage GetImage(IRomAccess rom, int mapIndex)
     {
-        int roomAddress = 0xC000 + (mapIndex * 256);
-        return new JetSetWillyMap(this, mapIndex, rom.ReadBytes((uint)roomAddress, 256));
+        return new JetSetWillyMap(rom, mapIndex);
     }
     
-    public int GetMapCount()
+    public int GetMapCount(IRomAccess rom)
     {
-        return GetImageCount();
+        return GetImageCount(rom);
     }
 
-    public ITileMap GetMap(int mapIndex)
+    public ITileMap GetMap(IRomAccess rom,int mapIndex)
+    {
+        return new JetSetWilly48TileMap(rom, mapIndex);
+    }
+
+    public static void SetMap(IRomAccess rom, int mapIndex, byte[] modified)
     {
         int roomAddress = 0xC000 + (mapIndex * 256);
-        return new JetSetWilly48TileMap(this, mapIndex, rom.ReadBytes((uint)roomAddress, 256));
+        rom.WriteBytes(WriteKind.SerialisedRam, (uint)roomAddress, modified);
     }
 
-    public void SetMap(int mapIndex, byte[] modified)
-    {
-        int roomAddress = 0xC000 + (mapIndex * 256);
-        rom.WriteBytes((uint)roomAddress, modified);
-    }
-
-    public ushort GetItemCode(byte itemIndex)
+    public static ushort GetItemCode(IRomAccess rom, byte itemIndex)
     {
         uint itemTable = 41984;
-        var hicode=rom.ReadByte(itemTable + itemIndex);
-        var locode=rom.ReadByte(itemTable + itemIndex + 256);
+        var hicode = rom.ReadBytes(ReadKind.Ram, itemTable+itemIndex, 1)[0];
+        var locode = rom.ReadBytes(ReadKind.Ram, itemTable + itemIndex + 256, 1)[0];
         return (ushort)((hicode<<8) + locode);
     }
 
-    public int GetInitialItemIndex()
+    public static byte GetInitialItemIndex(IRomAccess rom)
     {
-        return rom.ReadByte(41983);
+        return rom.ReadBytes(ReadKind.Ram, 419783,1)[0];
     }
 
     public enum GuardianKind
@@ -230,40 +216,35 @@ public class JetSetWilly48 : IRetroPlugin, IImages, ITileMaps
         public byte ArrowBitPattern => bytes[6];
     }
 
-    public GuardianData GetGuardianData(uint guardianIndex,byte roomByte)
+    public static GuardianData GetGuardianData(IRomAccess rom, uint guardianIndex,byte roomByte)
     {
         // Guardian data is 8 bytes long and starts at 40960 - There is space 15 extra guardians - 0-127 (127 reservered, 112-126 empty)
-        var guardianData = rom.ReadBytes(40960 + guardianIndex * 8, 8);
+        var guardianData = rom.ReadBytes(ReadKind.Ram, 40960 + guardianIndex * 8, 8);
 
         var guardian = new GuardianData();
-        guardian.bytes = guardianData;
+        guardian.bytes = guardianData.ToArray();
         guardian.bytes[2]=roomByte;
         return guardian;
     }
 
-    public byte[] GetSpriteData(byte page, byte spriteIndex)
+    public static ReadOnlySpan<byte> GetSpriteData(IRomAccess rom, byte page, byte spriteIndex)
     {
-        var spriteData = rom.ReadBytes((uint)(page * 256 + spriteIndex * 32), 32);
-        return spriteData;
+        return rom.ReadBytes(ReadKind.Ram, (uint)(page * 256 + spriteIndex * 32), 32);
     }
 
-    public byte[] GetRopeTable()
+    public static ReadOnlySpan<byte> GetRopeTable(IRomAccess rom)
     {
-        var ropeTable = rom.ReadBytes(33536, 256);
-        return ropeTable;
+        return rom.ReadBytes(ReadKind.Ram, 33536, 256);
     }
 
-    public byte[] GetWilly()
+    public static ReadOnlySpan<byte> GetWilly(IRomAccess rom)
     {
-        var willy = rom.ReadBytes(0x9D00, 256);
-        return willy;
-    
+        return rom.ReadBytes(ReadKind.Ram, 0x9D00, 256);
     }
 }
 
 public class JetSetWillyMap : IImage
 {
-    JetSetWilly48 main;
     byte[] mapData;
     string mapName;
     int mapIndex;
@@ -274,10 +255,13 @@ public class JetSetWillyMap : IImage
     int frameCounter;
     int animFrameCounter;
 
-    public JetSetWillyMap(JetSetWilly48 main, int mapIndex, byte[] data)
+    IRomAccess rom;
+
+    public JetSetWillyMap(IRomAccess rom, int mapIndex)
     {
-        this.main = main;
-        this.mapData = data;
+        this.rom = rom;
+        int roomAddress = 0xC000 + (mapIndex * 256);
+        this.mapData = rom.ReadBytes(ReadKind.Ram, (uint)roomAddress, 256).ToArray(); 
         this.mapName = GetMapName();
         this.mapIndex = mapIndex;
     }
@@ -298,7 +282,7 @@ public class JetSetWillyMap : IImage
     {
         return RenderMap(seconds);
     }
-
+/*
     public Pixel[] GetSpriteData(float seconds)
     {
         var helper = new ZXSpectrum48ImageHelper(Width, Height);
@@ -319,7 +303,7 @@ public class JetSetWillyMap : IImage
         return helper.Render(seconds);
         //return RenderMap(seconds);
     }
-
+*/
 
     static readonly Pixel[] palette = new Pixel[]
     {
@@ -435,9 +419,9 @@ public class JetSetWillyMap : IImage
 
         // Unpack items..
         var baseColour = 1+(int)(seconds*6);
-        for (int a=main.GetInitialItemIndex();a<256;a++)
+        for (int a=JetSetWilly48.GetInitialItemIndex(rom);a<256;a++)
         {
-            var itemCode = main.GetItemCode((byte)a);
+            var itemCode = JetSetWilly48.GetItemCode(rom,(byte)a);
             var xpos = itemCode & 0x1F;
             var ypos = (itemCode >> 5) & 7;
             ypos |= (itemCode & 0x8000) >> 12;
@@ -466,7 +450,7 @@ public class JetSetWillyMap : IImage
             var guardianNo=guardianA;
 
             // Guardian data is 8 bytes long and starts at 40960 - There is space 15 extra guardians - 0-127 (127 reservered, 112-126 empty)
-            var data = main.GetGuardianData(guardianNo, guardianB);
+            var data = JetSetWilly48.GetGuardianData(rom,guardianNo, guardianB);
 
             if (data.Kind == JetSetWilly48.GuardianKind.Horizontal || data.Kind == JetSetWilly48.GuardianKind.Vertical)
             {
@@ -492,7 +476,7 @@ public class JetSetWillyMap : IImage
         int ropeOffset = currentFrame % data.RopeFrameDirectionChange;
         int direction = currentFrame < data.RopeFrameDirectionChange ? 1 : -1;
         direction*=data.InverseInitialDirection ? -1 : 1;
-        var ropeTable = main.GetRopeTable();
+        var ropeTable = JetSetWilly48.GetRopeTable(rom);
         int y = 0;
         int x = data.XCoord * 8;
         for (int a=0;a<data.RopeLength;a++)
@@ -546,7 +530,7 @@ public class JetSetWillyMap : IImage
         var animFrame = data.InitialFrame + animFrameCounter;
         animFrame&=data.AnimMask;
 
-        var spriteData = main.GetSpriteData((byte)data.GraphicPage, (byte)(data.SpriteBaseIndex+animFrame));
+        var spriteData = JetSetWilly48.GetSpriteData(rom, (byte)data.GraphicPage, (byte)(data.SpriteBaseIndex+animFrame));
 
         for (int y=0;y<16;y++)
         {
@@ -669,7 +653,6 @@ public class JetSetWillyMap : IImage
 
 public class JetSetWilly48TileMap : ITileMap
 {
-    JetSetWilly48 main;
     byte[] mapData;
     string mapName;
     int mapIndex;
@@ -682,6 +665,7 @@ public class JetSetWilly48TileMap : ITileMap
 
     JetSetWilly48Tile[] tiles;
     JetSetWilly48Layer layer;
+    IRomAccess rom;
 
     public class JetSetWilly48Tile : ITile
     {
@@ -813,10 +797,11 @@ public class JetSetWilly48TileMap : ITileMap
         }
     }
 
-    public JetSetWilly48TileMap(JetSetWilly48 main, int mapIndex, byte[] data)
+    public JetSetWilly48TileMap(IRomAccess rom, int mapIndex)
     {
-        this.main = main;
-        this.mapData = data;
+        int roomAddress = 0xC000 + (mapIndex * 256);
+        this.rom = rom;
+        this.mapData = rom.ReadBytes(ReadKind.Ram, (uint)roomAddress, 256).ToArray();
         this.mapName = GetMapName();
         this.mapIndex = mapIndex;
         this.tiles = new JetSetWilly48Tile[4];
@@ -865,13 +850,13 @@ public class JetSetWilly48TileMap : ITileMap
         }
         
         var data = layer.GetModifiedMap();
-        main.SetMap(mapIndex, data);
+        JetSetWilly48.SetMap(rom, mapIndex, data);
     }
 
     public void Close()
     {
         var data = layer.GetModifiedMap();
-        main.SetMap(mapIndex, data);
+        JetSetWilly48.SetMap(rom, mapIndex, data);
     }
 
     static readonly Pixel[] palette = new Pixel[]
