@@ -11,50 +11,15 @@ class ZXSpectrum : IRomPlugin
     public MemoryEndian Endian => MemoryEndian.Little;
 
     private PlayableRom playableRom;    // For loading and testing
-    private IEditor editorInterface;
 
-    public void Initialise(PlayableRom playableRom, IEditor editorInterface)
+    public void Initialise(PlayableRom playableRom)
     {
-        this.editorInterface = editorInterface;
         this.playableRom = playableRom;
     }
 
-    public bool InitialLoad(ProjectSettings settings, IRetroPlugin retroPlugin)
-    {
-        playableRom.Setup(settings, editorInterface.GetRomPath(settings), retroPlugin.AutoLoadCondition);
-
-        retroPlugin.SetupGameTemporaryPatches(playableRom);
-
-        playableRom.Reset(true);
-
-        return true;
-    }
-
-    public bool Reload(ProjectSettings settings, IRetroPlugin retroPlugin)
-    {
-        playableRom.Reload(settings);
-
-        retroPlugin.SetupGameTemporaryPatches(playableRom);
-
-        playableRom.Reset(true);
-
-        return true;
-    }
-
-
-    public void Save(ProjectSettings settings)
-    {
-        playableRom.Serialise(settings);
-    }
 
     public bool Export(string filename, IRetroPlugin retroPlugin)
     {
-        // Before export, we need to restore the original state, and only apply the serialised part
-        playableRom.Reset(false);
-
-        retroPlugin.Export(playableRom).Save(filename);
-
-        playableRom.Reset(true);
         return true;
     }
 

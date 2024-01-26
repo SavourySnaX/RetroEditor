@@ -4,7 +4,6 @@ using ImGuiNET;
 using System.Security.Cryptography;
 using System.Text.Json;
 using System.Runtime.InteropServices;
-using System.Text;
 using System.IO.Compression;
 
 internal struct ActiveProject
@@ -181,7 +180,7 @@ internal class Editor : IEditor
 
         foreach (var active in activeProjects)
         {
-            active.RomPlugin.Save(active.Settings);
+            active.PlayableRomPlugin.Serialise(active.Settings);
             active.RetroPlugin.Close();
         }
 
@@ -252,7 +251,12 @@ internal class Editor : IEditor
 
                             if (result.IsOk)
                             {
-                                active.RomPlugin.Export(result.Path, active.RetroPlugin);
+                                // Before export, we need to restore the original state, and only apply the serialised part
+                                active.PlayableRomPlugin.Reset(false);
+
+                                active.RetroPlugin.Export(active.PlayableRomPlugin).Save(result.Path);
+
+                                active.PlayableRomPlugin.Reset(true);
                             }
                         }
                     }
@@ -467,15 +471,18 @@ internal class Editor : IEditor
 
         var playableRom = new PlayableRom(this, emuPlugin, romInterface.Endian);
 
-        romInterface.Initialise(playableRom, this);
         if (firstTime)
         {
-            romInterface.InitialLoad(projectSettings, plugin);
+            playableRom.Setup(projectSettings, GetRomPath(projectSettings), plugin.AutoLoadCondition);
         }
         else
         {
-            romInterface.Reload(projectSettings, plugin);
+            playableRom.Reload(projectSettings);
         }
+
+        plugin.SetupGameTemporaryPatches(playableRom);
+
+        playableRom.Reset(true);
         
         InternalAddDefaultWindowAndProject(projectSettings, plugin, emuPlugin, romInterface, playableRom);
         return true;
