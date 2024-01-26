@@ -34,19 +34,6 @@ public class LibRetroPlayerWindow : IWindow
     public bool OtherStuff()
     {
         /*
-        if (name == "Fuse")
-        {
-            plugin.LoadGame("c:\\work\\editor\\jsw\\Jet Set Willy (1984)(Software Projects).tzx");
-            //plugin.LoadGame("C:\\work\\editor\\Jet Set Willy (1984)(Software Projects).tap");
-
-            // Load to a defined point (because we are loading from tape)
-            plugin.AutoLoad(() =>
-            {
-                var memory = plugin.GetMemory(0x5800, 768);  // Load until attribute memory contains this pattern (so we match any colour code request)
-                var hash = MD5.Create().ComputeHash(memory);
-                return hash.SequenceEqual(jswAutoLoadHash);
-            });
-        }
         else if (name == "Flibble")
         {
             plugin.LoadGame("C:\\work\\editor\\rollercoaster\\RollerCoaster.tzx");
@@ -150,9 +137,6 @@ public class LibRetroPlayerWindow : IWindow
         bitmap = Raylib.LoadTextureFromImage(image);
     }
 
-    public readonly byte[] jswAutoLoadHash = { 27, 10, 249, 194, 93, 180, 162, 138, 198, 11, 210, 12, 245, 143, 226, 53 };
-    public readonly byte[] rollerCoasterAutoLoadHash = { 127, 247, 134, 25, 56, 220, 59, 199, 13, 96, 96, 187, 253, 12, 28, 200 };
-
     public void Update(float seconds)
     {
         plugin.Run();
@@ -171,6 +155,12 @@ public class LibRetroPlayerWindow : IWindow
             plugin.UpdateKey(KeyboardKey.KEY_SPACE, ImGui.IsKeyDown(ImGuiKey.Space));
             plugin.UpdateKey(KeyboardKey.KEY_O, ImGui.IsKeyDown(ImGuiKey.O));
             plugin.UpdateKey(KeyboardKey.KEY_P, ImGui.IsKeyDown(ImGuiKey.P));
+
+            // Rollercoaster keys
+            plugin.UpdateKey(KeyboardKey.KEY_ENTER, ImGui.IsKeyDown(ImGuiKey.Enter));
+            plugin.UpdateKey(KeyboardKey.KEY_M, ImGui.IsKeyDown(ImGuiKey.M));
+            plugin.UpdateKey(KeyboardKey.KEY_LEFT_SHIFT, ImGui.IsKeyDown(ImGuiKey.LeftShift));
+            plugin.UpdateKey(KeyboardKey.KEY_RIGHT_SHIFT, ImGui.IsKeyDown(ImGuiKey.RightShift));
 
             // JOYPAD emulation 
             plugin.UpdateKey(KeyboardKey.KEY_UP, ImGui.IsKeyDown(ImGuiKey.UpArrow));

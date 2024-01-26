@@ -150,6 +150,7 @@ internal class Editor : IEditor
         pluginWindow.OtherStuff();
         AddWindow(pluginWindow);
 */
+
         var deltaTime = 0.0f;
         while (!Raylib.WindowShouldClose())
         {
@@ -282,8 +283,42 @@ internal class Editor : IEditor
                 ImGui.EndDisabled();
                 ImGui.EndMenu();
             }
-            if (ImGui.BeginMenu("Remote"))
+#if DEBUG
+            if (ImGui.BeginMenu("Developer"))
             {
+                if (ImGui.BeginMenu("Plugin Player"))
+                {
+                    foreach (var plugin in romPlugins)
+                    {
+                        if (ImGui.MenuItem(plugin.Key))
+                        {
+                            var result = NativeFileDialogSharp.Dialog.FileOpen();
+                            if (result.IsOk)
+                            {
+                                var instance = GetRomInstance(plugin.Key);
+                                if (instance != null)
+                                {
+                                    var retro = GetLibRetroInstance(instance.LibRetroPluginName, null);
+                                    if (retro != null)
+                                    {
+                                        var roller = new Rollercoaster();
+                                        var pluginWindow = new LibRetroPlayerWindow(retro, plugin.Key);
+                                        var playableRom = new PlayableRom(this, retro, instance.Endian);
+                                        pluginWindow.Initialise();
+                                        retro.LoadGame(result.Path);
+                                        //retro.AutoLoad(playableRom, roller.AutoLoadCondition);
+                                        pluginWindow.OtherStuff();
+                                        pluginWindow.InitWindow();
+                                        windowManager.AddWindow(pluginWindow, plugin.Key);
+                                    }
+                                }
+                            }
+
+                        }
+                    }
+
+                    ImGui.EndMenu();
+                }
                 if (ImGui.MenuItem("Mame Remote"))
                 {
                     var mame = new MameRemoteCommandWindow();
@@ -292,6 +327,7 @@ internal class Editor : IEditor
                 }
                 ImGui.EndMenu();
             }
+#endif
             if (ImGui.BeginMenu("Window"))
             {
                 if (activeProjects.Count==0)
@@ -514,7 +550,7 @@ internal class Editor : IEditor
         return Path.Combine(projectSettings.projectPath, "Editor", $"{projectSettings.RetroCoreName}_{serialiseName}.json");
     }
 
-    public LibRetroPlugin? GetLibRetroInstance(string pluginName, ProjectSettings projectSettings)
+    public LibRetroPlugin? GetLibRetroInstance(string pluginName, ProjectSettings? projectSettings)
     {
         var OS=RuntimeInformation.OSDescription;
         var platform = "";
@@ -547,8 +583,16 @@ internal class Editor : IEditor
 
 
         var sourcePlugin = Path.Combine(settings.RetroCoreFolder, platform, architecture, $"{pluginName}{extension}");
-        var destinationPlugin = Path.Combine(projectSettings.projectPath, "LibRetro", $"{projectSettings.RetroCoreName}_{platform}_{architecture}{extension}");
-
+        string? destinationPlugin;
+        if (projectSettings == null)
+        {
+            // Developer mode, we don't have a project folder
+            destinationPlugin = sourcePlugin;
+        }
+        else
+        {
+            destinationPlugin = Path.Combine(projectSettings.projectPath, "LibRetro", $"{projectSettings.RetroCoreName}_{platform}_{architecture}{extension}");
+        }
         if (!File.Exists(destinationPlugin))
         {
             if (!File.Exists(sourcePlugin))
@@ -561,7 +605,10 @@ internal class Editor : IEditor
                 }
             }
 
-            File.Copy(sourcePlugin, destinationPlugin, true);
+            if (destinationPlugin != sourcePlugin)
+            {
+                File.Copy(sourcePlugin, destinationPlugin, true);
+            }
         }
 
         try 
