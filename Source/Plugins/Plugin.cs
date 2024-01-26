@@ -161,37 +161,6 @@ public interface IRomPlugin
     string LibRetroPluginName { get; } 
 
     MemoryEndian Endian { get; }
-
-    void Initialise(PlayableRom playableRom, IEditor editorInterface);
-
-    bool InitialLoad(ProjectSettings settings,IRetroPlugin retroPlugin);
-    bool Reload(ProjectSettings settings, IRetroPlugin retroPlugin);
-    void Save(ProjectSettings settings);
-    bool Export(string filename, IRetroPlugin retroPlugin);
-
-    byte ReadByte(uint address);
-    ushort ReadWord(uint address);
-    uint ReadLong(uint address);
-
-    void WriteByte(uint address, byte value);
-
-    byte[] ReadBytes(uint address, uint length)
-    {
-        byte[] result = new byte[length];
-        for (uint i = 0; i < length; i++)
-        {
-            result[i] = ReadByte(address + i);
-        }
-        return result;
-    }
-
-    void WriteBytes(uint address, byte[] bytes)
-    {
-        for (uint i = 0; i < bytes.Length; i++)
-        {
-            WriteByte(address + i, bytes[i]);
-        }
-    }
 }
 
 public interface IImage
