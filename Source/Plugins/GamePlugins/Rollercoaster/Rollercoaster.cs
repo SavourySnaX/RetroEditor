@@ -1,40 +1,51 @@
-/*
+using System.Security.Cryptography;
+using ImGuiNET;
+
 public class Rollercoaster : IRetroPlugin, IImages
 {
-    // This is MD5 of a ram dump of the game, will update with tap/tzx version later 
-    private byte[] RollercoasterInMem = new byte[] { 239, 164, 65, 60, 2, 160, 26, 129, 136, 128, 247, 75, 160, 47, 7, 9 };
+    private byte[][] supportedMD5s = new byte[][] {
+        new byte[] { 0xd0, 0x64, 0xb9, 0x2f, 0x76, 0xcb, 0xd3, 0x35, 0xad, 0xc9, 0x84, 0x0f, 0x69, 0x2a, 0x1a, 0xf6 },  // ./Roller Coaster (1986)(Elite Systems).tap
+        new byte[] { 0x2f, 0x54, 0x54, 0xf9, 0x0a, 0x37, 0x38, 0xa6, 0xcf, 0x2c, 0x79, 0xe9, 0x61, 0xbf, 0x0c, 0x75 },  // ./Roller Coaster (1986)(Elite Systems).tzx
+        new byte[] { 0xda, 0x54, 0x51, 0x5f, 0x31, 0xb7, 0xca, 0x71, 0x61, 0xb9, 0xb5, 0xc8, 0x2d, 0x6f, 0x8f, 0xf7 },  // ./Roller Coaster (1986)(Elite Systems)[a].tzx
+        new byte[] { 0x13, 0xcb, 0xdb, 0x06, 0x9f, 0x86, 0xbd, 0x7e, 0xfd, 0x08, 0x04, 0x12, 0xee, 0x15, 0x61, 0x1d },  // ./Roller Coaster (1989)(Encore).tzx
+/* 
+  For now ignore these, some are hacks, some are password protected cover tapes
 
-    public string Name => "Rollercoaster";
-    IRomPlugin rom;
+        new byte[] { 0xe2, 0xcd, 0xeb, 0xa4, 0x4d, 0x01, 0x04, 0xf7, 0x95, 0x74, 0xad, 0xf2, 0xb1, 0x89, 0xca, 0x37 },  // ./Roller Coaster (1986)(Elite Systems)[a][Sinclair User Covertape][password WINDOW].tzx
+        new byte[] { 0x3b, 0x6b, 0xf8, 0x85, 0x0b, 0xc6, 0x09, 0x79, 0x99, 0xe5, 0xc8, 0xae, 0xc8, 0x5f, 0x1a, 0xef },  // ./Roller Coaster (1986)(Elite Systems)[cr JanSoft].tzx
+        new byte[] { 0xf9, 0xd1, 0x4c, 0xcc, 0x7d, 0xa9, 0x22, 0x88, 0x46, 0x95, 0x06, 0xb3, 0x02, 0x09, 0x1d, 0x7d },  // ./Roller Coaster (1986)(Elite Systems)[Sinclair User Covertape][password AMAAAA].tzx
+        new byte[] { 0x7e, 0xd0, 0x0e, 0x27, 0xdb, 0x1b, 0x5d, 0xda, 0xc9, 0x66, 0x7f, 0x69, 0x01, 0xd3, 0x48, 0xe4 },  // ./Roller Coaster (1986)(Elite Systems)[Sinclair User Covertape][password WINDOW].tzx
+        new byte[] { 0xf0, 0xca, 0x9f, 0xe8, 0x5b, 0xa8, 0x82, 0xd8, 0x57, 0x2b, 0x55, 0x07, 0x70, 0x12, 0xfd, 0x86 },  // ./Roller Coaster (1986)(Elite Systems)[h Jansoft].tap
+        new byte[] { 0x75, 0xd0, 0x87, 0xdf, 0x00, 0x3c, 0x34, 0x69, 0x2f, 0x1e, 0xe2, 0x88, 0xae, 0x6e, 0x3e, 0x1c },  // ./Roller Coaster (1986)(Elite Systems)[h Jansoft][a].tap
+        new byte[] { 0xcc, 0x4d, 0x11, 0xa7, 0x58, 0xcb, 0x09, 0x7f, 0xe1, 0xe4, 0x6a, 0x9f, 0xb9, 0xde, 0x81, 0xb6 }   // ./Roller Coaster (1989)(Encore)[h Drj].tap
+*/
+    };
 
+    public static string Name => "Rollercoaster";
 
-    public Rollercoaster()
-    {
-        rom = new NullRomPlugin();
-    }
+    public string RomPluginName => "ZXSpectrum";
 
-    public bool CanHandle(byte[] md5, byte[] bytes, string filename)
+    public bool CanHandle(string filename)
     {
         // One issue with this approach, is we can't generically load hacks of the game..
-        return RollercoasterInMem.SequenceEqual(md5);
-    }
-
-    public bool Init(IEditor editorInterface, byte[] md5, byte[] bytes, string filename)
-    {
-        var spectrumRomInterface = editorInterface.GetRomInstance("ZXSpectrum");
-        if (spectrumRomInterface==null)
+        if (!File.Exists(filename))
         {
             return false;
         }
-        rom = spectrumRomInterface;
-        if (rom.Load(bytes,"MEM"))
+        var md5 = MD5.Create().ComputeHash(File.ReadAllBytes(filename));
+
+        foreach (var supported in supportedMD5s)
         {
-            return true;
+            if (supported.SequenceEqual(md5))
+            {
+                return true;
+            }
         }
         return false;
     }
 
-    public int GetImageCount()
+
+    public int GetImageCount(IRomAccess rom)
     {
         return 16+16+16+12;
     }
@@ -48,49 +59,58 @@ public class Rollercoaster : IRetroPlugin, IImages
         return this;
     }
 
-    public IImage GetImage(int mapIndex)
+    public IImage GetImage(IRomAccess rom,int mapIndex)
     {
-        if (mapIndex<12)
+        return new RollercoasterImage(rom,mapIndex);
+    }
+
+    public static ReadOnlySpan<byte> GetLevelTile(IRomAccess rom, int tileIndex)
+    {
+        return rom.ReadBytes(ReadKind.Ram, (uint)(0x7D00 + (tileIndex * 8)), 8);
+    }
+
+    public void Menu(IRomAccess rom, IEditor editorInterface)
+    {
+        if (ImGui.BeginMenu("Image Viewer"))
         {
-            int roomAddress = 0x7100 + (mapIndex * 256);
-            return new RollercoasterImage(this, mapIndex, rom.ReadBytes((uint)roomAddress, 256));
-        }
-        if (mapIndex<12+16)
-        {
-            int roomAddress = 0x6100 + ((mapIndex-12) * 256);
-            return new RollercoasterImage(this, mapIndex, rom.ReadBytes((uint)roomAddress, 256));
-        }
-        if (mapIndex<12+16+16)
-        {
-            int roomAddress = 0xE679 + ((mapIndex-12-16) * 256);
-            return new RollercoasterImage(this, mapIndex, rom.ReadBytes((uint)roomAddress, 256));
-        }
-        else
-        {
-            int roomAddress = 0xC300 + ((mapIndex-12-16-16) * 256);
-            return new RollercoasterImage(this, mapIndex, rom.ReadBytes((uint)roomAddress, 256));
+            for (int a = 0; a < GetImageCount(rom); a++)
+            {
+                var map = GetImage(rom,a);
+                var mapName = map.Name;
+                if (ImGui.MenuItem(mapName))
+                {
+                    editorInterface.OpenWindow(new ImageWindow(this,GetImage(rom,a)), $"Image {{{mapName}}}");
+                }
+            }
+            ImGui.EndMenu();
         }
     }
 
-    public byte[] GetLevelTile(int tileIndex)
+    public bool AutoLoadCondition(IRomAccess romAccess)
     {
-        return rom.ReadBytes((uint)(0x7D00 + (tileIndex * 8)), 8);
+        var memory = romAccess.ReadBytes(ReadKind.Ram, 0x4000, 0x800);  // Load until first third of screen contains title bitmap
+        var hash = IncrementalHash.CreateHash(HashAlgorithmName.MD5);
+        hash.AppendData(memory);
+        return hash.GetCurrentHash().SequenceEqual(rollerCoasterAutoLoadHash);
     }
 
-    public byte GetByte(uint address)
+    private readonly byte[] rollerCoasterAutoLoadHash = { 127, 247, 134, 25, 56, 220, 59, 199, 13, 96, 96, 187, 253, 12, 28, 200 };
+
+    public void SetupGameTemporaryPatches(IRomAccess romAccess)
     {
-        return rom.ReadByte(address);
+        
     }
 
-    public byte[] GetBytes(uint address, uint length)
+    public ISave Export(IRomAccess romAcess)
     {
-        return rom.ReadBytes(address, length);
+        // Blankety blank tape for now?
+        var tape = new ZXSpectrumTape.Tape();
+        return tape;
     }
 }
 
 public class RollercoasterImage : IImage
 {
-    Rollercoaster main;
     byte[] mapData;
     string mapName;
     int mapIndex;
@@ -98,11 +118,13 @@ public class RollercoasterImage : IImage
 
     ZXSpectrum48ImageHelper imageHelper;
 
-    public RollercoasterImage(Rollercoaster main, int mapIndex, byte[] data)
+    IRomAccess rom;
+
+    public RollercoasterImage(IRomAccess rom, int mapIndex)
     {
-        this.main = main;
-        this.mapData = data;
         this.mapIndex = mapIndex;
+        this.rom = rom;
+        this.mapData = rom.ReadBytes(ReadKind.Ram, GetImageAddress(), 256).ToArray();
         this.mapName = GetMapName();
         imageHelper = new ZXSpectrum48ImageHelper(Width, Height);
 
@@ -110,6 +132,27 @@ public class RollercoasterImage : IImage
         uint spriteData = mapData[(int)RollerCoaster_MapDataOffsets.SpriteDataHigh];
         spriteData <<= 8;
         spriteData |= mapData[(int)RollerCoaster_MapDataOffsets.SpriteDataLow];
+    }
+
+    private uint GetImageAddress()
+    {
+        if (mapIndex<12)
+        {
+            return (uint)(0x7100 + (mapIndex * 256));
+        }
+        if (mapIndex<12+16)
+        {
+            return (uint)(0x6100 + ((mapIndex - 12) * 256));
+        }
+        if (mapIndex<12+16+16)
+        {
+            return (uint)(0xE679 + ((mapIndex-12-16) * 256));
+        }
+        else
+        {
+            return (uint)(0xC300 + ((mapIndex - 12 - 16 - 16) * 256));
+        }
+
     }
 
     public string GetMapName()
@@ -144,9 +187,9 @@ public class RollercoasterImage : IImage
         return RenderMap(seconds);
     }
 
-    private byte[] GetTile(int code)
+    private ReadOnlySpan<byte> GetTile(int code)
     {
-        return main.GetLevelTile(code);
+        return Rollercoaster.GetLevelTile(rom,code);
     }
 
     private Pixel[] RenderMap(float seconds)
@@ -228,7 +271,7 @@ public class RollercoasterImage : IImage
 
         for (int a=0;a<cnt;a++)
         {
-            var sprite = main.GetBytes(spriteData, 15);
+            var sprite = rom.ReadBytes(ReadKind.Ram, spriteData, 15);
             spriteData += 15;
             var spriteFlags = sprite[0];
             uint spriteGfx = sprite[2];
@@ -507,6 +550,8 @@ public class RollercoasterImage : IImage
             var x = mapData[++mapOffset];
             var y = mapData[++mapOffset];
 
+            var attrBytes = rom.ReadBytes(ReadKind.Ram, attrPos, (uint)(innercnt * outercnt));
+            var attrOffs = 0;
             for (uint yy = 0; yy < outercnt; yy++)
             {
                 for (uint xx = 0; xx < innercnt; xx++)
@@ -516,7 +561,7 @@ public class RollercoasterImage : IImage
                     var curAttribute = imageHelper.GetAttribute(cx, cy);
                     if (curAttribute != mapData[(int)RollerCoaster_MapDataOffsets.PaintIgnoreAttr1] && curAttribute != mapData[(int)RollerCoaster_MapDataOffsets.PaintIgnoreAttr2])
                     {
-                        var newAttr = main.GetByte(attrPos++);
+                        var newAttr = attrBytes[attrOffs++];
                         imageHelper.SetAttribute(cx, cy, newAttr);
                     }
                 }
@@ -527,13 +572,15 @@ public class RollercoasterImage : IImage
 
     private void DrawBigTileXor(byte y,byte x,byte numLines,byte numTiles,uint srcGfx, byte attribute,bool flipX,bool flipY)
     {
+        var bytes = rom.ReadBytes(ReadKind.Ram, srcGfx, (uint)(numLines * numTiles));
+        int offs = 0;
         for (uint yy = 0; yy < numLines; yy++)
         {
             uint yyy = (uint)(flipY ? (numLines - 1) - yy : yy);
             for (uint xx = 0; xx < numTiles; xx++)
             {
                 uint xxx = (uint)(flipX ? (numTiles - 1) - xx : xx);
-                var tileByte = main.GetByte(srcGfx++);
+                var tileByte = bytes[offs++];
 
                 imageHelper.Xor8BitsNoAttribute(xxx*8+x,yyy+y,tileByte,flipX);
             }
@@ -604,14 +651,14 @@ public class RollercoasterImage : IImage
     }
 
     // Wrapping in Y is not supported (in fact writing to 18 to 22 will overwrite the score area)
-    private void RenderTile(uint xpos, uint ypos, byte[] tile, byte attribute)
+    private void RenderTile(uint xpos, uint ypos, ReadOnlySpan<byte> tile, byte attribute)
     {
         xpos &= 31;
         xpos *= 8;
         ypos *= 8;
         for (uint ty = 0; ty < 8; ty++)
         {
-            imageHelper.Draw8Bits(xpos, ypos + ty, tile[ty], attribute, false);
+            imageHelper.Draw8Bits(xpos, ypos + ty, tile[(int)ty], attribute, false);
         }
     }
 
@@ -642,4 +689,3 @@ public class RollercoasterImage : IImage
     }
 
 }
-*/

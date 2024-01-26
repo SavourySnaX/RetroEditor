@@ -739,6 +739,9 @@ public class LibRetroPlugin : IDisposable
         keyMap[(int)KeyboardKey.KEY_DOWN] = (int)RetroKey.RETROK_DOWN;
         keyMap[(int)KeyboardKey.KEY_LEFT] = (int)RetroKey.RETROK_LEFT;
         keyMap[(int)KeyboardKey.KEY_RIGHT] = (int)RetroKey.RETROK_RIGHT;
+        keyMap[(int)KeyboardKey.KEY_ENTER] = (int)RetroKey.RETROK_RETURN;
+        keyMap[(int)KeyboardKey.KEY_LEFT_SHIFT] = (int)RetroKey.RETROK_LSHIFT;
+        keyMap[(int)KeyboardKey.KEY_RIGHT_SHIFT] = (int)RetroKey.RETROK_RSHIFT;
     }
 
     private void LogCallback(int level, IntPtr fmt)

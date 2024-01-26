@@ -99,7 +99,7 @@ public class JetSetWilly48 : IRetroPlugin, IImages, ITileMaps
     }
 
 
-    public readonly byte[] screenHash = { 27, 10, 249, 194, 93, 180, 162, 138, 198, 11, 210, 12, 245, 143, 226, 53 };
+    private readonly byte[] screenHash = { 27, 10, 249, 194, 93, 180, 162, 138, 198, 11, 210, 12, 245, 143, 226, 53 };
 
     public void Close()
     {
