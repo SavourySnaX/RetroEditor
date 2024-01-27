@@ -301,12 +301,12 @@ internal class Editor : IEditor
                                     var retro = GetLibRetroInstance(instance.LibRetroPluginName, null);
                                     if (retro != null)
                                     {
-                                        var roller = new Rollercoaster();
+                                        var game = new Fairlight();
                                         var pluginWindow = new LibRetroPlayerWindow(retro, plugin.Key);
                                         var playableRom = new PlayableRom(this, retro, instance.Endian);
                                         pluginWindow.Initialise();
                                         retro.LoadGame(result.Path);
-                                        //retro.AutoLoad(playableRom, roller.AutoLoadCondition);
+                                        //retro.AutoLoad(playableRom, game.AutoLoadCondition);
                                         pluginWindow.OtherStuff();
                                         pluginWindow.InitWindow();
                                         windowManager.AddWindow(pluginWindow, plugin.Key);
