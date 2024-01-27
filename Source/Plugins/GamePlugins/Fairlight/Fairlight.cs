@@ -1,40 +1,100 @@
-/*
+using System.Security.Cryptography;
+using ImGuiNET;
+
 public class Fairlight : IRetroPlugin, IImages
 {
     // This is MD5 of a ram dump of the game, will update with tap/tzx version later 
-    private byte[] FairlightInMem = new byte[] { 116, 169, 129, 5, 73, 97, 39, 227, 202, 65, 167, 100, 76, 177, 243, 185 };
+    private byte[][] supportedMD5s = new byte[][] {
+        new byte[] { 0x7e, 0x7d, 0x2d, 0xce, 0x09, 0xae, 0x41, 0xf9, 0x8f, 0x7e, 0x21, 0x7a, 0x3d, 0x4d, 0xe1, 0xe0 }, // ./Fairlight - A Prelude - The Light Revealed (1985)(Edge, The)(48K-128K).tap
 
-    public string Name => "Fairlight";
-    IRomPlugin rom;
+    /* 
+     Unsupport for now (128K or current auto load fails - or offsets dont match)
+        new byte[] { 0x87, 0xe9, 0xda, 0x89, 0xe9, 0x2c, 0xb1, 0x7c, 0x59, 0xda, 0x9c, 0x92, 0x49, 0xb6, 0xb4, 0x2c }, // ./Fairlight (1985)(Micro Selection, The)(48K-128K)[re-release].tzx
+        new byte[] { 0x4f, 0x09, 0x7f, 0x83, 0xf3, 0x3e, 0x32, 0x89, 0x94, 0x96, 0x88, 0xe8, 0x60, 0xd9, 0x24, 0xdb }, // ./Fairlight - A Prelude - The Light Revealed (1985)(Edge, The)(48K-128K)(Side A)[m tzxtools][Alkatraz Protection System].tap
+        new byte[] { 0xe8, 0x54, 0xa7, 0xd7, 0xee, 0xe3, 0xc1, 0xbe, 0xde, 0x71, 0xbb, 0xce, 0xdd, 0x29, 0xcb, 0x6b }, // ./Fairlight - A Prelude - The Light Revealed (1985)(Edge, The)(48K-128K)[h Coda].tap
+        new byte[] { 0x64, 0x05, 0x01, 0xbf, 0x82, 0x8a, 0xf1, 0x18, 0x55, 0x97, 0x33, 0x6d, 0xec, 0x9a, 0xf8, 0xda }, // ./Fairlight - A Prelude - The Light Revealed (1985)(Edge, The)(48K-128K)[h Future Soft].tap
+        new byte[] { 0x5e, 0x90, 0xa1, 0x86, 0x53, 0xa4, 0x82, 0x52, 0x4e, 0xca, 0x43, 0xf4, 0x10, 0x22, 0x39, 0xcf }, // ./Fairlight - A Prelude - The Light Revealed (1985)(Edge, The)(48K-128K)[h Prospekt][tr ru].tap
+        new byte[] { 0x76, 0xfc, 0x13, 0x49, 0x74, 0xdc, 0xa0, 0xd6, 0x32, 0x5c, 0xde, 0x41, 0xa2, 0x53, 0xd4, 0xce }, // ./Fairlight - A Prelude - The Light Revealed (1985)(Edge, The)(48K-128K)[a].tzx
+        new byte[] { 0x45, 0xe3, 0xa9, 0x77, 0x9a, 0xa3, 0x5d, 0x1c, 0xa4, 0x68, 0x58, 0xde, 0xdf, 0x6c, 0xbb, 0x18 }, // ./Fairlight - A Prelude - The Light Revealed (1985)(Edge, The)(48K-128K)[h].tzx
+        new byte[] { 0x2b, 0x9b, 0x69, 0x2d, 0x79, 0x97, 0xfb, 0xb8, 0xdc, 0xe5, 0x78, 0x08, 0xd4, 0xfd, 0x60, 0xb2 }, // ./Fairlight - A Prelude - The Light Revealed (1985)(Edge, The)(128K)[Alkatraz Protection System].tzx
+        new byte[] { 0x24, 0x09, 0xd2, 0xfd, 0x90, 0x23, 0x8e, 0x2f, 0x66, 0xec, 0x5f, 0x0a, 0x3d, 0x6a, 0x60, 0xea }, // ./Fairlight - A Prelude - The Light Revealed (1985)(Edge, The)(128K)[h].tzx
+        new byte[] { 0xda, 0x6d, 0xa4, 0xd8, 0x79, 0x8e, 0xf4, 0xc1, 0x15, 0x7f, 0x67, 0x9e, 0xdb, 0xbf, 0xcf, 0xc6 }, // ./Fairlight - A Prelude - The Light Revealed (1985)(Edge, The)(128K).tap
+        new byte[] { 0x3f, 0x39, 0x55, 0xd9, 0xf6, 0xdc, 0x4c, 0x13, 0x02, 0x82, 0x3b, 0x24, 0x19, 0x84, 0x7d, 0x8c }, // ./Fairlight - A Prelude - The Light Revealed (1985)(Edge, The)(128K)[cr Matasoft][t Matasoft].tap
+        new byte[] { 0x31, 0x4d, 0x7d, 0xc2, 0x7f, 0x8e, 0xe5, 0x84, 0xc9, 0x6b, 0x63, 0x84, 0x09, 0xa2, 0x76, 0x5c }, // ./Fairlight (1985)(ABC Soft)(48K-128K)(ES)(en)[Alkatraz Protection System][re-release].tzx
+        new byte[] { 0xee, 0x6a, 0xcd, 0x81, 0x88, 0x3c, 0x4d, 0xa7, 0xe7, 0x8f, 0x81, 0x20, 0x77, 0xc6, 0xff, 0x62 }, // ./Fairlight - A Prelude - The Light Revealed (1985)(Edge, The)[Alkatraz Protection System].tzx
+        new byte[] { 0x1d, 0xba, 0x2a, 0xc5, 0x3f, 0xd2, 0x5f, 0x4c, 0xc1, 0x06, 0x5e, 0x18, 0xe3, 0x1a, 0x7b, 0x96 }, // ./Fairlight - A Prelude - The Light Revealed (1985)(Edge, The).tzx
+        new byte[] { 0x56, 0xad, 0x38, 0x92, 0xa2, 0x1e, 0xc1, 0xfd, 0x46, 0x99, 0x0c, 0x54, 0x7d, 0xcd, 0x0d, 0xe2 }, // ./Fairlight - A Prelude - The Light Revealed (1985)(Edge, The)(48K-128K).tzx
 
+    */
+    };
 
-    public Fairlight()
-    {
-        rom = new NullRomPlugin();
-    }
+    public static string Name => "Fairlight";
 
-    public bool CanHandle(byte[] md5, byte[] bytes, string filename)
+    public string RomPluginName => "ZXSpectrum";
+
+    public bool CanHandle(string filename)
     {
         // One issue with this approach, is we can't generically load hacks of the game..
-        return FairlightInMem.SequenceEqual(md5);
-    }
-
-    public bool Init(IEditor editorInterface, byte[] md5, byte[] bytes, string filename)
-    {
-        var spectrumRomInterface = editorInterface.GetRomInstance("ZXSpectrum");
-        if (spectrumRomInterface==null)
+        if (!File.Exists(filename))
         {
             return false;
         }
-        rom = spectrumRomInterface;
-        if (rom.Load(bytes,"MEM"))
+        var md5 = MD5.Create().ComputeHash(File.ReadAllBytes(filename));
+
+        foreach (var supported in supportedMD5s)
         {
-            return true;
+            if (supported.SequenceEqual(md5))
+            {
+                return true;
+            }
         }
         return false;
     }
 
-    public int GetImageCount()
+    public void Menu(IRomAccess rom, IEditor editorInterface)
+    {
+        if (ImGui.BeginMenu("Image Viewer"))
+        {
+            for (int a = 0; a < GetImageCount(rom); a++)
+            {
+                var map = GetImage(rom,a);
+                var mapName = map.Name;
+                if (ImGui.MenuItem(mapName))
+                {
+                    editorInterface.OpenWindow(new ImageWindow(this,GetImage(rom,a)), $"Image {{{mapName}}}");
+                }
+            }
+            ImGui.EndMenu();
+        }
+    }
+
+    private int fastLoadWait = 0;
+    public bool AutoLoadCondition(IRomAccess romAccess)
+    {
+        // Since there is no unique screen to catch after loading, we wait for a sequence of patterns in memory instead
+        var memory = romAccess.ReadBytes(ReadKind.Ram, 0xFF58, 24);
+        if (memory.SequenceEqual(matchRam))
+        {
+            fastLoadWait++;
+        }
+        return fastLoadWait>100;    // Safe to stop now -- TODO vastly improve this stop detection
+    }
+
+    private byte[] matchRam = new byte[] { 0xFF, 0xFD, 0xB6, 0x16, 0xC8, 0xE5, 0xCD, 0x03, 0xF2, 0xE1, 0x3A, 0x83, 0xFF, 0xFD, 0x34, 0x03, 0xFD, 0xBE, 0x00, 0xCA, 0x68, 0xFE, 0x11, 0x14 };
+
+    public void SetupGameTemporaryPatches(IRomAccess romAccess)
+    {
+        
+    }
+
+    public ISave Export(IRomAccess romAcess)
+    {
+        // Blankety blank tape for now?
+        var tape = new ZXSpectrumTape.Tape();
+        return tape;
+    }
+
+    public int GetImageCount(IRomAccess rom)
     {
         return 64;
     }
@@ -48,20 +108,21 @@ public class Fairlight : IRetroPlugin, IImages
         return this;
     }
 
-    public IImage GetImage(int mapIndex)
+    public IImage GetImage(IRomAccess rom,int mapIndex)
     {
-        var tableStart = FetchTableAddress(0x68B0, mapIndex);
-        return new FairlightImage(this, mapIndex, tableStart);
+        var tableStart = FetchTableAddress(rom, 0x68B0, mapIndex);
+        return new FairlightImage(rom, mapIndex, tableStart);
     }
 
-    public ushort FetchTableAddress(ushort baseAddress,int mapIndex)
+    public static ushort FetchTableAddress(IRomAccess rom,ushort baseAddress,int mapIndex)
     {
         var tableStart = baseAddress;
         ushort skip = 0;
         for (int a=0;a<=mapIndex;a++)
         {
             tableStart += skip;
-            skip = rom.ReadWord((uint)tableStart);
+            var bytes = rom.ReadBytes(ReadKind.Ram, tableStart, 2);
+            skip = rom.FetchMachineOrder16(0, bytes);
         }
 
         tableStart += 2;
@@ -69,23 +130,24 @@ public class Fairlight : IRetroPlugin, IImages
         return tableStart;
     }
 
-    public byte GetByte(uint address)
+    public static byte GetByte(IRomAccess rom, uint address)
     {
-        return rom.ReadByte(address);
+        return rom.ReadBytes(ReadKind.Ram, address, 1)[0];
     }
 
-    public byte[] GetBytes(uint address, uint length)
+    public static ReadOnlySpan<byte> GetBytes(IRomAccess rom,uint address, uint length)
     {
-        return rom.ReadBytes(address, length);
+        return rom.ReadBytes(ReadKind.Ram, address, length);
     }
 }
 
 public class FairlightImage : IImage
 {
-    Fairlight main;
     string mapName;
     int mapIndex;
     ushort mapAddress;
+
+    IRomAccess rom;
 
     ZXSpectrum48ImageHelper screen;
     ZXSpectrum48ImageHelper fillScreen;
@@ -151,9 +213,9 @@ public class FairlightImage : IImage
         public bool flagBit7;
     }
 
-    public FairlightImage(Fairlight main, int mapIndex, ushort mapAddress)
+    public FairlightImage(IRomAccess rom, int mapIndex, ushort mapAddress)
     {
-        this.main = main;
+        this.rom = rom;
         this.mapAddress = mapAddress;
         this.mapIndex = mapIndex;
         this.mapName = GetMapName();
@@ -198,7 +260,7 @@ public class FairlightImage : IImage
         maxFill = 999;
         iy37bit0 = false;
 
-        var ff8e = main.GetByte(currentState.address++);
+        var ff8e = Fairlight.GetByte(rom, currentState.address++);
         ProcessCommands(currentState);
 
         screen.FlipVertical();
@@ -212,7 +274,7 @@ public class FairlightImage : IImage
 
         while (true)
         {
-            byte code = main.GetByte(currentState.address++);
+            byte code = Fairlight.GetByte(rom, currentState.address++);
 
             if (code == 0xE5)   // END
                 return true;
@@ -238,7 +300,7 @@ public class FairlightImage : IImage
                 if (code < 0xC0)    // MOVE
                 {
                     var nY = code;
-                    var a = main.GetByte(currentState.address++);
+                    var a = Fairlight.GetByte(rom, currentState.address++);
                     if (currentState.flagBit6)
                     {
                         if (currentState.flagBit4)
@@ -331,7 +393,7 @@ public class FairlightImage : IImage
                                 // Set current X,Y - TODO modified by flags
                                 if (currentState.flagBit4)
                                 {
-                                    var a= main.GetByte(currentState.address++);
+                                    var a= Fairlight.GetByte(rom,currentState.address++);
                                     if (a + currentState.lastY > 0xFF)
                                     {
                                         a += currentState.lastY;
@@ -346,7 +408,7 @@ public class FairlightImage : IImage
                                         }
                                     }
                                     currentState.lastY = a;
-                                    a=main.GetByte(currentState.address++);
+                                    a=Fairlight.GetByte(rom,currentState.address++);
                                     if (currentState.flagBit6)
                                     {
                                         a = (byte)(0 - a);
@@ -356,8 +418,8 @@ public class FairlightImage : IImage
                                 }
                                 else
                                 {
-                                    currentState.lastY = main.GetByte(currentState.address++);
-                                    var a= main.GetByte(currentState.address++);
+                                    currentState.lastY = Fairlight.GetByte(rom,currentState.address++);
+                                    var a = Fairlight.GetByte(rom, currentState.address++);
                                     if (currentState.flagBit6)
                                     {
                                         a ^= 0xFF;
@@ -412,7 +474,7 @@ public class FairlightImage : IImage
                                 currentState.lastY = currentState.nextY;
                                 break;
                             case 0xD5:  // SET_LOOP
-                                currentState.loopCount = main.GetByte(currentState.address++);
+                                currentState.loopCount = Fairlight.GetByte(rom, currentState.address++);
                                 currentState.loopPoint = currentState.address;
                                 break;
                             case 0xD6:  // DEC_LOOP
@@ -423,9 +485,9 @@ public class FairlightImage : IImage
                                 }
                                 break;
                             case 0xE0:  // GOSUB
-                                index = main.GetByte(currentState.address++);
+                                index = Fairlight.GetByte(rom, currentState.address++);
                                 stateStack.Push(currentState);
-                                currentState=new State(main.FetchTableAddress(0x7593, index-1), currentState);  // 0x7593 might be dynamic, its loaded from 0xFFB5 - TODO trace
+                                currentState = new State(Fairlight.FetchTableAddress(rom, 0x7593, index - 1), currentState);  // 0x7593 might be dynamic, its loaded from 0xFFB5 - TODO trace
                                 if (!ProcessCommands(currentState))
                                     return false;
                                 currentState.flagBit7 = false;
@@ -434,10 +496,10 @@ public class FairlightImage : IImage
                             case 0xE1:  // GOSUB_SAVE
                                 // Push state and process new command
 
-                                index = main.GetByte(currentState.address++);
+                                index = Fairlight.GetByte(rom, currentState.address++);
                                 stateStack.Push(currentState);
 
-                                currentState=new State(main.FetchTableAddress(0x7593, index-1), currentState);  // 0x7593 might be dynamic, its loaded from 0xFFB5 - TODO trace
+                                currentState=new State(Fairlight.FetchTableAddress(rom, 0x7593, index-1), currentState);  // 0x7593 might be dynamic, its loaded from 0xFFB5 - TODO trace
                                 if (!ProcessCommands(currentState))
                                     return false;
                                 currentState.flagBit7 = false;
@@ -447,7 +509,7 @@ public class FairlightImage : IImage
                                 fillScreen.CopyBitmapFrom(screen);
                                 break;
                             case 0xE4:  // EXTENDED_COMMAND
-                                var eCode=main.GetByte(currentState.address++);
+                                var eCode=Fairlight.GetByte(rom, currentState.address++);
                                 switch (eCode)
                                 {
                                     case 0x04:
@@ -479,7 +541,7 @@ public class FairlightImage : IImage
     // AB
     // CD
     // ABCD
-    private bool GetPatternBit(byte[] pattern,int x,int y)
+    private bool GetPatternBit(ReadOnlySpan<byte> pattern,int x,int y)
     {
         x &= 15;
         y &= 15;
@@ -495,7 +557,7 @@ public class FairlightImage : IImage
     private void FillPattern(State currentState)
     {
         // Basic flood fill, assume pattern is aligned to screen co-ordinates for now
-        var pattern = main.GetBytes(currentState.patternAddress, 32);
+        var pattern = Fairlight.GetBytes(rom, currentState.patternAddress, 32);
 
         var x = currentState.nextX;
         var y = currentState.nextY;
@@ -504,7 +566,7 @@ public class FairlightImage : IImage
 
     }
 
-    private void FloodFill(uint x,uint y,byte[] pattern)
+    private void FloodFill(uint x, uint y, ReadOnlySpan<byte> pattern)
     {
         Queue<(uint x, uint y)> queue = new Queue<(uint x, uint y)>();
         queue.Enqueue((x, y));
@@ -604,4 +666,3 @@ public class FairlightImage : IImage
         }
     }
 }
-*/
