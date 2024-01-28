@@ -1,7 +1,4 @@
 
-using System.Security.Cryptography;
-using ZXSpectrumTape;
-
 class ZXSpectrum : IRomPlugin
 {
     public static string Name => "ZXSpectrum";

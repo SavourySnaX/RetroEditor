@@ -32,33 +32,6 @@ public class LibRetroPlayerWindow : IWindow
 
     public bool OtherStuff()
     {
-        /*
-        else if (name == "FCEU")
-        {
-            var name = "C:\\work\\editor\\nes\\metroid.nes";
-            var game = File.ReadAllBytes(name);
-            // since a nes cartridge is rom, we patch here 
-
-            game[16 + 0x0A] = 0x80;    // Press Start - advance to new game screen
-            game[16 + 0x10DD] = 0x80;   // Press new game
-
-            //game[16 + 0x1325] = 0x34;   // Y POS
-            //game[16 + 0x1328] = 0x78;   // X POS
-
-
-            // Brinstar
-            game[16 + 0x55D7] = 3;      // 0x4000 + (0x95D7-0x8000)     MAP X Position
-            game[16 + 0x55D8] = 2;      // 0x4000 + (0x95D8-0x8000)     MAP Y Position
-            game[16 + 0x55D9] = 0x50;   // 0x4000 + (0x95D9-0x8000)     Start Y
-
-
-            //15 Y
-            //X 2
-
-            //game[16 + 0x253E + (14 * 32) + 3] = 0x17;   // Modify map room number....
-            plugin.LoadGame(name,game);
-        }
-*/
         // We should save snapshot, so we don't need to load from tape again...
         var saveSize = plugin.GetSaveStateSize();
         var state = new byte[saveSize];
