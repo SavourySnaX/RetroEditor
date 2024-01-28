@@ -1,37 +1,31 @@
-/*
+using System.Security.Cryptography;
+using ImGuiNET;
+using Microsoft.VisualBasic;
+
 public class PhantasyStar2 : IRetroPlugin, IImages
 {
+    // MD5 of Phantasy Star EU-US Rev 2
     private byte[] PhantasyStarUSEURev2 = new byte[] { 15, 163, 139, 18, 207, 10, 176, 22, 61, 134, 86, 0, 172, 115, 26, 154 };
 
-    public string Name => "Phantasy Star 2";
-    IRomPlugin rom;
+    public static string Name => "Phantasy Star 2";
 
-    const uint MapDataTableAddress = 0x27C0A;
+    public string RomPluginName => "Megadrive";
+
+    public bool RequiresAutoLoad => false;
+
     const int MapDataTableEntries = 0x65;
 
-    public PhantasyStar2()
+    public bool CanHandle(string filename)
     {
-        rom = new NullRomPlugin();
-    }
-
-    public bool CanHandle(byte[] md5, byte[] bytes, string filename)
-    {
-        // MD5 of Phantasy Star EU-US Rev 2
-        return PhantasyStarUSEURev2.SequenceEqual(md5);
-    }
-
-    public bool Init(IEditor editorInterface, byte[] md5, byte[] bytes, string filename)
-    {
-        var megadriveRomInterfaceInstance = editorInterface.GetRomInstance("Megadrive");
-        if (megadriveRomInterfaceInstance==null)
+        if (File.Exists(filename))
         {
-            return false;
+            var md5 = MD5.Create().ComputeHash(File.ReadAllBytes(filename));
+            return PhantasyStarUSEURev2.SequenceEqual(md5);
         }
-        rom=megadriveRomInterfaceInstance;
-        return rom.Load(bytes,"");
+        return false;
     }
 
-    public int GetImageCount()
+    public int GetImageCount(IRomAccess rom)
     {
         return MapDataTableEntries;
     }
@@ -46,25 +40,7 @@ public class PhantasyStar2 : IRetroPlugin, IImages
     }
 
 
-    private MapDataEntry GetMapDataEntry(int index)
-    {
-        uint address = MapDataTableAddress + (uint)(index * 20);
-        MapDataEntry mapDataEntry = new MapDataEntry();
-        mapDataEntry.LoadDataFromAddress(rom, address);
-        return mapDataEntry;
-    }
-
-    public uint GetMapWidth(int mapIndex)
-    {
-        return (uint)GetMapDataEntry(mapIndex).MaxCameraPosX;
-    }
-
-    public uint GetMapHeight(int mapIndex)
-    {
-        return (uint)GetMapDataEntry(mapIndex).MaxCameraPosY;
-    }
-
-    public string GetMapName(int mapIndex)
+    public static string GetMapName(int mapIndex)
     {
         return mapIndex switch
         {
@@ -174,12 +150,87 @@ public class PhantasyStar2 : IRetroPlugin, IImages
         };
     }
 
-    public IImage GetImage(int mapIndex)
+    public IImage GetImage(IRomAccess rom, int mapIndex)
     {
-        return new PhantasyStar2Map(this, mapIndex);
+        return new PhantasyStar2Map(rom, mapIndex);
     }
 
 
+    public void Menu(IRomAccess rom, IEditor editorInterface)
+    {
+        if (ImGui.BeginMenu("Image Viewer"))
+        {
+            for (int a = 0; a < GetImageCount(rom); a++)
+            {
+                var map = GetImage(rom,a);
+                var mapName = map.Name;
+                if (ImGui.MenuItem(mapName))
+                {
+                    editorInterface.OpenWindow(new ImageWindow(this,GetImage(rom,a)), $"Image {{{mapName}}}");
+                }
+            }
+            ImGui.EndMenu();
+        }
+    }
+
+    public bool AutoLoadCondition(IRomAccess romAccess)
+    {
+        throw new NotImplementedException();
+    }
+
+    public void SetupGameTemporaryPatches(IRomAccess romAccess)
+    {
+        romAccess.WriteBytes(WriteKind.TemporaryRom, 0x2b2, new byte[] { 0x73, 0x48 });     // Skip Sega logo
+    }
+
+    public ISave Export(IRomAccess romAcess)
+    {
+        throw new NotImplementedException();
+    }
+}
+
+public class PhantasyStar2Map : IImage
+{
+    int index;
+    IRomAccess rom;
+    const uint MapDataTableAddress = 0x27C0A;
+
+    public PhantasyStar2Map(IRomAccess rom, int index)
+    {
+        this.rom = rom;
+        this.index = index;
+    }
+
+    public uint Width => GetMapWidth(index);
+
+    public uint Height => GetMapHeight(index);
+
+    public string Name => PhantasyStar2.GetMapName(index);
+
+    public Pixel[] GetImageData(float seconds)
+    {
+        return RenderMap(index);
+    }
+
+    private MapDataEntry GetMapDataEntry(int index)
+    {
+        uint address = MapDataTableAddress + (uint)(index * 20);
+        MapDataEntry mapDataEntry = new MapDataEntry();
+        mapDataEntry.LoadDataFromAddress(rom, address);
+        return mapDataEntry;
+    }
+
+    public uint GetMapWidth(int mapIndex)
+    {
+        return (uint)GetMapDataEntry(mapIndex).MaxCameraPosX;
+    }
+
+    public uint GetMapHeight(int mapIndex)
+    {
+        return (uint)GetMapDataEntry(mapIndex).MaxCameraPosY;
+    }
+
+    
     void RenderLayer(byte[] chunks, byte[] tileBitmaps, PalettePtr.PaletteEntry palEntry, int chunkMaxX, int chunkMaxY, byte[] mapLayout, bool isFore, Pixel[] layer, int stride)
     {
         for (int mapY=0;mapY<chunkMaxY;mapY++)
@@ -301,29 +352,5 @@ public class PhantasyStar2 : IRetroPlugin, IImages
 
         return mapLayer;
     }
+
 }
-
-public class PhantasyStar2Map : IImage
-{
-    int index;
-    PhantasyStar2 main;
-
-    public PhantasyStar2Map(PhantasyStar2 main, int index)
-    {
-        this.main = main;
-        this.index = index;
-    }
-
-    public uint Width => main.GetMapWidth(index);
-
-    public uint Height => main.GetMapHeight(index);
-
-    public string Name => main.GetMapName(index);
-
-    public Pixel[] GetImageData(float seconds)
-    {
-        return main.RenderMap(index);
-    }
-    
-}
-*/

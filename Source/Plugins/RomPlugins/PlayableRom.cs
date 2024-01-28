@@ -13,24 +13,33 @@ public class PlayableRom : IRomAccess
 
     private byte[] state;
     private MemoryEndian endian;
+    private bool needsReload;
 
     MemoryblockCollection temporaryBlocksRam;
+    MemoryblockCollection temporaryBlocksRom;
     MemoryblockCollection serialisedBlocksRam { get; set; }
 
+    public delegate ReadOnlySpan<byte> CheckSumDelegate(IRomAccess rom,out int address);
 
-    public PlayableRom(IEditor editorInterface,LibRetroPlugin plugin, MemoryEndian endian)
+    private CheckSumDelegate checkSumDelegate;
+
+    public PlayableRom(IEditor editorInterface,LibRetroPlugin plugin, MemoryEndian endian, bool needsReload, CheckSumDelegate checkSumDelegate)
     {
         this.endian = endian;
         this.editorInterface = editorInterface;
         this.plugin = plugin;
+        this.needsReload = needsReload;
+        this.checkSumDelegate = checkSumDelegate;
         temporaryBlocksRam = new MemoryblockCollection();
+        temporaryBlocksRom = new MemoryblockCollection();
         serialisedBlocksRam = new MemoryblockCollection();
         state=Array.Empty<byte>();
     }
 
     public bool Setup(ProjectSettings settings, string filename, Func<IRomAccess,bool>? autoLoad = null)
     {
-        plugin.LoadGame(filename);
+        var romData = File.ReadAllBytes(filename);
+        plugin.LoadGame(settings.OriginalRomName, romData);
 
         // Load to a defined point (because we are loading from tape)
         if (autoLoad != null)
@@ -49,7 +58,9 @@ public class PlayableRom : IRomAccess
 
     public bool Reload(ProjectSettings settings)
     {
-        plugin.LoadGame(editorInterface.GetRomPath(settings));
+        var name = editorInterface.GetRomPath(settings);
+        var romData = File.ReadAllBytes(name);
+        plugin.LoadGame(settings.OriginalRomName, romData);
         state = editorInterface.LoadState(settings);
 
         var path=editorInterface.GetEditorDataPath(settings, "Ram");
@@ -64,6 +75,23 @@ public class PlayableRom : IRomAccess
 
     public void Reset(bool withTemporaryPatches)
     {
+        if (withTemporaryPatches)
+        {
+            foreach (var block in temporaryBlocksRom.Blocks)
+            {
+                plugin.WriteRom(block.address, block.data);
+            }
+        }
+
+        var chk = checkSumDelegate(this,out var address);
+        if (chk.Length > 0)
+        {
+            plugin.WriteRom((uint)address, chk);
+        }
+        if (needsReload)
+        {
+            plugin.Reload();
+        }
         plugin.RestoreState(state);
         if (withTemporaryPatches)
         {
@@ -92,7 +120,7 @@ public class PlayableRom : IRomAccess
         switch (region)
         {
             case MemoryRegion.Rom:
-                throw new NotImplementedException($"Rom not done");
+                return plugin.FetchRom(address, length);
             case MemoryRegion.Ram:
                 return plugin.GetMemory(address, length);
         }
@@ -107,7 +135,7 @@ public class PlayableRom : IRomAccess
         }
         else
         {
-            throw new Exception("Not implemented");
+            temporaryBlocksRom.AddRegion(address, data);
         }
     }
 
@@ -155,6 +183,8 @@ public class PlayableRom : IRomAccess
         }
         throw new Exception("Not implemented");
     }
+
+    public int RomSize => (int)plugin.RomLength();
 }
 
 public enum MemoryRegion

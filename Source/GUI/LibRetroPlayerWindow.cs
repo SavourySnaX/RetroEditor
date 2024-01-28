@@ -1,4 +1,3 @@
-using System.Security.Cryptography;
 using ImGuiNET;
 using Raylib_cs;
 using rlImGui_cs;
@@ -34,17 +33,6 @@ public class LibRetroPlayerWindow : IWindow
     public bool OtherStuff()
     {
         /*
-        else if (name == "Flibble")
-        {
-            plugin.LoadGame("C:\\work\\editor\\rollercoaster\\RollerCoaster.tzx");
-            
-            plugin.AutoLoad(() =>
-            {
-                var memory = plugin.GetMemory(0x4000, 0x800);  // Load until first third of screen contains title bitmap
-                var hash = MD5.Create().ComputeHash(memory);
-                return hash.SequenceEqual(rollerCoasterAutoLoadHash);
-            });
-        }
         else if (name == "FCEU")
         {
             var name = "C:\\work\\editor\\nes\\metroid.nes";
@@ -70,53 +58,12 @@ public class LibRetroPlayerWindow : IWindow
             //game[16 + 0x253E + (14 * 32) + 3] = 0x17;   // Modify map room number....
             plugin.LoadGame(name,game);
         }
-        else if (name == "Genesis")
-        {
-            var name = "C:\\work\\editor\\Phantasy Star II Rev 02 (1990-01)(Sega)(EU-US).bin";
-            var game = File.ReadAllBytes(name);
-
-            game[0x2b2] = 0x73;     // Skip Sega logo
-            game[0x2b3] = 0x48;
-
-            // need to fix checksum
-            ushort chk= 0;
-            for (uint a=0x200;a<game.Length;a+=2)
-            {
-                ushort word = (ushort)(game[a+1] | (game[a] << 8));
-                chk += word;
-            }
-            game[0x18e] = (byte)(chk >> 8);
-            game[0x18f] = (byte)(chk & 0xFF);
-
-            plugin.LoadGame(name, game);
-        }
 */
         // We should save snapshot, so we don't need to load from tape again...
         var saveSize = plugin.GetSaveStateSize();
         var state = new byte[saveSize];
         plugin.SaveState(state);
 
-        if (name == "1Fuse")
-        {
-            // FROM HERE
-            plugin.RestoreState(state);
-
-            // Kill copy protection code, and jump to screen to test...
-            plugin.SetMemory(0x8785, new byte[] { 0xC9 });          // Store return to force out of cheat code key wait
-            plugin.SetMemory(0x872C, new byte[] { 0xCA, 0x87 });    // Jump to game start
-            plugin.SetMemory(0x88AC, new byte[] { 0xFC, 0x88 });    // start game
-
-            byte yPos = 13 * 8;
-            byte xPos = 1 * 8;
-            byte roomNumber = 0x22;
-
-            ushort attributeAddress = (ushort)(0x5C00 + ((yPos / 8) * 32) + (xPos / 8));
-
-            plugin.SetMemory(0x87E6, new byte[] { (byte)(yPos * 2) });          // willys y cordinate
-            plugin.SetMemory(0x87F0, new byte[] { (byte)(attributeAddress & 0xFF), (byte)(attributeAddress >> 8) });    // willys cordinate
-            plugin.SetMemory(0x87EB, new byte[] { (byte)(roomNumber) });
-            // TO HERE
-        }
         return true;
     }
 

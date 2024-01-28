@@ -1,4 +1,3 @@
-/*
 public struct MapDataEntry
 {
     byte data0;
@@ -10,16 +9,17 @@ public struct MapDataEntry
     byte data2; // loc_283ee  offset (high bit cleared, high bit means ? ? )
     byte musicID;
 
-    public void LoadDataFromAddress(IRomPlugin rom, uint address)
+    public void LoadDataFromAddress(IRomAccess rom, uint address)
     {
-        data0=rom.ReadByte(address);
-        data1=rom.ReadByte(address+1);
-        offset0=rom.ReadLong(address+2);
-        offset1=rom.ReadLong(address+6);
-        offset2=rom.ReadLong(address+10);
-        transitionData=rom.ReadLong(address+14);
-        data2=rom.ReadByte(address+18);
-        musicID=rom.ReadByte(address+19);
+        var bytes = rom.ReadBytes(ReadKind.Rom, address, 20);
+        data0 = bytes[0]; //rom.ReadByte(address);
+        data1 = bytes[1]; //rom.ReadByte(address+1);
+        offset0 = rom.FetchMachineOrder32(2, bytes); //rom.ReadLong(address+2);
+        offset1 = rom.FetchMachineOrder32(6, bytes); //rom.ReadLong(address+6);
+        offset2 = rom.FetchMachineOrder32(10, bytes); //rom.ReadLong(address+10);
+        transitionData = rom.FetchMachineOrder32(14, bytes); //rom.ReadLong(address+14);
+        data2 = bytes[18]; //rom.ReadByte(address+18);
+        musicID = bytes[19]; //rom.ReadByte(address+19);
     }
 
     public int PlanetIndex => (int)(data0 & 0x80)>>7;
@@ -38,4 +38,3 @@ public struct MapDataEntry
 
     public int SpriteDataTableOffset => (int)(data2 & 0x7F);
 }
-*/

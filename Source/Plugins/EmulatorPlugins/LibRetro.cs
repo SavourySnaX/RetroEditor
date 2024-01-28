@@ -218,6 +218,10 @@ public class LibRetroPlugin : IDisposable
 
     public LibRetroPlugin(string path)
     {
+        if (Environment.GetEnvironmentVariable("RETROEDITOR_OVERRIDE_LIBRETRO_PATH") != null)
+        {
+            path = Environment.GetEnvironmentVariable("RETROEDITOR_OVERRIDE_LIBRETRO_PATH");
+        }
         nativeGameInfo = Marshal.AllocHGlobal(Marshal.SizeOf<retro_game_info_ext>());   // we need to own this memory, dispose will free
         keyArray=new bool[RetroKeyArrayCount];
         keyMap=new int[RetroKeyArrayCount];
@@ -239,6 +243,7 @@ public class LibRetroPlugin : IDisposable
         nativeSetInputState = Marshal.GetDelegateForFunctionPointer<retro_set_input_state>(NativeLibrary.GetExport(libraryHandle, "retro_set_input_state"));
         nativeSetVideoRefresh = Marshal.GetDelegateForFunctionPointer<retro_set_video_refresh>(NativeLibrary.GetExport(libraryHandle, "retro_set_video_refresh"));
         nativeLoadGame = Marshal.GetDelegateForFunctionPointer<retro_load_game>(NativeLibrary.GetExport(libraryHandle, "retro_load_game"));
+        nativeUnloadGame = Marshal.GetDelegateForFunctionPointer<retro_unload_game>(NativeLibrary.GetExport(libraryHandle, "retro_unload_game"));
         nativeGetMemorySize = Marshal.GetDelegateForFunctionPointer<retro_get_memory_size>(NativeLibrary.GetExport(libraryHandle, "retro_get_memory_size"));
         nativeGetMemoryData = Marshal.GetDelegateForFunctionPointer<retro_get_memory_data>(NativeLibrary.GetExport(libraryHandle, "retro_get_memory_data"));
         nativeSerializeSize = Marshal.GetDelegateForFunctionPointer<retro_serialize_size>(NativeLibrary.GetExport(libraryHandle, "retro_serialize_size"));
@@ -321,6 +326,8 @@ public class LibRetroPlugin : IDisposable
         InternalLoad(path, data);
     }
 
+    private retro_game_info last_loaded_game;
+
     private void InternalLoad(string path, byte[] data)
     {
         loadedPath = path;
@@ -328,17 +335,15 @@ public class LibRetroPlugin : IDisposable
         loadedRomSize=(UIntPtr)data.Length;
         Marshal.Copy(data, 0, loadedRom, data.Length);
 
-        var info = new retro_game_info
+        last_loaded_game = new retro_game_info
         {
             path = Marshal.StringToHGlobalAnsi(path),
             data = loadedRom,
             size = (UIntPtr)data.Length,
             meta = IntPtr.Zero
         };
-        unsafe
-        {
-            nativeLoadGame(&info);
-        }
+
+        NativeLoadLastGame();
 
         // Should be able to allocate our framebuffer here
         var aVInfo=GetSystemAVInfo();
@@ -346,6 +351,17 @@ public class LibRetroPlugin : IDisposable
         frameBufferHeight=height=aVInfo.geometry.maxHeight;
         frameBuffer = new byte[width * height * 4];
 
+    }
+
+    private void NativeLoadLastGame()
+    {
+        unsafe
+        {
+            fixed (retro_game_info* ptr = &last_loaded_game)
+            {
+                nativeLoadGame(ptr);
+            }
+        }
     }
 
     public UInt64 GetMemorySize(MemoryKind mem)
@@ -468,6 +484,27 @@ public class LibRetroPlugin : IDisposable
         dataHandle.Free();
     }
 
+    public UInt64 RomLength()
+    {
+        return loadedRomSize;
+    }
+
+    public ReadOnlySpan<byte> FetchRom(uint address, uint length)
+    {
+        unsafe
+        {
+            return new ReadOnlySpan<byte>((void*)((nint)loadedRom + address), (int)length);
+        }
+    }
+
+    public void WriteRom(uint address,ReadOnlySpan<byte> data)
+    {
+        unsafe
+        {
+            Marshal.Copy(data.ToArray(), 0, (nint)loadedRom + (nint)address, data.Length);
+        }
+    }
+
     public UInt64 GetSaveStateSize()
     {
         return nativeSerializeSize();
@@ -496,6 +533,11 @@ public class LibRetroPlugin : IDisposable
         {
             keyArray[keyMap[(int)key]] = pressed;
         }
+    }
+
+    public void Reload()
+    {
+        NativeLoadLastGame();
     }
 
     public void Reset()
@@ -576,6 +618,7 @@ public class LibRetroPlugin : IDisposable
     private delegate void retro_set_input_state(retro_input_state_t cb);
     private delegate void retro_set_video_refresh(retro_video_refresh_t cb);
     private unsafe delegate void retro_load_game(retro_game_info* info);
+    private delegate void retro_unload_game();
     private delegate UIntPtr retro_get_memory_size(uint id);
     private unsafe delegate void* retro_get_memory_data(uint id);
     private delegate UIntPtr retro_serialize_size();
@@ -596,6 +639,7 @@ public class LibRetroPlugin : IDisposable
     private retro_set_input_state nativeSetInputState;
     private retro_set_video_refresh nativeSetVideoRefresh;
     private retro_load_game nativeLoadGame;
+    private retro_unload_game nativeUnloadGame;
     private retro_get_memory_size nativeGetMemorySize;
     private retro_get_memory_data nativeGetMemoryData;
     private retro_serialize_size nativeSerializeSize;

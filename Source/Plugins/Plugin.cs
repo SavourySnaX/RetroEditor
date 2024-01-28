@@ -45,6 +45,8 @@ public interface IRomAccess
     public ReadOnlySpan<byte> ReadBytes(ReadKind kind, uint address, uint length);
     public void WriteBytes(WriteKind kind, uint address, ReadOnlySpan<byte> bytes);
 
+    public int RomSize { get; }
+
     public MemoryEndian Endian {get;}
 
     public UInt16 FetchMachineOrder16(int offset, ReadOnlySpan<byte> bytes)
@@ -159,8 +161,11 @@ public interface IRomPlugin
 {
     static abstract string? Name { get; }
     string LibRetroPluginName { get; } 
+    bool RequiresReload { get; }
 
     MemoryEndian Endian { get; }
+
+    public ReadOnlySpan<byte> ChecksumCalculation(IRomAccess rom,out int address) { address = 0; return ReadOnlySpan<byte>.Empty; }
 }
 
 public interface IImage
@@ -246,20 +251,22 @@ public sealed class ProjectSettings
 {
     public sealed class SerializedSettings
     {
-        public SerializedSettings(string version, string retroCoreName, string retroPluginName)
+        public SerializedSettings(string version, string retroCoreName, string retroPluginName, string originalRomName)
         {
             Version = version;
             RetroCoreName = retroCoreName;
             RetroPluginName = retroPluginName;
+            OriginalRomName = originalRomName;
         }
-        public string Version { get; set; }
-        public string RetroCoreName { get; set; }
-        public string RetroPluginName { get; set; }
+        public string Version { get; private set; }
+        public string RetroCoreName { get; private set; }
+        public string RetroPluginName { get; private set; }
+        public string OriginalRomName { get; private set; }
     }
     
-    public ProjectSettings(string projectName, string projectPath, string retroCoreName, string retroPluginName)
+    public ProjectSettings(string projectName, string projectPath, string retroCoreName, string retroPluginName, string originalRomName)
     {
-        this.serializedSettings = new SerializedSettings("0.0.1", retroCoreName, retroPluginName);
+        this.serializedSettings = new SerializedSettings("0.0.1", retroCoreName, retroPluginName, originalRomName);
         this.projectPath = projectPath;
         this.projectName = projectName;
     }
@@ -288,6 +295,7 @@ public sealed class ProjectSettings
     public string Version => serializedSettings.Version;
     public string RetroCoreName => serializedSettings.RetroCoreName;
     public string RetroPluginName => serializedSettings.RetroPluginName;
+    public string OriginalRomName => serializedSettings.OriginalRomName;
     internal readonly string projectName;
     internal readonly string projectPath;
 }
@@ -300,15 +308,9 @@ public interface IRetroPlugin
 
     string RomPluginName { get; }
 
+    bool RequiresAutoLoad { get; }
 
-    /// <summary>
-    /// Returns true if the plugin can handle the file
-    /// </summary>
-    /// <param name="md5">md5 of the inputs</param>
-    /// <param name="bytes">bytes of the input - in case plugin wishes to use alternate method of identifying supported file</param>
-    /// <param name="filename">filename - in case plugin wishes to use alternate method of identifying supported file</param>
-    /// <returns></returns>
-    bool CanHandle(string filename);
+    bool CanHandle(string filename);    //TODO at present you cant use this to record which rom was actually loaded, since its loaded into a different instance
 
     void Menu(IRomAccess rom,IEditor editorInterface);
 
