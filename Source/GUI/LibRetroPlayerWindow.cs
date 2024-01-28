@@ -72,8 +72,7 @@ public class LibRetroPlayerWindow : IWindow
         aVInfo = plugin.GetSystemAVInfo();
         frameHeight= aVInfo.geometry.maxHeight;
         frameWidth = aVInfo.geometry.maxWidth;
-        var image = Raylib.GenImageColor((int)aVInfo.geometry.maxWidth, (int)aVInfo.geometry.maxHeight, Color.BLACK);
-        image = new Image
+        var image = new Image
         {
             Width = (int)aVInfo.geometry.maxWidth,
             Height = (int)aVInfo.geometry.maxHeight,

@@ -63,6 +63,8 @@ internal class Editor : IEditor
     internal EditorSettings Settings => settings;
 
     internal IEnumerable<string> Plugins => plugins.Keys;
+
+    private ActiveProject? currentActiveProject;
     public Editor(IRetroPlugin[] plugins, IRomPlugin[] romPlugins)
     {
         this.activeProjects = new List<ActiveProject>();
@@ -105,6 +107,8 @@ internal class Editor : IEditor
         {
             Directory.CreateDirectory(settings.RetroCoreFolder);
         }
+
+        currentActiveProject=null;
     }
 
 
@@ -342,7 +346,9 @@ internal class Editor : IEditor
                     {
                         if (ImGui.BeginMenu(active.Name))
                         {
+                            currentActiveProject=active;
                             active.RetroPlugin.Menu(active.PlayableRomPlugin, this);
+                            currentActiveProject=null;
                             bool playerOpen = windowManager.IsOpen($"LibRetro Player ({active.Name})");
                             if (playerOpen)
                             {
@@ -664,7 +670,15 @@ internal class Editor : IEditor
             return;
         }
         window.Initialise();
-        windowManager.AddWindow(window, name);
+
+        if (currentActiveProject != null)
+        {
+            windowManager.AddWindow(window, $"{name} ({currentActiveProject?.Name})");
+        }
+        else
+        {
+            windowManager.AddWindow(window, name);
+        }
     }
 
     public void CloseWindow(string name)
