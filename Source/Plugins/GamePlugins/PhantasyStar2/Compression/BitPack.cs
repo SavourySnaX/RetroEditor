@@ -1,8 +1,7 @@
-/*
 public class BitPack
 {
 
-    public byte[] Decompress(IRomPlugin rom, uint sourceAddress)
+    public byte[] Decompress(IRomAccess rom, uint sourceAddress)
     {
         byte[] scratch = new byte[32];
         List<byte> output = new List<byte>();
@@ -10,7 +9,7 @@ public class BitPack
         while (true)
         {
             uint bitsUsed = 0;
-            int packedDataCounter = (sbyte)rom.ReadByte(sourceAddress++);
+            int packedDataCounter = (sbyte)rom.ReadBytes(ReadKind.Rom, sourceAddress++, 1)[0];
             uint UnpackedBitsRemain = 0xFFFFFFFF;
             if (packedDataCounter != 0)
             {
@@ -22,14 +21,16 @@ public class BitPack
 
                 while (packedDataCounter >= 0)
                 {
-                    var splatByte = rom.ReadByte(sourceAddress++);
-                    uint bitsToUnpack = rom.ReadByte(sourceAddress++);
+                    var bytes=rom.ReadBytes(ReadKind.Rom, sourceAddress, 5);
+                    sourceAddress += 5;
+                    var splatByte = bytes[0];
+                    uint bitsToUnpack = bytes[1];
                     bitsToUnpack <<= 8;
-                    bitsToUnpack |= rom.ReadByte(sourceAddress++);
+                    bitsToUnpack |= bytes[2];
                     bitsToUnpack <<= 8;
-                    bitsToUnpack |= rom.ReadByte(sourceAddress++);
+                    bitsToUnpack |= bytes[3];
                     bitsToUnpack <<= 8;
-                    bitsToUnpack |= rom.ReadByte(sourceAddress++);
+                    bitsToUnpack |= bytes[4];
                     bitsUsed |= bitsToUnpack;
 
                     for (int a=0;a<32;a++)
@@ -50,7 +51,7 @@ public class BitPack
                 {
                     if ((bitsUsed & 0x80000000) == 0x00000000)
                     {
-                        scratch[a] = rom.ReadByte(sourceAddress++);
+                        scratch[a] = rom.ReadBytes(ReadKind.Rom, sourceAddress++, 1)[0];
                     }
                     bitsUsed <<= 1;
                 }
@@ -64,6 +65,3 @@ public class BitPack
 
     }
 }
-
-
-*/

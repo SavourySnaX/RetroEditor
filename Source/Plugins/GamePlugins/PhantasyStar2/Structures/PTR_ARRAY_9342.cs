@@ -1,4 +1,3 @@
-/*
 public struct PTR_ARRAY_9342
 {
     const uint EntriesInRom = 7;
@@ -10,13 +9,14 @@ public struct PTR_ARRAY_9342
         internal uint addressB;
     }
 
-    public void Load(IRomPlugin rom, uint address)
+    public void Load(IRomAccess rom, uint address)
     {
         ptrs=new PTR_9342[EntriesInRom];
+        var bytes = rom.ReadBytes(ReadKind.Rom, address, (uint)(EntriesInRom * 8));
         for (int a=0;a<EntriesInRom;a++)
         {
-            ptrs[a].compressedBitmapData=rom.ReadLong(address+(uint)(a*8));
-            ptrs[a].addressB=rom.ReadLong(address+(uint)(a*8)+4);
+            ptrs[a].compressedBitmapData = rom.FetchMachineOrder32(a * 8, bytes);//    rom.ReadLong(address+(uint)(a*8));
+            ptrs[a].addressB = rom.FetchMachineOrder32(a * 8 + 4, bytes); //rom.ReadLong(address+(uint)(a*8)+4);
         }
     }
 
@@ -30,4 +30,3 @@ public struct PTR_ARRAY_9342
         return ptrs[index].addressB;
     }
 }
-*/

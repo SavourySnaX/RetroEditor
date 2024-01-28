@@ -25,6 +25,8 @@ public class Rollercoaster : IRetroPlugin, IImages
 
     public string RomPluginName => "ZXSpectrum";
 
+    public bool RequiresAutoLoad => true;
+
     public bool CanHandle(string filename)
     {
         // One issue with this approach, is we can't generically load hacks of the game..

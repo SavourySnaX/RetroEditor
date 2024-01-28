@@ -301,9 +301,9 @@ internal class Editor : IEditor
                                     var retro = GetLibRetroInstance(instance.LibRetroPluginName, null);
                                     if (retro != null)
                                     {
-                                        var game = new Fairlight();
+                                        //var game = new Fairlight();
                                         var pluginWindow = new LibRetroPlayerWindow(retro, plugin.Key);
-                                        var playableRom = new PlayableRom(this, retro, instance.Endian);
+                                        var playableRom = new PlayableRom(this, retro, instance.Endian, instance.RequiresReload, instance.ChecksumCalculation);
                                         pluginWindow.Initialise();
                                         retro.LoadGame(result.Path);
                                         //retro.AutoLoad(playableRom, game.AutoLoadCondition);
@@ -422,7 +422,7 @@ internal class Editor : IEditor
         // Load the project settings
         var projectName = projectPath.Split(Path.DirectorySeparatorChar).Last();
         var jsonPath = Path.Combine(editorPath, $"{projectName}.json");
-        var projectSettings = new ProjectSettings(projectName, projectPath, "", "");
+        var projectSettings = new ProjectSettings(projectName, projectPath, "", "", "");
         projectSettings.Load(jsonPath);
 
         // Locate the plugin this project needs
@@ -474,7 +474,7 @@ internal class Editor : IEditor
         var hash = MD5.Create().ComputeHash(hashA.Concat(hashB).Concat(hashC).ToArray());
         var retroCoreName = string.Concat(hash.Select(x => x.ToString("X2")));
 
-        var projectSettings = new ProjectSettings(projectName, projectPath, retroCoreName, retroPluginName);
+        var projectSettings = new ProjectSettings(projectName, projectPath, retroCoreName, retroPluginName, Path.GetFileName(importFile));
         projectSettings.Save(projectFile);
         File.Copy(importFile, GetRomPath(projectSettings), true);
 
@@ -505,11 +505,11 @@ internal class Editor : IEditor
         }
         emuPlugin.Init();
 
-        var playableRom = new PlayableRom(this, emuPlugin, romInterface.Endian);
+        var playableRom = new PlayableRom(this, emuPlugin, romInterface.Endian, romInterface.RequiresReload, romInterface.ChecksumCalculation);
 
         if (firstTime)
         {
-            playableRom.Setup(projectSettings, GetRomPath(projectSettings), plugin.AutoLoadCondition);
+            playableRom.Setup(projectSettings, GetRomPath(projectSettings), plugin.RequiresAutoLoad ? plugin.AutoLoadCondition : null);
         }
         else
         {

@@ -16,6 +16,8 @@ public class JetSetWilly48 : IRetroPlugin, IImages, ITileMaps
 
     public string RomPluginName => "ZXSpectrum";
 
+    public bool RequiresAutoLoad => true;
+
     public bool CanHandle(string filename)
     {
         // One issue with this approach, is we can't generically load hacks of the game..

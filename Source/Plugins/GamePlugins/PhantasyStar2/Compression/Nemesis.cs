@@ -1,5 +1,3 @@
-/*
-
 public class Nemesis
 {
     ushort[] CodeTable = new ushort[256];
@@ -19,10 +17,11 @@ public class Nemesis
         return (byte)((CodeTable[offset] >> 4)&0xF);
     }
 
-    public byte[] Decompress(IRomPlugin rom, uint sourceAddress)
+    public byte[] Decompress(IRomAccess rom, uint sourceAddress)
     {
         bool xorMode = false;
-        var numPatterns = rom.ReadWord(sourceAddress);
+        var bytes = rom.ReadBytes(ReadKind.Rom, sourceAddress, 2);
+        var numPatterns = rom.FetchMachineOrder16(0, bytes);
         sourceAddress += 2;
         if ((numPatterns&0x8000)==0x8000)
         {
@@ -33,14 +32,16 @@ public class Nemesis
 
         BuildCodeTable(rom,ref sourceAddress);
 
-        ushort firstCompWord = rom.ReadByte(sourceAddress++);
+        bytes = rom.ReadBytes(ReadKind.Rom, sourceAddress, 2);
+        sourceAddress += 2;
+        ushort firstCompWord = bytes[0];
         firstCompWord <<= 8;
-        firstCompWord |= rom.ReadByte(sourceAddress++);
+        firstCompWord |= bytes[1];
 
         return ProcessCompData(rom,sourceAddress,firstCompWord,numPatterns,xorMode);
     }
 
-    private byte[] ProcessCompData(IRomPlugin rom, uint address, ushort compWord, ushort numPatterns, bool xorMode)
+    private byte[] ProcessCompData(IRomAccess rom, uint address, ushort compWord, ushort numPatterns, bool xorMode)
     {
         var patternRow = 8;
         int d2 = 0;
@@ -63,7 +64,7 @@ public class Nemesis
                 {
                     initialShiftValue += 8;
                     compWord <<= 8;
-                    compWord |= rom.ReadByte(address++);
+                    compWord |= rom.ReadBytes(ReadKind.Rom, address++, 1)[0];
                 }
                 initialShiftValue = initialShiftValue - 7;
                 d1 = compWord;
@@ -74,7 +75,7 @@ public class Nemesis
                 {
                     initialShiftValue += 8;
                     compWord <<= 8;
-                    compWord |= rom.ReadByte(address++);
+                    compWord |= rom.ReadBytes(ReadKind.Rom, address++, 1)[0];
                 }
             }
             else
@@ -86,7 +87,7 @@ public class Nemesis
                 {
                     initialShiftValue += 8;
                     compWord <<= 8;
-                    compWord |= rom.ReadByte(address++);
+                    compWord |= rom.ReadBytes(ReadKind.Rom, address++, 1)[0];
                 }
 
                 palIndex = GetPalIndex((byte)d1);
@@ -137,13 +138,13 @@ public class Nemesis
 
     }
 
-    private void BuildCodeTable(IRomPlugin rom,ref uint address)
+    private void BuildCodeTable(IRomAccess rom,ref uint address)
     {
-        var firstByte = rom.ReadByte(address++);
+        var firstByte = rom.ReadBytes(ReadKind.Rom, address++, 1)[0];
         var palIndex = firstByte;
         while (firstByte != 0xFF)
         {
-            var nextByte = rom.ReadByte(address++);
+            var nextByte = rom.ReadBytes(ReadKind.Rom, address++, 1)[0];
             if ((nextByte & 0x80) == 0x80)
             {
                 firstByte = nextByte;
@@ -159,13 +160,13 @@ public class Nemesis
             codeLength=(byte)(8-codeLength);
             if (codeLength == 0)
             {
-                ushort code = rom.ReadByte(address++);
+                ushort code = rom.ReadBytes(ReadKind.Rom, address++, 1)[0];
                 CodeTable[code] = tableEntry;
             }
             else
             {
                 // short code
-                ushort code = rom.ReadByte(address++);
+                ushort code = rom.ReadBytes(ReadKind.Rom, address++, 1)[0];
                 code <<= codeLength;
                 var countMask = (1 << codeLength) - 1;
                 do
@@ -178,5 +179,3 @@ public class Nemesis
         }
     }
 }
-
-*/
