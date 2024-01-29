@@ -1,5 +1,4 @@
 
-
 using System.Security.Cryptography;
 using ImGuiNET;
 
@@ -243,6 +242,22 @@ public class JetSetWilly48 : IRetroPlugin, IImages, ITileMaps
     {
         return rom.ReadBytes(ReadKind.Ram, 0x9D00, 256);
     }
+
+    public static ReadOnlySpan<byte> GetMapTile(ReadOnlySpan<byte> mapData, int code)
+    {
+        var offset = 128 + 32;
+        if (code>5)
+        {
+            offset += 6 * 9 + 4 + 4 + 1 + 2;    // Item graphic offset
+        }
+        else
+        {
+            offset += code * 9;
+        }
+        return mapData.Slice(offset, 9);
+    }
+
+
 }
 
 public class JetSetWillyMap : IImage
@@ -307,76 +322,6 @@ public class JetSetWillyMap : IImage
     }
 */
 
-    static readonly Pixel[] palette = new Pixel[]
-    {
-        new Pixel() { Red = 0, Green = 0, Blue = 0 },
-        new Pixel() { Red = 0, Green = 0, Blue = 192 },
-        new Pixel() { Red = 192, Green = 0, Blue = 0 },
-        new Pixel() { Red = 192, Green = 0, Blue = 192 },
-        new Pixel() { Red = 0, Green = 192, Blue = 0 },
-        new Pixel() { Red = 0, Green = 192, Blue = 192 },
-        new Pixel() { Red = 192, Green = 192, Blue = 0 },
-        new Pixel() { Red = 192, Green = 192, Blue = 192 },
-        new Pixel() { Red = 0, Green = 0, Blue = 0 },
-        new Pixel() { Red = 0, Green = 0, Blue = 255 },
-        new Pixel() { Red = 255, Green = 0, Blue = 0 },
-        new Pixel() { Red = 255, Green = 0, Blue = 255 },
-        new Pixel() { Red = 0, Green = 255, Blue = 0 },
-        new Pixel() { Red = 0, Green = 255, Blue = 255 },
-        new Pixel() { Red = 255, Green = 255, Blue = 0 },
-        new Pixel() { Red = 255, Green = 255, Blue = 255 }
-    };
-
-    private Pixel[] GetTile(int code, bool overrideColour=false, byte colour=0)
-    {
-        var tile = new Pixel[8 * 8];
-
-        var offset = 128 + 32;
-        if (code>5)
-        {
-            offset += 6 * 9 + 4 + 4 + 1 + 2;    // Item graphic offset
-        }
-        else
-        {
-            offset += code * 9;
-        }
-        var tileData = mapData.AsSpan(offset, 9);
-
-        if (!overrideColour)
-        {
-            colour = tileData[0];
-        }
-
-        var ink = colour & 7;
-        var paper = (colour >> 3) & 7;
-        var flash = (colour & 128) != 0;
-        var bright = (colour & 64) != 0;
-
-        if (flash && flashSwap)
-        {
-            var temp = paper;
-            paper = ink;
-            ink = temp;
-        }
-
-        var tileBytes = overrideColour ? tileData : tileData.Slice(1, 8);
-
-        var paperColour = palette[paper + (bright ? 8 : 0)];
-        var inkColour = palette[ink + (bright ? 8 : 0)];
-
-        for (int y = 0; y < 8; y++)
-        {
-            var row = tileBytes[y];
-            for (int x = 0; x < 8; x++)
-            {
-                var bit = (row >> (7 - x)) & 1;
-                tile[y * 8 + x] = bit == 1 ? inkColour : paperColour;
-            }
-        }
-
-        return tile;
-    }
-
     private Pixel[] RenderMap(float seconds)
     {
         // We should probably convert things to a common editable format - At present I render to bitmap, but thats dumb
@@ -385,9 +330,10 @@ public class JetSetWillyMap : IImage
         frameCounter=(int)(seconds*25);
         animFrameCounter=(int)(seconds*10);
 
-        // for now, lets just try to render the bitmap -- 
-        int ySize = 16;
-        int xSize = 8;
+        uint ySize = 16;
+        uint xSize = 8;
+
+        var spectrumScreen = new ZXSpectrum48ImageHelper(xSize * 8 * 4, ySize * 8);
 
         var bitmap = new Pixel[xSize * 8 * 4 * ySize * 8];
 
@@ -401,24 +347,24 @@ public class JetSetWillyMap : IImage
                     int code = (mapByte >> ((3 - b) * 2)) & 3;
 
                     // code = 00 background, 01 floor, 10 wall, 11 hazard
-                    var tile = GetTile(code);
+                    var tile = JetSetWilly48.GetMapTile(mapData, code);
 
-                    int xpos = x * 8 * 4 + b * 8;
-                    int ypos = y * 8;
+                    uint xpos = (uint)(x * 8 * 4 + b * 8);
+                    uint ypos = (uint)(y * 8);
 
-                    RenderTile(xpos, ypos, bitmap, tile);
+                    spectrumScreen.Draw8x8(xpos, ypos, tile.Slice(1), tile[0]);
                 }
             }
         }
 
         // Unpack conveyor..
         int conveyorDataOffset = 128 + 32 + 6 * 9;
-        RenderStairConveyor(5, conveyorDataOffset, bitmap, true);
+        RenderStairConveyor(5, conveyorDataOffset, spectrumScreen, true);
 
         // Unpack stairs..
         int stairDataOffset = 128 + 32 + 6 * 9 + 4;
-        RenderStairConveyor(4, stairDataOffset, bitmap, false);
-
+        RenderStairConveyor(4, stairDataOffset, spectrumScreen, false);
+        
         // Unpack items..
         var baseColour = 1+(int)(seconds*6);
         for (int a=JetSetWilly48.GetInitialItemIndex(rom);a<256;a++)
@@ -430,13 +376,13 @@ public class JetSetWillyMap : IImage
             var room = (itemCode >> 8) & 0x3F;
             if (room == mapIndex)
             {
-                var itemTile = GetTile(6, true, (byte)(0x40 | (baseColour & 7)));
+                var itemTile = JetSetWilly48.GetMapTile(mapData, 6);
                 baseColour++;
                 if ((baseColour&7)==0)
                 {
                     baseColour++;
                 }
-                RenderTileIgnoreBlack(xpos * 8, ypos * 8, bitmap, itemTile);
+                spectrumScreen.Draw8x8InkOnly((uint)(xpos * 8), (uint)(ypos * 8), itemTile.Slice(1), (byte)(0x40 | (baseColour & 7)));
             }
         }
 
@@ -456,23 +402,22 @@ public class JetSetWillyMap : IImage
 
             if (data.Kind == JetSetWilly48.GuardianKind.Horizontal || data.Kind == JetSetWilly48.GuardianKind.Vertical)
             {
-                RenderSprite(bitmap, data);
+                RenderSprite(spectrumScreen, data);
             }
-            // Todo - Rope / Arrow
             if (data.Kind == JetSetWilly48.GuardianKind.Rope)
             {
-                RenderRope(bitmap,data);
+                RenderRope(spectrumScreen,data);
             }
             if (data.Kind == JetSetWilly48.GuardianKind.Arrow)
             {
-                RenderArrow(bitmap,data);
+                RenderArrow(spectrumScreen,data);
             }
         }
 
-        return bitmap;
+        return spectrumScreen.Render(seconds);
     }
 
-    private void RenderRope(Pixel[] bitmap, JetSetWilly48.GuardianData data)
+    private void RenderRope(ZXSpectrum48ImageHelper screen, JetSetWilly48.GuardianData data)
     {
         int currentFrame = frameCounter % (2*data.RopeFrameDirectionChange);
         int ropeOffset = currentFrame % data.RopeFrameDirectionChange;
@@ -483,13 +428,14 @@ public class JetSetWillyMap : IImage
         int x = data.XCoord * 8;
         for (int a=0;a<data.RopeLength;a++)
         {
-            bitmap[y * 256 + x] = palette[15];
+            screen.DrawBitNoAttribute((uint)x, (uint)y, true);
+            screen.SetAttribute((uint)(x>>8),(uint)(y>>8),0x07);
             y += ropeTable[128 + a + ropeOffset]/2;
             x += direction*ropeTable[a + ropeOffset];
         }
     }
 
-    private void RenderArrow(Pixel[] bitmap, JetSetWilly48.GuardianData data)
+    private void RenderArrow(ZXSpectrum48ImageHelper screen, JetSetWilly48.GuardianData data)
     {
         int xPos = data.ArrowInitialXPos;
         var rowPattern = data.ArrowBitPattern;
@@ -515,66 +461,72 @@ public class JetSetWillyMap : IImage
                 {
                     row = 0xFF;
                 }
-                for (int x=0;x<8;x++)
-                {
-                    int bit = (row >> (7 - x)) & 1;
-                    if (bit!=0)
-                    {
-                        bitmap[(ypos + y) * 256 + (xpos + x)] = palette[15];
-                    }
-                }
+                screen.Draw8BitsInkOnly((uint)xpos,(uint)(ypos+y),row,0x07,false);
             }
         }
     }
 
-    private void RenderSprite(Pixel[] bitmap, JetSetWilly48.GuardianData data)
+    private void RenderSprite(ZXSpectrum48ImageHelper screen, JetSetWilly48.GuardianData data)
     {
         var animFrame = data.InitialFrame + animFrameCounter;
         animFrame&=data.AnimMask;
 
         var spriteData = JetSetWilly48.GetSpriteData(rom, (byte)data.GraphicPage, (byte)(data.SpriteBaseIndex+animFrame));
-
         for (int y=0;y<16;y++)
         {
-            var row = (spriteData[y*2+0]<<8) | spriteData[y*2+1];
-            for (int x=0;x<16;x++)
+            for (int x=0;x<2;x++)
             {
-                var bit = (row >> (15 - x)) & 1;
-                if (bit!=0)
-                {
-                    var xpos = data.XCoord*8 + x;
-                    var ypos = (data.PixelYCoord/2) + y;
-                    bitmap[ypos * 256 + xpos] = palette[data.Ink + (data.Bright ? 8 : 0)];
-                }
+                var xpos = data.XCoord*8 + x*8;
+                var ypos = (data.PixelYCoord/2) + y;
+
+                screen.Draw8BitsInkOnly((uint)xpos, (uint)ypos, spriteData[y*2+x], (byte)(data.Ink + (data.Bright ? 8 : 0)), false);
             }
-        }   
+        }
     }
 
-    private void RenderStairConveyor(int tileNum, int conveyorDataOffset, Pixel[] bitmap, bool conveyorKind)
+    private void RenderStairConveyor(int tileNum, int conveyorDataOffset, ZXSpectrum48ImageHelper spectrumScreen, bool conveyorKind)
     {
-        var conveyor = GetTile(tileNum);
+        var conveyor = JetSetWilly48.GetMapTile(mapData, tileNum);
         var conveyorDirection = mapData[conveyorDataOffset];
         var conveyorPosA = mapData[conveyorDataOffset + 1];
         var conveyorPosB = mapData[conveyorDataOffset + 2];
         var conveyorLength = mapData[conveyorDataOffset + 3]; 
-        var conveyorPos = conveyorPosA + (conveyorPosB << 8);
+        uint conveyorPos = conveyorPosA + (uint)(conveyorPosB << 8);
 
         conveyorPos -= 24064;
-        var conveyorPosX = conveyorPos % 32;
-        var conveyorPosY = conveyorPos / 32;
+        uint conveyorPosX = conveyorPos % 32;
+        uint conveyorPosY = conveyorPos / 32;
+
+        if (conveyorKind)
+        {
+            var dupeForConveyor = conveyor.ToArray();
+            var amount = conveyorOffset & 7;
+            // Rotate first and third rows by offset
+            if (conveyorDirection==1)
+            {
+                dupeForConveyor[1] = (byte)((conveyor[0] >> amount) | (conveyor[0] << (8 - amount)));
+                dupeForConveyor[3] = (byte)((conveyor[0] << amount) | (conveyor[0] >> (8 - amount)));
+            }
+            else
+            {
+                dupeForConveyor[1] = (byte)((conveyor[0] << amount) | (conveyor[0] >> (8 - amount)));
+                dupeForConveyor[3] = (byte)((conveyor[0] >> amount) | (conveyor[0] << (8 - amount)));
+            }
+            conveyor = dupeForConveyor;
+        }
 
         for (int a=0;a<conveyorLength;a++)
         {
-            int xpos = conveyorPosX * 8;
-            int ypos = conveyorPosY * 8;
+            uint xpos = conveyorPosX * 8;
+            uint ypos = conveyorPosY * 8;
             if (conveyorKind)
             {
-                RenderConveyorTile(xpos, ypos, bitmap, conveyor, conveyorDirection == 1, conveyorOffset);
+                spectrumScreen.Draw8x8(xpos, ypos, conveyor.Slice(1), conveyor[0]);
                 conveyorPosX++;
             }
             else
             {
-                RenderTile(xpos,ypos,bitmap,conveyor);
+                spectrumScreen.Draw8x8(xpos, ypos, conveyor.Slice(1), conveyor[0]);
                 switch (conveyorDirection)
                 {
                     case 0:
@@ -587,67 +539,6 @@ public class JetSetWillyMap : IImage
                         break;
                 }
 
-            }
-        }
-    }
-
-    private void RenderTile(int xpos, int ypos, Pixel[] bitmap, Pixel[] tile)
-    {
-        for (int ty = 0; ty < 8; ty++)
-        {
-            for (int tx = 0; tx < 8; tx++)
-            {
-                bitmap[(ypos + ty) * 256 + (xpos + tx)] = tile[ty * 8 + tx];
-            }
-        }
-    }
-    
-    private void RenderTileIgnoreBlack(int xpos, int ypos, Pixel[] bitmap, Pixel[] tile)
-    {
-        for (int ty = 0; ty < 8; ty++)
-        {
-            for (int tx = 0; tx < 8; tx++)
-            {
-                var pixel = tile[ty * 8 + tx];
-                if (pixel.Red != 0 || pixel.Green != 0 || pixel.Blue != 0)
-                {
-                    bitmap[(ypos + ty) * 256 + (xpos + tx)] = pixel;
-                }
-            }
-        }
-    }
-
-
-    private void RenderConveyorTile(int xpos, int ypos, Pixel[] bitmap, Pixel[] tile, bool rightWard, int offs)
-    {
-        for (int ty = 0; ty < 8; ty++)
-        {
-            for (int tx = 0; tx < 8; tx++)
-            {
-                int x = tx;
-                if (ty==0)
-                {
-                    if (rightWard)
-                    {
-                        x = (tx + offs) & 7;
-                    }
-                    else
-                    {
-                        x = (tx - offs) & 7;
-                    }
-                }
-                if (ty==2)
-                {
-                    if (rightWard)
-                    {
-                        x = (tx - offs) & 7;
-                    }
-                    else
-                    {
-                        x = (tx + offs) & 7;
-                    }
-                }
-                bitmap[(ypos + ty) * 256 + (xpos + tx)] = tile[ty * 8 + x];
             }
         }
     }
@@ -665,6 +556,7 @@ public class JetSetWilly48TileMap : ITileMap
     int frameCounter;
     int animFrameCounter;
 
+    ZXSpectrum48ImageHelper[] helpers;
     JetSetWilly48Tile[] tiles;
     JetSetWilly48Layer layer;
     IRomAccess rom;
@@ -763,40 +655,6 @@ public class JetSetWilly48TileMap : ITileMap
             return this.mapData;
         }
 
-        public Pixel[] GetMapImage()
-        {
-            int ySize = 16;
-            int xSize = 8;
-
-            var bitmap = new Pixel[xSize * 8 * 4 * ySize * 8];
-
-            for (int y = 0; y < ySize; y++)
-            {
-                for (int x = 0; x < xSize; x++)
-                {
-                    byte mapByte = map.mapData[y * xSize + x];
-                    for (int b = 0; b < 4; b++)
-                    {
-                        int code = (mapByte >> ((3 - b) * 2)) & 3;
-
-                        // code = 00 background, 01 floor, 10 wall, 11 hazard
-                        var tile = map.tiles[code].GetImageData();
-
-                        int xpos = x * 8 * 4 + b * 8;
-                        int ypos = y * 8;
-
-                        for (int ty = 0; ty < 8; ty++)
-                        {
-                            for (int tx = 0; tx < 8; tx++)
-                            {
-                                bitmap[(ypos + ty) * 256 + (xpos + tx)] = tile[ty * 8 + tx];
-                            }
-                        }
-                    }
-                }
-            }
-            return bitmap;
-        }
     }
 
     public JetSetWilly48TileMap(IRomAccess rom, int mapIndex)
@@ -806,11 +664,19 @@ public class JetSetWilly48TileMap : ITileMap
         this.mapData = rom.ReadBytes(ReadKind.Ram, (uint)roomAddress, 256).ToArray();
         this.mapName = GetMapName();
         this.mapIndex = mapIndex;
+
+        this.helpers = new ZXSpectrum48ImageHelper[4];
+        for (int a=0;a<4;a++)
+        {
+            helpers[a] = new ZXSpectrum48ImageHelper(8, 8);
+            var tile = JetSetWilly48.GetMapTile(mapData, a);
+            helpers[a].Draw8x8(0, 0, tile.Slice(1), tile[0]);
+        }
         this.tiles = new JetSetWilly48Tile[4];
-        this.tiles[0] = new JetSetWilly48Tile(GetTile(0), $"Air");
-        this.tiles[1] = new JetSetWilly48Tile(GetTile(1), $"Water");
-        this.tiles[2] = new JetSetWilly48Tile(GetTile(2), $"Earth");
-        this.tiles[3] = new JetSetWilly48Tile(GetTile(3), $"Fire");
+        this.tiles[0] = new JetSetWilly48Tile(helpers[0].Render(0), $"Air");
+        this.tiles[1] = new JetSetWilly48Tile(helpers[1].Render(0), $"Water");
+        this.tiles[2] = new JetSetWilly48Tile(helpers[2].Render(0), $"Earth");
+        this.tiles[3] = new JetSetWilly48Tile(helpers[3].Render(0), $"Fire");
         this.layer = new JetSetWilly48Layer(this);
     }
 
@@ -848,7 +714,7 @@ public class JetSetWilly48TileMap : ITileMap
 
         for (int a=0;a<4;a++)
         {
-            tiles[a].Update(GetTile(a));
+            tiles[a].Update(helpers[a].Render(seconds));
         }
         
         var data = layer.GetModifiedMap();
@@ -860,76 +726,4 @@ public class JetSetWilly48TileMap : ITileMap
         var data = layer.GetModifiedMap();
         JetSetWilly48.SetMap(rom, mapIndex, data);
     }
-
-    static readonly Pixel[] palette = new Pixel[]
-    {
-        new Pixel() { Red = 0, Green = 0, Blue = 0 },
-        new Pixel() { Red = 0, Green = 0, Blue = 192 },
-        new Pixel() { Red = 192, Green = 0, Blue = 0 },
-        new Pixel() { Red = 192, Green = 0, Blue = 192 },
-        new Pixel() { Red = 0, Green = 192, Blue = 0 },
-        new Pixel() { Red = 0, Green = 192, Blue = 192 },
-        new Pixel() { Red = 192, Green = 192, Blue = 0 },
-        new Pixel() { Red = 192, Green = 192, Blue = 192 },
-        new Pixel() { Red = 0, Green = 0, Blue = 0 },
-        new Pixel() { Red = 0, Green = 0, Blue = 255 },
-        new Pixel() { Red = 255, Green = 0, Blue = 0 },
-        new Pixel() { Red = 255, Green = 0, Blue = 255 },
-        new Pixel() { Red = 0, Green = 255, Blue = 0 },
-        new Pixel() { Red = 0, Green = 255, Blue = 255 },
-        new Pixel() { Red = 255, Green = 255, Blue = 0 },
-        new Pixel() { Red = 255, Green = 255, Blue = 255 }
-    };
-
-    private Pixel[] GetTile(int code, bool overrideColour=false, byte colour=0)
-    {
-        var tile = new Pixel[8 * 8];
-
-        var offset = 128 + 32;
-        if (code>5)
-        {
-            offset += 6 * 9 + 4 + 4 + 1 + 2;    // Item graphic offset
-        }
-        else
-        {
-            offset += code * 9;
-        }
-        var tileData = mapData.AsSpan(offset, 9);
-
-        if (!overrideColour)
-        {
-            colour = tileData[0];
-        }
-
-        var ink = colour & 7;
-        var paper = (colour >> 3) & 7;
-        var flash = (colour & 128) != 0;
-        var bright = (colour & 64) != 0;
-
-        if (flash && flashSwap)
-        {
-            var temp = paper;
-            paper = ink;
-            ink = temp;
-        }
-
-        var tileBytes = overrideColour ? tileData : tileData.Slice(1, 8);
-
-        var paperColour = palette[paper + (bright ? 8 : 0)];
-        var inkColour = palette[ink + (bright ? 8 : 0)];
-
-        for (int y = 0; y < 8; y++)
-        {
-            var row = tileBytes[y];
-            for (int x = 0; x < 8; x++)
-            {
-                var bit = (row >> (7 - x)) & 1;
-                tile[y * 8 + x] = bit == 1 ? inkColour : paperColour;
-                tile[y * 8 + x].Alpha = 255;
-            }
-        }
-
-        return tile;
-    }
-
 }

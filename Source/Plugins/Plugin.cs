@@ -199,7 +199,6 @@ public interface ILayer
     uint Height { get; }
 
      uint[] GetMapData();
-    Pixel[] GetMapImage();
 
     void SetTile(uint x, uint y, uint tile);
 }
