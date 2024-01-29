@@ -115,6 +115,12 @@ public class PlayableRom : IRomAccess
         File.WriteAllText(path, json);
     }
 
+    public void ClearTemporaryMemory()
+    {
+        temporaryBlocksRam.Clear();
+        temporaryBlocksRom.Clear();
+    }
+
     public ReadOnlySpan<byte> ReadMemory(MemoryRegion region, uint address, uint length)
     {
         switch (region)
