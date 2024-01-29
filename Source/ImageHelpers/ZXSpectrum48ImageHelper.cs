@@ -103,6 +103,35 @@ public class ZXSpectrum48ImageHelper
         return bitmap[pixelOffset] != 0;
     }
 
+    public void Draw8BitsNoAttributeInkOnly(uint x, uint y, byte bits, bool flipX)
+    {
+        uint pixelOffset = (y * pixelWidth) + x;
+        if (flipX)
+        {
+            for (int px = 0; px < 8; px++)
+            {
+                if ((bits & 0x01) != 0)
+                {
+                    bitmap[pixelOffset] = 1;
+                }
+                bits >>= 1;
+                pixelOffset++;
+            }
+        }
+        else
+        {
+            for (int px = 0; px < 8; px++)
+            {
+                if ((bits & 0x80) != 0)
+                {
+                    bitmap[pixelOffset] = 1;
+                }
+                bits <<= 1;
+                pixelOffset++;
+            }
+        }
+    }
+
     public void Draw8BitsNoAttribute(uint x, uint y, byte bits, bool flipX)
     {
         uint pixelOffset = (y * pixelWidth) + x;
@@ -149,6 +178,17 @@ public class ZXSpectrum48ImageHelper
     {
         Draw8BitsNoAttribute(x, y, bits, flipX);
         SetAttribute(ConvertXBitmapPosToYAttribute(x), ConvertYBitmapPosToYAttribute(y), attribute);
+    }
+    
+    public void Draw8BitsInkOnly(uint x, uint y, byte bits, byte attribute, bool flipX)
+    {
+        Draw8BitsNoAttributeInkOnly(x, y, bits, flipX);
+        var attrX=ConvertXBitmapPosToYAttribute(x);
+        var attrY=ConvertYBitmapPosToYAttribute(y);
+        byte currentAttribute = GetAttribute(attrX, attrY);
+        currentAttribute&=0xF8;
+        currentAttribute|=(byte)(attribute&0x07);
+        SetAttribute(attrX, attrY, currentAttribute);
     }
     
     public void Xor8Bits(uint x, uint y, byte bits, byte attribute, bool flipX)
@@ -199,4 +239,21 @@ public class ZXSpectrum48ImageHelper
             }
         }
     }
+
+    public void Draw8x8(uint x, uint y, ReadOnlySpan<byte> tile, byte attribute)
+    {
+        for (int a=0;a<8;a++)
+        {
+            Draw8Bits(x, (uint)(y + a), tile[a], attribute, false);
+        }
+    }
+
+    public void Draw8x8InkOnly(uint x, uint y, ReadOnlySpan<byte> tile, byte attribute)
+    {
+        for (int a=0;a<8;a++)
+        {
+            Draw8BitsInkOnly(x, (uint)(y + a), tile[a], attribute, false);
+        }
+    }
+
 }
