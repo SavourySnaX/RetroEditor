@@ -118,4 +118,9 @@ public class MemoryblockCollection
     {
         memoryBlocks = JsonSerializer.Deserialize<SortedDictionary<uint, MemoryBlock>>(json);
     }
+
+    internal void Clear()
+    {
+        memoryBlocks.Clear();
+    }
 }

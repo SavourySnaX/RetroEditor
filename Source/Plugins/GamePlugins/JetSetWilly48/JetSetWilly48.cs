@@ -2,7 +2,7 @@
 using System.Security.Cryptography;
 using ImGuiNET;
 
-public class JetSetWilly48 : IRetroPlugin, IImages, ITileMaps
+public class JetSetWilly48 : IRetroPlugin, IImages, ITileMaps, IPlayerWindowExtension
 {
     private byte[][] supportedMD5s = new byte[][] {
         new byte[] { 0x4E, 0x5E, 0xD5, 0x38, 0xEB, 0x9F, 0x56, 0x59, 0x8F, 0xAF, 0xF8, 0x29, 0x06, 0x44, 0xC9, 0xD7 },  // JetSetWillyTap
@@ -16,6 +16,16 @@ public class JetSetWilly48 : IRetroPlugin, IImages, ITileMaps
     public string RomPluginName => "ZXSpectrum";
 
     public bool RequiresAutoLoad => true;
+
+    private bool cheat_infiniteLives = false;
+    private bool cheat_noFall = false;
+    private bool cheat_noTime = false;
+    private bool cheat_noNastyKill = false;
+    private bool cheat_noGuardianKill = false;
+    private bool cheat_noArrowKill = false;
+    private int startRoom = 0x22;
+    private int startRoomX = 1;
+    private int startRoomY = 13;
 
     public bool CanHandle(string filename)
     {
@@ -88,15 +98,40 @@ public class JetSetWilly48 : IRetroPlugin, IImages, ITileMaps
         romAccess.WriteBytes(WriteKind.TemporaryRam, 0x872C, new byte[] { 0xCA, 0x87 });    // Jump to game start
         romAccess.WriteBytes(WriteKind.TemporaryRam, 0x88AC, new byte[] { 0xFC, 0x88 });    // start game
 
-        byte yPos = 13 * 8;
-        byte xPos = 1 * 8;
-        byte roomNumber = 0x22;
+        byte yPos = (byte)(startRoomY * 8);
+        byte xPos = (byte)(startRoomX * 8);
+        byte roomNumber = (byte)startRoom;
 
         ushort attributeAddress = (ushort)(0x5C00 + ((yPos / 8) * 32) + (xPos / 8));
 
         romAccess.WriteBytes(WriteKind.TemporaryRam, 0x87E6, new byte[] { (byte)(yPos * 2) });          // willys y cordinate
         romAccess.WriteBytes(WriteKind.TemporaryRam, 0x87F0, new byte[] { (byte)(attributeAddress & 0xFF), (byte)(attributeAddress >> 8) });    // willys cordinate
         romAccess.WriteBytes(WriteKind.TemporaryRam, 0x87EB, new byte[] { (byte)(roomNumber) });
+
+        if (cheat_noFall)
+        {
+            romAccess.WriteBytes(WriteKind.TemporaryRam, 0x8EE2, new byte[] { 0x10 }); // Disable fall check
+        }
+        if (cheat_infiniteLives)
+        {
+            romAccess.WriteBytes(WriteKind.TemporaryRam, 0x8C3B, new byte[] { 0x00 }); // Infinte lives
+        }
+        if (cheat_noTime)
+        {
+            romAccess.WriteBytes(WriteKind.TemporaryRam, 0x8A50, new byte[] { 0x18 }); // Infinte time
+        }
+        if (cheat_noNastyKill)
+        {
+            romAccess.WriteBytes(WriteKind.TemporaryRam, 0x962F, new byte[] { 0xC9 }); // No nasty kill
+        }
+        if (cheat_noGuardianKill)
+        {
+            romAccess.WriteBytes(WriteKind.TemporaryRam, 0x9210, new byte[] { 0x00 }); // No guardian kill
+        }
+        if (cheat_noArrowKill)
+        {
+            romAccess.WriteBytes(WriteKind.TemporaryRam, 0x9281, new byte[] { 0x18 }); // No arrow kill
+        }
     }
 
 
@@ -145,6 +180,8 @@ public class JetSetWilly48 : IRetroPlugin, IImages, ITileMaps
     {
         return this;
     }
+
+    public IPlayerWindowExtension? GetPlayerExtension() { return this; }
 
     public IImage GetImage(IRomAccess rom, int mapIndex)
     {
@@ -257,7 +294,29 @@ public class JetSetWilly48 : IRetroPlugin, IImages, ITileMaps
         return mapData.Slice(offset, 9);
     }
 
+    public void Update(float deltaTime)
+    {
+    }
 
+    public void Render(IPlayerControls controls)
+    {
+        bool changed = false;
+        changed|=ImGui.Checkbox("Infinte Lives", ref cheat_infiniteLives);
+        changed|=ImGui.Checkbox("No Fall Death", ref cheat_noFall);
+        changed|=ImGui.Checkbox("No Time Limit", ref cheat_noTime);
+        changed|=ImGui.Checkbox("No Nasty Kill", ref cheat_noNastyKill);
+        changed|=ImGui.Checkbox("No Guardian Kill", ref cheat_noGuardianKill);
+        changed|=ImGui.Checkbox("No Arrow Kill", ref cheat_noArrowKill);
+        ImGui.Separator();
+        changed|=ImGui.SliderInt("Start Room Number", ref startRoom, 0, 60);
+        changed|=ImGui.SliderInt("Start Room XPos", ref startRoomX, 0, 31);
+        changed|=ImGui.SliderInt("Start Room YPos", ref startRoomY, 0, 15);
+
+        if (changed)
+        {
+            controls.Reset();
+        }
+    }
 }
 
 public class JetSetWillyMap : IImage

@@ -6,7 +6,7 @@ using System.Text.Json;
 using System.Runtime.InteropServices;
 using System.IO.Compression;
 
-internal struct ActiveProject
+internal struct ActiveProject : IPlayerControls
 {
     public ActiveProject(string name, IRetroPlugin retroPlugin, LibRetroPlugin libRetroPlugin, IRomPlugin romPlugin, PlayableRom playableRom, ProjectSettings settings)
     {
@@ -32,6 +32,13 @@ internal struct ActiveProject
     public readonly PlayableRom PlayableRomPlugin => playableRom;
 
     public readonly string Name => name;
+
+    public void Reset()
+    {
+        playableRom.ClearTemporaryMemory();
+        retroPlugin.SetupGameTemporaryPatches(playableRom);
+        playableRom.Reset(true);
+    }
 }
 
 
@@ -306,7 +313,7 @@ internal class Editor : IEditor
                                     if (retro != null)
                                     {
                                         //var game = new Fairlight();
-                                        var pluginWindow = new LibRetroPlayerWindow(retro, plugin.Key);
+                                        var pluginWindow = new LibRetroPlayerWindow(retro, null, null);
                                         var playableRom = new PlayableRom(this, retro, instance.Endian, instance.RequiresReload, instance.ChecksumCalculation);
                                         pluginWindow.Initialise();
                                         retro.LoadGame(result.Path);
@@ -442,7 +449,7 @@ internal class Editor : IEditor
 
     private void OpenPlayerWindow(ActiveProject activeProject)
     {
-        var pluginWindow = new LibRetroPlayerWindow(activeProject.LibRetroPlugin, activeProject.Name);
+        var pluginWindow = new LibRetroPlayerWindow(activeProject.LibRetroPlugin, activeProject, activeProject.RetroPlugin.GetPlayerExtension());
         OpenWindow(pluginWindow, $"LibRetro Player ({activeProject.Name})");
         pluginWindow.InitWindow();
     }
