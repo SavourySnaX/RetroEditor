@@ -122,7 +122,6 @@ internal class WindowManager
             ImGui.Begin(window.Name, ref open);
             if (window.Window.Draw())
             {
-                ImGui.CloseCurrentPopup();
                 open = false;
             }
             ImGui.End();

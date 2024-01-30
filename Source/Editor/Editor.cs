@@ -134,33 +134,12 @@ internal class Editor : IEditor
         }
         rlImGui.Setup(darkTheme: true, enableDocking: true);
 
-        // Main application loop
-
         var args = Environment.GetCommandLineArgs();
 
         foreach (var arg in args)
         {
             OpenProject(arg);
         }
-
-        // Testing
-        /*
-        var pluginWindow = new JSWTest(LibRetroPluginFactory.Create("fuse_libretro","C:\\work\\editor\\RetroEditor\\data\\1.dll"), "Flibble");
-        pluginWindow.Initialise();
-        pluginWindow.OtherStuff();
-        pluginWindow.InitWindow();
-        AddWindow(pluginWindow);*/
-        /*
-        pluginWindow = new JSWTest(LibRetroPluginFactory.Create("C:\\zidoo_flash\\retroarch\\cores\\fceumm_libretro.dll"), "FCEU");
-        //var pluginWindow = new JSWTest(LibRetroPluginFactory.Create("C:\\work\\editor\\nes\\libretro-fceumm\\fceumm_libretro.dll"), "FCEU");
-        pluginWindow.Initialise();
-        pluginWindow.OtherStuff();
-        AddWindow(pluginWindow);
-        pluginWindow = new JSWTest(LibRetroPluginFactory.Create("C:\\zidoo_flash\\retroarch\\cores\\genesis_plus_gx_libretro.dll"), "Genesis");
-        pluginWindow.Initialise();
-        pluginWindow.OtherStuff();
-        AddWindow(pluginWindow);
-*/
 
         var deltaTime = 0.0f;
         while (!Raylib.WindowShouldClose())
