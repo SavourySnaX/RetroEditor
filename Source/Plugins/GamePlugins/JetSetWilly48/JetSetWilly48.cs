@@ -169,6 +169,10 @@ public class JetSetWilly48 : IRetroPlugin, IImages, ITileMaps, IPlayerWindowExte
             }
             ImGui.EndMenu();
         }
+        if (ImGui.MenuItem("Graphics Editor"))
+        {
+            editorInterface.OpenWindow(new BitmapWindow(this, GetBitmap(rom)), "Graphics Editor");
+        }
     }
 
     public IImages GetImageInterface()
@@ -186,6 +190,11 @@ public class JetSetWilly48 : IRetroPlugin, IImages, ITileMaps, IPlayerWindowExte
     public IImage GetImage(IRomAccess rom, int mapIndex)
     {
         return new JetSetWillyMap(rom, mapIndex);
+    }
+
+    public IBitmapImage GetBitmap(IRomAccess rom)
+    {
+        return new JetSetWilly48Bitmap(rom, WillyPage, 0, 16, 16);
     }
     
     public int GetMapCount(IRomAccess rom)
@@ -267,7 +276,12 @@ public class JetSetWilly48 : IRetroPlugin, IImages, ITileMaps, IPlayerWindowExte
 
     public static ReadOnlySpan<byte> GetSpriteData(IRomAccess rom, byte page, byte spriteIndex)
     {
-        return rom.ReadBytes(ReadKind.Ram, (uint)(page * 256 + spriteIndex * 32), 32);
+        return rom.ReadBytes(ReadKind.Ram, GetSpriteBaseAddresss(rom, page, spriteIndex), 32);
+    }
+
+    public static uint GetSpriteBaseAddresss(IRomAccess rom, byte page, byte spriteIndex)
+    {
+        return (uint)(page * 256 + spriteIndex * 32);
     }
 
     public static ReadOnlySpan<byte> GetRopeTable(IRomAccess rom)
@@ -275,10 +289,7 @@ public class JetSetWilly48 : IRetroPlugin, IImages, ITileMaps, IPlayerWindowExte
         return rom.ReadBytes(ReadKind.Ram, 33536, 256);
     }
 
-    public static ReadOnlySpan<byte> GetWilly(IRomAccess rom)
-    {
-        return rom.ReadBytes(ReadKind.Ram, 0x9D00, 256);
-    }
+    public static byte WillyPage = 0x9D;
 
     public static ReadOnlySpan<byte> GetMapTile(ReadOnlySpan<byte> mapData, int code)
     {
@@ -358,28 +369,6 @@ public class JetSetWillyMap : IImage
     {
         return RenderMap(seconds);
     }
-/*
-    public Pixel[] GetSpriteData(float seconds)
-    {
-        var helper = new ZXSpectrum48ImageHelper(Width, Height);
-
-        helper.Clear(0x07);
-
-        var willy = main.GetWilly();
-
-        for (uint y=0;y<16;y++)
-        {
-            for (uint x=0;x<2;x++)
-            {
-                var gfx = willy[y * 2 + x];
-                helper.Draw8BitsNoAttribute(x * 8, y, gfx, false);
-            }
-        }
-
-        return helper.Render(seconds);
-        //return RenderMap(seconds);
-    }
-*/
 
     private Pixel[] RenderMap(float seconds)
     {
@@ -784,5 +773,60 @@ public class JetSetWilly48TileMap : ITileMap
     {
         var data = layer.GetModifiedMap();
         JetSetWilly48.SetMap(rom, mapIndex, data);
+    }
+}
+
+public class JetSetWilly48Bitmap : IBitmapImage
+{
+    private IRomAccess rom;
+    private uint width;
+    private uint height;
+    private byte page;
+    private byte index;
+
+    public JetSetWilly48Bitmap(IRomAccess rom, byte page, byte index, uint width, uint height)
+    {
+        this.rom = rom;
+        this.width = width;
+        this.height = height;
+        this.page = page;
+        this.index = index;
+    }
+
+    public uint Width => width;
+
+    public uint Height => height;
+
+    public Pixel[] Palette => new Pixel[] { new Pixel(0, 0, 0), new Pixel(255, 255, 255) };
+
+    public uint[] GetImageData(float seconds)
+    {
+        var spriteData = JetSetWilly48.GetSpriteData(rom, (byte)page, (byte)(index));
+        var result = new uint[width * height];
+        for (int a = 0; a < width * height / 8; a++)
+        {
+            for (int b = 0; b < 8; b++)
+            {
+                result[a * 8 + b] = (uint)(spriteData[a] >> (7 - b)) & 1;
+            }
+        }
+        return result;
+    }
+
+    public void SetPixel(uint x, uint y, uint paletteIndex)
+    {
+        var spriteAddress=JetSetWilly48.GetSpriteBaseAddresss(rom, page, index);
+        var offs = y*2 + (x / 8);
+        int bit = (int)(7 - (x & 7));
+        var current = rom.ReadBytes(ReadKind.Ram, spriteAddress + offs, 1)[0];
+        if (paletteIndex == 0)
+        {
+            current &= (byte)~(1 << bit);
+        }
+        else
+        {
+            current |= (byte)(1 << bit);
+        }
+        rom.WriteBytes(WriteKind.SerialisedRam, spriteAddress + offs, new byte[] { current });
     }
 }

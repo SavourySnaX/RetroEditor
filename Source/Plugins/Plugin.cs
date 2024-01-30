@@ -156,6 +156,18 @@ public interface IRomAccess
     }
 }
 
+public interface IBitmapImage
+{
+    uint Width { get; }
+    uint Height { get; }
+
+    Pixel[] Palette { get; }
+
+    uint[] GetImageData(float seconds);
+
+    void SetPixel(uint x, uint y, uint paletteIndex);
+}
+
 
 public interface IRomPlugin
 {
