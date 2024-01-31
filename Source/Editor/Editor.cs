@@ -122,7 +122,7 @@ internal class Editor : IEditor
     public void RenderRun()
     {
         Raylib.SetConfigFlags(ConfigFlags.FLAG_WINDOW_RESIZABLE);
-        Raylib.SetConfigFlags(ConfigFlags.FLAG_VSYNC_HINT);
+        //Raylib.SetConfigFlags(ConfigFlags.FLAG_VSYNC_HINT);   // Don't wait for VSYNC, we do all synchronisation ourselves
         Raylib.InitWindow(800, 600, "Retro Editor");
         if (Raylib.IsWindowFullscreen())
         {
