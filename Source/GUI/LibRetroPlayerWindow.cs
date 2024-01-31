@@ -67,8 +67,15 @@ public class LibRetroPlayerWindow : IWindow
 
     public float UpdateInterval => (float)(1.0 / aVInfo.timing.fps);
 
+    private bool audioEnabled = false;
+
     public bool Draw()
     {
+        if (ImGui.Checkbox("Audio", ref audioEnabled))
+        {
+            plugin.SwitchAudio(audioEnabled);
+        }
+
         rlImGui.ImageRect(bitmap, (int)(aVInfo.geometry.baseWidth * scale), (int)(aVInfo.geometry.baseHeight * scale), new Rectangle(0,0,frameWidth,frameHeight));
 
         if (ImGui.IsWindowFocused())
