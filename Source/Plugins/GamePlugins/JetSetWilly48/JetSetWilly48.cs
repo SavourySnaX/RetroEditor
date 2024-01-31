@@ -336,7 +336,6 @@ public class JetSetWillyMap : IImage
     string mapName;
     int mapIndex;
 
-    bool flashSwap;
     int conveyorOffset;
 
     int frameCounter;
@@ -373,7 +372,6 @@ public class JetSetWillyMap : IImage
     private Pixel[] RenderMap(float seconds)
     {
         // We should probably convert things to a common editable format - At present I render to bitmap, but thats dumb
-        flashSwap = ((int)(seconds*2.0f)&1)==1;
         conveyorOffset=(int)(seconds*20);
         frameCounter=(int)(seconds*25);
         animFrameCounter=(int)(seconds*10);
@@ -598,11 +596,6 @@ public class JetSetWilly48TileMap : ITileMap
     string mapName;
     int mapIndex;
 
-    bool flashSwap;
-    int conveyorOffset;
-
-    int frameCounter;
-    int animFrameCounter;
 
     ZXSpectrum48ImageHelper[] helpers;
     JetSetWilly48Tile[] tiles;
@@ -755,11 +748,6 @@ public class JetSetWilly48TileMap : ITileMap
 
     public void Update(float seconds)
     {
-        flashSwap = ((int)(seconds*2.0f)&1)==1;
-        conveyorOffset=(int)(seconds*20);
-        frameCounter=(int)(seconds*25);
-        animFrameCounter=(int)(seconds*10);
-
         for (int a=0;a<4;a++)
         {
             tiles[a].Update(helpers[a].Render(seconds));
