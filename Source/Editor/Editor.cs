@@ -134,6 +134,8 @@ internal class Editor : IEditor
         }
         rlImGui.Setup(darkTheme: true, enableDocking: true);
 
+        Raylib.InitAudioDevice();
+
         var args = Environment.GetCommandLineArgs();
 
         foreach (var arg in args)
