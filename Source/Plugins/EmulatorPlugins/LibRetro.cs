@@ -254,7 +254,10 @@ public class LibRetroPlugin : IDisposable
         nativeRun = Marshal.GetDelegateForFunctionPointer<retro_run>(NativeLibrary.GetExport(libraryHandle, "retro_run"));
         nativeDeinit = Marshal.GetDelegateForFunctionPointer<retro_deinit>(NativeLibrary.GetExport(libraryHandle, "retro_deinit"));
         SetEnvironment();
+        audioHelper = new RayLibAudioHelper();
     }
+
+    private RayLibAudioHelper audioHelper;
 
     public uint Version()
     {
@@ -917,7 +920,7 @@ public class LibRetroPlugin : IDisposable
             case EnvironmentCommand.ENVIRONMENT_GET_AUDIO_VIDEO_ENABLE:
                 {
                     // Just want video for now
-                    Marshal.WriteInt32(data, 1);    // bits 3-0 HardAudioDisable|FastSave|AudioDisable|VideoDisable
+                    Marshal.WriteInt32(data, 3);    // bits 3-0 HardAudioDisable|FastSave|AudioDisable|VideoDisable
                     return 1;
                 }
             case EnvironmentCommand.ENVIRONMENT_GET_MESSAGE_INTERFACE_VERSION:
@@ -1086,68 +1089,10 @@ public class LibRetroPlugin : IDisposable
 
     public void SwitchAudio(bool enable)
     {
-        if (enable)
-        {
-            if (audioEnabledWrite)
-            {
-                return;
-            }
-            // If already enabled, do nothing?
-            var avinfo = GetSystemAVInfo();
-            audio = Raylib.LoadAudioStream((uint)Math.Floor(avinfo.timing.sampleRate), 16, 2);
-            unsafe
-            {
-                audioCallback = &RayLibAudioCallback;
-                Raylib.SetAudioStreamBufferSizeDefault((int)Math.Floor(avinfo.timing.sampleRate)*2);
-                Raylib.SetAudioStreamCallback(audio, audioCallback);
-            }
-            audioEnabledWrite = true;
-            Raylib.PlayAudioStream(audio);
-        }
-        else
-        {
-            if (audioEnabledWrite)
-            {
-                Raylib.StopAudioStream(audio);
-                Raylib.UnloadAudioStream(audio);
-                audioEnabledRead = false;
-                audioEnabledWrite = false;
-                audioReadPos = 0;
-                audioWritePos = 0;
-            }
-
-        }
+        var avinfo = GetSystemAVInfo();
+        audioHelper.SwitchAudio((uint)Math.Floor(avinfo.timing.sampleRate), enable);
     }
 
-    private AudioStream audio;
-    private static bool audioEnabledWrite;
-    private static bool audioEnabledRead;
-
-    [UnmanagedCallersOnly(CallConvs = new Type[] { typeof(CallConvCdecl)})]
-    private unsafe static void RayLibAudioCallback(void* ptr, uint size)
-    {
-        if (audioEnabledRead)
-        {
-            size*=4;
-            if (audioReadPos + size > 1024 * 1024)
-            {
-                var toCopy = 1024 * 1024 - audioReadPos;
-                var remain = size - toCopy;
-                Marshal.Copy(audioBuffer, audioReadPos, (IntPtr)ptr, (int)toCopy);
-                audioReadPos = 0;
-                Marshal.Copy(audioBuffer, audioReadPos, (IntPtr)ptr, (int)remain);
-                audioReadPos += (int)remain;
-            }
-            else
-            {
-                Marshal.Copy(audioBuffer, audioReadPos, (IntPtr)ptr, (int)size);
-                audioReadPos += (int)size;
-            }
-            IntPtr ptrP = new IntPtr(ptr);
-        }
-    }
-
-    private unsafe delegate* unmanaged[Cdecl]<void*, uint, void> audioCallback;
 
     private void AudioSampleCallback(short left, short right)
     {
@@ -1158,37 +1103,8 @@ public class LibRetroPlugin : IDisposable
     // * I.e. int16_t buf[4] = { l, r, l, r }; would be 2 frames.
     private void AudioSampleBatchCallback(IntPtr data, UIntPtr frames)
     {
-        if (audioEnabledWrite)
-        {
-            var bytes = ((int)frames)*2*2;
-
-            if (audioWritePos + bytes > 1024*1024)
-            {
-                var toCopy = 1024 * 1024 - audioWritePos;
-                var remain = bytes  - toCopy;
-                Marshal.Copy(data, audioBuffer, audioWritePos, (int)toCopy);
-                audioWritePos = 0;
-                Marshal.Copy(data, audioBuffer, audioWritePos, (int)remain);
-                audioWritePos += (int)remain;
-            }
-            else
-            {
-                Marshal.Copy(data, audioBuffer, audioWritePos, (int)bytes);
-                audioWritePos += (int)bytes;
-            }
-
-            if (audioWritePos>16*1024)
-            {
-                audioEnabledRead=true;
-            }
-
-            // Copy data to buffer, so our callback can grab it when it needs to
-            //System.Console.WriteLine($"Audio sample batch callback: {frames} {counter}");
-        }
+        audioHelper.AudioSampleIn(data, frames);
     }
 
-    static byte[] audioBuffer = new byte[1024 * 1024];
-    static int audioReadPos = 0;
-    static int audioWritePos = 0;
 
 }
