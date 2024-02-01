@@ -26,6 +26,7 @@ internal class RayLibAudioHelper
     private nint trampoline;
     private AudioStream audio;
     const int AudioBufferSize = 1024 * 1024;
+    const int AudioBufferWritePosBeforeRead = 16 * 1024;
 
     private nint audioSharedData;
 
@@ -42,7 +43,20 @@ internal class RayLibAudioHelper
             audioShared->audioEnabledRead = false;
         }
         audio = new AudioStream();
-        var lib = NativeLibrary.Load("C:/work/editor/retroeditor/Native/InstanceTrampoline/build/Debug/InstanceTrampoline.dll");
+        string instanceTrampolinePath = Path.Combine(Directory.GetCurrentDirectory(), "Native", "InstanceTrampoline", "build");
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        {
+            instanceTrampolinePath = Path.Combine(instanceTrampolinePath, "InstanceTrampoline.dll");
+        }
+        else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+        {
+            instanceTrampolinePath = Path.Combine(instanceTrampolinePath, "libInstanceTrampoline.so");
+        }
+        else
+        {
+            throw new Exception("Unsupported platform");
+        }
+        var lib = NativeLibrary.Load(instanceTrampolinePath);
         var method = NativeLibrary.GetExport(lib, "allocate_trampoline");
 
         var initialise = Marshal.GetDelegateForFunctionPointer<Initialise>(method);
@@ -83,8 +97,8 @@ internal class RayLibAudioHelper
                 {
                     Raylib.StopAudioStream(audio);
                     Raylib.UnloadAudioStream(audio);
-                    audioShared->audioEnabledRead = false;
                     audioShared->audioEnabledWrite = false;
+                    audioShared->audioEnabledRead = false;
                     audioShared->audioReadPos = 0;
                     audioShared->audioWritePos = 0;
                 }
@@ -100,9 +114,9 @@ internal class RayLibAudioHelper
         if (audioShared->audioEnabledRead)
         {
             size*=4;
-            if (audioShared->audioReadPos + size > 1024 * 1024)
+            if (audioShared->audioReadPos + size > AudioBufferSize)
             {
-                var toCopy = 1024 * 1024 - audioShared->audioReadPos;
+                var toCopy = AudioBufferSize - audioShared->audioReadPos;
                 var remain = size - toCopy;
 
                 var spanDest = new Span<byte>((byte*)ptr, (int)toCopy);
@@ -137,9 +151,9 @@ internal class RayLibAudioHelper
             {
                 var bytes = ((int)frames) * 2 * 2;
 
-                if (audioShared->audioWritePos + bytes > 1024 * 1024)
+                if (audioShared->audioWritePos + bytes > AudioBufferSize)
                 {
-                    var toCopy = 1024 * 1024 - audioShared->audioWritePos;
+                    var toCopy = AudioBufferSize - audioShared->audioWritePos;
                     var remain = bytes - toCopy;
                     var spanDest = new Span<byte>((byte*)audioShared->audioBuffer + audioShared->audioWritePos, (int)toCopy);
                     var spanSrc = new Span<byte>((byte*)data, (int)toCopy);
@@ -158,7 +172,7 @@ internal class RayLibAudioHelper
                     audioShared->audioWritePos += (int)bytes;
                 }
 
-                if (audioShared->audioWritePos > 16 * 1024)
+                if (audioShared->audioWritePos > AudioBufferWritePosBeforeRead)
                 {
                     audioShared->audioEnabledRead = true;
                 }
