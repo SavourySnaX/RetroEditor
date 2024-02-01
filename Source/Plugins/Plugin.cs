@@ -2,6 +2,14 @@ using System.Text.Json;
 
 public struct Pixel
 {
+    public Pixel()
+    {
+        Red = 0;
+        Green = 0;
+        Blue = 0;
+        Alpha = 255;
+    }
+
     public Pixel(byte r, byte g, byte b)
     {
         Red = r;
