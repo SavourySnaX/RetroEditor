@@ -51,13 +51,20 @@ internal class Editor : IEditor
 
     internal class EditorSettings
     {
+        public const int MajorVersion = 0;
+        public const int MinorVersion = 1;
+        public const int PatchVersion = 0;
         public string ProjectLocation { get; set;}
         public string LastImportedLocation { get; set;}
         public string RetroCoreFolder { get; set;}
         public List<string> RecentProjects { get; set;}
+        public string Version { get; set; }
+
+        public static string CurrentVersion => $"{MajorVersion}.{MinorVersion}.{PatchVersion}";
 
         public EditorSettings()
         {
+            Version = $"{MajorVersion}.{MinorVersion}.{PatchVersion}";
             ProjectLocation = Path.Combine(Directory.GetCurrentDirectory(), "Projects");
             RetroCoreFolder = Path.Combine(Directory.GetCurrentDirectory(), "Data");
             LastImportedLocation = "";
@@ -123,7 +130,7 @@ internal class Editor : IEditor
     {
         Raylib.SetConfigFlags(ConfigFlags.FLAG_WINDOW_RESIZABLE);
         //Raylib.SetConfigFlags(ConfigFlags.FLAG_VSYNC_HINT);   // Don't wait for VSYNC, we do all synchronisation ourselves
-        Raylib.InitWindow(800, 600, "Retro Editor");
+        Raylib.InitWindow(800, 600, $"Retro Editor - レトロゲームの変更の具 - Version {EditorSettings.CurrentVersion}");
         if (Raylib.IsWindowFullscreen())
         {
             Raylib.ToggleFullscreen();

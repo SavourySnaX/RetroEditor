@@ -46,7 +46,7 @@ internal class RayLibAudioHelper
         string instanceTrampolinePath = Path.Combine(Directory.GetCurrentDirectory(), "Native", "InstanceTrampoline", "build");
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
-            instanceTrampolinePath = Path.Combine(instanceTrampolinePath, "InstanceTrampoline.dll");
+            instanceTrampolinePath = Path.Combine(instanceTrampolinePath, "Debug", "InstanceTrampoline.dll");
         }
         else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
         {

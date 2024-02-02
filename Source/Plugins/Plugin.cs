@@ -285,7 +285,7 @@ public sealed class ProjectSettings
     
     public ProjectSettings(string projectName, string projectPath, string retroCoreName, string retroPluginName, string originalRomName)
     {
-        this.serializedSettings = new SerializedSettings("0.0.1", retroCoreName, retroPluginName, originalRomName);
+        this.serializedSettings = new SerializedSettings(Editor.EditorSettings.CurrentVersion, retroCoreName, retroPluginName, originalRomName);
         this.projectPath = projectPath;
         this.projectName = projectName;
     }

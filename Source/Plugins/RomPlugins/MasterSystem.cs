@@ -4,7 +4,7 @@ class MasterSystem : IRomPlugin
 {
     public static string Name => "MasterSystem";
 
-    public string LibRetroPluginName => "genesis_plus_gx_libretro";
+    public string LibRetroPluginName => "smsplus_libretro";
 
     public MemoryEndian Endian => MemoryEndian.Little;
 
