@@ -14,9 +14,8 @@ extern "C"
 {
 #endif
 
-typedef void* IntPtr;
-
-NATIVE_EXPORT_API IntPtr allocate_trampoline(IntPtr instance, int numInputs, IntPtr method);
+NATIVE_EXPORT_API void* allocate_trampoline(void* instance, int numInputs, void* method);
+NATIVE_EXPORT_API void* allocate_printer(void* method);
 
 #ifdef __cplusplus
 }

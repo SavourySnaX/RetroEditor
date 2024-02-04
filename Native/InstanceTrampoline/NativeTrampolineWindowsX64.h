@@ -138,4 +138,34 @@ public:
 
         jitBuffer.CopyBlock(&CallMemberFunc, sizeof(CallMemberFunc));
     }
+
+    static void SetTemp0From(void* wrapper, JITBuffer& jitBuffer)
+    {
+        const intptr_t p=(intptr_t)wrapper;
+        const uint8_t SetTemp0[] = {0x48, 0xB8, 
+                                     uint8_t(p>>0), uint8_t(p>>8), uint8_t(p>>16), uint8_t(p>>24), uint8_t(p>>32), uint8_t(p>>40), uint8_t(p>>48), uint8_t(p>>56)};  // mov rax,imm64
+        jitBuffer.CopyBlock(&SetTemp0, sizeof(SetTemp0));
+    }
+
+    static void MoveParam0ToTemp0Offset(uint8_t offset, JITBuffer& jitBuffer)
+    {
+        const uint8_t MoveParam0ToTemp0[] = {0x48, 0x89, 0x48, uint8_t(offset)};
+        jitBuffer.CopyBlock(&MoveParam0ToTemp0, sizeof(MoveParam0ToTemp0));
+    }
+
+    static void MoveTemp0ToParam0(JITBuffer& jitBuffer)
+    {
+        const uint8_t MoveTemp0ToParam0[] = {0x48, 0x89, 0xC1};
+        jitBuffer.CopyBlock(&MoveTemp0ToParam0, sizeof(MoveTemp0ToParam0));
+    }
+
+    static void Jmp(void* target, JITBuffer& jitBuffer)
+    {
+        const intptr_t p=(intptr_t)target;
+        const uint8_t Jmp[] = {0x48, 0xB8, 
+                               uint8_t(p>>0), uint8_t(p>>8), uint8_t(p>>16), uint8_t(p>>24), uint8_t(p>>32), uint8_t(p>>40), uint8_t(p>>48), uint8_t(p>>56),  // mov rax,imm64
+                               0xFF, 0xE0 };                                                                                                                  // jmp rax
+
+        jitBuffer.CopyBlock(&Jmp, sizeof(Jmp));
+    }
 };

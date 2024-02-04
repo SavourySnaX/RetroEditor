@@ -24,6 +24,17 @@ public:
         return jitBuffer->EndBlock();
     }
 
+    void* GeneratePrinter(void* wrapper,void* printMethod)
+    {
+        jitBuffer->StartBlock();
+        jitBuffer->SetTemp0From(wrapper);
+        jitBuffer->MoveParam0ToTemp0Offset(8);
+        jitBuffer->MoveTemp0ToParam0();
+        jitBuffer->Jmp(printMethod);
+
+        return jitBuffer->EndBlock();
+    }
+
 
 private:
     
