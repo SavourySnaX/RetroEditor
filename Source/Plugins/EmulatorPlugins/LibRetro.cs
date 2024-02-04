@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Raylib_cs;
 
@@ -343,7 +344,7 @@ public class LibRetroPlugin : IDisposable
             path = Marshal.StringToHGlobalAnsi(path),
             data = loadedRom,
             size = (UIntPtr)data.Length,
-            meta = IntPtr.Zero
+            meta = Marshal.StringToHGlobalAnsi("")
         };
 
         NativeLoadLastGame();
@@ -358,6 +359,13 @@ public class LibRetroPlugin : IDisposable
 
     private void NativeLoadLastGame()
     {
+        if (last_loaded_game.size == 0)
+        {
+            unsafe
+            {
+                nativeLoadGame(null);
+            }
+        }
         unsafe
         {
             fixed (retro_game_info* ptr = &last_loaded_game)
@@ -606,9 +614,9 @@ public class LibRetroPlugin : IDisposable
     private retro_input_state_t inputStateCallback;                 // Prevent collection of delegate
     private retro_video_refresh_t videoRefreshCallback;             // Prevent collection of delegate
 
-    private delegate void Log(int level, IntPtr fmt);
+    private unsafe delegate* unmanaged[Cdecl]<UInt64, void*, void> logCallbackDelegate;
+    private nint logCallbackTrampoline;
 
-    private Log logCallback;                                       // Prevent collection of delegate
 
     private delegate uint retro_api_version();
     private unsafe delegate void retro_get_system_info(retro_system_info* info);
@@ -655,16 +663,27 @@ public class LibRetroPlugin : IDisposable
 
     private enum EnvironmentCommand
     {
+        ENVIRONMENT_SET_ROTATION = 1,
+        ENVIRONMENT_GET_SYSTEM_DIRECTORY = 9,
         ENVIRONMENT_SET_PIXEL_FORMAT = 10,
         ENVIRONMENT_SET_INPUT_DESCRIPTORS = 11,
+        ENVIRONMENT_SET_KEYBOARD_CALLBACK = 12,
         ENVIRONMENT_GET_VARIABLE = 15,
         ENVIRONMENT_SET_VARIABLES = 16,
         ENVIRONMENT_GET_VARIABLE_UPDATE = 17,
+        ENVIRONMENT_SET_SUPPORT_NO_GAME = 18,
         ENVIRONMENT_GET_LOG_INTERFACE = 27,
+        ENVIORNMENT_GET_CORE_ASSETS_DIRECTORY = 30,
+        ENVIRONMENT_GET_SAVE_DIRECTORY = 31,
         ENVIRONMENT_SET_CONTROLLER_INFO = 35,
         ENVIRONMENT_SET_MEMORY_MAPS = 36,
+        ENVIRONMENT_SET_GEOMETRY = 37,
+        ENVIRONMENT_GET_LED_INTERFACE = 46,
         ENVIRONMENT_GET_AUDIO_VIDEO_ENABLE = 47,
+        ENVIRONMENT_GET_INPUT_BITMASKS = 51,
+        ENVIRONMENT_GET_CORE_OPTIONS_VERSION = 52,
         ENVIRONMENT_GET_MESSAGE_INTERFACE_VERSION = 59,
+        ENVIRONMENT_SET_RETRO_FAST_FORWARDING_OVERRIDE = 64,
         ENVIRONMENT_GET_GAME_INFO_EXT = 66,
     }
 
@@ -720,7 +739,7 @@ public class LibRetroPlugin : IDisposable
 
     private struct retro_log_callback
     {
-        public Log log;
+        public nint log;
     }
 
     private struct retro_memory_map
@@ -771,6 +790,13 @@ public class LibRetroPlugin : IDisposable
         public byte persistent_data;
     }
 
+    struct retro_keyboard_callback
+    {
+        public retro_keyboard_event_t callback;
+    }
+
+    private delegate void retro_keyboard_event_t(byte down, uint keycode, uint character, ushort key_modifiers);
+
     private void InitKeyboardToRetroKeyMap()
     {
         for (int a=(int)KeyboardKey.KEY_A;a<=(int)KeyboardKey.KEY_Z;a++)
@@ -791,11 +817,12 @@ public class LibRetroPlugin : IDisposable
         keyMap[(int)KeyboardKey.KEY_RIGHT_SHIFT] = (int)RetroKey.RETROK_RSHIFT;
     }
 
-    private void LogCallback(int level, IntPtr fmt)
+    [UnmanagedCallersOnly(CallConvs = new Type[] { typeof(CallConvCdecl) })]
+    private unsafe static void LogCallback(UInt64 level, void* stringPtr)
     {
-        var fmtString = Marshal.PtrToStringAnsi(fmt);
+        // We may have to add a param here to give us an instance for the plugin, if we plan to record logs
+        var fmtString = Marshal.PtrToStringAnsi(new IntPtr(stringPtr));
         System.Console.WriteLine($"Log callback: {level}, {fmtString}");
-        // TODO implement args expansion
     }
 
     private byte EnvironmentCallback(uint cmd, IntPtr data)
@@ -806,6 +833,16 @@ public class LibRetroPlugin : IDisposable
         var command = (EnvironmentCommand)cmd;
         switch (command)
         {
+            case EnvironmentCommand.ENVIRONMENT_SET_ROTATION:
+                {
+                    Marshal.WriteInt32(data, 0);
+                    return 1;
+                }
+            case EnvironmentCommand.ENVIRONMENT_GET_SYSTEM_DIRECTORY:
+                {
+                    Marshal.WriteIntPtr(data, Marshal.StringToHGlobalAnsi("c:\\retroedittemp\\"));
+                    return 1;
+                }
             case EnvironmentCommand.ENVIRONMENT_SET_PIXEL_FORMAT:
                 {
                     pixelFormat = (PixelFormat)Marshal.ReadInt32(data);
@@ -829,6 +866,11 @@ public class LibRetroPlugin : IDisposable
                         Console.WriteLine($"INPUT DESCRIPTOR : {port}, {device}, {index}, {id}, {description}");
                         data += descSize;
                     }
+                    return 1;
+                }
+            case EnvironmentCommand.ENVIRONMENT_SET_KEYBOARD_CALLBACK:
+                {
+                    Marshal.StructureToPtr(new retro_keyboard_callback { callback = KeyboardCallback }, data, false);
                     return 1;
                 }
             case EnvironmentCommand.ENVIRONMENT_GET_VARIABLE:
@@ -859,14 +901,36 @@ public class LibRetroPlugin : IDisposable
                 {
                     return 0;   // no variables updated since last run
                 }
+            case EnvironmentCommand.ENVIRONMENT_SET_SUPPORT_NO_GAME:
+                {
+                    Console.WriteLine($"Supports No Game : {Marshal.ReadByte(data)}");
+                    return 1;
+                }
             case EnvironmentCommand.ENVIRONMENT_GET_LOG_INTERFACE:
                 {
-                    logCallback = LogCallback;
+                    var printfWrapper = InterfaceTrampoline.GetPrintf();
+
+                    unsafe
+                    {
+                        logCallbackDelegate = &LogCallback;
+                        logCallbackTrampoline = printfWrapper((nint)logCallbackDelegate);
+                    }
+
                     var logInterface = new retro_log_callback
                     {
-                        log = logCallback
+                        log = logCallbackTrampoline
                     };
                     Marshal.StructureToPtr(logInterface, data, false);
+                    return 1;
+                }
+            case EnvironmentCommand.ENVIORNMENT_GET_CORE_ASSETS_DIRECTORY:
+                {
+                    Marshal.WriteIntPtr(data, Marshal.StringToHGlobalAnsi("c:\\retroedittemp\\"));
+                    return 1;
+                }
+            case EnvironmentCommand.ENVIRONMENT_GET_SAVE_DIRECTORY:
+                {
+                    Marshal.WriteIntPtr(data, Marshal.StringToHGlobalAnsi("c:\\retroedittemp\\"));
                     return 1;
                 }
             case EnvironmentCommand.ENVIRONMENT_SET_CONTROLLER_INFO:
@@ -916,17 +980,41 @@ public class LibRetroPlugin : IDisposable
                     }
                     return 1;
                 }
+            case EnvironmentCommand.ENVIRONMENT_SET_GEOMETRY:
+                {
+                    var geometry = Marshal.PtrToStructure<retro_game_geometry>(data);
+                    Console.WriteLine($"GEOMETRY : {geometry.base_width}, {geometry.base_height}, {geometry.max_width}, {geometry.max_height}, {geometry.aspect_ratio}");
+                    return 1;
+                }
+            case EnvironmentCommand.ENVIRONMENT_GET_LED_INTERFACE:
+                {
+                    return 0;   // No LED interface
+                }
             case EnvironmentCommand.ENVIRONMENT_GET_AUDIO_VIDEO_ENABLE:
                 {
                     // Just want video for now
                     Marshal.WriteInt32(data, 3);    // bits 3-0 HardAudioDisable|FastSave|AudioDisable|VideoDisable
                     return 1;
                 }
+            case EnvironmentCommand.ENVIRONMENT_GET_INPUT_BITMASKS:
+                {
+                    //var ptr = Marshal.ReadIntPtr(data);
+                    //Marshal.WriteByte(ptr, 0);    // No input bitmasks
+                    return 0;
+                }
+            case EnvironmentCommand.ENVIRONMENT_GET_CORE_OPTIONS_VERSION:
+                {
+                    return 0;       //version 0 for now
+                }
             case EnvironmentCommand.ENVIRONMENT_GET_MESSAGE_INTERFACE_VERSION:
                 {
                     Marshal.WriteInt32(data, 1);    // We support version 1
 
                     return 1;
+                }
+            case EnvironmentCommand.ENVIRONMENT_SET_RETRO_FAST_FORWARDING_OVERRIDE:
+                {
+                    return 0;   // No fast forwarding
                 }
             case EnvironmentCommand.ENVIRONMENT_GET_GAME_INFO_EXT:
                 {
@@ -1031,6 +1119,11 @@ public class LibRetroPlugin : IDisposable
             return;
         }
 
+        if (data == IntPtr.Zero)
+        {
+            return;// No data to render
+        }
+
         this.width = width;
         this.height = height;
         var frameBufferPitch = (frameBufferWidth-width)*4;
@@ -1063,8 +1156,40 @@ public class LibRetroPlugin : IDisposable
                 }
                 break;
             }
+            case PixelFormat.XRGB8888:
+            {
+                unsafe 
+                {
+                    var src = (uint*)data;
+                    uint frameBufferPos = 0;
+                    var srcNextLine=(pitch.ToUInt32() / 4) - width;
+                    for (int y=0;y<height;y++)
+                    {
+                        for (int x=0;x<width;x++)
+                        {
+                            var pixel = *src++;
+                            frameBuffer[frameBufferPos++] = (byte)((pixel & 0x00FF0000) >> 16);
+                            frameBuffer[frameBufferPos++] = (byte)((pixel & 0x0000FF00) >> 8);
+                            frameBuffer[frameBufferPos++] = (byte)((pixel & 0x000000FF) >> 0);
+                            frameBuffer[frameBufferPos++] = 255;
+                        }
+                        src += srcNextLine;
+                        frameBufferPos += frameBufferPitch;
+                    }
+                }
+                break;
+            }
             default:
                 throw new Exception($"TODO implement pixel format conversion {pixelFormat}");
+        }
+    }
+
+    private void KeyboardCallback(byte down, uint keycode, uint character, ushort key_modifiers)
+    {
+        System.Console.WriteLine($"Keyboard callback: {down}, {keycode}, {character}, {key_modifiers}");
+        if (keycode < RetroKeyArrayCount)
+        {
+            keyArray[keycode] = down != 0;
         }
     }
 

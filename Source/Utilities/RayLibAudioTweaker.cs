@@ -20,7 +20,6 @@ internal class RayLibAudioHelper
         public bool audioEnabledRead;
     }
 
-    delegate nint Initialise(nint instance,int numParams, nint method);
     private unsafe delegate* unmanaged[Cdecl]<void*, void*, uint, void> audioCallback;
     private unsafe delegate* unmanaged[Cdecl]<void*, uint, void> audioCallbackTrampoline;
     private nint trampoline;
@@ -43,23 +42,7 @@ internal class RayLibAudioHelper
             audioShared->audioEnabledRead = false;
         }
         audio = new AudioStream();
-        string instanceTrampolinePath = Path.Combine(Directory.GetCurrentDirectory(), "Native", "InstanceTrampoline", "build");
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-        {
-            instanceTrampolinePath = Path.Combine(instanceTrampolinePath, "Debug", "InstanceTrampoline.dll");
-        }
-        else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-        {
-            instanceTrampolinePath = Path.Combine(instanceTrampolinePath, "libInstanceTrampoline.so");
-        }
-        else
-        {
-            throw new Exception("Unsupported platform");
-        }
-        var lib = NativeLibrary.Load(instanceTrampolinePath);
-        var method = NativeLibrary.GetExport(lib, "allocate_trampoline");
-
-        var initialise = Marshal.GetDelegateForFunctionPointer<Initialise>(method);
+        var initialise = InterfaceTrampoline.GetInitialise();
 
         unsafe
         {

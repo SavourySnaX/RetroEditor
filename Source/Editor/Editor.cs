@@ -318,6 +318,33 @@ internal class Editor : IEditor
 
                     ImGui.EndMenu();
                 }
+                if (ImGui.MenuItem("Launch"))
+                {
+                    var result = NativeFileDialogSharp.Dialog.FileOpen();
+                    if (result.IsOk)
+                    {
+                        var instance = GetRomInstance(ZXSpectrum.Name);
+                        if (instance != null)
+                        {
+                            var retro = new LibRetroPlugin("C:\\mamesys64\\src\\lib_mame\\mess_libretro.dll");
+                            //var retro = new LibRetroPlugin("C:\\zidoo_flash\\RetroArch\\cores\\mame_libretro.dll");
+                            if (retro != null)
+                            {
+                                //var game = new Fairlight();
+                                var pluginWindow = new LibRetroPlayerWindow(retro, null, null);
+                                var playableRom = new PlayableRom(this, retro, instance.Endian, instance.RequiresReload, instance.ChecksumCalculation);
+                                pluginWindow.Initialise();
+                                retro.LoadGame("", Array.Empty<byte>());
+                                //retro.LoadGame(result.Path);
+                                //retro.AutoLoad(playableRom, game.AutoLoadCondition);
+                                pluginWindow.OtherStuff();
+                                pluginWindow.InitWindow();
+                                windowManager.AddWindow(pluginWindow, "MAME RETRO");
+                            }
+                        }
+                    }
+
+                }
                 if (ImGui.MenuItem("Mame Remote"))
                 {
                     var mame = new MameRemoteCommandWindow();

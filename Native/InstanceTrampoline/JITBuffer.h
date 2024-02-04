@@ -29,9 +29,17 @@ public:
     void Return();
     void CallMemberFunc(void* staticFuncWithMemberPointer);
 
+    void SetTemp0From(void *wrapper);
+    void MoveParam0ToTemp0Offset(int offset);
+    void MoveTemp0ToParam0();
+    void Jmp(void *destination);
+
     void* GetCurrentAddress() { return jitBuffer+jitPosition; }
 
+    void *JITBuffer::Allocate(size_t size);
+
 private:
+    void JITBuffer::Skip(size_t length);
     uint8_t* jitBuffer;
     size_t jitPosition;
     size_t jitAllocation;

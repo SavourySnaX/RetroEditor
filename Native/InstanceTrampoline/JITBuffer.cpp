@@ -83,6 +83,21 @@ void* JITBuffer::AllocatePointer(const void* value)
     return EndBlock();
 }
 
+void* JITBuffer::Allocate(size_t size)
+{
+    StartBlock();
+    void* result = jitBuffer+jitPosition;
+    jitPosition+=size;
+    return EndBlock();
+}
+
+void JITBuffer::Skip(size_t length)
+{
+    assert(jitPosition+length < jitAllocation && "Initial allocation for jit buffer is too small");
+    uint8_t* dest = jitBuffer + jitPosition;
+    jitPosition+=length;
+}
+
 void JITBuffer::StartBlock()
 {
     jitBufferStartLoc=jitPosition;
@@ -131,4 +146,24 @@ void JITBuffer::Return()
 void JITBuffer::CallMemberFunc(void* staticFuncWithMemberPointer)
 {
     PLATFORM_TRAMPOLINE_IMPLEMENTATION::CallMemberFunc(staticFuncWithMemberPointer,*this);
+}
+
+void JITBuffer::SetTemp0From(void *wrapper)
+{
+    PLATFORM_TRAMPOLINE_IMPLEMENTATION::SetTemp0From(wrapper,*this);
+}
+
+void JITBuffer::MoveParam0ToTemp0Offset(int offset)
+{
+    PLATFORM_TRAMPOLINE_IMPLEMENTATION::MoveParam0ToTemp0Offset(offset,*this);
+}
+
+void JITBuffer::MoveTemp0ToParam0()
+{
+    PLATFORM_TRAMPOLINE_IMPLEMENTATION::MoveTemp0ToParam0(*this);
+}
+
+void JITBuffer::Jmp(void* destination)
+{
+    PLATFORM_TRAMPOLINE_IMPLEMENTATION::Jmp(destination,*this);
 }
