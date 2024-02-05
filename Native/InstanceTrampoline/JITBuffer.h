@@ -36,10 +36,10 @@ public:
 
     void* GetCurrentAddress() { return jitBuffer+jitPosition; }
 
-    void *JITBuffer::Allocate(size_t size);
+    void *Allocate(size_t size);
 
 private:
-    void JITBuffer::Skip(size_t length);
+    void Skip(size_t length);
     uint8_t* jitBuffer;
     size_t jitPosition;
     size_t jitAllocation;
