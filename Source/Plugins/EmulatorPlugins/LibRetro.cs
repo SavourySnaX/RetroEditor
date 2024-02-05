@@ -255,8 +255,11 @@ public class LibRetroPlugin : IDisposable
         nativeDeinit = Marshal.GetDelegateForFunctionPointer<retro_deinit>(NativeLibrary.GetExport(libraryHandle, "retro_deinit"));
         SetEnvironment();
         audioHelper = new RayLibAudioHelper();
+        temporaryPath = Path.Combine(Directory.GetCurrentDirectory(), "Temp");
+        Directory.CreateDirectory(temporaryPath);
     }
 
+    private string temporaryPath;
     private RayLibAudioHelper audioHelper;
 
     public uint Version()
@@ -840,7 +843,7 @@ public class LibRetroPlugin : IDisposable
                 }
             case EnvironmentCommand.ENVIRONMENT_GET_SYSTEM_DIRECTORY:
                 {
-                    Marshal.WriteIntPtr(data, Marshal.StringToHGlobalAnsi("c:\\retroedittemp\\"));
+                    Marshal.WriteIntPtr(data, Marshal.StringToHGlobalAnsi(temporaryPath));
                     return 1;
                 }
             case EnvironmentCommand.ENVIRONMENT_SET_PIXEL_FORMAT:
@@ -878,6 +881,18 @@ public class LibRetroPlugin : IDisposable
                     var variable = Marshal.PtrToStructure<retro_variable>(data);
                     var key = Marshal.PtrToStringAnsi(variable.key);
                     Console.WriteLine($"Get variable: {key}");
+                    if (key == "mame_media_type")
+                    {
+                        variable.value = Marshal.StringToHGlobalAnsi("dump");
+                        Marshal.StructureToPtr(variable, data, true);
+                        return 1;
+                    }
+                    if (key == "mame_autoloadfastforward")
+                    {
+                        variable.value = Marshal.StringToHGlobalAnsi("enabled");
+                        Marshal.StructureToPtr(variable, data, true);
+                        return 1;
+                    }
                     return 0;
                 }
             case EnvironmentCommand.ENVIRONMENT_SET_VARIABLES:
@@ -925,12 +940,12 @@ public class LibRetroPlugin : IDisposable
                 }
             case EnvironmentCommand.ENVIORNMENT_GET_CORE_ASSETS_DIRECTORY:
                 {
-                    Marshal.WriteIntPtr(data, Marshal.StringToHGlobalAnsi("c:\\retroedittemp\\"));
+                    Marshal.WriteIntPtr(data, Marshal.StringToHGlobalAnsi(temporaryPath));
                     return 1;
                 }
             case EnvironmentCommand.ENVIRONMENT_GET_SAVE_DIRECTORY:
                 {
-                    Marshal.WriteIntPtr(data, Marshal.StringToHGlobalAnsi("c:\\retroedittemp\\"));
+                    Marshal.WriteIntPtr(data, Marshal.StringToHGlobalAnsi(temporaryPath));
                     return 1;
                 }
             case EnvironmentCommand.ENVIRONMENT_SET_CONTROLLER_INFO:

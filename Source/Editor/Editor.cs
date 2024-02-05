@@ -109,7 +109,11 @@ internal class Editor : IEditor
         if (File.Exists("settings.json"))
         {
             var json = File.ReadAllText("settings.json");
-            settings = JsonSerializer.Deserialize<EditorSettings>(json);
+            var tempSettings = JsonSerializer.Deserialize<EditorSettings>(json);
+            if (tempSettings != null)
+            {
+                settings = tempSettings;
+            }
         }
 
         if (!Directory.Exists(settings.ProjectLocation))
@@ -326,7 +330,8 @@ internal class Editor : IEditor
                         var instance = GetRomInstance(ZXSpectrum.Name);
                         if (instance != null)
                         {
-                            var retro = new LibRetroPlugin("C:\\mamesys64\\src\\lib_mame\\mess_libretro.dll");
+                            var retro = new LibRetroPlugin("/home/snax/Work/Editor/lib_mame/mamemess_libretro.so");
+                            //var retro = new LibRetroPlugin("C:\\mamesys64\\src\\lib_mame\\mess_libretro.dll");
                             //var retro = new LibRetroPlugin("C:\\zidoo_flash\\RetroArch\\cores\\mame_libretro.dll");
                             if (retro != null)
                             {
@@ -334,8 +339,8 @@ internal class Editor : IEditor
                                 var pluginWindow = new LibRetroPlayerWindow(retro, null, null);
                                 var playableRom = new PlayableRom(this, retro, instance.Endian, instance.RequiresReload, instance.ChecksumCalculation);
                                 pluginWindow.Initialise();
-                                retro.LoadGame("", Array.Empty<byte>());
-                                //retro.LoadGame(result.Path);
+                                //retro.LoadGame("", Array.Empty<byte>());
+                                retro.LoadGame(result.Path);
                                 //retro.AutoLoad(playableRom, game.AutoLoadCondition);
                                 pluginWindow.OtherStuff();
                                 pluginWindow.InitWindow();
