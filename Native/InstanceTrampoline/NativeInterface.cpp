@@ -41,7 +41,7 @@ void* allocate_printer(void* method)
     wrapper->method = method;
     auto trampoline = new Trampoline(jitBuffer, nullptr);
 
-    return trampoline->GeneratePrinter(wrapper,printf_handler);
+    return trampoline->GeneratePrinter(wrapper,(void*)printf_handler);
 }
 
 void printf_handler(PrintWrapper* wrapper, const char* format, ...)
