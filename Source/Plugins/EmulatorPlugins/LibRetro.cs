@@ -887,12 +887,18 @@ public class LibRetroPlugin : IDisposable
                         Marshal.StructureToPtr(variable, data, true);
                         return 1;
                     }
-                    if (key == "mame_autoloadfastforward")
+                    /*if (key == "mame_autoloadfastforward")
                     {
                         variable.value = Marshal.StringToHGlobalAnsi("enabled");
                         Marshal.StructureToPtr(variable, data, true);
                         return 1;
                     }
+                    if (key == "mame_thread_mode")
+                    {
+                        variable.value = Marshal.StringToHGlobalAnsi("enabled");
+                        Marshal.StructureToPtr(variable, data, true);
+                        return 1;
+                    }*/
                     return 0;
                 }
             case EnvironmentCommand.ENVIRONMENT_SET_VARIABLES:

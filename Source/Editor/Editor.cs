@@ -336,7 +336,7 @@ internal class Editor : IEditor
                             if (retro != null)
                             {
                                 //var game = new Fairlight();
-                                var pluginWindow = new LibRetroPlayerWindow(retro, null, null);
+                                var pluginWindow = new LibRetroDebuggerWindow(retro, null, null);
                                 var playableRom = new PlayableRom(this, retro, instance.Endian, instance.RequiresReload, instance.ChecksumCalculation);
                                 pluginWindow.Initialise();
                                 //retro.LoadGame("", Array.Empty<byte>());
