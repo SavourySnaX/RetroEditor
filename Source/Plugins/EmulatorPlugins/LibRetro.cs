@@ -257,6 +257,14 @@ public class LibRetroPlugin : IDisposable
         audioHelper = new RayLibAudioHelper();
         temporaryPath = Path.Combine(Directory.GetCurrentDirectory(), "Temp");
         Directory.CreateDirectory(temporaryPath);
+        debuggerTrampoline=IntPtr.Zero;
+        debuggerCallback=null;
+    }
+
+    public void SetDebuggerCallback(DebuggerCallbackDelegate callback)
+    {
+        debuggerCallback = callback;
+        debuggerTrampoline = Marshal.GetFunctionPointerForDelegate(callback);
     }
 
     private string temporaryPath;
@@ -610,15 +618,19 @@ public class LibRetroPlugin : IDisposable
     private delegate short retro_input_state_t(uint port, uint device, uint index, uint id);
     private delegate void retro_video_refresh_t(IntPtr data, uint width, uint height, UIntPtr pitch);
 
+    public delegate int DebuggerCallbackDelegate(int kind, IntPtr data);
+
     private retro_environment_t environmentCallback;                // Prevent collection of delegate
     private retro_audio_sample_t audioSampleCallback;               // Prevent collection of delegate
     private retro_audio_sample_batch_t audioSampleBatchCallback;    // Prevent collection of delegate
     private retro_input_poll_t inputPollCallback;                   // Prevent collection of delegate  
     private retro_input_state_t inputStateCallback;                 // Prevent collection of delegate
     private retro_video_refresh_t videoRefreshCallback;             // Prevent collection of delegate
+    private DebuggerCallbackDelegate debuggerCallback;                      // Prevent collection of delegate
 
     private unsafe delegate* unmanaged[Cdecl]<UInt64, void*, void> logCallbackDelegate;
     private nint logCallbackTrampoline;
+    private nint debuggerTrampoline;
 
 
     private delegate uint retro_api_version();
@@ -688,6 +700,9 @@ public class LibRetroPlugin : IDisposable
         ENVIRONMENT_GET_MESSAGE_INTERFACE_VERSION = 59,
         ENVIRONMENT_SET_RETRO_FAST_FORWARDING_OVERRIDE = 64,
         ENVIRONMENT_GET_GAME_INFO_EXT = 66,
+
+        // Custom (for now)
+        ENVIRONMENT_GET_DEBUGGER_INTERFACE = 999,
     }
 
     private struct retro_system_info
@@ -883,7 +898,7 @@ public class LibRetroPlugin : IDisposable
                     Console.WriteLine($"Get variable: {key}");
                     if (key == "mame_media_type")
                     {
-                        variable.value = Marshal.StringToHGlobalAnsi("dump");
+                        variable.value = Marshal.StringToHGlobalAnsi("cart");
                         Marshal.StructureToPtr(variable, data, true);
                         return 1;
                     }
@@ -1057,6 +1072,12 @@ public class LibRetroPlugin : IDisposable
                     Marshal.WriteIntPtr(data, nativeGameInfo);
                     return 1;
                 }
+            case EnvironmentCommand.ENVIRONMENT_GET_DEBUGGER_INTERFACE:
+                {
+                    Marshal.WriteIntPtr(data, debuggerTrampoline);
+                    return 1;
+                }
+
             default:
                 {
                     System.Console.WriteLine($"Environment callback :  {cmd} {(experimental?"Experimental":"")} {(frontendPrivate?"Private":"")}");
@@ -1249,6 +1270,21 @@ public class LibRetroPlugin : IDisposable
     private void AudioSampleBatchCallback(IntPtr data, UIntPtr frames)
     {
         audioHelper.AudioSampleIn(data, frames);
+    }
+
+    public unsafe delegate byte* DebugView(void* data, int x, int y,int w,int h, int kind);
+    public unsafe delegate byte* RemoteCommandCB(IntPtr data, byte* command);
+
+    public struct DebuggerView
+    {
+        public DebugView viewCb;
+        public IntPtr data;
+    }
+
+    public struct RemoteCommand
+    {
+        public RemoteCommandCB remoteCommandCB;
+        public IntPtr data;
     }
 
 
