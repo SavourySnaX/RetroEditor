@@ -350,12 +350,6 @@ internal class Editor : IEditor
                     }
 
                 }
-                if (ImGui.MenuItem("Mame Remote"))
-                {
-                    var mame = new MameRemoteCommandWindow();
-                    mame.Initialise();
-                    windowManager.AddWindow(mame, "Mame Remote");
-                }
                 ImGui.EndMenu();
             }
 #endif
