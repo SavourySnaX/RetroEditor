@@ -1,3 +1,7 @@
+#if DEBUG
+#define ENABLE_DEVELOPER
+#endif
+
 using Raylib_cs;
 using rlImGui_cs;
 using ImGuiNET;
@@ -78,6 +82,8 @@ internal class Editor : IEditor
 
     internal IEnumerable<string> Plugins => plugins.Keys;
 
+    internal LibMameDebugger? mameInstance;
+
     private ActiveProject? currentActiveProject;
     public Editor(IRetroPlugin[] plugins, IRomPlugin[] romPlugins)
     {
@@ -127,6 +133,7 @@ internal class Editor : IEditor
         }
 
         currentActiveProject=null;
+        mameInstance = null;
     }
 
 
@@ -286,7 +293,7 @@ internal class Editor : IEditor
                 ImGui.EndDisabled();
                 ImGui.EndMenu();
             }
-#if DEBUG
+#if ENABLE_DEVELOPER
             if (ImGui.BeginMenu("Developer"))
             {
                 if (ImGui.BeginMenu("Plugin Player"))
@@ -322,33 +329,61 @@ internal class Editor : IEditor
 
                     ImGui.EndMenu();
                 }
-                if (ImGui.MenuItem("Launch"))
+                if (ImGui.BeginMenu("LibMame Debugger"))
                 {
-                    var result = NativeFileDialogSharp.Dialog.FileOpen();
-                    if (result.IsOk)
+                    var initialMameInstance = mameInstance;
+                    if (initialMameInstance != null)
                     {
-                        var instance = GetRomInstance(ZXSpectrum.Name);
-                        if (instance != null)
+                        ImGui.BeginDisabled();
+                    }
+                    if (ImGui.MenuItem("Launch"))
+                    {
+                        // We use Mame for debugging mostly because it means I only needed to modify one of the lib retro plugins
+                        var result = NativeFileDialogSharp.Dialog.FileOpen();
+                        if (result.IsOk)
                         {
-                            var retro = new LibRetroPlugin("/home/snax/Work/Editor/lib_mame/mamemess_libretro.so");
-                            //var retro = new LibRetroPlugin("C:\\mamesys64\\src\\lib_mame\\mess_libretro.dll");
-                            //var retro = new LibRetroPlugin("C:\\zidoo_flash\\RetroArch\\cores\\mame_libretro.dll");
-                            if (retro != null)
+                            var instance = GetRomInstance(ZXSpectrum.Name);
+                            if (instance != null)
                             {
-                                //var game = new Fairlight();
-                                var pluginWindow = new LibRetroDebuggerWindow(retro, null, null);
-                                var playableRom = new PlayableRom(this, retro, instance.Endian, instance.RequiresReload, instance.ChecksumCalculation);
-                                pluginWindow.Initialise();
-                                //retro.LoadGame("", Array.Empty<byte>());
-                                retro.LoadGame(result.Path);
-                                //retro.AutoLoad(playableRom, game.AutoLoadCondition);
-                                pluginWindow.OtherStuff();
-                                pluginWindow.InitWindow();
-                                windowManager.AddWindow(pluginWindow, "MAME RETRO");
+                                // TODO - grab from somewhere (need to find somewhere to upload the custom fork of the lib_mame)
+                                var retro = new LibRetroPlugin("/home/snax/Work/Editor/lib_mame/mamemess_libretro.so");
+                                //var retro = new LibRetroPlugin("C:\\mamesys64\\src\\lib_mame\\mess_libretro.dll");
+                                //var retro = new LibRetroPlugin("C:\\zidoo_flash\\RetroArch\\cores\\mame_libretro.dll");
+                                if (retro != null)
+                                {
+                                    mameInstance = new LibMameDebugger(retro);
+
+                                    var pluginWindow = new LibRetroDebuggerWindow(retro, null, null);
+                                    pluginWindow.Initialise();
+                                    retro.LoadGame(result.Path);
+                                    pluginWindow.InitWindow();
+                                    windowManager.AddWindow(pluginWindow, "MAME RETRO");
+
+                                }
                             }
                         }
                     }
-
+                    if (initialMameInstance != null)
+                    {
+                        ImGui.EndDisabled();
+                    }
+                    if (mameInstance == null)
+                    {
+                        ImGui.BeginDisabled();
+                    }
+                    mameInstance?.Menus(this);
+                    if (ImGui.MenuItem("Open Player Window"))
+                    {
+                        if (!windowManager.IsOpen("MAME RETRO"))
+                        {
+                            // TODO
+                        }
+                    }
+                    if (mameInstance == null)
+                    {
+                        ImGui.EndDisabled();
+                    }
+                    ImGui.EndMenu();
                 }
                 ImGui.EndMenu();
             }
