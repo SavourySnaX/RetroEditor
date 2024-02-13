@@ -1272,7 +1272,7 @@ public class LibRetroPlugin : IDisposable
         audioHelper.AudioSampleIn(data, frames);
     }
 
-    public unsafe delegate byte* DebugView(void* data, int x, int y,int w,int h, int kind);
+    public unsafe delegate byte* DebugView(void* data, int x, int y,int w,int h, int kind, byte* str);
     public unsafe delegate byte* RemoteCommandCB(IntPtr data, byte* command);
 
     public struct DebuggerView
