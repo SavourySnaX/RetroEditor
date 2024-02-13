@@ -74,10 +74,11 @@ internal class LibMameDebugger
         {
             return;
         }
+        var exp = Marshal.StringToHGlobalAnsi("cur_pc");
         unsafe
         {
             var _this = (void*)debuggerViewCallback.data;
-            var view_char = debuggerViewCallback.viewCb(_this, view.x, view.y, view.w, view.h, view.viewNum);
+            var view_char = debuggerViewCallback.viewCb(_this, view.x, view.y, view.w, view.h, view.viewNum, (byte*)exp);
             Marshal.Copy((nint)view_char,view.state,0,viewSize);
         }
     }

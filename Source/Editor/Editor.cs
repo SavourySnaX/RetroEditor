@@ -346,8 +346,8 @@ internal class Editor : IEditor
                             if (instance != null)
                             {
                                 // TODO - grab from somewhere (need to find somewhere to upload the custom fork of the lib_mame)
-                                var retro = new LibRetroPlugin("/home/snax/Work/Editor/lib_mame/mamemess_libretro.so");
-                                //var retro = new LibRetroPlugin("C:\\mamesys64\\src\\lib_mame\\mess_libretro.dll");
+                                //var retro = new LibRetroPlugin("/home/snax/Work/Editor/lib_mame/mamemess_libretro.so");
+                                var retro = new LibRetroPlugin("C:\\mamesys64\\src\\lib_mame\\mame_libretro.dll");
                                 //var retro = new LibRetroPlugin("C:\\zidoo_flash\\RetroArch\\cores\\mame_libretro.dll");
                                 if (retro != null)
                                 {
