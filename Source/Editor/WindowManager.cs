@@ -62,6 +62,10 @@ internal class WindowManager
             while (priorityQueue.Peek().Time <= totalTime)
             {
                 var next = priorityQueue.Dequeue();
+                if (activeWindows.IndexOf(next.Window) == -1)
+                {
+                    continue;
+                }
                 if (!next.Action(next.Window, totalTime))
                 {
                     var newTime = next.Time + next.Window.Window.UpdateInterval;
