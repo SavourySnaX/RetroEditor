@@ -6,14 +6,15 @@ internal class DebuggerView : IWindow
 {
     public float UpdateInterval => 1.0f/30;
 
-    public DebuggerView(LibMameDebugger debugger, int viewNum, int w, int h)
+    public DebuggerView(LibMameDebugger debugger, LibRetroPlugin.debug_view_type type, int w, int h, string expression)
     {
         this.debugger = debugger;
-        view = new LibMameDebugger.DView(viewNum, 0, 0, w, h);
+        this.view = new LibMameDebugger.DView(debugger.AllocView(type), 0, 0, w, h, expression);
     }
 
     public void Close()
     {
+        debugger.FreeView(view.view);
     }
 
     public bool Draw()
@@ -22,18 +23,18 @@ internal class DebuggerView : IWindow
         ImGui.PushStyleVar(ImGuiStyleVar.ItemSpacing, new Vector2(0,0));
     
         var sizeOfMonoText=ImGui.CalcTextSize("A");
-        ImGui.BeginChild("BLAH", new Vector2(sizeOfMonoText.X*(view.w+2), sizeOfMonoText.Y*(view.h+2)),0,0);
+        ImGui.BeginChild("BLAH", new Vector2(sizeOfMonoText.X*(view.view.W+2), sizeOfMonoText.Y*(view.view.H+2)),0,0);
 
         var drawList = ImGui.GetWindowDrawList();
         var convCode = new byte[] { 0, 0 };
         Vector2 pos = ImGui.GetCursorScreenPos();
-        for (int yy=0;yy<view.h;yy++)
+        for (int yy=0;yy<view.view.H;yy++)
         {
-            for (int xx=0;xx<view.w;xx++)
+            for (int xx=0;xx<view.view.W;xx++)
             {
-                var attr=view.state[(yy*view.w+xx)*2+1];
+                var attr=view.state[(yy*view.view.W+xx)*2+1];
                 FetchColourForStyle(attr,out var fg,out var bg);
-                convCode[0]=view.state[(yy*view.w+xx)*2];
+                convCode[0]=view.state[(yy*view.view.W+xx)*2];
                 drawList.AddRectFilled(pos, new Vector2(pos.X + sizeOfMonoText.X, pos.Y + sizeOfMonoText.Y), ImGui.GetColorU32(bg));
                 drawList.AddText(pos, ImGui.GetColorU32(fg), System.Text.Encoding.ASCII.GetString(convCode));
                 pos.X += sizeOfMonoText.X;
@@ -55,7 +56,7 @@ internal class DebuggerView : IWindow
     public void Update(float seconds)
     {
         // Request update todo
-        var viewSize = view.w * view.h * 2;
+        var viewSize = view.view.W * view.view.H * 2;
         if (view.state.Length != viewSize)
         {
             view.state = new byte[viewSize];

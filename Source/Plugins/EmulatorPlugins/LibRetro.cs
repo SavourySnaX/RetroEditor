@@ -1272,12 +1272,107 @@ public class LibRetroPlugin : IDisposable
         audioHelper.AudioSampleIn(data, frames);
     }
 
-    public unsafe delegate byte* DebugView(void* data, int x, int y,int w,int h, int kind, byte* str);
+    public enum debug_view_type
+    {
+        None,
+        Console,
+        State,
+        Disassembly,
+        Memory,
+        Log,
+        BreakPoints,
+        RegisterPoints
+    } 
+
+    public struct retro_debug_view_t
+    {
+        public nint data;
+        public nint expression;
+        public nint view;
+        public debug_view_type kind;
+        public int x,y;
+        public int w,h;
+    }
+
+    public unsafe struct RetroDebugView
+    {
+        public RetroDebugView(retro_debug_view_t* view)
+        {
+            this.view = view;
+            Expression = "";
+        }
+        internal retro_debug_view_t* view;
+        public string Expression
+        {
+            set
+            {
+                view->expression = Marshal.StringToHGlobalAnsi(value);
+            }
+        }
+        public debug_view_type Kind
+        {
+            get
+            {
+                return view->kind;
+            }
+        }
+        public int X
+        {
+            get
+            {
+                return view->x;
+            }
+            set
+            {
+                view->x = value;
+            }
+        }
+        public int Y
+        {
+            get
+            {
+                return view->y;
+            }
+            set
+            {
+                view->y = value;
+            }
+        }
+        public int W
+        {
+            get
+            {
+                return view->w;
+            }
+            set
+            {
+                view->w = value;
+            }
+        }
+        public int H
+        {
+            get
+            {
+                return view->h;
+            }
+            set
+            {
+                view->h = value;
+            }
+        }
+    }
+
+
+    public unsafe delegate retro_debug_view_t* AllocDebugView(void* data,debug_view_type view);
+    public unsafe delegate void FreeDebugView(void* data,retro_debug_view_t* view);
+    public unsafe delegate byte* UpdateDebugView(void* data, retro_debug_view_t* view);
     public unsafe delegate byte* RemoteCommandCB(IntPtr data, byte* command);
 
     public struct DebuggerView
     {
-        public DebugView viewCb;
+        public AllocDebugView allocCb;
+        public FreeDebugView freeCb;
+        public UpdateDebugView viewCb;
         public IntPtr data;
     }
 
