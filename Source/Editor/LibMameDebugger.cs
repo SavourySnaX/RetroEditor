@@ -70,7 +70,7 @@ internal class LibMameDebugger
         }
         if (ImGui.MenuItem("Memory"))
         {
-            editor.OpenWindow(new DebuggerView(this, LibRetroPlugin.debug_view_type.Memory, 20, 25, "0"), $"Memory {memoryCounter++}");
+            editor.OpenWindow(new DebuggerView(this, LibRetroPlugin.debug_view_type.Memory, 80, 25, "0"), $"Memory {memoryCounter++}");
         }
         if (ImGui.MenuItem("Console"))
         {
