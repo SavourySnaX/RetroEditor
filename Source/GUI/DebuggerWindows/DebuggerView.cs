@@ -6,6 +6,8 @@ internal class DebuggerView : IWindow
 {
     public float UpdateInterval => 1.0f/30;
 
+    string expressionStore = "";
+
     public DebuggerView(LibMameDebugger debugger, LibRetroPlugin.debug_view_type type, int w, int h, string expression)
     {
         this.debugger = debugger;
@@ -19,6 +21,15 @@ internal class DebuggerView : IWindow
 
     public bool Draw()
     {
+        if (this.view.view.Kind == LibRetroPlugin.debug_view_type.Memory)
+        {
+            // Add Expression
+            if (ImGui.InputText("Expression", ref expressionStore, 64, ImGuiInputTextFlags.EnterReturnsTrue))
+            {
+                view.view.Expression = expressionStore;
+            }
+        }
+
         ImGui.PushStyleVar(ImGuiStyleVar.FramePadding, new Vector2(0,0));
         ImGui.PushStyleVar(ImGuiStyleVar.ItemSpacing, new Vector2(0,0));
     
