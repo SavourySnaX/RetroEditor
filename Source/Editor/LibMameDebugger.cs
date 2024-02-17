@@ -131,6 +131,19 @@ internal class LibMameDebugger
         }
     }
 
+    public void SetDataFormat(ref DView view, LibRetroPlugin.debug_format format)
+    {
+        if (debuggerViewCallbacks.dataFormatCb == null)
+        {
+            return;
+        }
+        unsafe
+        {
+            var _this = (void*)debuggerViewCallbacks.data;
+            debuggerViewCallbacks.dataFormatCb(_this, view.view.view, (int)format);
+        }
+    }
+
     public void UpdateDView(ref DView view)
     {
         int viewSize = view.view.W * view.view.H * 2;
