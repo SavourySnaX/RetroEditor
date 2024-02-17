@@ -44,7 +44,7 @@ internal class LibMameDebugger
         this.disasmCounter=0;
         this.memoryCounter=0;
         this.plugin = plugin;
-        plugin.SetDebuggerCallback(DebuggerCallback);
+        this.plugin.SetDebuggerCallback(DebuggerCallback);
     }
 /*
     public void OpenDebugger()
@@ -102,6 +102,32 @@ internal class LibMameDebugger
         {
             var _this = (void*)debuggerViewCallbacks.data;
             debuggerViewCallbacks.freeCb(_this, view.view);
+        }
+    }
+
+    public void SetExpression(ref DView view)
+    {
+        if (debuggerViewCallbacks.updateExpressionCb == null)
+        {
+            return;
+        }
+        unsafe
+        {
+            var _this = (void*)debuggerViewCallbacks.data;
+            debuggerViewCallbacks.updateExpressionCb(_this, view.view.view);
+        }
+    }
+
+    public void ProcessKey(ref DView view, LibRetroPlugin.debug_key key)
+    {
+        if (debuggerViewCallbacks.processCharCb == null)
+        {
+            return;
+        }
+        unsafe
+        {
+            var _this = (void*)debuggerViewCallbacks.data;
+            debuggerViewCallbacks.processCharCb(_this, view.view.view, (int)key);
         }
     }
 

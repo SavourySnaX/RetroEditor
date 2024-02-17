@@ -1274,15 +1274,32 @@ public class LibRetroPlugin : IDisposable
 
     public enum debug_view_type
     {
-        None,
-        Console,
-        State,
-        Disassembly,
-        Memory,
-        Log,
-        BreakPoints,
-        RegisterPoints
+        None = 0,
+        Console = 1,
+        State = 2,
+        Disassembly = 3,
+        Memory = 4,
+        Log = 5,
+        BreakPoints = 6,
+        RegisterPoints = 7
     } 
+
+
+    public enum debug_key
+    {
+        DCH_UP = 1,        // up arrow
+        DCH_DOWN = 2,        // down arrow
+        DCH_LEFT = 3,        // left arrow
+        DCH_RIGHT = 4,        // right arrow
+        DCH_PUP = 5,        // page up
+        DCH_PDOWN = 6,        // page down
+        DCH_HOME = 7,        // home
+        DCH_CTRLHOME = 8,        // ctrl+home
+        DCH_END = 9,        // end
+        DCH_CTRLEND = 10,       // ctrl+end
+        DCH_CTRLRIGHT = 11,       // ctrl+right
+        DCH_CTRLLEFT = 12       // ctrl+left
+    }
 
     public struct retro_debug_view_t
     {
@@ -1366,6 +1383,8 @@ public class LibRetroPlugin : IDisposable
     public unsafe delegate retro_debug_view_t* AllocDebugView(void* data,debug_view_type view);
     public unsafe delegate void FreeDebugView(void* data,retro_debug_view_t* view);
     public unsafe delegate byte* UpdateDebugView(void* data, retro_debug_view_t* view);
+    public unsafe delegate void ProcessChar(void* data, retro_debug_view_t* view, int c);
+    public unsafe delegate void UpdateExpression(void* data, retro_debug_view_t* view);
     public unsafe delegate byte* RemoteCommandCB(IntPtr data, byte* command);
 
     public struct DebuggerView
@@ -1373,6 +1392,8 @@ public class LibRetroPlugin : IDisposable
         public AllocDebugView allocCb;
         public FreeDebugView freeCb;
         public UpdateDebugView viewCb;
+        public ProcessChar processCharCb;
+        public UpdateExpression updateExpressionCb;
         public IntPtr data;
     }
 

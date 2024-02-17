@@ -12,6 +12,7 @@ internal class DebuggerView : IWindow
     {
         this.debugger = debugger;
         this.view = new LibMameDebugger.DView(debugger.AllocView(type), 0, 0, w, h, expression);
+        this.debugger.SetExpression(ref view);
     }
 
     public void Close()
@@ -21,20 +22,23 @@ internal class DebuggerView : IWindow
 
     public bool Draw()
     {
-        if (this.view.view.Kind == LibRetroPlugin.debug_view_type.Memory)
+        float YOff = 0;
+        if (this.view.view.Kind == LibRetroPlugin.debug_view_type.Memory || this.view.view.Kind == LibRetroPlugin.debug_view_type.Disassembly)
         {
             // Add Expression
             if (ImGui.InputText("Expression", ref expressionStore, 64, ImGuiInputTextFlags.EnterReturnsTrue))
             {
                 view.view.Expression = expressionStore;
+                debugger.SetExpression(ref view);
             }
+            YOff = ImGui.GetCursorPosY();
         }
 
         ImGui.PushStyleVar(ImGuiStyleVar.FramePadding, new Vector2(0,0));
         ImGui.PushStyleVar(ImGuiStyleVar.ItemSpacing, new Vector2(0,0));
     
         var sizeOfMonoText=ImGui.CalcTextSize("A");
-        ImGui.BeginChild("BLAH", new Vector2(sizeOfMonoText.X*(view.view.W+2), sizeOfMonoText.Y*(view.view.H+2)),0,0);
+        ImGui.BeginChild("BLAH", new Vector2(sizeOfMonoText.X*(view.view.W+2), sizeOfMonoText.Y*(view.view.H+2)),0,ImGuiWindowFlags.NoScrollbar);
 
         var drawList = ImGui.GetWindowDrawList();
         var convCode = new byte[] { 0, 0 };
@@ -55,6 +59,66 @@ internal class DebuggerView : IWindow
         }
         ImGui.EndChild();
         ImGui.PopStyleVar(2);
+
+        var size = ImGui.GetWindowSize();
+        size.Y -= YOff;
+        var expectedSize = (int)Math.Floor(size.Y / sizeOfMonoText.Y)-2;
+        if (view.view.H != expectedSize)
+        {
+            view.view.H = expectedSize;
+            view.state = new byte[view.view.W * view.view.H * 2];
+        }
+
+        if (ImGui.IsWindowFocused())
+        {
+            if (this.view.view.Kind == LibRetroPlugin.debug_view_type.Memory || this.view.view.Kind == LibRetroPlugin.debug_view_type.Disassembly)
+            {
+                if (ImGui.IsKeyPressed(ImGuiKey.DownArrow))
+                {
+                    if (ImGui.IsKeyDown(ImGuiKey.LeftShift) || ImGui.IsKeyDown(ImGuiKey.RightShift))
+                    {
+                        debugger.ProcessKey(ref view, LibRetroPlugin.debug_key.DCH_PDOWN);
+                    }
+                    else
+                    {
+                        debugger.ProcessKey(ref view, LibRetroPlugin.debug_key.DCH_DOWN);
+                    }
+                }
+                if (ImGui.IsKeyPressed(ImGuiKey.UpArrow))
+                {
+                    if (ImGui.IsKeyDown(ImGuiKey.LeftShift) || ImGui.IsKeyDown(ImGuiKey.RightShift))
+                    {
+                        debugger.ProcessKey(ref view, LibRetroPlugin.debug_key.DCH_PUP);
+                    }
+                    else
+                    {
+                        debugger.ProcessKey(ref view, LibRetroPlugin.debug_key.DCH_UP);
+                    }
+                }
+                if (ImGui.IsKeyPressed(ImGuiKey.LeftArrow))
+                {
+                    if (ImGui.IsKeyDown(ImGuiKey.LeftShift) || ImGui.IsKeyDown(ImGuiKey.RightShift))
+                    {
+                        debugger.ProcessKey(ref view, LibRetroPlugin.debug_key.DCH_CTRLLEFT);
+                    }
+                    else
+                    {
+                        debugger.ProcessKey(ref view, LibRetroPlugin.debug_key.DCH_LEFT);
+                    }
+                }
+                if (ImGui.IsKeyPressed(ImGuiKey.RightArrow))
+                {
+                    if (ImGui.IsKeyDown(ImGuiKey.LeftShift) || ImGui.IsKeyDown(ImGuiKey.RightShift))
+                    {
+                        debugger.ProcessKey(ref view, LibRetroPlugin.debug_key.DCH_CTRLRIGHT);
+                    }
+                    else
+                    {
+                        debugger.ProcessKey(ref view, LibRetroPlugin.debug_key.DCH_RIGHT);
+                    }
+                }
+            }
+        }
 
         return false;
     }
