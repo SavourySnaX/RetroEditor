@@ -7,7 +7,10 @@ internal class DebuggerView : IWindow
     public float UpdateInterval => 1.0f/30;
 
     string expressionStore = "";
-
+    LibRetroPlugin.debug_format displayFormat = LibRetroPlugin.debug_format.DataFormat1ByteHex;
+    LibRetroPlugin.debug_format addressFormat = LibRetroPlugin.debug_format.HexAddress;
+    LibRetroPlugin.debug_format typeFormat = LibRetroPlugin.debug_format.LogicalAddress;
+    LibRetroPlugin.debug_format rightColumn = LibRetroPlugin.debug_format.AsmRightColumnRawOpcodes;
     public DebuggerView(LibMameDebugger debugger, LibRetroPlugin.debug_view_type type, int w, int h, string expression)
     {
         this.debugger = debugger;
@@ -30,6 +33,64 @@ internal class DebuggerView : IWindow
             {
                 view.view.Expression = expressionStore;
                 debugger.SetExpression(ref view);
+            }
+            if (this.view.view.Kind == LibRetroPlugin.debug_view_type.Memory)
+            {
+                var format = (int)displayFormat - (int)LibRetroPlugin.debug_format.DataFormat1ByteHex;
+                if (ImGui.Combo("Format", ref format, new string[] 
+                    { 
+                        "1 Byte Hex", 
+                        "2 Byte Hex", 
+                        "4 Byte Hex", 
+                        "8 Byte Hex",
+                        "1 Byte Octal", 
+                        "2 Byte Octal", 
+                        "4 Byte Octal", 
+                        "8 Byte Octal",
+                        "32 Bit Float",
+                        "64 Bit Float",
+                        "80 Bit Float",
+                    }, 11))
+                {
+                    displayFormat = (LibRetroPlugin.debug_format)((format + LibRetroPlugin.debug_format.DataFormat1ByteHex));
+                    debugger.SetDataFormat(ref view, displayFormat);
+                }
+                var address = (int)addressFormat - (int)LibRetroPlugin.debug_format.HexAddress;
+                if (ImGui.Combo("Address Format", ref address, new string[] 
+                    { 
+                        "Hexadecimal", 
+                        "Decimal", 
+                        "Octal"
+                    }, 3))
+                {
+                    addressFormat = (LibRetroPlugin.debug_format)((address + LibRetroPlugin.debug_format.HexAddress));
+                    debugger.SetDataFormat(ref view, addressFormat);
+                }
+                var type = (int)typeFormat - (int)LibRetroPlugin.debug_format.LogicalAddress;
+                if (ImGui.Combo("Type Format", ref type, new string[] 
+                    { 
+                        "Logical Address", 
+                        "Physical Address"
+                    }, 2))
+                {
+                    typeFormat = (LibRetroPlugin.debug_format)((type + LibRetroPlugin.debug_format.LogicalAddress));
+                    debugger.SetDataFormat(ref view, typeFormat);
+                }
+            }
+            else
+            {
+                var right = (int)rightColumn - (int)LibRetroPlugin.debug_format.AsmRightColumnNone;
+                if (ImGui.Combo("Right Column", ref right, new string[] 
+                    { 
+                        "None",
+                        "Raw Opcodes", 
+                        "Encrypted Opcodes",
+                        "Comments"
+                    }, 4))
+                {
+                    rightColumn = (LibRetroPlugin.debug_format)((right + LibRetroPlugin.debug_format.AsmRightColumnNone));
+                    debugger.SetDataFormat(ref view, rightColumn);
+                }
             }
             YOff = ImGui.GetCursorPosY();
         }

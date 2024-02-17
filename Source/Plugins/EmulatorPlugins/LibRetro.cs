@@ -1301,6 +1301,30 @@ public class LibRetroPlugin : IDisposable
         DCH_CTRLLEFT = 12       // ctrl+left
     }
 
+    public enum debug_format
+    {
+        AsmRightColumnNone = 0x0000,
+        AsmRightColumnRawOpcodes = 0x0001,
+        AsmRightColumnEncyptedOpcodes = 0x0002,
+        AsmRightColumnComments = 0x0003,
+        DataFormat1ByteHex = 0x1000,
+        DataFormat2ByteHex = 0x1001,
+        DataFormat4ByteHex = 0x1002,
+        DataFormat8ByteHex = 0x1003,
+        DataFormat1ByteOctal = 0x1004,
+        DataFormat2ByteOctal = 0x1005,
+        DataFormat4ByteOctal = 0x1006,
+        DataFormat8ByteOctal = 0x1007,
+        DataFormat32BitFloat = 0x1008,
+        DataFormat64BitFloat = 0x1009,
+        DataFormat80BitFloat = 0x100A,
+        HexAddress = 0x2000,
+        DecAddress = 0x2001,
+        OctAddress = 0x2002,
+        LogicalAddress = 0x3000,
+        PhysicalAddress = 0x3001,
+    }
+
     public struct retro_debug_view_t
     {
         public nint data;
@@ -1385,6 +1409,7 @@ public class LibRetroPlugin : IDisposable
     public unsafe delegate byte* UpdateDebugView(void* data, retro_debug_view_t* view);
     public unsafe delegate void ProcessChar(void* data, retro_debug_view_t* view, int c);
     public unsafe delegate void UpdateExpression(void* data, retro_debug_view_t* view);
+    public unsafe delegate void DataFormat(void* data, retro_debug_view_t* view, int format);
     public unsafe delegate byte* RemoteCommandCB(IntPtr data, byte* command);
 
     public struct DebuggerView
@@ -1394,6 +1419,7 @@ public class LibRetroPlugin : IDisposable
         public UpdateDebugView viewCb;
         public ProcessChar processCharCb;
         public UpdateExpression updateExpressionCb;
+        public DataFormat dataFormatCb;
         public IntPtr data;
     }
 
