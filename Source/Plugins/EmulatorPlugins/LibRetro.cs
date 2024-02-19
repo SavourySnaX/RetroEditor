@@ -1272,6 +1272,8 @@ public class LibRetroPlugin : IDisposable
         audioHelper.AudioSampleIn(data, frames);
     }
 
+    // Custom debugger extensions, NOT part of the libretro API
+
     public enum debug_view_type
     {
         None = 0,
@@ -1410,6 +1412,9 @@ public class LibRetroPlugin : IDisposable
     public unsafe delegate void ProcessChar(void* data, retro_debug_view_t* view, int c);
     public unsafe delegate void UpdateExpression(void* data, retro_debug_view_t* view);
     public unsafe delegate void DataFormat(void* data, retro_debug_view_t* view, int format);
+    public unsafe delegate int DataSourcesCount(void* data, retro_debug_view_t* view);
+    public unsafe delegate void* DataSourcesName(void* data, retro_debug_view_t* view, int index);
+    public unsafe delegate void DataSourcesSet(void* data, retro_debug_view_t* view, int index);
     public unsafe delegate byte* RemoteCommandCB(IntPtr data, byte* command);
 
     public struct DebuggerView
@@ -1420,6 +1425,9 @@ public class LibRetroPlugin : IDisposable
         public ProcessChar processCharCb;
         public UpdateExpression updateExpressionCb;
         public DataFormat dataFormatCb;
+        public DataSourcesCount dataSourcesCountCb;
+        public DataSourcesName dataSourcesNameCb;
+        public DataSourcesSet dataSourcesSetCb;
         public IntPtr data;
     }
 

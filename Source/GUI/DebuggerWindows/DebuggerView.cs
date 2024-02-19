@@ -6,6 +6,7 @@ internal class DebuggerView : IWindow
 {
     public float UpdateInterval => 1.0f/30;
 
+    int sourceIndex =0;
     string expressionStore = "";
     LibRetroPlugin.debug_format displayFormat = LibRetroPlugin.debug_format.DataFormat1ByteHex;
     LibRetroPlugin.debug_format addressFormat = LibRetroPlugin.debug_format.HexAddress;
@@ -26,6 +27,13 @@ internal class DebuggerView : IWindow
     public bool Draw()
     {
         float YOff = 0;
+        if (debugger.GetSourcesCount(ref view) > 1)
+        {
+            if (ImGui.Combo("Source", ref sourceIndex, debugger.GetSourcesList(ref view), debugger.GetSourcesCount(ref view)))
+            {
+                debugger.SetSource(ref view, sourceIndex);
+            }
+        }
         if (this.view.view.Kind == LibRetroPlugin.debug_view_type.Memory || this.view.view.Kind == LibRetroPlugin.debug_view_type.Disassembly)
         {
             // Add Expression
@@ -123,11 +131,14 @@ internal class DebuggerView : IWindow
 
         var size = ImGui.GetWindowSize();
         size.Y -= YOff;
-        var expectedSize = (int)Math.Floor(size.Y / sizeOfMonoText.Y)-2;
-        if (view.view.H != expectedSize)
+        if (size.Y > 0)
         {
-            view.view.H = expectedSize;
-            view.state = new byte[view.view.W * view.view.H * 2];
+            var expectedSize = (int)Math.Floor(size.Y / sizeOfMonoText.Y) - 2;
+            if (view.view.H != expectedSize)
+            {
+                view.view.H = expectedSize;
+                view.state = new byte[view.view.W * view.view.H * 2];
+            }
         }
 
         if (ImGui.IsWindowFocused())
