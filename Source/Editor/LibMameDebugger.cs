@@ -159,6 +159,46 @@ internal class LibMameDebugger
         }
     }
 
+    public int GetSourcesCount(ref DView view)
+    {
+        if (debuggerViewCallbacks.dataSourcesCountCb == null)
+        {
+            return 0;
+        }
+        unsafe
+        {
+            var _this = (void*)debuggerViewCallbacks.data;
+            return debuggerViewCallbacks.dataSourcesCountCb(_this, view.view.view);
+        }
+    }
+
+    public string GetSourceName(ref DView view, int source)
+    {
+        if (debuggerViewCallbacks.dataSourcesNameCb == null)
+        {
+            return "";
+        }
+        unsafe
+        {
+            var _this = (void*)debuggerViewCallbacks.data;
+            var sourceName = debuggerViewCallbacks.dataSourcesNameCb(_this, view.view.view, source);
+            return Marshal.PtrToStringAnsi((nint)sourceName) ?? "";
+        }
+    }
+
+    public void SetSource(ref DView view, int source)
+    {
+        if (debuggerViewCallbacks.dataSourcesSetCb == null)
+        {
+            return;
+        }
+        unsafe
+        {
+            var _this = (void*)debuggerViewCallbacks.data;
+            debuggerViewCallbacks.dataSourcesSetCb(_this, view.view.view, source);
+        }
+    }
+
     public string SendCommand(string command)
     {
         if (remoteCommandCallback.remoteCommandCB != null)
@@ -190,5 +230,14 @@ internal class LibMameDebugger
         }
     }
 
-
+    internal string[] GetSourcesList(ref DView view)
+    {
+        var count = GetSourcesCount(ref view);
+        var sources = new string[count];
+        for (int i = 0; i < count; i++)
+        {
+            sources[i] = GetSourceName(ref view, i);
+        }
+        return sources;
+    }
 }
