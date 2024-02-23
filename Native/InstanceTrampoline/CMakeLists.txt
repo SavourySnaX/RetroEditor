@@ -4,7 +4,7 @@ project(InstanceTrampoline VERSION 0.1.0)
 list(APPEND SOURCES "JITBuffer.cpp" "NativeInterface.cpp" "NativeTrampoline.cpp")
 list(APPEND SOURCES "JITBuffer.h" "NativeInterface.h")
 list(APPEND SOURCES "NativeTrampoline.h" "platform.h")
-list(APPEND SOURCES "NativeTrampolineMacOSArm64.h" "NativeTrampolineSystemVX64.h" "NativeTrampolineWindowsX64.h")
+list(APPEND SOURCES "NativeTrampolineSystemVAarch64.h" "NativeTrampolineSystemVX64.h" "NativeTrampolineWindowsX64.h")
 
 add_library(InstanceTrampoline SHARED ${SOURCES})
 

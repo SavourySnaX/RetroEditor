@@ -137,7 +137,7 @@ public:
     {
         offset>>=3; // align to 8 byte boundary
         offset<<=2; // put in correct position for instruction
-        const uint8_t MoveParam0ToTemp0[] = {0x00, 0x10 + offset, 0x00, 0xF9};                                            // str x0, [x8, offset]
+        const uint8_t MoveParam0ToTemp0[] = {0x00, uint8_t(0x10 + offset), 0x00, 0xF9};                                   // str x0, [x8, offset]
         jitBuffer.CopyBlock(&MoveParam0ToTemp0, sizeof(MoveParam0ToTemp0));
     }
 
