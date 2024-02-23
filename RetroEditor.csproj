@@ -15,6 +15,7 @@
     <PackageReference Include="raylib" Version="5.0.0" />
     <PackageReference Include="Raylib-cs" Version="5.0.0" />
     <PackageReference Include="ImGui.NET" Version="1.90.0.1" />
+    <PackageReference Include="SavourySnaX.InstanceTrampoline" Version="8.0.0" />
   </ItemGroup>
 
 </Project>

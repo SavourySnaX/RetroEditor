@@ -944,12 +944,10 @@ public class LibRetroPlugin : IDisposable
                 }
             case EnvironmentCommand.ENVIRONMENT_GET_LOG_INTERFACE:
                 {
-                    var printfWrapper = InterfaceTrampoline.GetPrintf();
-
                     unsafe
                     {
                         logCallbackDelegate = &LogCallback;
-                        logCallbackTrampoline = printfWrapper((nint)logCallbackDelegate);
+                        logCallbackTrampoline = InstanceTrampoline.InterfaceTrampoline.AllocatePrinter((nint)logCallbackDelegate);
                     }
 
                     var logInterface = new retro_log_callback

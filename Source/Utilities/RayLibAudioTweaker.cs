@@ -42,12 +42,10 @@ internal class RayLibAudioHelper
             audioShared->audioEnabledRead = false;
         }
         audio = new AudioStream();
-        var initialise = InterfaceTrampoline.GetInitialise();
-
         unsafe
         {
             audioCallback = &RayLibAudioCallback;
-            trampoline = initialise(audioSharedData, 2, (nint)audioCallback);
+            trampoline = InstanceTrampoline.InterfaceTrampoline.AllocateTrampoline(audioSharedData, 2, (nint)audioCallback);
             audioCallbackTrampoline = (delegate* unmanaged[Cdecl]<void*,uint, void>)trampoline;
         }
 
