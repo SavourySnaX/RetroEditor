@@ -35,7 +35,7 @@
 */
 
 
-class NativeTrampolineMacOSArm64Implementation
+class NativeTrampolineSystemVAarch64Implementation
 {
 public:
     static void AllocateStackSpace(int8_t slots, JITBuffer& jitBuffer)
