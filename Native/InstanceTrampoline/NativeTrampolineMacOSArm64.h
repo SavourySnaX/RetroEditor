@@ -114,5 +114,55 @@ public:
 
         jitBuffer.CopyBlock(&CallMemberFunc, sizeof(CallMemberFunc));
     }
-};
 
+    static void SetTemp0From(void* wrapper, JITBuffer& jitBuffer)
+    {
+        const intptr_t p=(intptr_t)wrapper;
+        const intptr_t imm0 = p&0xFFFF;
+        const intptr_t imm1 = (p>>16)&0xFFFF;
+        const intptr_t imm2 = (p>>32)&0xFFFF;
+        const intptr_t imm3 = (p>>48)&0xFFFF;
+
+        const uint8_t CallMemberFunc[] = { 
+            uint8_t(0x08 + ((imm0&0x7)<<5)), uint8_t(imm0>>3), uint8_t(0x80 + ((imm0>>11)&0x1F)), 0xD2,                   // movz x8, #lo16 bits of ptr
+            uint8_t(0x08 + ((imm1&0x7)<<5)), uint8_t(imm1>>3), uint8_t(0xA0 + ((imm1>>11)&0x1F)), 0xF2,                   // movk x8, #lo16 bits of ptr, LSL 16
+            uint8_t(0x08 + ((imm2&0x7)<<5)), uint8_t(imm2>>3), uint8_t(0xC0 + ((imm2>>11)&0x1F)), 0xF2,                   // movk x8, #lo16 bits of ptr, LSL 32
+            uint8_t(0x08 + ((imm3&0x7)<<5)), uint8_t(imm3>>3), uint8_t(0xE0 + ((imm3>>11)&0x1F)), 0xF2                    // movk x8, #lo16 bits of ptr, LSL 48
+            };
+
+        jitBuffer.CopyBlock(&CallMemberFunc, sizeof(CallMemberFunc));
+    }
+
+    static void MoveParam0ToTemp0Offset(uint8_t offset, JITBuffer& jitBuffer)
+    {
+        offset>>=3; // align to 8 byte boundary
+        offset<<=2; // put in correct position for instruction
+        const uint8_t MoveParam0ToTemp0[] = {0x00, 0x10 + offset, 0x00, 0xF9};                                            // str x0, [x8, offset]
+        jitBuffer.CopyBlock(&MoveParam0ToTemp0, sizeof(MoveParam0ToTemp0));
+    }
+
+    static void MoveTemp0ToParam0(JITBuffer& jitBuffer)
+    {
+        const uint8_t MoveTemp0ToParam0[] = {0xE0, 0x03, 0x08, 0xAA};                                                    // mov x0, x8
+        jitBuffer.CopyBlock(&MoveTemp0ToParam0, sizeof(MoveTemp0ToParam0));
+    }
+
+    static void Jmp(void* target, JITBuffer& jitBuffer)
+    {
+        const intptr_t p=(intptr_t)target;
+        const intptr_t imm0 = p&0xFFFF;
+        const intptr_t imm1 = (p>>16)&0xFFFF;
+        const intptr_t imm2 = (p>>32)&0xFFFF;
+        const intptr_t imm3 = (p>>48)&0xFFFF;
+
+        const uint8_t jmp[] = { 
+            uint8_t(0x08 + ((imm0&0x7)<<5)), uint8_t(imm0>>3), uint8_t(0x80 + ((imm0>>11)&0x1F)), 0xD2,                   // movz x8, #lo16 bits of ptr
+            uint8_t(0x08 + ((imm1&0x7)<<5)), uint8_t(imm1>>3), uint8_t(0xA0 + ((imm1>>11)&0x1F)), 0xF2,                   // movk x8, #lo16 bits of ptr, LSL 16
+            uint8_t(0x08 + ((imm2&0x7)<<5)), uint8_t(imm2>>3), uint8_t(0xC0 + ((imm2>>11)&0x1F)), 0xF2,                   // movk x8, #lo16 bits of ptr, LSL 32
+            uint8_t(0x08 + ((imm3&0x7)<<5)), uint8_t(imm3>>3), uint8_t(0xE0 + ((imm3>>11)&0x1F)), 0xF2,                   // movk x8, #lo16 bits of ptr, LSL 48
+            0x00, 0x01, 0x1F, 0xD6};                                                                                      // br x8
+
+        jitBuffer.CopyBlock(&jmp, sizeof(jmp));
+    }
+
+};
