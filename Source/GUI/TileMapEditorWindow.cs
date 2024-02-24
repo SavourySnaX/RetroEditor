@@ -27,7 +27,7 @@ public class TileMapEditorWindow : IWindow
             Width = (int)map.Width,
             Height = (int)map.Height,
             Mipmaps = 1,
-            Format = PixelFormat.PIXELFORMAT_UNCOMPRESSED_R8G8B8A8
+            Format = PixelFormat.UncompressedR8G8B8A8
         };
         bitmaps[0]=Raylib.LoadTextureFromImage(image);
         var tiles = map.FetchTiles(0);
@@ -38,7 +38,7 @@ public class TileMapEditorWindow : IWindow
                 Width = (int)tiles[a].Width,
                 Height = (int)tiles[a].Height,
                 Mipmaps = 1,
-                Format = PixelFormat.PIXELFORMAT_UNCOMPRESSED_R8G8B8A8
+                Format = PixelFormat.UncompressedR8G8B8A8
             };
             bitmaps[a+1] = Raylib.LoadTextureFromImage(image);
         }

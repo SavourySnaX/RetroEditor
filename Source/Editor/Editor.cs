@@ -139,7 +139,7 @@ internal class Editor : IEditor
 
     public void RenderRun()
     {
-        Raylib.SetConfigFlags(ConfigFlags.FLAG_WINDOW_RESIZABLE);
+        Raylib.SetConfigFlags(ConfigFlags.ResizableWindow);
         //Raylib.SetConfigFlags(ConfigFlags.FLAG_VSYNC_HINT);   // Don't wait for VSYNC, we do all synchronisation ourselves
         Raylib.InitWindow(800, 600, $"Retro Editor - レトロゲームの変更の具 - Version {EditorSettings.CurrentVersion}");
         if (Raylib.IsWindowFullscreen())
@@ -170,7 +170,7 @@ internal class Editor : IEditor
                 rlImGui.Setup(darkTheme: true, enableDocking: true);
             }
             Raylib.BeginDrawing();
-            Raylib.ClearBackground(Color.BLANK);
+            Raylib.ClearBackground(Color.Blank);
 
             rlImGui.Begin();
 
@@ -342,24 +342,20 @@ internal class Editor : IEditor
                         var result = NativeFileDialogSharp.Dialog.FileOpen();
                         if (result.IsOk)
                         {
-                            var instance = GetRomInstance(ZXSpectrum.Name);
-                            if (instance != null)
+                            // TODO - grab from somewhere (need to find somewhere to upload the custom fork of the lib_mame)
+                            //var retro = new LibRetroPlugin("/home/snax/Work/Editor/lib_mame/mamemess_libretro.so");
+                            var retro = new LibRetroPlugin("C:\\mamesys64\\src\\lib_mame\\mamemess_libretro.dll");
+                            //var retro = new LibRetroPlugin("C:\\zidoo_flash\\RetroArch\\cores\\mame_libretro.dll");
+                            if (retro != null)
                             {
-                                // TODO - grab from somewhere (need to find somewhere to upload the custom fork of the lib_mame)
-                                //var retro = new LibRetroPlugin("/home/snax/Work/Editor/lib_mame/mamemess_libretro.so");
-                                var retro = new LibRetroPlugin("C:\\mamesys64\\src\\lib_mame\\mame_libretro.dll");
-                                //var retro = new LibRetroPlugin("C:\\zidoo_flash\\RetroArch\\cores\\mame_libretro.dll");
-                                if (retro != null)
-                                {
-                                    mameInstance = new LibMameDebugger(retro);
+                                mameInstance = new LibMameDebugger(retro);
 
-                                    var pluginWindow = new LibRetroDebuggerWindow(retro, null, null);
-                                    pluginWindow.Initialise();
-                                    retro.LoadGame(result.Path);
-                                    pluginWindow.InitWindow();
-                                    windowManager.AddWindow(pluginWindow, "MAME RETRO");
+                                var pluginWindow = new LibRetroDebuggerWindow(retro, null, null);
+                                pluginWindow.Initialise();
+                                retro.LoadGame(result.Path);
+                                pluginWindow.InitWindow();
+                                windowManager.AddWindow(pluginWindow, "MAME RETRO");
 
-                                }
                             }
                         }
                     }

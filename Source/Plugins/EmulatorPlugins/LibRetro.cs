@@ -817,22 +817,22 @@ public class LibRetroPlugin : IDisposable
 
     private void InitKeyboardToRetroKeyMap()
     {
-        for (int a=(int)KeyboardKey.KEY_A;a<=(int)KeyboardKey.KEY_Z;a++)
+        for (int a=(int)KeyboardKey.A; a<=(int)KeyboardKey.Z;a++)
         {
-            keyMap[a] = (a - (int)KeyboardKey.KEY_A) + (int)RetroKey.RETROK_a;
+            keyMap[a] = (a - (int)KeyboardKey.A) + (int)RetroKey.RETROK_a;
         }
-        for (int a=(int)KeyboardKey.KEY_ZERO;a<=(int)KeyboardKey.KEY_NINE;a++)
+        for (int a=(int)KeyboardKey.Zero;a<=(int)KeyboardKey.Nine;a++)
         {
-            keyMap[a] = (a - (int)KeyboardKey.KEY_ZERO) + (int)RetroKey.RETROK_0;
+            keyMap[a] = (a - (int)KeyboardKey.Zero) + (int)RetroKey.RETROK_0;
         }
-        keyMap[(int)KeyboardKey.KEY_SPACE] = (int)RetroKey.RETROK_SPACE;
-        keyMap[(int)KeyboardKey.KEY_UP] = (int)RetroKey.RETROK_UP;
-        keyMap[(int)KeyboardKey.KEY_DOWN] = (int)RetroKey.RETROK_DOWN;
-        keyMap[(int)KeyboardKey.KEY_LEFT] = (int)RetroKey.RETROK_LEFT;
-        keyMap[(int)KeyboardKey.KEY_RIGHT] = (int)RetroKey.RETROK_RIGHT;
-        keyMap[(int)KeyboardKey.KEY_ENTER] = (int)RetroKey.RETROK_RETURN;
-        keyMap[(int)KeyboardKey.KEY_LEFT_SHIFT] = (int)RetroKey.RETROK_LSHIFT;
-        keyMap[(int)KeyboardKey.KEY_RIGHT_SHIFT] = (int)RetroKey.RETROK_RSHIFT;
+        keyMap[(int)KeyboardKey.Space] = (int)RetroKey.RETROK_SPACE;
+        keyMap[(int)KeyboardKey.Up] = (int)RetroKey.RETROK_UP;
+        keyMap[(int)KeyboardKey.Down] = (int)RetroKey.RETROK_DOWN;
+        keyMap[(int)KeyboardKey.Left] = (int)RetroKey.RETROK_LEFT;
+        keyMap[(int)KeyboardKey.Right] = (int)RetroKey.RETROK_RIGHT;
+        keyMap[(int)KeyboardKey.Enter] = (int)RetroKey.RETROK_RETURN;
+        keyMap[(int)KeyboardKey.LeftShift] = (int)RetroKey.RETROK_LSHIFT;
+        keyMap[(int)KeyboardKey.RightShift] = (int)RetroKey.RETROK_RSHIFT;
     }
 
     [UnmanagedCallersOnly(CallConvs = new Type[] { typeof(CallConvCdecl) })]

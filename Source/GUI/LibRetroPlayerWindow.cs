@@ -52,7 +52,7 @@ public class LibRetroPlayerWindow : IWindow
             Width = (int)aVInfo.geometry.maxWidth,
             Height = (int)aVInfo.geometry.maxHeight,
             Mipmaps = 1,
-            Format = PixelFormat.PIXELFORMAT_UNCOMPRESSED_R8G8B8A8
+            Format = PixelFormat.UncompressedR8G8B8A8
         };
 
         bitmap = Raylib.LoadTextureFromImage(image);
@@ -81,27 +81,27 @@ public class LibRetroPlayerWindow : IWindow
         if (ImGui.IsWindowFocused())
         {
             // JSW keys
-            plugin.UpdateKey(KeyboardKey.KEY_SPACE, ImGui.IsKeyDown(ImGuiKey.Space));
-            plugin.UpdateKey(KeyboardKey.KEY_O, ImGui.IsKeyDown(ImGuiKey.O));
-            plugin.UpdateKey(KeyboardKey.KEY_P, ImGui.IsKeyDown(ImGuiKey.P));
+            plugin.UpdateKey(KeyboardKey.Space, ImGui.IsKeyDown(ImGuiKey.Space));
+            plugin.UpdateKey(KeyboardKey.O, ImGui.IsKeyDown(ImGuiKey.O));
+            plugin.UpdateKey(KeyboardKey.P, ImGui.IsKeyDown(ImGuiKey.P));
 
             // Rollercoaster keys
-            plugin.UpdateKey(KeyboardKey.KEY_ENTER, ImGui.IsKeyDown(ImGuiKey.Enter));
-            plugin.UpdateKey(KeyboardKey.KEY_M, ImGui.IsKeyDown(ImGuiKey.M));
-            plugin.UpdateKey(KeyboardKey.KEY_LEFT_SHIFT, ImGui.IsKeyDown(ImGuiKey.LeftShift));
-            plugin.UpdateKey(KeyboardKey.KEY_RIGHT_SHIFT, ImGui.IsKeyDown(ImGuiKey.RightShift));
+            plugin.UpdateKey(KeyboardKey.Enter, ImGui.IsKeyDown(ImGuiKey.Enter));
+            plugin.UpdateKey(KeyboardKey.M, ImGui.IsKeyDown(ImGuiKey.M));
+            plugin.UpdateKey(KeyboardKey.LeftShift, ImGui.IsKeyDown(ImGuiKey.LeftShift));
+            plugin.UpdateKey(KeyboardKey.RightShift, ImGui.IsKeyDown(ImGuiKey.RightShift));
 
             // JOYPAD emulation 
-            plugin.UpdateKey(KeyboardKey.KEY_UP, ImGui.IsKeyDown(ImGuiKey.UpArrow));
-            plugin.UpdateKey(KeyboardKey.KEY_DOWN, ImGui.IsKeyDown(ImGuiKey.DownArrow));
-            plugin.UpdateKey(KeyboardKey.KEY_LEFT, ImGui.IsKeyDown(ImGuiKey.LeftArrow));
-            plugin.UpdateKey(KeyboardKey.KEY_RIGHT, ImGui.IsKeyDown(ImGuiKey.RightArrow));
-            plugin.UpdateKey(KeyboardKey.KEY_Z, ImGui.IsKeyDown(ImGuiKey.Z));
-            plugin.UpdateKey(KeyboardKey.KEY_X, ImGui.IsKeyDown(ImGuiKey.X));
-            plugin.UpdateKey(KeyboardKey.KEY_A, ImGui.IsKeyDown(ImGuiKey.A));
-            plugin.UpdateKey(KeyboardKey.KEY_S, ImGui.IsKeyDown(ImGuiKey.S));
-            plugin.UpdateKey(KeyboardKey.KEY_M, ImGui.IsKeyDown(ImGuiKey.M));
-            plugin.UpdateKey(KeyboardKey.KEY_N, ImGui.IsKeyDown(ImGuiKey.N));
+            plugin.UpdateKey(KeyboardKey.Up, ImGui.IsKeyDown(ImGuiKey.UpArrow));
+            plugin.UpdateKey(KeyboardKey.Down, ImGui.IsKeyDown(ImGuiKey.DownArrow));
+            plugin.UpdateKey(KeyboardKey.Left, ImGui.IsKeyDown(ImGuiKey.LeftArrow));
+            plugin.UpdateKey(KeyboardKey.Right, ImGui.IsKeyDown(ImGuiKey.RightArrow));
+            plugin.UpdateKey(KeyboardKey.Z, ImGui.IsKeyDown(ImGuiKey.Z));
+            plugin.UpdateKey(KeyboardKey.X, ImGui.IsKeyDown(ImGuiKey.X));
+            plugin.UpdateKey(KeyboardKey.A, ImGui.IsKeyDown(ImGuiKey.A));
+            plugin.UpdateKey(KeyboardKey.S, ImGui.IsKeyDown(ImGuiKey.S));
+            plugin.UpdateKey(KeyboardKey.M, ImGui.IsKeyDown(ImGuiKey.M));
+            plugin.UpdateKey(KeyboardKey.N, ImGui.IsKeyDown(ImGuiKey.N));
         }
 
         extension?.Render(controls);
