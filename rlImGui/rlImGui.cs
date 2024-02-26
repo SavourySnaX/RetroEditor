@@ -277,15 +277,15 @@ namespace rlImGui_cs
             // remove this part if you don't want font awesome
             unsafe
             {
-                ImFontConfig icons_config = new ImFontConfig();
-                icons_config.MergeMode = 1;                      // merge the glyph ranges into the default font
-                icons_config.PixelSnapH = 1;                     // don't try to render on partial pixels
-                icons_config.FontDataOwnedByAtlas = 0;           // the font atlas does not own this font data
+                ImFontConfig* icons_config = ImGuiNative.ImFontConfig_ImFontConfig();
+                icons_config->MergeMode = 1;                      // merge the glyph ranges into the default font
+                icons_config->PixelSnapH = 1;                     // don't try to render on partial pixels
+                icons_config->FontDataOwnedByAtlas = 0;           // the font atlas does not own this font data
 
-                icons_config.GlyphMaxAdvanceX = float.MaxValue;
-                icons_config.RasterizerMultiply = 1.0f;
-                icons_config.OversampleH = 2;
-                icons_config.OversampleV = 1;
+                icons_config->GlyphMaxAdvanceX = float.MaxValue;
+                icons_config->RasterizerMultiply = 1.0f;
+                icons_config->OversampleH = 2;
+                icons_config->OversampleV = 1;
 
                 ushort[] IconRanges = new ushort[3];
                 IconRanges[0] = IconFonts.FontAwesome6.IconMin;
@@ -297,15 +297,17 @@ namespace rlImGui_cs
                     // this unmanaged memory must remain allocated for the entire run of rlImgui
                     IconFonts.FontAwesome6.IconFontRanges = Marshal.AllocHGlobal(6);
                     Buffer.MemoryCopy(range, IconFonts.FontAwesome6.IconFontRanges.ToPointer(), 6, 6);
-                    icons_config.GlyphRanges = (ushort*)IconFonts.FontAwesome6.IconFontRanges.ToPointer();
+                    icons_config->GlyphRanges = (ushort*)IconFonts.FontAwesome6.IconFontRanges.ToPointer();
 
                     byte[] fontDataBuffer = Convert.FromBase64String(IconFonts.FontAwesome6.IconFontData);
 
                     fixed (byte* buffer = fontDataBuffer)
                     {
-                        ImGui.GetIO().Fonts.AddFontFromMemoryTTF(new IntPtr(buffer), fontDataBuffer.Length, 11, &icons_config);
+                        var fontPtr = ImGui.GetIO().Fonts.AddFontFromMemoryTTF(new IntPtr(buffer), fontDataBuffer.Length, 11, icons_config, IconFonts.FontAwesome6.IconFontRanges);
                     }
                 }
+
+                ImGuiNative.ImFontConfig_destroy(icons_config);
             }
 
             ImGuiIOPtr io = ImGui.GetIO();
@@ -313,7 +315,7 @@ namespace rlImGui_cs
             if (SetupUserFonts != null)
                 SetupUserFonts(io);
 
-            io.BackendFlags |= ImGuiBackendFlags.HasMouseCursors;
+            io.BackendFlags |= ImGuiBackendFlags.HasMouseCursors | ImGuiBackendFlags.HasSetMousePos | ImGuiBackendFlags.HasGamepad;
 
             io.MousePos.X = 0;
             io.MousePos.Y = 0;
@@ -344,7 +346,7 @@ namespace rlImGui_cs
         {
             ImGuiIOPtr io = ImGui.GetIO();
 
-            if (Raylib.IsWindowFullscreen()/* || Raylib.IsWindowMaximized()*/)
+            if (Raylib.IsWindowFullscreen())
             {
                 int monitor = Raylib.GetCurrentMonitor();
                 io.DisplaySize = new Vector2(Raylib.GetMonitorWidth(monitor), Raylib.GetMonitorHeight(monitor));
@@ -354,10 +356,10 @@ namespace rlImGui_cs
                 io.DisplaySize = new Vector2(Raylib.GetScreenWidth(), Raylib.GetScreenHeight());
             }
 
-            io.DisplayFramebufferScale = Raylib.GetWindowScaleDPI();
+            io.DisplayFramebufferScale = new Vector2(1, 1);
 
-            if (!Raylib.IsWindowState(ConfigFlags.HighDpiWindow))
-                io.DisplayFramebufferScale = new Vector2( 1,1 );
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX) || Raylib.IsWindowState(ConfigFlags.HighDpiWindow))
+                    io.DisplayFramebufferScale = Raylib.GetWindowScaleDPI();
 
             io.DeltaTime = dt >= 0 ? dt : Raylib.GetFrameTime();
 
@@ -461,7 +463,59 @@ namespace rlImGui_cs
                 io.AddInputCharacter((uint)pressed);
                 pressed = Raylib.GetCharPressed();
             }
+
+            // gamepads
+            if ((io.ConfigFlags & ImGuiConfigFlags.NavEnableGamepad) != 0 && Raylib.IsGamepadAvailable(0))
+            {
+                HandleGamepadButtonEvent(io, GamepadButton.LeftFaceUp, ImGuiKey.GamepadDpadUp);
+                HandleGamepadButtonEvent(io, GamepadButton.LeftFaceRight, ImGuiKey.GamepadDpadRight);
+                HandleGamepadButtonEvent(io, GamepadButton.LeftFaceDown, ImGuiKey.GamepadDpadDown);
+                HandleGamepadButtonEvent(io, GamepadButton.LeftFaceLeft, ImGuiKey.GamepadDpadLeft);
+
+                HandleGamepadButtonEvent(io, GamepadButton.RightFaceUp, ImGuiKey.GamepadFaceUp);
+                HandleGamepadButtonEvent(io, GamepadButton.RightFaceRight, ImGuiKey.GamepadFaceLeft);
+                HandleGamepadButtonEvent(io, GamepadButton.RightFaceDown, ImGuiKey.GamepadFaceDown);
+                HandleGamepadButtonEvent(io, GamepadButton.RightFaceLeft, ImGuiKey.GamepadFaceRight);
+
+                HandleGamepadButtonEvent(io, GamepadButton.LeftTrigger1, ImGuiKey.GamepadL1);
+                HandleGamepadButtonEvent(io, GamepadButton.LeftTrigger2, ImGuiKey.GamepadL2);
+                HandleGamepadButtonEvent(io, GamepadButton.RightTrigger1, ImGuiKey.GamepadR1);
+                HandleGamepadButtonEvent(io, GamepadButton.RightTrigger2, ImGuiKey.GamepadR2);
+                HandleGamepadButtonEvent(io, GamepadButton.LeftThumb, ImGuiKey.GamepadL3);
+                HandleGamepadButtonEvent(io, GamepadButton.RightThumb, ImGuiKey.GamepadR3);
+
+                HandleGamepadButtonEvent(io, GamepadButton.MiddleLeft, ImGuiKey.GamepadStart);
+                HandleGamepadButtonEvent(io, GamepadButton.MiddleRight, ImGuiKey.GamepadBack);
+
+                // left stick
+                HandleGamepadStickEvent(io, GamepadAxis.LeftX, ImGuiKey.GamepadLStickLeft, ImGuiKey.GamepadLStickRight);
+                HandleGamepadStickEvent(io, GamepadAxis.LeftY, ImGuiKey.GamepadLStickUp, ImGuiKey.GamepadLStickDown);
+
+                // right stick
+                HandleGamepadStickEvent(io, GamepadAxis.RightX, ImGuiKey.GamepadRStickLeft, ImGuiKey.GamepadRStickRight);
+                HandleGamepadStickEvent(io, GamepadAxis.RightY, ImGuiKey.GamepadRStickUp, ImGuiKey.GamepadRStickDown);
+            }
         }
+
+
+        private static void HandleGamepadButtonEvent(ImGuiIOPtr io, GamepadButton button, ImGuiKey key)
+        {
+            if (Raylib.IsGamepadButtonPressed(0, button))
+                io.AddKeyEvent(key, true);
+            else if (Raylib.IsGamepadButtonReleased(0, button))
+                io.AddKeyEvent(key, false);
+        }
+
+        private static void HandleGamepadStickEvent(ImGuiIOPtr io, GamepadAxis axis, ImGuiKey negKey, ImGuiKey posKey)
+        {
+            const float deadZone = 0.20f;
+
+            float axisValue = Raylib.GetGamepadAxisMovement(0, axis);
+
+            io.AddKeyAnalogEvent(negKey, axisValue < -deadZone, axisValue < -deadZone ? -axisValue : 0);
+            io.AddKeyAnalogEvent(posKey, axisValue > deadZone, axisValue > deadZone ? axisValue : 0);
+        }
+
         /// <summary>
         /// Starts a new ImGui Frame
         /// </summary>
@@ -481,7 +535,7 @@ namespace rlImGui_cs
             ImGuiIOPtr io = ImGui.GetIO();
 
             Vector2 scale = new Vector2(1.0f, 1.0f);
-            if (Raylib.IsWindowState(ConfigFlags.HighDpiWindow))
+            if (Raylib.IsWindowState(ConfigFlags.HighDpiWindow) || RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
                 scale = io.DisplayFramebufferScale;
 
             Rlgl.Scissor(   (int)(x * scale.X),
