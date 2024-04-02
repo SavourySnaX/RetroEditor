@@ -342,10 +342,7 @@ internal class Editor : IEditor
                         var result = NativeFileDialogSharp.Dialog.FileOpen();
                         if (result.IsOk)
                         {
-                            // TODO - grab from somewhere (need to find somewhere to upload the custom fork of the lib_mame)
-                            //var retro = new LibRetroPlugin("/home/snax/Work/Editor/lib_mame/mamemess_libretro.so");
-                            var retro = new LibRetroPlugin("C:\\mamesys64\\src\\lib_mame\\mamemess_libretro.dll");
-                            //var retro = new LibRetroPlugin("C:\\zidoo_flash\\RetroArch\\cores\\mame_libretro.dll");
+                            var retro = GetDeveloperMame();
                             if (retro != null)
                             {
                                 mameInstance = new LibMameDebugger(retro);
@@ -655,7 +652,7 @@ internal class Editor : IEditor
         {
             if (!File.Exists(sourcePlugin))
             {
-                var task = Download(platform, architecture, extension, pluginName);
+                var task = DownloadLibRetro(platform, architecture, extension, pluginName);
                 task.Wait();
                 if (task.Result!=true)
                 {
@@ -680,11 +677,80 @@ internal class Editor : IEditor
         }
     }
 
-    async Task<bool> Download(string platform, string architecture, string extension, string pluginName)
+    public LibRetroPlugin? GetDeveloperMame()
+    {
+        var OS=RuntimeInformation.OSDescription;
+        var platform = "";
+        var extension = "";
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        {
+            platform = "windows";
+            extension = ".dll";
+        }
+        else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+        {
+            platform = "linux";
+            extension = ".so";
+        }
+        else
+        {
+            Console.WriteLine($"Unsupported OS: {OS}");
+            return null;
+        }
+        var architecture = "";
+        switch (RuntimeInformation.OSArchitecture)
+        {
+            case Architecture.X64:
+                architecture = "x86_64";
+                break;
+            default:
+                Console.WriteLine($"Unsupported Architecture: {RuntimeInformation.OSArchitecture}");
+                return null;
+        }
+
+
+        var destinationPlugin = Path.Combine(settings.RetroCoreFolder, "developer", platform, architecture, $"mame_libretro{extension}");
+        if (!File.Exists(destinationPlugin))
+        {
+            var task = DownloadDeveloperMame(platform, architecture, extension);
+            task.Wait();
+            if (task.Result!=true)
+            {
+                return null;
+            }
+        }
+
+        try 
+        {
+            return new LibRetroPlugin(destinationPlugin);
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine($"Failed to load developer mame plugin from {destinationPlugin}: {e.Message}");
+            return null;
+        }
+    }
+
+    async Task<bool> DownloadDeveloperMame(string platform, string architecture, string extension)
+    {
+        var api_revision = "v1.261.0"; // TODO - link this to the extension api
+        var url = $"https://github.com/SavourySnaX/lib_mame_retro_custom_fork/releases/download/{api_revision}/build_{platform}.zip";
+        var destination = Path.Combine(settings.RetroCoreFolder, "developer", platform, architecture, $"mame_libretro{extension}");
+        var itemToGrab = $"mame_libretro{extension}";
+        return Download(url, destination, itemToGrab).Result;
+    }
+
+
+    async Task<bool> DownloadLibRetro(string platform, string architecture, string extension, string pluginName)
     {
         var url = $"http://buildbot.libretro.com/nightly/{platform}/{architecture}/latest/{pluginName}{extension}.zip";
         var destination = Path.Combine(settings.RetroCoreFolder, platform, architecture, $"{pluginName}{extension}");
+        var itemToGrab = $"{pluginName}{extension}";
+        return Download(url, destination, itemToGrab).Result;
+    }
 
+    async Task<bool> Download(string url, string destination, string itemToGrab)
+    {
         using (var client = new HttpClient())
         {
             var response = await client.GetAsync(url);
@@ -698,7 +764,7 @@ internal class Editor : IEditor
                         ZipArchive archive = new ZipArchive(memoryStream);
                         foreach (var entry in archive.Entries)
                         {
-                            if (entry.Name == $"{pluginName}{extension}")
+                            if (entry.Name == itemToGrab)
                             {
                                 Directory.CreateDirectory(Path.GetDirectoryName(destination));  // Ensure destination folder exists
                                 using (var fileStream = File.Create(destination))
