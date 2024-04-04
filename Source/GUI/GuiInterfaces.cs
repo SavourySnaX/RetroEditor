@@ -10,8 +10,3 @@ public interface IWindow
 
     void Close();
 }
-
-internal interface IEditorWindow : IWindow
-{
-    bool SetEditor(Editor editor);
-}

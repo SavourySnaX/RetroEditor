@@ -11,10 +11,10 @@ public class LibRetroPlayerWindow : IWindow
     float scale = 2.0f;
 
     uint frameWidth, frameHeight;
-    IPlayerWindowExtension extension;
-    IPlayerControls controls;
+    IPlayerWindowExtension? extension;
+    IPlayerControls? controls;
 
-    public LibRetroPlayerWindow(LibRetroPlugin plugin, IPlayerControls controls, IPlayerWindowExtension extension)
+    public LibRetroPlayerWindow(LibRetroPlugin plugin, IPlayerControls? controls, IPlayerWindowExtension? extension)
     {
         this.plugin = plugin;
         this.extension = extension;
@@ -104,7 +104,10 @@ public class LibRetroPlayerWindow : IWindow
             plugin.UpdateKey(KeyboardKey.N, ImGui.IsKeyDown(ImGuiKey.N));
         }
 
-        extension?.Render(controls);
+        if (extension!=null && controls!=null)
+        {
+            extension.Render(controls);
+        }
         return false;
     }
 

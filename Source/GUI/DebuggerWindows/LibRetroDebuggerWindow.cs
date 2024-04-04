@@ -13,12 +13,12 @@ public class LibRetroDebuggerWindow : IWindow
     float scale = 1.0f;
 
     uint frameWidth, frameHeight;
-    IPlayerWindowExtension extension;
-    IPlayerControls controls;
-    Thread mameThread;
+    IPlayerWindowExtension? extension;
+    IPlayerControls? controls;
+    Thread? mameThread;
     bool notDone;
 
-    public LibRetroDebuggerWindow(LibRetroPlugin plugin, IPlayerControls controls, IPlayerWindowExtension extension)
+    public LibRetroDebuggerWindow(LibRetroPlugin plugin, IPlayerControls? controls, IPlayerWindowExtension? extension)
     {
         this.plugin = plugin;
         this.extension = extension;
@@ -63,7 +63,7 @@ public class LibRetroDebuggerWindow : IWindow
         };
 
         bitmap = Raylib.LoadTextureFromImage(image);
-        mameThread.Start();
+        mameThread?.Start();
     }
 
     public void Update(float seconds)
@@ -75,8 +75,6 @@ public class LibRetroDebuggerWindow : IWindow
     public float UpdateInterval => (float)(1.0 / aVInfo.timing.fps);
 
     private bool audioEnabled = false;
-    string inputBuffer;
-    string log;
 
     public bool Draw()
     {
@@ -113,7 +111,10 @@ public class LibRetroDebuggerWindow : IWindow
             plugin.UpdateKey(KeyboardKey.N, ImGui.IsKeyDown(ImGuiKey.N));
         }
 
-        extension?.Render(controls);
+        if (extension!=null && controls!=null)
+        {
+            extension.Render(controls);
+        }
         return false;
     }
 
