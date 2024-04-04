@@ -116,7 +116,8 @@ public class MemoryblockCollection
 
     public void Deserialise(string json)
     {
-        memoryBlocks = JsonSerializer.Deserialize<SortedDictionary<uint, MemoryBlock>>(json);
+        var data = JsonSerializer.Deserialize<SortedDictionary<uint, MemoryBlock>>(json);
+        memoryBlocks = data ?? new SortedDictionary<uint, MemoryBlock>();
     }
 
     internal void Clear()

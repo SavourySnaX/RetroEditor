@@ -207,8 +207,7 @@ internal class Editor : IEditor
             {
                 if (ImGui.MenuItem("Create New Project"))
                 {
-                    var window = new NewProjectDialog();
-                    window.SetEditor(this);
+                    var window = new NewProjectDialog(this);
                     window.Initialise();
                     windowManager.AddBlockingPopup(window, "Create New Project");
                 }
@@ -311,12 +310,10 @@ internal class Editor : IEditor
                                     var retro = GetLibRetroInstance(instance.LibRetroPluginName, null);
                                     if (retro != null)
                                     {
-                                        //var game = new Fairlight();
                                         var pluginWindow = new LibRetroPlayerWindow(retro, null, null);
                                         var playableRom = new PlayableRom(this, retro, instance.Endian, instance.RequiresReload, instance.ChecksumCalculation);
                                         pluginWindow.Initialise();
                                         retro.LoadGame(result.Path);
-                                        //retro.AutoLoad(playableRom, game.AutoLoadCondition);
                                         pluginWindow.OtherStuff();
                                         pluginWindow.InitWindow();
                                         windowManager.AddWindow(pluginWindow, plugin.Key);
@@ -737,7 +734,7 @@ internal class Editor : IEditor
         var url = $"https://github.com/SavourySnaX/lib_mame_retro_custom_fork/releases/download/{api_revision}/build_{platform}.zip";
         var destination = Path.Combine(settings.RetroCoreFolder, "developer", platform, architecture, $"mame_libretro{extension}");
         var itemToGrab = $"mame_libretro{extension}";
-        return Download(url, destination, itemToGrab).Result;
+        return await Download(url, destination, itemToGrab);
     }
 
 
@@ -746,7 +743,7 @@ internal class Editor : IEditor
         var url = $"http://buildbot.libretro.com/nightly/{platform}/{architecture}/latest/{pluginName}{extension}.zip";
         var destination = Path.Combine(settings.RetroCoreFolder, platform, architecture, $"{pluginName}{extension}");
         var itemToGrab = $"{pluginName}{extension}";
-        return Download(url, destination, itemToGrab).Result;
+        return await Download(url, destination, itemToGrab);
     }
 
     async Task<bool> Download(string url, string destination, string itemToGrab)
@@ -766,7 +763,12 @@ internal class Editor : IEditor
                         {
                             if (entry.Name == itemToGrab)
                             {
-                                Directory.CreateDirectory(Path.GetDirectoryName(destination));  // Ensure destination folder exists
+                                var destinationFolder = Path.GetDirectoryName(destination);
+                                if (destinationFolder == null)
+                                {
+                                    return false;
+                                }
+                                Directory.CreateDirectory(destinationFolder);  // Ensure destination folder exists
                                 using (var fileStream = File.Create(destination))
                                 {
                                     entry.Open().CopyTo(fileStream);

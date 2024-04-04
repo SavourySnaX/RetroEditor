@@ -219,9 +219,10 @@ public class LibRetroPlugin : IDisposable
 
     public LibRetroPlugin(string path)
     {
-        if (Environment.GetEnvironmentVariable("RETROEDITOR_OVERRIDE_LIBRETRO_PATH") != null)
+        var pathOverride = Environment.GetEnvironmentVariable("RETROEDITOR_OVERRIDE_LIBRETRO_PATH");
+        if (pathOverride != null)
         {
-            path = Environment.GetEnvironmentVariable("RETROEDITOR_OVERRIDE_LIBRETRO_PATH");
+            path = pathOverride;
         }
         nativeGameInfo = Marshal.AllocHGlobal(Marshal.SizeOf<retro_game_info_ext>());   // we need to own this memory, dispose will free
         keyArray=new bool[RetroKeyArrayCount];
@@ -253,12 +254,28 @@ public class LibRetroPlugin : IDisposable
         nativeReset = Marshal.GetDelegateForFunctionPointer<retro_reset>(NativeLibrary.GetExport(libraryHandle, "retro_reset"));
         nativeRun = Marshal.GetDelegateForFunctionPointer<retro_run>(NativeLibrary.GetExport(libraryHandle, "retro_run"));
         nativeDeinit = Marshal.GetDelegateForFunctionPointer<retro_deinit>(NativeLibrary.GetExport(libraryHandle, "retro_deinit"));
-        SetEnvironment();
+        
+        environmentCallback=EnvironmentCallback;
+        audioSampleCallback=AudioSampleCallback;
+        audioSampleBatchCallback=AudioSampleBatchCallback;
+        inputPollCallback=InputPollCallback;
+        inputStateCallback=InputStateCallback;
+        videoRefreshCallback=VideoRefreshCallback;
+
+        nativeSetEnvironment.Invoke(environmentCallback);
+        nativeSetAudioSample.Invoke(audioSampleCallback);
+        nativeSetAudioSampleBatch.Invoke(audioSampleBatchCallback);
+        nativeSetInputPoll.Invoke(inputPollCallback);
+        nativeSetInputState.Invoke(inputStateCallback);
+        nativeSetVideoRefresh.Invoke(videoRefreshCallback);
+
         audioHelper = new RayLibAudioHelper();
         temporaryPath = Path.Combine(Directory.GetCurrentDirectory(), "Temp");
         Directory.CreateDirectory(temporaryPath);
         debuggerTrampoline=IntPtr.Zero;
         debuggerCallback=null;
+        loadedPath = "";
+        memoryMaps = Array.Empty<MemoryMap>();
     }
 
     public void SetDebuggerCallback(DebuggerCallbackDelegate callback)
@@ -626,7 +643,7 @@ public class LibRetroPlugin : IDisposable
     private retro_input_poll_t inputPollCallback;                   // Prevent collection of delegate  
     private retro_input_state_t inputStateCallback;                 // Prevent collection of delegate
     private retro_video_refresh_t videoRefreshCallback;             // Prevent collection of delegate
-    private DebuggerCallbackDelegate debuggerCallback;                      // Prevent collection of delegate
+    private DebuggerCallbackDelegate? debuggerCallback;             // Prevent collection of delegate
 
     private unsafe delegate* unmanaged[Cdecl]<UInt64, void*, void> logCallbackDelegate;
     private nint logCallbackTrampoline;
@@ -688,7 +705,7 @@ public class LibRetroPlugin : IDisposable
         ENVIRONMENT_GET_VARIABLE_UPDATE = 17,
         ENVIRONMENT_SET_SUPPORT_NO_GAME = 18,
         ENVIRONMENT_GET_LOG_INTERFACE = 27,
-        ENVIORNMENT_GET_CORE_ASSETS_DIRECTORY = 30,
+        ENVIRONMENT_GET_CORE_ASSETS_DIRECTORY = 30,
         ENVIRONMENT_GET_SAVE_DIRECTORY = 31,
         ENVIRONMENT_SET_CONTROLLER_INFO = 35,
         ENVIRONMENT_SET_MEMORY_MAPS = 36,
@@ -743,16 +760,27 @@ public class LibRetroPlugin : IDisposable
         public IntPtr meta;
     }
 
-    private struct retro_memory_descriptor
+    private readonly struct retro_memory_descriptor
     {
-        public UInt64 flags;
-        public IntPtr ptr;
-        public IntPtr offset;
-        public IntPtr start;
-        public IntPtr select;
-        public IntPtr disconnect;
-        public IntPtr len;
-        public IntPtr addressSpace;
+        public retro_memory_descriptor()
+        {
+            flags = 0;
+            ptr = IntPtr.Zero;
+            offset = IntPtr.Zero;
+            start = IntPtr.Zero;
+            select = IntPtr.Zero;
+            disconnect = IntPtr.Zero;
+            len = IntPtr.Zero;
+            addressSpace = IntPtr.Zero;
+        }
+        public readonly UInt64 flags;
+        public readonly IntPtr ptr;
+        public readonly IntPtr offset;
+        public readonly IntPtr start;
+        public readonly IntPtr select;
+        public readonly IntPtr disconnect;
+        public readonly IntPtr len;
+        public readonly IntPtr addressSpace;
     }
 
     private struct retro_log_callback
@@ -760,37 +788,64 @@ public class LibRetroPlugin : IDisposable
         public nint log;
     }
 
-    private struct retro_memory_map
+    private readonly struct retro_memory_map
     {
-        public IntPtr descriptors;
-        public uint num_descriptors;
+        public retro_memory_map()
+        {
+            descriptors = IntPtr.Zero;
+            num_descriptors = 0;
+        }
+        public readonly IntPtr descriptors;
+        public readonly uint num_descriptors;
     }
 
     private struct retro_variable
     {
-        public IntPtr key;
+        public retro_variable()
+        {
+            key = IntPtr.Zero;
+        }
+        public readonly IntPtr key;
         public IntPtr value;
     }
 
-    private struct retro_input_descriptor
+    private readonly struct retro_input_descriptor
     {
-        public uint port;
-        public uint device;
-        public uint index;
-        public uint id;
-        public IntPtr description;
+        public retro_input_descriptor()
+        {
+            port = 0;
+            device = 0;
+            index = 0;
+            id = 0;
+            description = IntPtr.Zero;
+        }
+        public readonly uint port;
+        public readonly uint device;
+        public readonly uint index;
+        public readonly uint id;
+        public readonly IntPtr description;
     }
     
-    private struct retro_controller_description
+    private readonly struct retro_controller_description
     {
-        public IntPtr description;
-        public uint id;
+        public retro_controller_description()
+        {
+            id = 0;
+            description = IntPtr.Zero;
+        }
+        public readonly IntPtr description;
+        public readonly uint id;
     }
 
-    private struct retro_controller_info
+    private readonly struct retro_controller_info
     {
-        public IntPtr types;
-        public uint num_types;
+        public retro_controller_info()
+        {
+            types = IntPtr.Zero;
+            num_types = 0;
+        }
+        public readonly IntPtr types;
+        public readonly uint num_types;
     }
 
     private struct retro_game_info_ext
@@ -957,7 +1012,7 @@ public class LibRetroPlugin : IDisposable
                     Marshal.StructureToPtr(logInterface, data, false);
                     return 1;
                 }
-            case EnvironmentCommand.ENVIORNMENT_GET_CORE_ASSETS_DIRECTORY:
+            case EnvironmentCommand.ENVIRONMENT_GET_CORE_ASSETS_DIRECTORY:
                 {
                     Marshal.WriteIntPtr(data, Marshal.StringToHGlobalAnsi(temporaryPath));
                     return 1;
@@ -1008,7 +1063,7 @@ public class LibRetroPlugin : IDisposable
                             select = (UInt64)descriptor.select,
                             disconnect = (UInt64)descriptor.disconnect,
                             len = (UInt64)descriptor.len,
-                            addressSpace = Marshal.PtrToStringAnsi(descriptor.addressSpace)
+                            addressSpace = Marshal.PtrToStringAnsi(descriptor.addressSpace)??""
                         };
                         Console.WriteLine($"MEMORY MAP : {memoryMaps[a].flags}, {memoryMaps[a].ptr}, {memoryMaps[a].offset}, {memoryMaps[a].start}, {memoryMaps[a].select}, {memoryMaps[a].disconnect}, {memoryMaps[a].len}, {memoryMaps[a].addressSpace}");
                     }
@@ -1233,23 +1288,6 @@ public class LibRetroPlugin : IDisposable
         }
     }
 
-    private void SetEnvironment()
-    {
-        // Record delegate to prevent garbage collection
-        environmentCallback=EnvironmentCallback;
-        audioSampleCallback=AudioSampleCallback;
-        audioSampleBatchCallback=AudioSampleBatchCallback;
-        inputPollCallback=InputPollCallback;
-        inputStateCallback=InputStateCallback;
-        videoRefreshCallback=VideoRefreshCallback;
-
-        nativeSetEnvironment.Invoke(environmentCallback);
-        nativeSetAudioSample.Invoke(audioSampleCallback);
-        nativeSetAudioSampleBatch.Invoke(audioSampleBatchCallback);
-        nativeSetInputPoll.Invoke(inputPollCallback);
-        nativeSetInputState.Invoke(inputStateCallback);
-        nativeSetVideoRefresh.Invoke(videoRefreshCallback);
-    }
 
     public void SwitchAudio(bool enable)
     {

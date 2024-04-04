@@ -1,16 +1,22 @@
 using ImGuiNET;
 
-class NewProjectDialog : IEditorWindow
+class NewProjectDialog : IWindow
 {
     public float UpdateInterval => 9999.0f;
 
-    private string projectName;
-    private string projectLocation;
-    private string importFile;
+    private string projectName="";
+    private string projectLocation="";
+    private string importFile="";
     private int selectedPlugin;
-    public string[] availablePluginNames;
+    public string[] availablePluginNames=Array.Empty<string>();
 
     private Editor editor;
+
+    public NewProjectDialog(Editor editor)
+    {
+        this.editor = editor;
+    }
+
     public void Close()
     {
         // User cancelled
@@ -145,9 +151,4 @@ class NewProjectDialog : IEditorWindow
         // Nothing to do
     }
 
-    public bool SetEditor(Editor editor)
-    {
-        this.editor = editor;
-        return true;
-    }
 }
