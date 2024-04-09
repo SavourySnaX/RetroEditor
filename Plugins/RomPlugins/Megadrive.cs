@@ -1,3 +1,4 @@
+
 class Megadrive : IRomPlugin
 {
     public static string Name => "Megadrive";
