@@ -1,8 +1,4 @@
-﻿using System.Reflection;
-using System.Runtime.Loader;
-using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
-
+﻿
 Console.OutputEncoding = System.Text.Encoding.UTF8;
 
 
@@ -13,7 +9,7 @@ var romPlugins = iRomPlugin.LoadPlugin();
 
 var editorPlugins = new List<GamePluginLoader>();
 
-foreach (var dir in Directory.GetDirectories("plugins/GamePlugins"))
+foreach (var dir in Directory.GetDirectories("Plugins/GamePlugins"))
 {
     var pluginLoader = new GamePluginLoader(dir);
     editorPlugins.Add(pluginLoader);
