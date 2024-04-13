@@ -49,10 +49,6 @@ internal struct ActiveProject : IPlayerControls
         PlayableRomPlugin.Close();
         RetroPlugin.Close();
         libRetroPlugin.Dispose();
-        retroPlugin = null;
-        libRetroPlugin = null;
-        romPlugin = null;
-        playableRom = null;
     }
 }
 
@@ -870,7 +866,8 @@ internal class Editor : IEditor
 
         if (currentActiveProject != null)
         {
-            windowManager.AddWindow(window, $"{name} ({currentActiveProject?.Name})", currentActiveProject.Value.Settings);
+            var active = currentActiveProject.Value;
+            windowManager.AddWindow(window, $"{name} ({active.Name})", active.Settings);
         }
         else
         {

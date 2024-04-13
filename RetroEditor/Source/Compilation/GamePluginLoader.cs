@@ -1,5 +1,3 @@
-using System.Reflection.Metadata;
-
 public class GamePluginLoader
 {
     private PluginBuilder _plugin;
@@ -9,10 +7,8 @@ public class GamePluginLoader
     {
         var directoryName = new DirectoryInfo(path).Name;
         _plugin = new PluginBuilder(directoryName);
-        var editorReference = Path.Combine(System.AppContext.BaseDirectory, "RetroEditor.dll"); // Todo make a reference assembly of the important bits and remove this
         var imguiReference = Path.Combine(System.AppContext.BaseDirectory, "ImGui.NET.dll"); // Todo make an EditorUI assembly and remove direct imgui access
         var referenceAssembliesRoot = Path.Combine(System.AppContext.BaseDirectory, "ReferenceAssemblies");
-        _plugin.AddReference(editorReference);
         _plugin.AddReference(imguiReference);
         _plugin.AddReferences(referenceAssembliesRoot);
         _plugin.AddGlobalUsing("System");
@@ -24,6 +20,7 @@ public class GamePluginLoader
 
     public List<Type> LoadPlugin()
     {
+        var retroPlugins = new List<Type>();
         var result = _plugin.BuildPlugin(_pathToPlugin);
         if (!result.Success)
         {
@@ -32,12 +29,11 @@ public class GamePluginLoader
             {
                 Console.WriteLine(diagnostic);
             }
-            return null;
+            return retroPlugins;
         }
 
         var assembly = _plugin.LoadInMemoryPlugin();
 
-        var retroPlugins = new List<Type>();
         foreach (var type in assembly.GetTypes())
         {
             if (type.GetInterface("IRetroPlugin") != null)

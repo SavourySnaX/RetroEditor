@@ -1,28 +1,27 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <OutputType>Exe</OutputType>
-    <LangVersion>11.0</LangVersion>
     <TargetFramework>net8.0</TargetFramework>
+    <LangVersion>11.0</LangVersion>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <PublishSingleFile>true</PublishSingleFile>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <Deterministic>true</Deterministic>
+    <ProduceReferenceAssembly>true</ProduceReferenceAssembly>
+    <TargetRefPath>$(MSBuildThisFileDirectory)../ReferenceAssemblies/RetroEditor.dll</TargetRefPath>
   </PropertyGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="RetroEditorApplication" />
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.10.0-2.final" />
     <PackageReference Include="NativeFileDialogSharp" Version="0.5.0" />
     <PackageReference Include="raylib" Version="5.0.0" />
     <PackageReference Include="Raylib-cs" Version="6.0.0" />
     <PackageReference Include="ImGui.NET" Version="1.90.1.1" />
     <PackageReference Include="SavourySnaX.InstanceTrampoline" Version="8.0.2" />
-    <Compile Remove="Plugins\**" />
-    <Content Include="Plugins\**" CopyToPublishDirectory="PreserveNewest" />
-    <Content Include="ReferenceAssemblies\**\*.*">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
+    <Folder Include="Source\" />
+    <Folder Include="rlImGui\" />
   </ItemGroup>
 
 </Project>
