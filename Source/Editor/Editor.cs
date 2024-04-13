@@ -43,6 +43,17 @@ internal struct ActiveProject : IPlayerControls
         retroPlugin.SetupGameTemporaryPatches(playableRom);
         playableRom.Reset(true);
     }
+
+    internal void UnloadRetroPlugin()
+    {
+        PlayableRomPlugin.Close();
+        RetroPlugin.Close();
+        libRetroPlugin.Dispose();
+        retroPlugin = null;
+        libRetroPlugin = null;
+        romPlugin = null;
+        playableRom = null;
+    }
 }
 
 
@@ -85,29 +96,32 @@ internal class Editor : IEditor
     internal LibMameDebugger? mameInstance;
 
     private ActiveProject? currentActiveProject;
-    public Editor(IRetroPlugin[] plugins, IRomPlugin[] romPlugins)
+
+    ProjectSettings developerSettings;
+
+    private Dictionary<Type, GamePluginLoader> pluginToLoader = new Dictionary<Type, GamePluginLoader>();
+
+    public Editor(IEnumerable<GamePluginLoader> plugins, Type[] romPlugins)
     {
+        developerSettings=new ProjectSettings("Developer", "", "", "", "");
         this.activeProjects = new List<ActiveProject>();
         this.romPlugins = new Dictionary<string, Type>();
         foreach (var plugin in romPlugins)
         {
-            var type = plugin.GetType();
+            var type = plugin;
             var name = type.InvokeMember("Name", System.Reflection.BindingFlags.GetProperty, null, null, null) as string;
             if (name != null)
             {
                 this.romPlugins.Add(name, type);
             }
         }
+
         this.plugins = new Dictionary<string, Type>();
-        foreach (var plugin in plugins)
+        foreach (var pluginLoader in plugins)
         {
-            var type = plugin.GetType();
-            var name = type.InvokeMember("Name", System.Reflection.BindingFlags.GetProperty, null, null, null) as string;
-            if (name != null)
-            {
-                this.plugins.Add(name, type);
-            }
+            InitialisePlugin(pluginLoader);
         }
+
         windowManager = new WindowManager();
 
         settings = new EditorSettings();
@@ -136,6 +150,39 @@ internal class Editor : IEditor
         mameInstance = null;
     }
 
+    private void InitialisePlugin(GamePluginLoader pluginLoader)
+    {
+        var pluginTypes = pluginLoader.LoadPlugin();
+        if (pluginTypes == null)
+        {
+            return;
+        }
+        foreach (var t in pluginTypes)
+        {
+            pluginToLoader.Add(t, pluginLoader);
+            InitialiseIRetroType(t);
+        }
+    }
+
+    private void ClosePlugin(GamePluginLoader pluginLoader)
+    {
+        pluginLoader.UnloadPlugin();
+    }
+
+    private void InitialiseIRetroType(Type plugin)
+    {
+        var type = plugin;
+        var name = type.InvokeMember("Name", System.Reflection.BindingFlags.GetProperty, null, null, null) as string;
+        if (name != null)
+        {
+            this.plugins.Add(name, type);
+        }
+    }
+
+    private void RemoveIRetroType(string name)
+    {
+        this.plugins.Remove(name);
+    }
 
     public void RenderRun()
     {
@@ -316,7 +363,7 @@ internal class Editor : IEditor
                                         retro.LoadGame(result.Path);
                                         pluginWindow.OtherStuff();
                                         pluginWindow.InitWindow();
-                                        windowManager.AddWindow(pluginWindow, plugin.Key);
+                                        windowManager.AddWindow(pluginWindow, plugin.Key, developerSettings);
                                     }
                                 }
                             }
@@ -348,7 +395,7 @@ internal class Editor : IEditor
                                 pluginWindow.Initialise();
                                 retro.LoadGame(result.Path);
                                 pluginWindow.InitWindow();
-                                windowManager.AddWindow(pluginWindow, "MAME RETRO");
+                                windowManager.AddWindow(pluginWindow, "MAME RETRO", developerSettings);
 
                             }
                         }
@@ -388,13 +435,13 @@ internal class Editor : IEditor
                 }
                 else
                 {
+                    ActiveProject? toClose = null;
                     foreach (var active in activeProjects)
                     {
                         if (ImGui.BeginMenu(active.Name))
                         {
                             currentActiveProject=active;
                             active.RetroPlugin.Menu(active.PlayableRomPlugin, this);
-                            currentActiveProject=null;
                             bool playerOpen = windowManager.IsOpen($"LibRetro Player ({active.Name})");
                             if (playerOpen)
                             {
@@ -408,9 +455,30 @@ internal class Editor : IEditor
                             {
                                 ImGui.EndDisabled();
                             }
+                            if (ImGui.MenuItem("Reload Plugin"))
+                            {
+                                toClose = active;
+                            }
 
+                            currentActiveProject=null;
                             ImGui.EndMenu();
                         }
+                    }
+                    if (toClose != null)
+                    {
+                        var projectLocation = toClose.Value.Settings.projectPath;
+                        var pluginName = toClose.Value.Settings.RetroPluginName;
+                        var loader = pluginToLoader[toClose.Value.RetroPlugin.GetType()];
+                        CloseProject(toClose.Value);
+                        toClose = null;
+
+                        RemoveIRetroType(pluginName);
+                        ClosePlugin(loader);
+
+                        InitialisePlugin(loader);
+
+                        // Reload the project
+                        OpenProject(projectLocation);
                     }
                 }
                 ImGui.EndMenu();
@@ -486,6 +554,13 @@ internal class Editor : IEditor
         }
     }
 
+    private void CloseProject(ActiveProject project)
+    {
+        activeProjects.Remove(project);
+        windowManager.CloseAll(project.Settings);
+        project.UnloadRetroPlugin();
+    }
+
     private void OpenPlayerWindow(ActiveProject activeProject)
     {
         var pluginWindow = new LibRetroPlayerWindow(activeProject.LibRetroPlugin, activeProject, activeProject.RetroPlugin.GetPlayerExtension());
@@ -498,6 +573,7 @@ internal class Editor : IEditor
         var activeProjectName = projectSettings.projectName + $" [{activeProjects.Count + 1}]";
         var project = new ActiveProject(activeProjectName, plugin, retroPluginInstance, romPlugin, playableRom, projectSettings);
 
+        currentActiveProject=project;
         OpenPlayerWindow(project);
         activeProjects.Add(project);
         if (!settings.RecentProjects.Contains(projectSettings.projectPath))
@@ -508,6 +584,7 @@ internal class Editor : IEditor
             }
             settings.RecentProjects.Add(projectSettings.projectPath);
         }
+        currentActiveProject = null;
     }
 
     internal bool CreateNewProject(string projectName, string projectLocation, string importFile, string retroPluginName)
@@ -793,11 +870,11 @@ internal class Editor : IEditor
 
         if (currentActiveProject != null)
         {
-            windowManager.AddWindow(window, $"{name} ({currentActiveProject?.Name})");
+            windowManager.AddWindow(window, $"{name} ({currentActiveProject?.Name})", currentActiveProject.Value.Settings);
         }
         else
         {
-            windowManager.AddWindow(window, name);
+            windowManager.AddWindow(window, name, developerSettings);
         }
     }
 

@@ -1,6 +1,5 @@
 using System.Security.Cryptography;
 using ImGuiNET;
-using Microsoft.VisualBasic;
 
 public class PhantasyStar2 : IRetroPlugin, IImages
 {

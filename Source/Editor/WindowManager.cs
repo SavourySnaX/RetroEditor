@@ -5,6 +5,7 @@ internal class WindowManager
 {
     private List<WindowWrapper> activeWindows;
     private PriorityQueue<UpdateQueueWrapper, float> priorityQueue;
+    private Dictionary<ProjectSettings, List<WindowWrapper>> projectWindows;
     private float totalTime;
 
     private struct WindowWrapper
@@ -25,10 +26,11 @@ internal class WindowManager
     {
         activeWindows = new List<WindowWrapper>();
         priorityQueue = new PriorityQueue<UpdateQueueWrapper, float>();
+        projectWindows = new Dictionary<ProjectSettings, List<WindowWrapper>>();
         totalTime = 0.0f;
     }
 
-    public void AddWindow(IWindow window, string name)
+    public void AddWindow(IWindow window, string name, ProjectSettings activeProject)
     {
         var newWindow = new WindowWrapper
         {
@@ -37,6 +39,11 @@ internal class WindowManager
             modalPopup = false
         };
         activeWindows.Add(newWindow);
+        if (!projectWindows.ContainsKey(activeProject))
+        {
+            projectWindows.Add(activeProject, new List<WindowWrapper>());
+        }
+        projectWindows[activeProject].Add(newWindow);
         priorityQueue.Enqueue(new UpdateQueueWrapper { Window = newWindow, Action = InternalUpdate, Time = totalTime }, totalTime);
     }
 
@@ -57,26 +64,23 @@ internal class WindowManager
     {
         totalTime += deltaTime;
         // Update all windows in the priority queue
-        if (priorityQueue.Count > 0)
+        while (priorityQueue.Count > 0 && priorityQueue.Peek().Time <= totalTime)
         {
-            while (priorityQueue.Peek().Time <= totalTime)
+            var next = priorityQueue.Dequeue();
+            if (activeWindows.IndexOf(next.Window) == -1)
             {
-                var next = priorityQueue.Dequeue();
-                if (activeWindows.IndexOf(next.Window) == -1)
+                continue;
+            }
+            if (!next.Action(next.Window, totalTime))
+            {
+                var newTime = next.Time + next.Window.Window.UpdateInterval;
+                if (newTime < totalTime)
                 {
-                    continue;
+                    // If we failed to keep up, just wait a whole upate now
+                    newTime = totalTime + next.Window.Window.UpdateInterval;
                 }
-                if (!next.Action(next.Window, totalTime))
-                {
-                    var newTime = next.Time + next.Window.Window.UpdateInterval;
-                    if (newTime<totalTime)
-                    {
-                        // If we failed to keep up, just wait a whole upate now
-                        newTime = totalTime + next.Window.Window.UpdateInterval;
-                    }
-                    next.Time = newTime;
-                    priorityQueue.Enqueue(next, newTime);
-                }
+                next.Time = newTime;
+                priorityQueue.Enqueue(next, newTime);
             }
         }
     }
@@ -153,16 +157,45 @@ internal class WindowManager
         return false;
     }
 
+    private void CloseWindow(WindowWrapper window)
+    {
+        foreach (var kp in projectWindows)
+        {
+            if (kp.Value.Contains(window))
+            {
+                kp.Value.Remove(window);
+            }
+        }
+        window.Window.Close();
+        activeWindows.Remove(window);
+    }
+
     internal void Close(string name)
     {
         foreach (var window in activeWindows)
         {
             if (window.Name == name)
             {
-                window.Window.Close();
-                activeWindows.Remove(window);
+                CloseWindow(window);
                 break;
             }
+        }
+    }
+
+    internal void CloseAll(ProjectSettings activeProject)
+    {
+        if (projectWindows.ContainsKey(activeProject))
+        {
+            List<WindowWrapper> windowsToClear = new List<WindowWrapper>();
+            foreach (var window in projectWindows[activeProject])
+            {
+                windowsToClear.Add(window);
+            }
+            foreach (var window in windowsToClear)
+            {
+                CloseWindow(window);
+            }
+            projectWindows[activeProject].Clear();
         }
     }
 }
