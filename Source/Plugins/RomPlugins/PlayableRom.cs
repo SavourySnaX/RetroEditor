@@ -190,6 +190,11 @@ public class PlayableRom : IRomAccess
         throw new Exception("Not implemented");
     }
 
+    public void Close()
+    {
+        plugin.Close();
+    }
+
     public int RomSize => (int)plugin.RomLength();
 }
 

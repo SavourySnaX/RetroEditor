@@ -19,6 +19,7 @@
     <PackageReference Include="ImGui.NET" Version="1.90.1.1" />
     <PackageReference Include="SavourySnaX.InstanceTrampoline" Version="8.0.2" />
     <Compile Remove="Plugins\**" />
+    <Content Include="Plugins\**" CopyToPublishDirectory="PreserveNewest" />
     <Content Include="ReferenceAssemblies\**\*.*">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>

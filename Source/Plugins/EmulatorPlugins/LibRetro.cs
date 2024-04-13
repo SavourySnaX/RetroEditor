@@ -358,6 +358,11 @@ public class LibRetroPlugin : IDisposable
         InternalLoad(path, data);
     }
 
+    public void UnloadGame()
+    {
+        nativeUnloadGame.Invoke();
+    }
+
     private retro_game_info last_loaded_game;
 
     private void InternalLoad(string path, byte[] data)
@@ -604,6 +609,12 @@ public class LibRetroPlugin : IDisposable
         width = this.width;
         height = this.height;
         return frameBuffer;
+    }
+
+    public void Close()
+    {
+        UnloadGame();
+        Deinit();
     }
 
     public void Dispose()

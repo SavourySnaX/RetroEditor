@@ -179,7 +179,7 @@ public interface IBitmapImage
 
 public interface IRomPlugin
 {
-    static abstract string? Name { get; }
+    static abstract string Name { get; }
     string LibRetroPluginName { get; } 
     bool RequiresReload { get; }
 
