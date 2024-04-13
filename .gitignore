@@ -1,5 +1,7 @@
 bin/**
 obj/**
+RetroEditor/bin/**
+RetroEditor/obj/**
 .vscode/**
 *.swp
 *.sln
@@ -7,4 +9,5 @@ obj/**
 Data/**
 Temp/**
 Projects/**
+ReferenceAssemblies/RetroEditor.dll
 settings.json

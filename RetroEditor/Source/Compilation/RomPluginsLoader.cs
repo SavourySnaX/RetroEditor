@@ -7,15 +7,14 @@ public class RomPluginsLoader
     public RomPluginsLoader()
     {
         _iromPlugin = new PluginBuilder("RomPlugins");
-        var editorReference = Path.Combine(System.AppContext.BaseDirectory, "RetroEditor.dll"); // Todo make a reference assembly of the important bits and remove this
         var referenceAssembliesRoot = Path.Combine(System.AppContext.BaseDirectory, "ReferenceAssemblies");
-        _iromPlugin.AddReference(editorReference);
         _iromPlugin.AddReferences(referenceAssembliesRoot);
         _iromPlugin.AddGlobalUsing("System");
     }
 
     public List<Type> LoadPlugin()
     {
+        var romPlugins = new List<Type>();
         var result = _iromPlugin.BuildPlugin("Plugins/RomPlugins");
         if (!result.Success)
         {
@@ -24,12 +23,11 @@ public class RomPluginsLoader
             {
                 Console.WriteLine(diagnostic);
             }
-            return null;
+            return romPlugins;
         }
 
         var assembly = _iromPlugin.LoadInMemoryPlugin();
 
-        var romPlugins = new List<Type>();
         foreach (var type in assembly.GetTypes())
         {
             if (type.GetInterface("IRomPlugin") != null)
