@@ -40,10 +40,10 @@ struct VaListLinuxX64
 /// <summary>
 /// Logging workaround for formatting strings from native code
 /// </summary>
-public static unsafe class Logging
+public static unsafe class RayLibLoggingWrapper
 {
     [UnmanagedCallersOnly(CallConvs = new[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
-    public static unsafe void LogConsole(int msgType, sbyte* text, sbyte* args)
+    public static unsafe void Log(int msgType, sbyte* text, sbyte* args)
     {
         var message = GetLogMessage(new IntPtr(text), new IntPtr(args));
         switch (msgType)
@@ -53,10 +53,10 @@ public static unsafe class Logging
             case 2:
                 Editor.Log(LogType.Debug, "RayLib", message);
                 break;
-            case 4:
+            case 3:
                 Editor.Log(LogType.Info, "RayLib", message);
                 break;
-            case 5:
+            case 4:
                 Editor.Log(LogType.Warning, "RayLib", message);
                 break;
             default:
@@ -87,7 +87,7 @@ public static unsafe class Logging
         var buffer = Marshal.AllocHGlobal(byteLength);
         VsPrintf(buffer, format, args);
 
-        string result = Marshal.PtrToStringUTF8(buffer);
+        string result = Marshal.PtrToStringUTF8(buffer) ?? "";
         Marshal.FreeHGlobal(buffer);
 
         return result;
@@ -132,7 +132,7 @@ public static unsafe class Logging
 
         // Print result into buffer
         Native.VsPrintfLinux(utf8Buffer, format, listPointer);
-        result = Marshal.PtrToStringUTF8(utf8Buffer);
+        result = Marshal.PtrToStringUTF8(utf8Buffer) ?? "";
 
         Marshal.FreeHGlobal(listPointer);
         Marshal.FreeHGlobal(utf8Buffer);

@@ -201,7 +201,7 @@ internal class Editor : IEditor
     {
         unsafe
         {
-            Raylib.SetTraceLogCallback(&Logging.LogConsole);
+            Raylib.SetTraceLogCallback(&RayLibLoggingWrapper.Log);
         }
 
         Raylib.SetConfigFlags(ConfigFlags.ResizableWindow);
