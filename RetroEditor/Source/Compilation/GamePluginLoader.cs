@@ -24,10 +24,10 @@ public class GamePluginLoader
         var result = _plugin.BuildPlugin(_pathToPlugin);
         if (!result.Success)
         {
-            Console.WriteLine("Compilation failed!");
+            Editor.Log(LogType.Error, "Compilation", "Compilation failed!");
             foreach (var diagnostic in result.Diagnostics)
             {
-                Console.WriteLine(diagnostic);
+                Editor.Log(LogType.Error, "Compilation", diagnostic.ToString());
             }
             return retroPlugins;
         }

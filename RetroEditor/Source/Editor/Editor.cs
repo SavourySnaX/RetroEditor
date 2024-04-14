@@ -68,6 +68,7 @@ internal class Editor : IEditor
         public string ProjectLocation { get; set;}
         public string LastImportedLocation { get; set;}
         public string RetroCoreFolder { get; set;}
+        public string LogFolder { get; set; }
         public List<string> RecentProjects { get; set;}
         public string Version { get; set; }
 
@@ -78,6 +79,7 @@ internal class Editor : IEditor
             Version = $"{MajorVersion}.{MinorVersion}.{PatchVersion}";
             ProjectLocation = Path.Combine(Directory.GetCurrentDirectory(), "Projects");
             RetroCoreFolder = Path.Combine(Directory.GetCurrentDirectory(), "Data");
+            LogFolder = Path.Combine(Directory.GetCurrentDirectory(), "Logs");
             LastImportedLocation = "";
             RecentProjects = new List<string>();
         }
@@ -96,6 +98,9 @@ internal class Editor : IEditor
     ProjectSettings developerSettings;
 
     private Dictionary<Type, GamePluginLoader> pluginToLoader = new Dictionary<Type, GamePluginLoader>();
+
+    private static Log? _log;
+
 
     public Editor(IEnumerable<GamePluginLoader> plugins, Type[] romPlugins)
     {
@@ -142,6 +147,13 @@ internal class Editor : IEditor
             Directory.CreateDirectory(settings.RetroCoreFolder);
         }
 
+        if (!Directory.Exists(settings.LogFolder))
+        {
+            Directory.CreateDirectory(settings.LogFolder);
+        }
+
+        _log = new Log(Path.Combine(settings.LogFolder, "editor.log"));
+
         currentActiveProject=null;
         mameInstance = null;
     }
@@ -165,6 +177,11 @@ internal class Editor : IEditor
         pluginLoader.UnloadPlugin();
     }
 
+    public static void Log(LogType type, string logSource, string message)
+    {
+        _log?.Add(type, logSource, message);
+    }
+
     private void InitialiseIRetroType(Type plugin)
     {
         var type = plugin;
@@ -182,6 +199,11 @@ internal class Editor : IEditor
 
     public void RenderRun()
     {
+        unsafe
+        {
+            Raylib.SetTraceLogCallback(&Logging.LogConsole);
+        }
+
         Raylib.SetConfigFlags(ConfigFlags.ResizableWindow);
         //Raylib.SetConfigFlags(ConfigFlags.FLAG_VSYNC_HINT);   // Don't wait for VSYNC, we do all synchronisation ourselves
         Raylib.InitWindow(800, 600, $"Retro Editor - レトロゲームの変更の具 - Version {EditorSettings.CurrentVersion}");
@@ -560,7 +582,7 @@ internal class Editor : IEditor
     private void OpenPlayerWindow(ActiveProject activeProject)
     {
         var pluginWindow = new LibRetroPlayerWindow(activeProject.LibRetroPlugin, activeProject, activeProject.RetroPlugin.GetPlayerExtension());
-        OpenWindow(pluginWindow, $"LibRetro Player ({activeProject.Name})");
+        OpenWindow(pluginWindow, $"LibRetro Player");
         pluginWindow.InitWindow();
     }
 
@@ -692,7 +714,7 @@ internal class Editor : IEditor
         }
         else
         {
-            Console.WriteLine($"Unsupported OS: {OS}");
+            Editor.Log(LogType.Error, "Editor", $"Unsupported OS: {OS} - Cannot load lib retro plugin");
             return null;
         }
         var architecture = "";
@@ -702,7 +724,7 @@ internal class Editor : IEditor
                 architecture = "x86_64";
                 break;
             default:
-                Console.WriteLine($"Unsupported Architecture: {RuntimeInformation.OSArchitecture}");
+                Editor.Log(LogType.Error, "Editor", $"Unsupported Architecture: {RuntimeInformation.OSArchitecture} - Cannot load lib retro plugin");
                 return null;
         }
 
@@ -742,7 +764,7 @@ internal class Editor : IEditor
         }
         catch (Exception e)
         {
-            Console.WriteLine($"Failed to load plugin {pluginName} from {destinationPlugin}: {e.Message}");
+            Editor.Log(LogType.Error, "Editor", $"Failed to load plugin {pluginName} from {destinationPlugin}: {e.Message}");
             return null;
         }
     }
@@ -764,7 +786,7 @@ internal class Editor : IEditor
         }
         else
         {
-            Console.WriteLine($"Unsupported OS: {OS}");
+            Editor.Log(LogType.Error, "Editor", $"Unsupported OS: {OS} - Cannot load developer mame plugin");
             return null;
         }
         var architecture = "";
@@ -774,7 +796,7 @@ internal class Editor : IEditor
                 architecture = "x86_64";
                 break;
             default:
-                Console.WriteLine($"Unsupported Architecture: {RuntimeInformation.OSArchitecture}");
+                Editor.Log(LogType.Error, "Editor", $"Unsupported Architecture: {RuntimeInformation.OSArchitecture} - Cannot load developer mame plugin");
                 return null;
         }
 
@@ -796,7 +818,7 @@ internal class Editor : IEditor
         }
         catch (Exception e)
         {
-            Console.WriteLine($"Failed to load developer mame plugin from {destinationPlugin}: {e.Message}");
+            Editor.Log(LogType.Error, "Editor", $"Failed to load developer mame plugin from {destinationPlugin}: {e.Message}");
             return null;
         }
     }
@@ -858,7 +880,14 @@ internal class Editor : IEditor
 
     public void OpenWindow(IWindow window, string name)
     {
-        if (windowManager.IsOpen(name))
+        var windowName=name;
+        if (currentActiveProject != null)
+        {
+            var active = currentActiveProject.Value;
+            windowName = $"{name} ({active.Name})";
+        }
+
+        if (windowManager.IsOpen(windowName))
         {
             return;
         }
@@ -867,11 +896,11 @@ internal class Editor : IEditor
         if (currentActiveProject != null)
         {
             var active = currentActiveProject.Value;
-            windowManager.AddWindow(window, $"{name} ({active.Name})", active.Settings);
+            windowManager.AddWindow(window, windowName, active.Settings);
         }
         else
         {
-            windowManager.AddWindow(window, name, developerSettings);
+            windowManager.AddWindow(window, windowName, developerSettings);
         }
     }
 

@@ -8,6 +8,7 @@ RetroEditor/obj/**
 *.ini
 Data/**
 Temp/**
+Logs/**
 Projects/**
 ReferenceAssemblies/RetroEditor.dll
 settings.json
