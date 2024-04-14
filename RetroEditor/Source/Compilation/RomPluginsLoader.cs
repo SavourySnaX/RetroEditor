@@ -18,10 +18,10 @@ public class RomPluginsLoader
         var result = _iromPlugin.BuildPlugin("Plugins/RomPlugins");
         if (!result.Success)
         {
-            Console.WriteLine("Compilation failed!");
+            Editor.Log(LogType.Error, "Compilation", "Compilation failed!");
             foreach (var diagnostic in result.Diagnostics)
             {
-                Console.WriteLine(diagnostic);
+                Editor.Log(LogType.Error, "Compilation", diagnostic.ToString());
             }
             return romPlugins;
         }

@@ -906,7 +906,10 @@ public class LibRetroPlugin : IDisposable
     {
         // We may have to add a param here to give us an instance for the plugin, if we plan to record logs
         var fmtString = Marshal.PtrToStringAnsi(new IntPtr(stringPtr));
-        System.Console.WriteLine($"Log callback: {level}, {fmtString}");
+        if (fmtString != null)
+        {
+            Editor.Log(LogType.Info, "LibRetro", fmtString);
+        }
     }
 
     private byte EnvironmentCallback(uint cmd, IntPtr data)
@@ -947,7 +950,7 @@ public class LibRetroPlugin : IDisposable
                         var index = descriptor.index;
                         var id = descriptor.id;
                         var description = Marshal.PtrToStringAnsi(descriptor.description);
-                        Console.WriteLine($"INPUT DESCRIPTOR : {port}, {device}, {index}, {id}, {description}");
+                        Editor.Log(LogType.Debug, "LibRetro", $"INPUT DESCRIPTOR : {port}, {device}, {index}, {id}, {description}");
                         data += descSize;
                     }
                     return 1;
@@ -961,7 +964,7 @@ public class LibRetroPlugin : IDisposable
                 {
                     var variable = Marshal.PtrToStructure<retro_variable>(data);
                     var key = Marshal.PtrToStringAnsi(variable.key);
-                    Console.WriteLine($"Get variable: {key}");
+                    Editor.Log(LogType.Debug, "LibRetro", $"Get variable: {key}");
                     if (key == "mame_media_type")
                     {
                         variable.value = Marshal.StringToHGlobalAnsi("cart");
@@ -994,7 +997,7 @@ public class LibRetroPlugin : IDisposable
                         }
                         var key = Marshal.PtrToStringAnsi(variable.key);
                         var value = Marshal.PtrToStringAnsi(variable.value);
-                        Console.WriteLine($"VARIABLES NOTIFY : {key}, {value}");
+                        Editor.Log(LogType.Debug, "LibRetro", $"Set variable: {key}, {value}");
                         data += varSize;
                     }
                     return 1;
@@ -1005,7 +1008,7 @@ public class LibRetroPlugin : IDisposable
                 }
             case EnvironmentCommand.ENVIRONMENT_SET_SUPPORT_NO_GAME:
                 {
-                    Console.WriteLine($"Supports No Game : {Marshal.ReadByte(data)}");
+                    Editor.Log(LogType.Debug, "LibRetro", $"Supports No Game : {Marshal.ReadByte(data)}");
                     return 1;
                 }
             case EnvironmentCommand.ENVIRONMENT_GET_LOG_INTERFACE:
@@ -1049,7 +1052,7 @@ public class LibRetroPlugin : IDisposable
                             var controllerDesc = Marshal.PtrToStructure<retro_controller_description>(controller.types + (a * descSize));
                             var description = Marshal.PtrToStringAnsi(controllerDesc.description);
                             var id = controllerDesc.id;
-                            Console.WriteLine($"CONTROLLER INFO : {description}, {id}");
+                            Editor.Log(LogType.Debug, "LibRetro", $"CONTROLLER INFO : {description}, {id}");
                         }
                         data += controllerSize;
                     }
@@ -1076,14 +1079,14 @@ public class LibRetroPlugin : IDisposable
                             len = (UInt64)descriptor.len,
                             addressSpace = Marshal.PtrToStringAnsi(descriptor.addressSpace)??""
                         };
-                        Console.WriteLine($"MEMORY MAP : {memoryMaps[a].flags}, {memoryMaps[a].ptr}, {memoryMaps[a].offset}, {memoryMaps[a].start}, {memoryMaps[a].select}, {memoryMaps[a].disconnect}, {memoryMaps[a].len}, {memoryMaps[a].addressSpace}");
+                        Editor.Log(LogType.Debug, "LibRetro", $"MEMORY MAP : {memoryMaps[a].flags}, {memoryMaps[a].ptr}, {memoryMaps[a].offset}, {memoryMaps[a].start}, {memoryMaps[a].select}, {memoryMaps[a].disconnect}, {memoryMaps[a].len}, {memoryMaps[a].addressSpace}");
                     }
                     return 1;
                 }
             case EnvironmentCommand.ENVIRONMENT_SET_GEOMETRY:
                 {
                     var geometry = Marshal.PtrToStructure<retro_game_geometry>(data);
-                    Console.WriteLine($"GEOMETRY : {geometry.base_width}, {geometry.base_height}, {geometry.max_width}, {geometry.max_height}, {geometry.aspect_ratio}");
+                    Editor.Log(LogType.Debug, "LibRetro", $"GEOMETRY : {geometry.base_width}, {geometry.base_height}, {geometry.max_width}, {geometry.max_height}, {geometry.aspect_ratio}");
                     return 1;
                 }
             case EnvironmentCommand.ENVIRONMENT_GET_LED_INTERFACE:
@@ -1144,7 +1147,7 @@ public class LibRetroPlugin : IDisposable
 
             default:
                 {
-                    System.Console.WriteLine($"Environment callback :  {cmd} {(experimental?"Experimental":"")} {(frontendPrivate?"Private":"")}");
+                    Editor.Log(LogType.Warning, "LibRetro", $"Unhandled Environment callback :  {cmd} {(experimental?"Experimental":"")} {(frontendPrivate?"Private":"")}");
                 }
                 return 0;
         }
@@ -1213,13 +1216,11 @@ public class LibRetroPlugin : IDisposable
         {
             return (short)(keyArray[id] == true ? 1 : 0);
         }
-        //System.Console.WriteLine($"Input state callback: {port}, {device}, {index}, {id}");
         return 0;
     }
 
     private void VideoRefreshCallback(IntPtr data, uint width, uint height, UIntPtr pitch)
     {
-        //System.Console.WriteLine($"Video refresh callback: {width}, {height}, {pitch}");
         if (disableVideo)
         {
             return;
@@ -1292,7 +1293,7 @@ public class LibRetroPlugin : IDisposable
 
     private void KeyboardCallback(byte down, uint keycode, uint character, ushort key_modifiers)
     {
-        System.Console.WriteLine($"Keyboard callback: {down}, {keycode}, {character}, {key_modifiers}");
+        Editor.Log(LogType.Debug, "LibRetro", $"Keyboard callback: {down}, {keycode}, {character}, {key_modifiers}");
         if (keycode < RetroKeyArrayCount)
         {
             keyArray[keycode] = down != 0;
@@ -1309,7 +1310,7 @@ public class LibRetroPlugin : IDisposable
 
     private void AudioSampleCallback(short left, short right)
     {
-        System.Console.WriteLine($"Audio sample callback: {left}, {right}");
+        Editor.Log(LogType.Debug, "LibRetro", $"Unhandled Audio sample callback: {left}, {right}");
     }
 
     // * One frame is defined as a sample of left and right channels, interleaved.
