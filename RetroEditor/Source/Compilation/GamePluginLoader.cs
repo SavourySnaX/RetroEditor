@@ -1,3 +1,5 @@
+using Microsoft.CodeAnalysis;
+
 public class GamePluginLoader
 {
     private PluginBuilder _plugin;
@@ -25,14 +27,32 @@ public class GamePluginLoader
         if (!result.Success)
         {
             Editor.Log(LogType.Error, "Compilation", "Compilation failed!");
-            foreach (var diagnostic in result.Diagnostics)
+        }
+        foreach (var diagnostic in result.Diagnostics)
+        {
+            switch (diagnostic.Severity)
             {
-                Editor.Log(LogType.Error, "Compilation", diagnostic.ToString());
+                case DiagnosticSeverity.Error:
+                    Editor.Log(LogType.Error, "Compilation", diagnostic.ToString());
+                    break;
+                case DiagnosticSeverity.Warning:
+                    Editor.Log(LogType.Warning, "Compilation", diagnostic.ToString());
+                    break;
+                case DiagnosticSeverity.Hidden:
+                    Editor.Log(LogType.Debug, "Compilation", diagnostic.ToString());
+                    break;
+                default:
+                    Editor.Log(LogType.Info, "Compilation", diagnostic.ToString());
+                    break;
             }
-            return retroPlugins;
         }
 
         var assembly = _plugin.LoadInMemoryPlugin();
+
+        if (assembly == null)
+        {
+            return retroPlugins;
+        }
 
         foreach (var type in assembly.GetTypes())
         {

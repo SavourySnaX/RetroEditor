@@ -1,5 +1,7 @@
 
 // For now, rom plugins never reload?
+using Microsoft.CodeAnalysis;
+
 public class RomPluginsLoader
 {
     private PluginBuilder _iromPlugin;
@@ -19,14 +21,31 @@ public class RomPluginsLoader
         if (!result.Success)
         {
             Editor.Log(LogType.Error, "Compilation", "Compilation failed!");
-            foreach (var diagnostic in result.Diagnostics)
+        }
+        foreach (var diagnostic in result.Diagnostics)
+        {
+            switch (diagnostic.Severity)
             {
-                Editor.Log(LogType.Error, "Compilation", diagnostic.ToString());
+                case DiagnosticSeverity.Error:
+                    Editor.Log(LogType.Error, "Compilation", diagnostic.ToString());
+                    break;
+                case DiagnosticSeverity.Warning:
+                    Editor.Log(LogType.Warning, "Compilation", diagnostic.ToString());
+                    break;
+                case DiagnosticSeverity.Hidden:
+                    Editor.Log(LogType.Debug, "Compilation", diagnostic.ToString());
+                    break;
+                default:
+                    Editor.Log(LogType.Info, "Compilation", diagnostic.ToString());
+                    break;
             }
-            return romPlugins;
         }
 
         var assembly = _iromPlugin.LoadInMemoryPlugin();
+        if (assembly == null)
+        {
+            return romPlugins;
+        }
 
         foreach (var type in assembly.GetTypes())
         {

@@ -69,4 +69,23 @@ internal class Log
         return _log.Count;
     }
 
+    internal ReadOnlySpan<char> Entry(int index)
+    {
+        return _log[index].ToString().AsSpan();
+    }
+
+    internal IEnumerable<string> Sources()
+    {
+        return _logPerSource.Keys;
+    }
+
+    internal int Count(string source)
+    {
+        return _logPerSource.ContainsKey(source) ? _logPerSource[source].Count : 0;
+    }
+
+    internal ReadOnlySpan<char> Entry(string source, int index)
+    {
+        return _logPerSource[source][index].ToString().AsSpan();
+    }
 }
