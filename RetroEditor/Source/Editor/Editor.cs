@@ -53,7 +53,7 @@ internal struct ActiveProject : IPlayerControls
 }
 
 
-internal class Editor : IEditor
+public class Editor : IEditor
 {
     private Dictionary<string, Type> romPlugins;
     private Dictionary<string, Type> plugins;
@@ -102,26 +102,10 @@ internal class Editor : IEditor
     private static Log? _log;
 
 
-    public Editor(IEnumerable<GamePluginLoader> plugins, Type[] romPlugins)
+    internal Editor(IEnumerable<GamePluginLoader> plugins, Type[] romPlugins)
     {
         developerSettings=new ProjectSettings("Developer", "", "", "", "");
         this.activeProjects = new List<ActiveProject>();
-        this.romPlugins = new Dictionary<string, Type>();
-        foreach (var plugin in romPlugins)
-        {
-            var type = plugin;
-            var name = type.InvokeMember("Name", System.Reflection.BindingFlags.GetProperty, null, null, null) as string;
-            if (name != null)
-            {
-                this.romPlugins.Add(name, type);
-            }
-        }
-
-        this.plugins = new Dictionary<string, Type>();
-        foreach (var pluginLoader in plugins)
-        {
-            InitialisePlugin(pluginLoader);
-        }
 
         windowManager = new WindowManager();
 
@@ -154,6 +138,23 @@ internal class Editor : IEditor
 
         _log = new Log(Path.Combine(settings.LogFolder, "editor.log"));
 
+        this.romPlugins = new Dictionary<string, Type>();
+        foreach (var plugin in romPlugins)
+        {
+            var type = plugin;
+            var name = type.InvokeMember("Name", System.Reflection.BindingFlags.GetProperty, null, null, null) as string;
+            if (name != null)
+            {
+                this.romPlugins.Add(name, type);
+            }
+        }
+
+        this.plugins = new Dictionary<string, Type>();
+        foreach (var pluginLoader in plugins)
+        {
+            InitialisePlugin(pluginLoader);
+        }
+
         currentActiveProject=null;
         mameInstance = null;
     }
@@ -177,7 +178,9 @@ internal class Editor : IEditor
         pluginLoader.UnloadPlugin();
     }
 
-    public static void Log(LogType type, string logSource, string message)
+    internal static Log? AccessLog => _log;
+
+    internal static void Log(LogType type, string logSource, string message)
     {
         _log?.Add(type, logSource, message);
     }
@@ -197,7 +200,7 @@ internal class Editor : IEditor
         this.plugins.Remove(name);
     }
 
-    public void RenderRun()
+    internal void RenderRun()
     {
         unsafe
         {
@@ -445,6 +448,22 @@ internal class Editor : IEditor
 #endif
             if (ImGui.BeginMenu("Window"))
             {
+                bool logOpen = windowManager.IsOpen("Log");
+                if (logOpen)
+                {
+                    ImGui.BeginDisabled();
+                }
+                if (ImGui.MenuItem("Show Log"))
+                {
+                    var logWindow = new LogView(this);
+                    logWindow.Initialise();
+                    OpenWindow(logWindow, "Log");
+                }
+                if (logOpen)
+                {
+                    ImGui.EndDisabled();
+                }
+
                 if (activeProjects.Count==0)
                 {
                     ImGui.BeginDisabled();

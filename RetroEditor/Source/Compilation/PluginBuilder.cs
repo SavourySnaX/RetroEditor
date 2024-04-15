@@ -11,6 +11,7 @@ public class PluginBuilder
     private AssemblyLoadContext _loadContext;
     private List<MetadataReference> _references;
     private List<string> _globalUsings;
+    private MemoryStream? _lastGood;
     private MemoryStream _ms;
 
     public PluginBuilder(string assemblyName)
@@ -20,6 +21,7 @@ public class PluginBuilder
         _references = new List<MetadataReference>();
         _globalUsings = new List<string>();
         _ms = new MemoryStream();
+        _lastGood = null;
     }
     public void AddReference(string referencePath)
     {
@@ -74,11 +76,27 @@ public class PluginBuilder
             options: new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
 
         _ms.Seek(0, SeekOrigin.Begin);
-        return compilation.Emit(_ms);
+        var result = compilation.Emit(_ms);
+        if (result.Success)
+        {
+            _lastGood = _ms;
+        }
+        else
+        {
+            if (_lastGood != null)
+            {
+                _ms = _lastGood;
+            }
+        }
+        return result;
     }
 
-    public Assembly LoadInMemoryPlugin()
+    public Assembly? LoadInMemoryPlugin()
     {
+        if (_lastGood == null)
+        {
+            return null;
+        }
         _ms.Seek(0, SeekOrigin.Begin);
         return _loadContext.LoadFromStream(_ms);
     }
