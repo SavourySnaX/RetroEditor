@@ -1,7 +1,9 @@
+using System;
+using System.IO;
+using System.Linq;
 using System.Security.Cryptography;
-using ImGuiNET;
 
-public class PhantasyStar2 : IRetroPlugin, IImages
+public class PhantasyStar2 : IRetroPlugin, IImages, IMenuProvider
 {
     // MD5 of Phantasy Star EU-US Rev 2
     private byte[] PhantasyStarUSEURev2 = new byte[] { 15, 163, 139, 18, 207, 10, 176, 22, 61, 134, 86, 0, 172, 115, 26, 154 };
@@ -154,21 +156,19 @@ public class PhantasyStar2 : IRetroPlugin, IImages
         return new PhantasyStar2Map(rom, mapIndex);
     }
 
-
-    public void Menu(IRomAccess rom, IEditor editorInterface)
+    public void ConfigureMenu(IRomAccess rom, IMenu menu)
     {
-        if (ImGui.BeginMenu("Image Viewer"))
+        var imageMenu = menu.AddItem("Image Viewer");
+        for (int a = 0; a < GetImageCount(rom); a++)
         {
-            for (int a = 0; a < GetImageCount(rom); a++)
-            {
-                var map = GetImage(rom,a);
-                var mapName = map.Name;
-                if (ImGui.MenuItem(mapName))
-                {
-                    editorInterface.OpenWindow(new ImageWindow(this,GetImage(rom,a)), $"Image {{{mapName}}}");
-                }
-            }
-            ImGui.EndMenu();
+            var idx = a;    // Otherwise lambda captures last value of a
+            var map = GetImage(rom, idx);
+            var mapName = map.Name;
+            menu.AddItem(imageMenu, mapName, 
+                (editorInterface,menuItem) => {
+                    var editor = new ImageWindow(this, GetImage(rom, idx));
+                    editorInterface.OpenWindow(editor, $"Image {{{mapName}}}");
+                });
         }
     }
 

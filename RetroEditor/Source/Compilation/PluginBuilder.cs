@@ -1,26 +1,36 @@
 
 using System.Reflection;
 using System.Runtime.Loader;
+using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Emit;
+using Microsoft.CodeAnalysis.Text;
+using Microsoft.VisualBasic;
 
 public class PluginBuilder
 {
     private string _assemblyName;
     private AssemblyLoadContext _loadContext;
     private List<MetadataReference> _references;
-    private List<string> _globalUsings;
-    private MemoryStream? _lastGood;
-    private MemoryStream _ms;
+    private StreamSymbolPair? _lastGood;
+
+    private StreamSymbolPair _streamSymbolPair;
+
+    private struct StreamSymbolPair
+    {
+        public MemoryStream assembly;
+        public MemoryStream symbols;
+    }
 
     public PluginBuilder(string assemblyName)
     {
         _assemblyName = assemblyName;
         _loadContext = new AssemblyLoadContext(assemblyName, true);
         _references = new List<MetadataReference>();
-        _globalUsings = new List<string>();
-        _ms = new MemoryStream();
+        _streamSymbolPair = new StreamSymbolPair();
+        _streamSymbolPair.assembly = new MemoryStream();
+        _streamSymbolPair.symbols = new MemoryStream();
         _lastGood = null;
     }
     public void AddReference(string referencePath)
@@ -34,11 +44,6 @@ public class PluginBuilder
         {
             _references.Add(MetadataReference.CreateFromFile(file));
         }
-    }
-
-    public void AddGlobalUsing(string usingNamespace)
-    {
-        _globalUsings.Add($"global using global::{usingNamespace}; ");
     }
 
     public EmitResult BuildPlugin(string sourceRoot)
@@ -60,32 +65,41 @@ public class PluginBuilder
             {
                 if (file.EndsWith(".cs"))
                 {
-                    var syntaxTree = CSharpSyntaxTree.ParseText(File.ReadAllText(file)).WithFilePath(file);
+                    var sbuffer = Encoding.UTF8.GetBytes(File.ReadAllText(file));
+                    var ssourceText = SourceText.From(sbuffer, sbuffer.Length, Encoding.UTF8, canBeEmbedded: true);
+                    var syntaxTree = CSharpSyntaxTree.ParseText(ssourceText, path: file);
+                    //var syntaxTree = CSharpSyntaxTree.ParseText(File.ReadAllText(file)).WithFilePath(file);
                     syntaxTrees.Add(syntaxTree);
                 }
             }
         }
-
-        var globalUsing = string.Join("", _globalUsings);
-        var globalUsings = CSharpSyntaxTree.ParseText(globalUsing).WithFilePath("globalUsings.cs");
-        syntaxTrees.Add(globalUsings);
 
         var compilation = CSharpCompilation.Create(_assemblyName,
             syntaxTrees: syntaxTrees,
             references: references,
             options: new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
 
-        _ms.Seek(0, SeekOrigin.Begin);
-        var result = compilation.Emit(_ms);
+        _streamSymbolPair.assembly.Seek(0, SeekOrigin.Begin);
+        _streamSymbolPair.symbols.Seek(0, SeekOrigin.Begin);
+
+        var emitOptions = new EmitOptions(debugInformationFormat: DebugInformationFormat.PortablePdb);
+
+        var embeddedTexts = new List<EmbeddedText>();
+        foreach (var syntaxTree in syntaxTrees)
+        {
+            embeddedTexts.Add(EmbeddedText.FromSource(syntaxTree.FilePath, syntaxTree.GetText()));
+        }
+
+        var result = compilation.Emit(peStream:_streamSymbolPair.assembly, pdbStream: _streamSymbolPair.symbols, embeddedTexts: embeddedTexts, options: emitOptions);
         if (result.Success)
         {
-            _lastGood = _ms;
+            _lastGood = _streamSymbolPair;
         }
         else
         {
             if (_lastGood != null)
             {
-                _ms = _lastGood;
+                _streamSymbolPair = _lastGood.Value;
             }
         }
         return result;
@@ -97,8 +111,9 @@ public class PluginBuilder
         {
             return null;
         }
-        _ms.Seek(0, SeekOrigin.Begin);
-        return _loadContext.LoadFromStream(_ms);
+        _streamSymbolPair.assembly.Seek(0, SeekOrigin.Begin);
+        _streamSymbolPair.symbols.Seek(0, SeekOrigin.Begin);
+        return _loadContext.LoadFromStream(_streamSymbolPair.assembly, _streamSymbolPair.symbols);
     }
 
     public void Unload()

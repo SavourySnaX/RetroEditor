@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 public class Nemesis
 {
     ushort[] CodeTable = new ushort[256];

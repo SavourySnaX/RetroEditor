@@ -9,7 +9,7 @@ var romPlugins = iRomPlugin.LoadPlugin();
 
 var editorPlugins = new List<GamePluginLoader>();
 
-foreach (var dir in Directory.GetDirectories("Plugins/GamePlugins"))
+foreach (var dir in Directory.GetDirectories("Plugins/Source/GamePlugins"))
 {
     var pluginLoader = new GamePluginLoader(dir);
     editorPlugins.Add(pluginLoader);

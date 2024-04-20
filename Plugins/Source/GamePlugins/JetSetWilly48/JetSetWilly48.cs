@@ -1,8 +1,10 @@
 
+using System;
+using System.IO;
+using System.Linq;
 using System.Security.Cryptography;
-using ImGuiNET;
 
-public class JetSetWilly48 : IRetroPlugin, IImages, ITileMaps, IPlayerWindowExtension
+public class JetSetWilly48 : IRetroPlugin, IImages, ITileMaps, IPlayerWindowExtension, IMenuProvider
 {
     private byte[][] supportedMD5s = new byte[][] {
         new byte[] { 0x4E, 0x5E, 0xD5, 0x38, 0xEB, 0x9F, 0x56, 0x59, 0x8F, 0xAF, 0xF8, 0x29, 0x06, 0x44, 0xC9, 0xD7 },  // JetSetWillyTap
@@ -11,7 +13,7 @@ public class JetSetWilly48 : IRetroPlugin, IImages, ITileMaps, IPlayerWindowExte
         new byte[] { 0x0f, 0xdb, 0xe2, 0xba, 0x51, 0x8d, 0x70, 0x67, 0x7f, 0xd8, 0x93, 0x75, 0xae, 0x4c, 0x6f, 0xb3 },  // JetSetWillyTzxF
     };
 
-    public static string? Name => "Jet Set Willy 48K";
+    public static string Name => "Jet Set Willy 48K";
 
     public string RomPluginName => "ZXSpectrum";
 
@@ -141,38 +143,31 @@ public class JetSetWilly48 : IRetroPlugin, IImages, ITileMaps, IPlayerWindowExte
     {
     }
 
-    public void Menu(IRomAccess rom, IEditor editorInterface)
+    public void ConfigureMenu(IRomAccess rom, IMenu menu)
     {
-        if (ImGui.BeginMenu("Image Viewer"))
+        var imageMenu = menu.AddItem("Image Viewer");
+        var tileMenu = menu.AddItem("Tile Map Editor");
+        for (int a = 0; a < GetImageCount(rom); a++)
         {
-            for (int a = 0; a < GetImageCount(rom); a++)
-            {
-                var map = GetImage(rom,a);
-                var mapName = map.Name;
-                if (ImGui.MenuItem(mapName))
-                {
-                    editorInterface.OpenWindow(new ImageWindow(this,GetImage(rom,a)), $"Image {{{mapName}}}");
-                }
-            }
-            ImGui.EndMenu();
+            var idx = a;    // Otherwise lambda captures last value of a
+            var map = GetImage(rom, idx);
+            var mapName = map.Name;
+            menu.AddItem(imageMenu, mapName, 
+                (editorInterface,menuItem) => {
+                    var editor = new ImageWindow(this, GetImage(rom, idx));
+                    editorInterface.OpenWindow(editor, $"Image {{{mapName}}}");
+                });
+            menu.AddItem(tileMenu, mapName, 
+                (editorInterface,menuItem) => {
+                    var editor = new TileMapEditorWindow(this, GetMap(rom, idx));
+                    editorInterface.OpenWindow(editor, $"Tile Map {{{mapName}}}");
+                });
         }
-        if (ImGui.BeginMenu("Tile Map Editor"))
-        {
-            for (int a = 0; a < GetMapCount(rom); a++)
-            {
-                var map = GetMap(rom,a);
-                var mapName = map.Name;
-                if (ImGui.MenuItem(mapName))
-                {
-                    editorInterface.OpenWindow(new TileMapEditorWindow(this, map), $"Tile Map {{{mapName}}}");
-                }
-            }
-            ImGui.EndMenu();
-        }
-        if (ImGui.MenuItem("Graphics Editor"))
-        {
-            editorInterface.OpenWindow(new BitmapWindow(this, GetBitmap(rom)), "Graphics Editor");
-        }
+        var graphicsMenu = menu.AddItem("Graphics Editor",
+            (editorInterface,menuItem) => {
+                var editor = new BitmapWindow(this, GetBitmap(rom));
+                editorInterface.OpenWindow(editor, "Graphics Editor");
+            });
     }
 
     public IImages GetImageInterface()
@@ -185,7 +180,7 @@ public class JetSetWilly48 : IRetroPlugin, IImages, ITileMaps, IPlayerWindowExte
         return this;
     }
 
-    public IPlayerWindowExtension? GetPlayerExtension() { return this; }
+    public IPlayerWindowExtension GetPlayerExtension() { return this; }
 
     public IImage GetImage(IRomAccess rom, int mapIndex)
     {
@@ -311,22 +306,23 @@ public class JetSetWilly48 : IRetroPlugin, IImages, ITileMaps, IPlayerWindowExte
 
     public void Render(IPlayerControls controls)
     {
+/*
         bool changed = false;
-        changed|=ImGui.Checkbox("Infinte Lives", ref cheat_infiniteLives);
-        changed|=ImGui.Checkbox("No Fall Death", ref cheat_noFall);
-        changed|=ImGui.Checkbox("No Time Limit", ref cheat_noTime);
-        changed|=ImGui.Checkbox("No Nasty Kill", ref cheat_noNastyKill);
-        changed|=ImGui.Checkbox("No Guardian Kill", ref cheat_noGuardianKill);
-        changed|=ImGui.Checkbox("No Arrow Kill", ref cheat_noArrowKill);
+        changed |= ImGui.Checkbox("Infinite Lives", ref cheat_infiniteLives);
+        changed |= ImGui.Checkbox("No Fall Death", ref cheat_noFall);
+        changed |= ImGui.Checkbox("No Time Limit", ref cheat_noTime);
+        changed |= ImGui.Checkbox("No Nasty Kill", ref cheat_noNastyKill);
+        changed |= ImGui.Checkbox("No Guardian Kill", ref cheat_noGuardianKill);
+        changed |= ImGui.Checkbox("No Arrow Kill", ref cheat_noArrowKill);
         ImGui.Separator();
-        changed|=ImGui.SliderInt("Start Room Number", ref startRoom, 0, 60);
+        changed |=ImGui.SliderInt("Start Room Number", ref startRoom, 0, 60);
         changed|=ImGui.SliderInt("Start Room XPos", ref startRoomX, 0, 31);
         changed|=ImGui.SliderInt("Start Room YPos", ref startRoomY, 0, 15);
 
         if (changed)
         {
             controls.Reset();
-        }
+        }*/
     }
 }
 

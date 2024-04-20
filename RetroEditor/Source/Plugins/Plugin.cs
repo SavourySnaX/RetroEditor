@@ -341,8 +341,6 @@ public interface IRetroPlugin
 
     bool CanHandle(string filename);    //TODO at present you cant use this to record which rom was actually loaded, since its loaded into a different instance
 
-    void Menu(IRomAccess rom,IEditor editorInterface);
-
     IImages? GetImageInterface() { return null; }
     ITileMaps? GetTileMapInterface() { return null; }
 

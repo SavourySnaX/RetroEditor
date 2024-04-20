@@ -1,7 +1,10 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Security.Cryptography;
-using ImGuiNET;
 
-public class Fairlight : IRetroPlugin, IImages
+public class Fairlight : IRetroPlugin, IImages, IMenuProvider
 {
     // This is MD5 of a ram dump of the game, will update with tap/tzx version later 
     private byte[][] supportedMD5s = new byte[][] {
@@ -52,20 +55,19 @@ public class Fairlight : IRetroPlugin, IImages
         return false;
     }
 
-    public void Menu(IRomAccess rom, IEditor editorInterface)
+    public void ConfigureMenu(IRomAccess rom, IMenu menu)
     {
-        if (ImGui.BeginMenu("Image Viewer"))
+        var imageMenu = menu.AddItem("Images");
+        for (int a = 0; a < GetImageCount(rom); a++)
         {
-            for (int a = 0; a < GetImageCount(rom); a++)
-            {
-                var map = GetImage(rom,a);
-                var mapName = map.Name;
-                if (ImGui.MenuItem(mapName))
-                {
-                    editorInterface.OpenWindow(new ImageWindow(this,GetImage(rom,a)), $"Image {{{mapName}}}");
-                }
-            }
-            ImGui.EndMenu();
+            var idx = a;    // Otherwise lambda captures last value of a
+            var map = GetImage(rom, idx);
+            var mapName = map.Name;
+            menu.AddItem(imageMenu, mapName, 
+                (editorInterface,menuItem) => {
+                    var editor = new ImageWindow(this, GetImage(rom, idx));
+                    editorInterface.OpenWindow(editor, $"Image {{{mapName}}}");
+                });
         }
     }
 
