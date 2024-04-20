@@ -14,12 +14,15 @@
   <ItemGroup>
     <Compile Remove="Plugins\**" />
     <Compile Remove="RetroEditor\**" />
-    <Content Include="Plugins\**" CopyToPublishDirectory="PreserveNewest" />
-    <Content Include="ReferenceAssemblies\**\*.*" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="Plugins\Source\GamePlugins\**" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="Plugins\Source\RomPlugins\**" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="Plugins\Plugins.csproj" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="ReferenceAssemblies\*.dll" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="RetroEditor\RetroEditor.csproj" />
+    <ProjectReference Include="Plugins\Plugins.csproj" Condition="'$(Configuration)'=='Debug'" /> <!-- Verify no compile issues when running in debugger, but avoid publishing with the plugins built -->
   </ItemGroup>
 
 </Project>

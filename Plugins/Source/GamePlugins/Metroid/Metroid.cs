@@ -1,4 +1,6 @@
-
+using System;
+using System.IO;
+using System.Linq;
 using System.Security.Cryptography;
 
 public class Metroid : IRetroPlugin
@@ -35,10 +37,6 @@ public class Metroid : IRetroPlugin
     public ISave Export(IRomAccess romAcess)
     {
         throw new NotImplementedException();
-    }
-
-    public void Menu(IRomAccess rom, IEditor editorInterface)
-    {
     }
 
     public void SetupGameTemporaryPatches(IRomAccess romAccess)

@@ -1,7 +1,9 @@
+using System;
+using System.IO;
+using System.Linq;
 using System.Security.Cryptography;
-using ImGuiNET;
 
-public class Rollercoaster : IRetroPlugin, IImages
+public class Rollercoaster : IRetroPlugin, IImages, IMenuProvider
 {
     private byte[][] supportedMD5s = new byte[][] {
         new byte[] { 0xd0, 0x64, 0xb9, 0x2f, 0x76, 0xcb, 0xd3, 0x35, 0xad, 0xc9, 0x84, 0x0f, 0x69, 0x2a, 0x1a, 0xf6 },  // ./Roller Coaster (1986)(Elite Systems).tap
@@ -71,20 +73,19 @@ public class Rollercoaster : IRetroPlugin, IImages
         return rom.ReadBytes(ReadKind.Ram, (uint)(0x7D00 + (tileIndex * 8)), 8);
     }
 
-    public void Menu(IRomAccess rom, IEditor editorInterface)
+    public void ConfigureMenu(IRomAccess rom, IMenu menu)
     {
-        if (ImGui.BeginMenu("Image Viewer"))
+        var imageMenu = menu.AddItem("Images");
+        for (int a = 0; a < GetImageCount(rom); a++)
         {
-            for (int a = 0; a < GetImageCount(rom); a++)
-            {
-                var map = GetImage(rom,a);
-                var mapName = map.Name;
-                if (ImGui.MenuItem(mapName))
-                {
-                    editorInterface.OpenWindow(new ImageWindow(this,GetImage(rom,a)), $"Image {{{mapName}}}");
-                }
-            }
-            ImGui.EndMenu();
+            var idx = a;    // Otherwise lambda captures last value of a
+            var map = GetImage(rom, idx);
+            var mapName = map.Name;
+            menu.AddItem(imageMenu, mapName, 
+                (editorInterface,menuItem) => {
+                    var editor = new ImageWindow(this, GetImage(rom, idx));
+                    editorInterface.OpenWindow(editor, $"Image {{{mapName}}}");
+                });
         }
     }
 

@@ -11,13 +11,12 @@ public class RomPluginsLoader
         _iromPlugin = new PluginBuilder("RomPlugins");
         var referenceAssembliesRoot = Path.Combine(System.AppContext.BaseDirectory, "ReferenceAssemblies");
         _iromPlugin.AddReferences(referenceAssembliesRoot);
-        _iromPlugin.AddGlobalUsing("System");
     }
 
     public List<Type> LoadPlugin()
     {
         var romPlugins = new List<Type>();
-        var result = _iromPlugin.BuildPlugin("Plugins/RomPlugins");
+        var result = _iromPlugin.BuildPlugin("Plugins/Source/RomPlugins");
         if (!result.Success)
         {
             Editor.Log(LogType.Error, "Compilation", "Compilation failed!");

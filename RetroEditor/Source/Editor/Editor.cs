@@ -10,9 +10,42 @@ using System.Text.Json;
 using System.Runtime.InteropServices;
 using System.IO.Compression;
 
-internal struct ActiveProject : IPlayerControls
+internal class MenuData : IMenuItem
 {
-    public ActiveProject(string name, IRetroPlugin retroPlugin, LibRetroPlugin libRetroPlugin, IRomPlugin romPlugin, PlayableRom playableRom, ProjectSettings settings)
+    bool _enabled;
+    string _name;
+    MenuEventHandler? _handler;
+    List<IMenuItem> _children;
+
+    public MenuData(string name, MenuEventHandler? handler)
+    {
+        _name = name;
+        _handler = handler;
+        _enabled = true;
+        _children = new List<IMenuItem>();
+    }
+
+    public bool Enabled { get => _enabled; set => _enabled = value; }
+    public string Name { get => _name; set => _name = value; }
+    public MenuEventHandler? Handler { get => _handler; set => _handler = value; }
+
+    public List<IMenuItem> Children => _children;
+
+}
+
+internal class UIData
+{
+    public UIData()
+    {
+        Menus = new List<MenuData>();
+    }
+
+    public List<MenuData> Menus;
+}
+
+internal struct ActiveProject : IPlayerControls, IMenu
+{
+    public ActiveProject(string name, IRetroPlugin retroPlugin, LibRetroPlugin libRetroPlugin, IRomPlugin romPlugin, PlayableRom playableRom, ProjectSettings settings, UIData ui)
     {
         this.name = name;
         this.retroPlugin = retroPlugin;
@@ -20,6 +53,7 @@ internal struct ActiveProject : IPlayerControls
         this.romPlugin = romPlugin;
         this.playableRom = playableRom;
         this.settings = settings;
+        this.ui = ui;
     }
 
     private string name;
@@ -28,12 +62,14 @@ internal struct ActiveProject : IPlayerControls
     private IRomPlugin romPlugin;
     private PlayableRom playableRom;
     private ProjectSettings settings;
+    private UIData ui;
 
     public readonly IRetroPlugin RetroPlugin => retroPlugin;
     public readonly LibRetroPlugin LibRetroPlugin => libRetroPlugin;
     public readonly IRomPlugin RomPlugin => romPlugin;
     public readonly ProjectSettings Settings => settings;
     public readonly PlayableRom PlayableRomPlugin => playableRom;
+    public readonly UIData UI => ui;
 
     public readonly string Name => name;
 
@@ -46,9 +82,31 @@ internal struct ActiveProject : IPlayerControls
 
     internal void UnloadRetroPlugin()
     {
+        ui.Menus.Clear();
         PlayableRomPlugin.Close();
         RetroPlugin.Close();
         libRetroPlugin.Dispose();
+    }
+
+    public readonly IMenuItem AddItem(string name)
+    {
+        var item = new MenuData(name, null);
+        ui.Menus.Add(item);
+        return item;
+    }
+
+    public IMenuItem AddItem(string name, MenuEventHandler handler)
+    {
+        var item = new MenuData(name, handler);
+        ui.Menus.Add(item);
+        return item;
+    }
+
+    public IMenuItem AddItem(IMenuItem parent, string name, MenuEventHandler handler)
+    {
+        var item = new MenuData(name, handler);
+        ((MenuData)parent).Children.Add(item);
+        return item;
     }
 }
 
@@ -478,7 +536,13 @@ public class Editor : IEditor
                         if (ImGui.BeginMenu(active.Name))
                         {
                             currentActiveProject=active;
-                            active.RetroPlugin.Menu(active.PlayableRomPlugin, this);
+                            foreach (var menu in active.UI.Menus)
+                            {
+                                RenderMenu(menu);
+                            }
+
+
+                            //active.RetroPlugin.Menu(active.PlayableRomPlugin, this);
                             bool playerOpen = windowManager.IsOpen($"LibRetro Player ({active.Name})");
                             if (playerOpen)
                             {
@@ -530,6 +594,36 @@ public class Editor : IEditor
         return false;
     }
 
+    private void RenderMenu(MenuData menu)
+    {
+        var disabled = menu.Enabled == false;
+        if (disabled)
+        {
+            ImGui.BeginDisabled();
+        }
+        if (menu.Children.Count == 0)
+        {
+            if (ImGui.MenuItem(menu.Name))
+            {
+                menu.Handler?.Invoke(this, menu);
+            }
+        }
+        else
+        {
+            if (ImGui.BeginMenu(menu.Name))
+            {
+                foreach (var child in menu.Children)
+                {
+                    RenderMenu((MenuData)child);
+                }
+                ImGui.EndMenu();
+            }
+        }
+        if (disabled)
+        {
+            ImGui.EndDisabled();
+        }
+    }
 
     internal IRomPlugin? GetRomInstance(string romKind)
     {
@@ -608,8 +702,12 @@ public class Editor : IEditor
     private void InternalAddDefaultWindowAndProject(ProjectSettings projectSettings, IRetroPlugin plugin, LibRetroPlugin retroPluginInstance, IRomPlugin romPlugin, PlayableRom playableRom)
     {
         var activeProjectName = projectSettings.projectName + $" [{activeProjects.Count + 1}]";
-        var project = new ActiveProject(activeProjectName, plugin, retroPluginInstance, romPlugin, playableRom, projectSettings);
+        var project = new ActiveProject(activeProjectName, plugin, retroPluginInstance, romPlugin, playableRom, projectSettings, new UIData());
 
+        if (project.RetroPlugin is IMenuProvider menuProvider)
+        {
+            menuProvider.ConfigureMenu(project.PlayableRomPlugin, project);
+        }
         currentActiveProject=project;
         OpenPlayerWindow(project);
         activeProjects.Add(project);
@@ -685,7 +783,7 @@ public class Editor : IEditor
         plugin.SetupGameTemporaryPatches(playableRom);
 
         playableRom.Reset(true);
-        
+
         InternalAddDefaultWindowAndProject(projectSettings, plugin, emuPlugin, romInterface, playableRom);
         return true;
     }

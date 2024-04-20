@@ -10,5 +10,9 @@ Data/**
 Temp/**
 Logs/**
 Projects/**
+Plugins/.vscode/**
+Plugins/bin/**
+Plugins/obj/**
+Plugins/*.sln
 ReferenceAssemblies/RetroEditor.dll
 settings.json
