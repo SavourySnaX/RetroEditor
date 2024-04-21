@@ -28,10 +28,10 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: Windows-X64
-        path: bin/Release/win-x64/publish
+        path: bin/Release/net8.0/win-x64/publish
     - name: Archive Linux
       uses: actions/upload-artifact@v4
       with:
         name: Linux-X64
-        path: bin/Release/linux-x64/publish
+        path: bin/Release/net8.0/linux-x64/publish
 
