@@ -17,7 +17,7 @@ jobs:
     - name: Restore
       run: dotnet restore
     - name: Build Debug RetroEditor (to ensure reference assembly exists before building projects)
-      run: dotnet build -c Debug RetroEditor/RetroEditor.csprog
+      run: dotnet build -c Debug RetroEditor/RetroEditor.csproj
     - name: Build Debug
       run: dotnet build -c Debug
     - name: Build Windows
