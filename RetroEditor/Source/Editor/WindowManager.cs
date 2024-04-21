@@ -56,7 +56,8 @@ internal class WindowManager
         if (activeProject != null)
         {
             settings = activeProject.Value.Settings;
-            if (activeProject.Value.RetroPlugin is IPlayerWindowExtension playerWindowExtension)
+            if (activeProject.Value.RetroPlugin is IPlayerWindowExtension playerWindowExtension &&
+                window is LibRetroPlayerWindow)
             {
                 playerWindowExtension.ConfigureWidgets(activeProject.Value.PlayableRomPlugin, newWindow.WidgetFactory, activeProject);
             }

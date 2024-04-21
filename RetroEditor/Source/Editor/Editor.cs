@@ -696,15 +696,11 @@ public class Editor : IEditor
         pluginWindow.InitWindow();
     }
 
-    private void InternalAddDefaultWindowAndProject(ProjectSettings projectSettings, IRetroPlugin plugin, LibRetroPlugin retroPluginInstance, IRomPlugin romPlugin, PlayableRom playableRom)
+    private ActiveProject InternalAddDefaultWindowAndProject(ProjectSettings projectSettings, IRetroPlugin plugin, LibRetroPlugin retroPluginInstance, IRomPlugin romPlugin, PlayableRom playableRom)
     {
         var activeProjectName = projectSettings.projectName + $" [{activeProjects.Count + 1}]";
         var project = new ActiveProject(activeProjectName, plugin, retroPluginInstance, romPlugin, playableRom, projectSettings, new UIData());
 
-        if (project.RetroPlugin is IMenuProvider menuProvider)
-        {
-            menuProvider.ConfigureMenu(project.PlayableRomPlugin, project);
-        }
         currentActiveProject=project;
         OpenPlayerWindow(project);
         activeProjects.Add(project);
@@ -717,6 +713,7 @@ public class Editor : IEditor
             settings.RecentProjects.Add(projectSettings.projectPath);
         }
         currentActiveProject = null;
+        return project;
     }
 
     internal bool CreateNewProject(string projectName, string projectLocation, string importFile, string retroPluginName)
@@ -777,11 +774,17 @@ public class Editor : IEditor
             playableRom.Reload(projectSettings);
         }
 
-        InternalAddDefaultWindowAndProject(projectSettings, plugin, emuPlugin, romInterface, playableRom);
+        var project = InternalAddDefaultWindowAndProject(projectSettings, plugin, emuPlugin, romInterface, playableRom);
         
         plugin.SetupGameTemporaryPatches(playableRom);
 
         playableRom.Reset(true);
+
+        // Initialise menus only after rom is ready
+        if (project.RetroPlugin is IMenuProvider menuProvider)
+        {
+            menuProvider.ConfigureMenu(project.PlayableRomPlugin, project);
+        }
 
         return true;
     }
