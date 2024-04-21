@@ -9,9 +9,7 @@ public class GamePluginLoader
     {
         var directoryName = new DirectoryInfo(path).Name;
         _plugin = new PluginBuilder(directoryName);
-        var imguiReference = Path.Combine(System.AppContext.BaseDirectory, "ImGui.NET.dll"); // Todo make an EditorUI assembly and remove direct imgui access
         var referenceAssembliesRoot = Path.Combine(System.AppContext.BaseDirectory, "ReferenceAssemblies");
-        _plugin.AddReference(imguiReference);
         _plugin.AddReferences(referenceAssembliesRoot);
         _pathToPlugin = path;
     }

@@ -153,8 +153,6 @@ public class Editor : IEditor
 
     private ActiveProject? currentActiveProject;
 
-    ProjectSettings developerSettings;
-
     private Dictionary<Type, GamePluginLoader> pluginToLoader = new Dictionary<Type, GamePluginLoader>();
 
     private static Log? _log;
@@ -162,7 +160,6 @@ public class Editor : IEditor
 
     internal Editor(IEnumerable<GamePluginLoader> plugins, Type[] romPlugins)
     {
-        developerSettings=new ProjectSettings("Developer", "", "", "", "");
         this.activeProjects = new List<ActiveProject>();
 
         windowManager = new WindowManager();
@@ -436,13 +433,13 @@ public class Editor : IEditor
                                     var retro = GetLibRetroInstance(instance.LibRetroPluginName, null);
                                     if (retro != null)
                                     {
-                                        var pluginWindow = new LibRetroPlayerWindow(retro, null, null);
+                                        var pluginWindow = new LibRetroPlayerWindow(retro);
                                         var playableRom = new PlayableRom(this, retro, instance.Endian, instance.RequiresReload, instance.ChecksumCalculation);
                                         pluginWindow.Initialise();
                                         retro.LoadGame(result.Path);
                                         pluginWindow.OtherStuff();
                                         pluginWindow.InitWindow();
-                                        windowManager.AddWindow(pluginWindow, plugin.Key, developerSettings);
+                                        windowManager.AddWindow(pluginWindow, plugin.Key, null);
                                     }
                                 }
                             }
@@ -470,11 +467,11 @@ public class Editor : IEditor
                             {
                                 mameInstance = new LibMameDebugger(retro);
 
-                                var pluginWindow = new LibRetroDebuggerWindow(retro, null, null);
+                                var pluginWindow = new LibRetroDebuggerWindow(retro);
                                 pluginWindow.Initialise();
                                 retro.LoadGame(result.Path);
                                 pluginWindow.InitWindow();
-                                windowManager.AddWindow(pluginWindow, "MAME RETRO", developerSettings);
+                                windowManager.AddWindow(pluginWindow, "MAME RETRO", null);
 
                             }
                         }
@@ -694,7 +691,7 @@ public class Editor : IEditor
 
     private void OpenPlayerWindow(ActiveProject activeProject)
     {
-        var pluginWindow = new LibRetroPlayerWindow(activeProject.LibRetroPlugin, activeProject, activeProject.RetroPlugin.GetPlayerExtension());
+        var pluginWindow = new LibRetroPlayerWindow(activeProject.LibRetroPlugin);
         OpenWindow(pluginWindow, $"LibRetro Player");
         pluginWindow.InitWindow();
     }
@@ -780,11 +777,12 @@ public class Editor : IEditor
             playableRom.Reload(projectSettings);
         }
 
+        InternalAddDefaultWindowAndProject(projectSettings, plugin, emuPlugin, romInterface, playableRom);
+        
         plugin.SetupGameTemporaryPatches(playableRom);
 
         playableRom.Reset(true);
 
-        InternalAddDefaultWindowAndProject(projectSettings, plugin, emuPlugin, romInterface, playableRom);
         return true;
     }
 
@@ -1013,11 +1011,11 @@ public class Editor : IEditor
         if (currentActiveProject != null)
         {
             var active = currentActiveProject.Value;
-            windowManager.AddWindow(window, windowName, active.Settings);
+            windowManager.AddWindow(window, windowName, active);
         }
         else
         {
-            windowManager.AddWindow(window, windowName, developerSettings);
+            windowManager.AddWindow(window, windowName, null);
         }
     }
 
