@@ -11,14 +11,10 @@ public class LibRetroPlayerWindow : IWindow
     float scale = 2.0f;
 
     uint frameWidth, frameHeight;
-    IPlayerWindowExtension? extension;
-    IPlayerControls? controls;
 
-    public LibRetroPlayerWindow(LibRetroPlugin plugin, IPlayerControls? controls, IPlayerWindowExtension? extension)
+    public LibRetroPlayerWindow(LibRetroPlugin plugin)
     {
         this.plugin = plugin;
-        this.extension = extension;
-        this.controls = controls;
     }
 
     public bool Initialise()
@@ -60,7 +56,6 @@ public class LibRetroPlayerWindow : IWindow
 
     public void Update(float seconds)
     {
-        extension?.Update(seconds);
         plugin.Run();
         Raylib.UpdateTexture(bitmap, plugin.GetFrameBuffer(out frameWidth, out frameHeight));
     }
@@ -104,10 +99,6 @@ public class LibRetroPlayerWindow : IWindow
             plugin.UpdateKey(KeyboardKey.N, ImGui.IsKeyDown(ImGuiKey.N));
         }
 
-        if (extension!=null && controls!=null)
-        {
-            extension.Render(controls);
-        }
         return false;
     }
 

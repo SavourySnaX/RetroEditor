@@ -319,13 +319,6 @@ public sealed class ProjectSettings
     internal readonly string projectPath;
 }
 
-
-public interface IPlayerWindowExtension
-{
-    void Update(float deltaTime);
-    void Render(IPlayerControls controls);
-}
-
 public interface IPlayerControls
 {
     void Reset();
@@ -343,8 +336,6 @@ public interface IRetroPlugin
 
     IImages? GetImageInterface() { return null; }
     ITileMaps? GetTileMapInterface() { return null; }
-
-    IPlayerWindowExtension? GetPlayerExtension() { return null; }
 
     void Close();
 

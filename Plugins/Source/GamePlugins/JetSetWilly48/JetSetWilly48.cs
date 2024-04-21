@@ -19,15 +19,18 @@ public class JetSetWilly48 : IRetroPlugin, IImages, ITileMaps, IPlayerWindowExte
 
     public bool RequiresAutoLoad => true;
 
-    private bool cheat_infiniteLives = false;
-    private bool cheat_noFall = false;
-    private bool cheat_noTime = false;
-    private bool cheat_noNastyKill = false;
-    private bool cheat_noGuardianKill = false;
-    private bool cheat_noArrowKill = false;
-    private int startRoom = 0x22;
-    private int startRoomX = 1;
-    private int startRoomY = 13;
+    private IWidgetCheckable cheat_infiniteLives;
+    private IWidgetCheckable cheat_noFall;
+    private IWidgetCheckable cheat_noTime;
+    private IWidgetCheckable cheat_noNastyKill;
+    private IWidgetCheckable cheat_noGuardianKill;
+    private IWidgetCheckable cheat_noArrowKill;
+    private IWidgetRanged cheat_startRoom;
+    private IWidgetRanged cheat_startRoomX;
+    private IWidgetRanged cheat_startRoomY;
+    private const int StartRoom = 0x22;
+    private const int StartRoomX = 1;
+    private const int StartRoomY = 13;
 
     public bool CanHandle(string filename)
     {
@@ -100,9 +103,9 @@ public class JetSetWilly48 : IRetroPlugin, IImages, ITileMaps, IPlayerWindowExte
         romAccess.WriteBytes(WriteKind.TemporaryRam, 0x872C, new byte[] { 0xCA, 0x87 });    // Jump to game start
         romAccess.WriteBytes(WriteKind.TemporaryRam, 0x88AC, new byte[] { 0xFC, 0x88 });    // start game
 
-        byte yPos = (byte)(startRoomY * 8);
-        byte xPos = (byte)(startRoomX * 8);
-        byte roomNumber = (byte)startRoom;
+        byte yPos = (byte)(cheat_startRoomY.Value * 8);
+        byte xPos = (byte)(cheat_startRoomX.Value * 8);
+        byte roomNumber = (byte)cheat_startRoom.Value;
 
         ushort attributeAddress = (ushort)(0x5C00 + ((yPos / 8) * 32) + (xPos / 8));
 
@@ -110,27 +113,27 @@ public class JetSetWilly48 : IRetroPlugin, IImages, ITileMaps, IPlayerWindowExte
         romAccess.WriteBytes(WriteKind.TemporaryRam, 0x87F0, new byte[] { (byte)(attributeAddress & 0xFF), (byte)(attributeAddress >> 8) });    // willys cordinate
         romAccess.WriteBytes(WriteKind.TemporaryRam, 0x87EB, new byte[] { (byte)(roomNumber) });
 
-        if (cheat_noFall)
+        if (cheat_noFall.Checked)
         {
             romAccess.WriteBytes(WriteKind.TemporaryRam, 0x8EE2, new byte[] { 0x10 }); // Disable fall check
         }
-        if (cheat_infiniteLives)
+        if (cheat_infiniteLives.Checked)
         {
             romAccess.WriteBytes(WriteKind.TemporaryRam, 0x8C3B, new byte[] { 0x00 }); // Infinte lives
         }
-        if (cheat_noTime)
+        if (cheat_noTime.Checked)
         {
             romAccess.WriteBytes(WriteKind.TemporaryRam, 0x8A50, new byte[] { 0x18 }); // Infinte time
         }
-        if (cheat_noNastyKill)
+        if (cheat_noNastyKill.Checked)
         {
             romAccess.WriteBytes(WriteKind.TemporaryRam, 0x962F, new byte[] { 0xC9 }); // No nasty kill
         }
-        if (cheat_noGuardianKill)
+        if (cheat_noGuardianKill.Checked)
         {
             romAccess.WriteBytes(WriteKind.TemporaryRam, 0x9210, new byte[] { 0x00 }); // No guardian kill
         }
-        if (cheat_noArrowKill)
+        if (cheat_noArrowKill.Checked)
         {
             romAccess.WriteBytes(WriteKind.TemporaryRam, 0x9281, new byte[] { 0x18 }); // No arrow kill
         }
@@ -179,8 +182,6 @@ public class JetSetWilly48 : IRetroPlugin, IImages, ITileMaps, IPlayerWindowExte
     {
         return this;
     }
-
-    public IPlayerWindowExtension GetPlayerExtension() { return this; }
 
     public IImage GetImage(IRomAccess rom, int mapIndex)
     {
@@ -300,30 +301,20 @@ public class JetSetWilly48 : IRetroPlugin, IImages, ITileMaps, IPlayerWindowExte
         return mapData.Slice(offset, 9);
     }
 
-    public void Update(float deltaTime)
+    public void ConfigureWidgets(IRomAccess rom, IWidget widget, IPlayerControls playerControls)
     {
+        cheat_infiniteLives = widget.AddCheckbox("Infinite Lives", false, () => playerControls.Reset());
+        cheat_noFall = widget.AddCheckbox("No Fall Death", false, () => playerControls.Reset());
+        cheat_noTime = widget.AddCheckbox("No Time Limit", false, () => playerControls.Reset());
+        cheat_noNastyKill = widget.AddCheckbox("No Nasty Kill", false, () => playerControls.Reset());
+        cheat_noGuardianKill = widget.AddCheckbox("No Guardian Kill", false, () => playerControls.Reset());
+        cheat_noArrowKill = widget.AddCheckbox("No Arrow Kill", false, () => playerControls.Reset());
+        widget.AddSeperator();
+        cheat_startRoom = widget.AddSlider("Start Room Number", StartRoom, 0, 60, () => playerControls.Reset());
+        cheat_startRoomX = widget.AddSlider("Start Room XPos", StartRoomX, 0, 31, () => playerControls.Reset());
+        cheat_startRoomY = widget.AddSlider("Start Room YPos", StartRoomY, 0, 15, () => playerControls.Reset());
     }
 
-    public void Render(IPlayerControls controls)
-    {
-/*
-        bool changed = false;
-        changed |= ImGui.Checkbox("Infinite Lives", ref cheat_infiniteLives);
-        changed |= ImGui.Checkbox("No Fall Death", ref cheat_noFall);
-        changed |= ImGui.Checkbox("No Time Limit", ref cheat_noTime);
-        changed |= ImGui.Checkbox("No Nasty Kill", ref cheat_noNastyKill);
-        changed |= ImGui.Checkbox("No Guardian Kill", ref cheat_noGuardianKill);
-        changed |= ImGui.Checkbox("No Arrow Kill", ref cheat_noArrowKill);
-        ImGui.Separator();
-        changed |=ImGui.SliderInt("Start Room Number", ref startRoom, 0, 60);
-        changed|=ImGui.SliderInt("Start Room XPos", ref startRoomX, 0, 31);
-        changed|=ImGui.SliderInt("Start Room YPos", ref startRoomY, 0, 15);
-
-        if (changed)
-        {
-            controls.Reset();
-        }*/
-    }
 }
 
 public class JetSetWillyMap : IImage

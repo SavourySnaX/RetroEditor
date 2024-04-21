@@ -8,11 +8,26 @@ internal class WindowManager
     private Dictionary<ProjectSettings, List<WindowWrapper>> projectWindows;
     private float totalTime;
 
-    private struct WindowWrapper
+    private class WindowWrapper
     {
-        public IWindow Window;
-        public string Name;
-        public bool modalPopup;
+        public WindowWrapper(IWindow window, string name, bool modalPopup)
+        {
+            _window = window;
+            _name = name;
+            _modalPopup = modalPopup;
+            _widgetFactory = new WidgetFactory();
+        }
+
+        private IWindow _window;
+        private string _name;
+        private bool _modalPopup;
+        private WidgetFactory _widgetFactory;
+
+        public IWindow Window => _window;
+        public string Name => _name;
+        public bool ModalPopup => _modalPopup;
+        public IEnumerable<IWidgetUpdateDraw> Widgets => _widgetFactory.Widgets;
+        public WidgetFactory WidgetFactory => _widgetFactory;
     }
 
     private struct UpdateQueueWrapper
@@ -22,6 +37,8 @@ internal class WindowManager
         public float Time;
     }
 
+    private ProjectSettings developerDummyProject = new ProjectSettings("Developer", "", "", "", "");
+
     public WindowManager()
     {
         activeWindows = new List<WindowWrapper>();
@@ -30,31 +47,31 @@ internal class WindowManager
         totalTime = 0.0f;
     }
 
-    public void AddWindow(IWindow window, string name, ProjectSettings activeProject)
+    public void AddWindow(IWindow window, string name, ActiveProject? activeProject)
     {
-        var newWindow = new WindowWrapper
-        {
-            Window = window,
-            Name = name,
-            modalPopup = false
-        };
+        var newWindow = new WindowWrapper(window, name , false);
         activeWindows.Add(newWindow);
-        if (!projectWindows.ContainsKey(activeProject))
+
+        var settings = developerDummyProject;
+        if (activeProject != null)
         {
-            projectWindows.Add(activeProject, new List<WindowWrapper>());
+            settings = activeProject.Value.Settings;
+            if (activeProject.Value.RetroPlugin is IPlayerWindowExtension playerWindowExtension)
+            {
+                playerWindowExtension.ConfigureWidgets(activeProject.Value.PlayableRomPlugin, newWindow.WidgetFactory, activeProject);
+            }
         }
-        projectWindows[activeProject].Add(newWindow);
+        if (!projectWindows.ContainsKey(settings))
+        {
+            projectWindows.Add(settings, new List<WindowWrapper>());
+        }
+        projectWindows[settings].Add(newWindow);
         priorityQueue.Enqueue(new UpdateQueueWrapper { Window = newWindow, Action = InternalUpdate, Time = totalTime }, totalTime);
     }
 
     public void AddBlockingPopup(IWindow window, string name)
     {
-        var newWindow = new WindowWrapper
-        {
-            Window = window,
-            Name = name,
-            modalPopup = true
-        };
+        var newWindow = new WindowWrapper(window, name, true);
         activeWindows.Add(newWindow);
         priorityQueue.Enqueue(new UpdateQueueWrapper { Window = newWindow, Action = InternalPopup, Time = totalTime }, totalTime);
         priorityQueue.Enqueue(new UpdateQueueWrapper { Window = newWindow, Action = InternalUpdate, Time = totalTime }, totalTime);
@@ -101,6 +118,7 @@ internal class WindowManager
     private bool InternalUpdate(WindowWrapper window, float totalTime)
     {
         window.Window.Update(totalTime);
+        UpdateWidgets(window, totalTime);
         return false;
     }
 
@@ -110,17 +128,34 @@ internal class WindowManager
         return true;
     }
 
+    private void UpdateWidgets(WindowWrapper window, float totalTime)
+    {
+        foreach (var widget in window.Widgets)
+        {
+            widget.Update(totalTime);
+        }
+    }
+
+    private void DrawWidgets(WindowWrapper window)
+    {
+        foreach (var widget in window.Widgets)
+        {
+            widget.Draw();
+        }
+    }
+
     private bool InternalDraw(WindowWrapper window)
     {
         bool open = true;
-        if (window.modalPopup)
+        if (window.ModalPopup)
         {
             if (ImGui.BeginPopupModal(window.Name, ref open))
             {
-                if (window.Window.Draw())
+                open = !window.Window.Draw();
+                DrawWidgets(window);
+                if (!open)
                 {
                     ImGui.CloseCurrentPopup();
-                    open = false;
                 }
                 ImGui.EndPopup();
             }
@@ -128,10 +163,8 @@ internal class WindowManager
         else
         {
             ImGui.Begin(window.Name, ref open);
-            if (window.Window.Draw())
-            {
-                open = false;
-            }
+            open=!window.Window.Draw();
+            DrawWidgets(window);
             ImGui.End();
         }
         return open;
