@@ -17,7 +17,6 @@
     <Content Include="Plugins\Source\GamePlugins\**" CopyToPublishDirectory="PreserveNewest" />
     <Content Include="Plugins\Source\RomPlugins\**" CopyToPublishDirectory="PreserveNewest" />
     <Content Include="Plugins\Plugins.csproj" CopyToPublishDirectory="PreserveNewest" />
-    <Content Include="ReferenceAssemblies\*.dll" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>
@@ -25,4 +24,10 @@
     <ProjectReference Include="Plugins\Plugins.csproj" Condition="'$(Configuration)'=='Debug'" /> <!-- Verify no compile issues when running in debugger, but avoid publishing with the plugins built -->
   </ItemGroup>
 
+  <Target Name="CopyReferenceAssemblies" AfterTargets="Publish">
+    <ItemGroup>
+      <SourceFiles Include="ReferenceAssemblies\*.dll" />
+    </ItemGroup>
+    <Copy SourceFiles="@(SourceFiles)" DestinationFolder="$(PublishDir)\ReferenceAssemblies\" SkipUnchangedFiles="true" />
+  </Target>
 </Project>

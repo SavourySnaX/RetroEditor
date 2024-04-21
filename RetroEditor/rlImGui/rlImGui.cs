@@ -20,7 +20,7 @@ using ImGuiNET;
 
 namespace rlImGui_cs
 {
-    public static class rlImGui
+    internal static class rlImGui
     {
         internal static IntPtr ImGuiContext = IntPtr.Zero;
 

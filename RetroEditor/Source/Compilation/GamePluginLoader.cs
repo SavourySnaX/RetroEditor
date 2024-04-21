@@ -9,7 +9,7 @@ public class GamePluginLoader
     {
         var directoryName = new DirectoryInfo(path).Name;
         _plugin = new PluginBuilder(directoryName);
-        var referenceAssembliesRoot = Path.Combine(System.AppContext.BaseDirectory, "ReferenceAssemblies");
+        var referenceAssembliesRoot = "ReferenceAssemblies";
         _plugin.AddReferences(referenceAssembliesRoot);
         _pathToPlugin = path;
     }
