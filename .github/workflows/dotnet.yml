@@ -1,0 +1,35 @@
+
+name: .NET
+
+on: push
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 8.0.x
+    - name: Restore
+      run: dotnet restore
+    - name: Build Debug
+      run: dotnet build -c Debug
+    - name: Build Windows
+      run: dotnet publish --os win
+    - name: Build Linux
+      run: dotnet publish --os linux
+    - name: Archive Windows
+      uses: actions/upload-artifact@v4
+      with:
+        name: Windows-X64
+        path: bin/Release/win-x64/publish
+    - name: Archive Linux
+      uses: actions/upload-artifact@v4
+      with:
+        name: Linux-X64
+        path: bin/Release/linux-x64/publish
+
