@@ -40,10 +40,10 @@ struct VaListLinuxX64
 /// <summary>
 /// Logging workaround for formatting strings from native code
 /// </summary>
-public static unsafe class RayLibLoggingWrapper
+internal static unsafe class RayLibLoggingWrapper
 {
     [UnmanagedCallersOnly(CallConvs = new[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
-    public static unsafe void Log(int msgType, sbyte* text, sbyte* args)
+    internal static unsafe void Log(int msgType, sbyte* text, sbyte* args)
     {
         var message = GetLogMessage(new IntPtr(text), new IntPtr(args));
         switch (msgType)
@@ -65,7 +65,7 @@ public static unsafe class RayLibLoggingWrapper
         }
     }
 
-    public static string GetLogMessage(IntPtr format, IntPtr args)
+    internal static string GetLogMessage(IntPtr format, IntPtr args)
     {
         if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
         {

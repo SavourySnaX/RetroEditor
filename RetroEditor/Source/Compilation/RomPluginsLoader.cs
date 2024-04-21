@@ -9,7 +9,7 @@ public class RomPluginsLoader
     public RomPluginsLoader()
     {
         _iromPlugin = new PluginBuilder("RomPlugins");
-        var referenceAssembliesRoot = Path.Combine(System.AppContext.BaseDirectory, "ReferenceAssemblies");
+        var referenceAssembliesRoot = "ReferenceAssemblies";
         _iromPlugin.AddReferences(referenceAssembliesRoot);
     }
 
