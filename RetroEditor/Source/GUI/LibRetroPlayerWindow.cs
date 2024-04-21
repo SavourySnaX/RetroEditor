@@ -2,7 +2,7 @@ using ImGuiNET;
 using Raylib_cs;
 using rlImGui_cs;
 
-public class LibRetroPlayerWindow : IWindow
+internal class LibRetroPlayerWindow : IWindow
 {
     Texture2D bitmap;
 

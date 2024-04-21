@@ -2,7 +2,7 @@
 // For now, rom plugins never reload?
 using Microsoft.CodeAnalysis;
 
-public class RomPluginsLoader
+internal class RomPluginsLoader
 {
     private PluginBuilder _iromPlugin;
 

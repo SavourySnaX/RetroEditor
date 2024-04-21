@@ -6,9 +6,8 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Emit;
 using Microsoft.CodeAnalysis.Text;
-using Microsoft.VisualBasic;
 
-public class PluginBuilder
+internal class PluginBuilder
 {
     private string _assemblyName;
     private AssemblyLoadContext _loadContext;

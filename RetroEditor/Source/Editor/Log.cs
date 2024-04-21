@@ -1,9 +1,24 @@
 
+/// <summary>
+/// The type of the Log Message, used to categorize the message.
+/// </summary>
 public enum LogType
 {
-    Debug,
+    /// <summary>
+    /// Debug messages are not shown in release builds, and are used for debugging purposes.
+    /// </summary>
+    Debug,  
+    /// <summary>
+    /// Info messages are used to inform the user of something, but are not considered important.
+    /// </summary>
     Info,
+    /// <summary>
+    /// Warning messages are used to inform the user of something that might be important.
+    /// </summary>
     Warning,
+    /// <summary>
+    /// Error messages are used to inform the user of something that is important.
+    /// </summary>
     Error
 }
 

@@ -4,7 +4,7 @@ using ImGuiNET;
 using Raylib_cs;
 using rlImGui_cs;
 
-public class LibRetroDebuggerWindow : IWindow
+internal class LibRetroDebuggerWindow : IWindow
 {
     Texture2D bitmap;
 

@@ -1,6 +1,6 @@
 using Microsoft.CodeAnalysis;
 
-public class GamePluginLoader
+internal class GamePluginLoader
 {
     private PluginBuilder _plugin;
     private string _pathToPlugin;

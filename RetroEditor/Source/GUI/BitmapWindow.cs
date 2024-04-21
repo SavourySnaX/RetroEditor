@@ -4,6 +4,9 @@ using ImGuiNET;
 using Raylib_cs;
 using rlImGui_cs;
 
+/// <summary>
+/// A window that displays a bitmap image and allows editing of the image.
+/// </summary>
 public class BitmapWindow : IWindow
 {
     Texture2D bitmap;
