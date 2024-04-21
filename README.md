@@ -1,6 +1,6 @@
 # Retro Editor Thingy - Very much WIP
 ## About
-Plugin based editor, for working on creating hacks of old games.
+Plugin based editor, for working on creating hacks of old games. Uses libretro plugins to provide edit and play without requiring external emulators. Plugins are shipped in source form, allowing modifications / development directly in the editor.
 
 ![Screenshot](screenshot.png)
 
@@ -10,9 +10,11 @@ Not much more than a proof a concept at this point. It is capable of editing the
 
 There is an initial tile image viewer for Phantasy Star 2 (Sega Megadrive/Genesis) (I have the sprites for maps mostly extracted, but not integrated here yet).
 
-There is an initial (current focus) pass on extracting the level layouts from Rollercoaster (ZX Spectrum).
+There is an initial pass on extracting the level layouts from Rollercoaster (ZX Spectrum).
+There is an initial pass on extracting the level backgrounds from Fairlight (ZX Spectrum).
+There is a Metroid (Nintendo Entertainment System) base plugin - it does nothing more than override the starting location at this point.
 
-There is a remote mame debugger plugin (requires [Mame fork with branch for debugger support](https://github.com/SavourySnaX/mame/tree/rdebug)) - Note its currently expecting to be debugging Rollercoaster. It should be started as shown [here](https://github.com/SavourySnaX/RetroEditor/blob/2f65b1a9cc33011dd8fa563737ccfcc9fae75e70/Source/Plugins/DebuggerPlugins/MameRemote.cs#L3)
+If building from source, there is a developer mode (although I intend to enable this in future), this adds another menu, that allows loading a custom fork of libretro mame.
 
 ## Documenting Formats
 
