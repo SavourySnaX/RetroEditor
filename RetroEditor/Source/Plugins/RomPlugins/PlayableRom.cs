@@ -4,7 +4,7 @@
 
 */
 
-public class PlayableRom : IRomAccess
+internal class PlayableRom : IRomAccess
 {
     public MemoryEndian Endian => endian;
 
@@ -198,7 +198,7 @@ public class PlayableRom : IRomAccess
     public int RomSize => (int)plugin.RomLength();
 }
 
-public enum MemoryRegion
+internal enum MemoryRegion
 {
     Rom,        // Applies to cartridge rom (so not useful for tape/disk based systems)
     Ram         // Applies to system ram (usually used for tape/disk based systems)

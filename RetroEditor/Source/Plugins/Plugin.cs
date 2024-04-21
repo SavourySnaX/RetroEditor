@@ -256,7 +256,6 @@ public interface ITileMaps
 
 public interface IEditor
 {
-    public LibRetroPlugin? GetLibRetroInstance(string pluginName, ProjectSettings settings);
     public byte[] LoadState(ProjectSettings settings);
     public void SaveState(byte[] state, ProjectSettings settings);
     public string GetRomPath(ProjectSettings settings);

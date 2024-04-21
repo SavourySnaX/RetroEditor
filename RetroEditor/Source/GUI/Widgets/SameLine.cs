@@ -1,7 +1,7 @@
 
 using ImGuiNET;
 
-public class SameLine : IWidgetItem, IWidgetUpdateDraw
+internal class SameLine : IWidgetItem, IWidgetUpdateDraw
 {
     public SameLine()
     {

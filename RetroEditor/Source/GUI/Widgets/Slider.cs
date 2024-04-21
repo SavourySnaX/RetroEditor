@@ -1,7 +1,7 @@
 
 using ImGuiNET;
 
-public class Slider : IWidgetRanged, IWidgetUpdateDraw
+internal class Slider : IWidgetRanged, IWidgetUpdateDraw
 {
     public Slider(string label, int value, int min, int max, ChangedEventHandler changed)
     {

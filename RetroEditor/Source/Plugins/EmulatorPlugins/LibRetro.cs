@@ -2,7 +2,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Raylib_cs;
 
-public class LibRetroPlugin : IDisposable
+internal class LibRetroPlugin : IDisposable
 {
     public enum MemoryKind
     {

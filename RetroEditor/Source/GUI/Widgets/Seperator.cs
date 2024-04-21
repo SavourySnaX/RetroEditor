@@ -1,7 +1,7 @@
 
 using ImGuiNET;
 
-public class Seperator : IWidgetItem, IWidgetUpdateDraw
+internal class Seperator : IWidgetItem, IWidgetUpdateDraw
 {
     public Seperator()
     {

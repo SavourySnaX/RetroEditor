@@ -111,7 +111,7 @@ internal struct ActiveProject : IPlayerControls, IMenu
 }
 
 
-public class Editor : IEditor
+internal class Editor : IEditor
 {
     private Dictionary<string, Type> romPlugins;
     private Dictionary<string, Type> plugins;
@@ -815,7 +815,7 @@ public class Editor : IEditor
         return Path.Combine(projectSettings.projectPath, "Editor", $"{projectSettings.RetroCoreName}_{serialiseName}.json");
     }
 
-    public LibRetroPlugin? GetLibRetroInstance(string pluginName, ProjectSettings? projectSettings)
+    internal LibRetroPlugin? GetLibRetroInstance(string pluginName, ProjectSettings? projectSettings)
     {
         var OS=RuntimeInformation.OSDescription;
         var platform = "";
@@ -887,7 +887,7 @@ public class Editor : IEditor
         }
     }
 
-    public LibRetroPlugin? GetDeveloperMame()
+    internal LibRetroPlugin? GetDeveloperMame()
     {
         var OS=RuntimeInformation.OSDescription;
         var platform = "";

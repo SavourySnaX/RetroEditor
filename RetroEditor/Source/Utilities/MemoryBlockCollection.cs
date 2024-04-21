@@ -2,7 +2,7 @@
 
 using System.Text.Json;
 
-public class MemoryblockCollection
+internal class MemoryblockCollection
 {
     public struct MemoryBlock
     {
