@@ -9,5 +9,9 @@
     <Reference Include="$(MSBuildThisFileDirectory)..\ReferenceAssemblies\*.dll" />
   </ItemGroup>
 
+  <ItemGroup Condition="'$(RetroEditorBuilding)' == 'Yes'">
+    <ProjectReference Include="$(MSBuildThisFileDirectory)..\RetroEditor\RetroEditor.csproj" />
+  </ItemGroup>
+
 </Project>
 
