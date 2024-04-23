@@ -3,7 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 
-public class Rollercoaster : IRetroPlugin, IImages, IMenuProvider
+public class Rollercoaster : IRetroPlugin, IMenuProvider
 {
     private byte[][] supportedMD5s = new byte[][] {
         new byte[] { 0xd0, 0x64, 0xb9, 0x2f, 0x76, 0xcb, 0xd3, 0x35, 0xad, 0xc9, 0x84, 0x0f, 0x69, 0x2a, 0x1a, 0xf6 },  // ./Roller Coaster (1986)(Elite Systems).tap
@@ -58,12 +58,7 @@ public class Rollercoaster : IRetroPlugin, IImages, IMenuProvider
     {
     }
 
-    public IImages GetImageInterface()
-    {
-        return this;
-    }
-
-    public IImage GetImage(IRomAccess rom,int mapIndex)
+    public RollercoasterImage GetImage(IRomAccess rom,int mapIndex)
     {
         return new RollercoasterImage(rom,mapIndex);
     }
@@ -79,12 +74,10 @@ public class Rollercoaster : IRetroPlugin, IImages, IMenuProvider
         for (int a = 0; a < GetImageCount(rom); a++)
         {
             var idx = a;    // Otherwise lambda captures last value of a
-            var map = GetImage(rom, idx);
-            var mapName = map.Name;
+            var mapName = GetMapName(idx);
             menu.AddItem(imageMenu, mapName, 
                 (editorInterface,menuItem) => {
-                    var editor = new ImageWindow(this, GetImage(rom, idx));
-                    editorInterface.OpenWindow(editor, $"Image {{{mapName}}}");
+                    editorInterface.OpenUserWindow(mapName, GetImage(rom, idx));
                 });
         }
     }
@@ -110,12 +103,31 @@ public class Rollercoaster : IRetroPlugin, IImages, IMenuProvider
         var tape = new ZXSpectrumTape.Tape();
         return tape;
     }
+
+    public string GetMapName(int mapIndex)
+    {
+        if (mapIndex < 12)
+        {
+            return $"Level 0 Room {mapIndex}";
+        }
+        if (mapIndex < 12 + 16)
+        {
+            return $"Level 1 Room {mapIndex - 12}";
+        }
+        if (mapIndex < 12 + 16 + 16)
+        {
+            return $"Level 2 Room {mapIndex - 12 - 16}";
+        }
+        else
+        {
+            return $"Level 3 Room {mapIndex - 12 - 16 - 16}";
+        }
+    }
 }
 
-public class RollercoasterImage : IImage
+public class RollercoasterImage : IImage, IUserWindow
 {
     byte[] mapData;
-    string mapName;
     int mapIndex;
     int frameCounter;
 
@@ -128,7 +140,6 @@ public class RollercoasterImage : IImage
         this.mapIndex = mapIndex;
         this.rom = rom;
         this.mapData = rom.ReadBytes(ReadKind.Ram, GetImageAddress(), 256).ToArray();
-        this.mapName = GetMapName();
         imageHelper = new ZXSpectrum48ImageHelper(Width, Height);
 
         var cnt = mapData[(int)RollerCoaster_MapDataOffsets.NumberOfSprites];
@@ -158,32 +169,14 @@ public class RollercoasterImage : IImage
 
     }
 
-    public string GetMapName()
-    {
-        if (mapIndex < 12)
-        {
-            return $"Level 0 Room {mapIndex}";
-        }
-        if (mapIndex < 12 + 16)
-        {
-            return $"Level 1 Room {mapIndex - 12}";
-        }
-        if (mapIndex < 12 + 16 + 16)
-        {
-            return $"Level 2 Room {mapIndex - 12 - 16}";
-        }
-        else
-        {
-            return $"Level 3 Room {mapIndex - 12 - 16 - 16}";
-        }
-    }
-
 
     public uint Width => 256;
 
     public uint Height => 18 * 8;
 
-    public string Name => mapName;
+    public float ScaleX => 2.0f;
+
+    public float ScaleY => 2.0f;
 
     public Pixel[] GetImageData(float seconds)
     {
@@ -665,6 +658,16 @@ public class RollercoasterImage : IImage
         }
     }
 
+    public float UpdateInterval => 1 / 30.0f;
+
+    public void ConfigureWidgets(IRomAccess rom, IWidget widget, IPlayerControls playerControls)
+    {
+        widget.AddImageView(this);
+    }
+
+    public void OnClose()
+    {
+    }
 
     enum RollerCoaster_MapDataOffsets
     {

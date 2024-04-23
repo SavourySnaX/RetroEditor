@@ -192,16 +192,10 @@ public interface IImage
 {
     uint Width { get; }
     uint Height { get; }
-    string Name { get; }
+    float ScaleX { get; }
+    float ScaleY { get; }
 
     Pixel[] GetImageData(float seconds);
-}
-
-public interface IImages
-{
-    int GetImageCount(IRomAccess rom);
-
-    IImage GetImage(IRomAccess rom, int mapIndex);
 }
 
 public interface ITile
@@ -246,13 +240,6 @@ public interface ITileMap
     // List of mobile objects
 }
 
-public interface ITileMaps
-{
-    int GetMapCount(IRomAccess rom);
-
-    ITileMap GetMap(IRomAccess rom, int mapIndex);
-}
-
 
 public interface IEditor
 {
@@ -261,7 +248,9 @@ public interface IEditor
     public string GetRomPath(ProjectSettings settings);
     public string GetEditorDataPath(ProjectSettings settings, string name);
 
-    public void OpenWindow(IWindow window, string name);
+    public void OpenUserWindow(string name, IUserWindow window);
+
+    public void OpenWindow(IWindow window, string name);    // TODO split out as these are really internal
     public void CloseWindow(string name);
 }
 
@@ -332,9 +321,6 @@ public interface IRetroPlugin
     bool RequiresAutoLoad { get; }
 
     bool CanHandle(string filename);    //TODO at present you cant use this to record which rom was actually loaded, since its loaded into a different instance
-
-    IImages? GetImageInterface() { return null; }
-    ITileMaps? GetTileMapInterface() { return null; }
 
     void Close();
 

@@ -4,7 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 
-public class JetSetWilly48 : IRetroPlugin, IImages, ITileMaps, IPlayerWindowExtension, IMenuProvider
+public class JetSetWilly48 : IRetroPlugin, IPlayerWindowExtension, IMenuProvider
 {
     private byte[][] supportedMD5s = new byte[][] {
         new byte[] { 0x4E, 0x5E, 0xD5, 0x38, 0xEB, 0x9F, 0x56, 0x59, 0x8F, 0xAF, 0xF8, 0x29, 0x06, 0x44, 0xC9, 0xD7 },  // JetSetWillyTap
@@ -153,12 +153,10 @@ public class JetSetWilly48 : IRetroPlugin, IImages, ITileMaps, IPlayerWindowExte
         for (int a = 0; a < GetImageCount(rom); a++)
         {
             var idx = a;    // Otherwise lambda captures last value of a
-            var map = GetImage(rom, idx);
-            var mapName = map.Name;
+            var mapName = GetMapName(rom,idx);
             menu.AddItem(imageMenu, mapName, 
                 (editorInterface,menuItem) => {
-                    var editor = new ImageWindow(this, GetImage(rom, idx));
-                    editorInterface.OpenWindow(editor, $"Image {{{mapName}}}");
+                    editorInterface.OpenUserWindow(mapName, GetImage(rom, idx));
                 });
             menu.AddItem(tileMenu, mapName, 
                 (editorInterface,menuItem) => {
@@ -173,17 +171,7 @@ public class JetSetWilly48 : IRetroPlugin, IImages, ITileMaps, IPlayerWindowExte
             });
     }
 
-    public IImages GetImageInterface()
-    {
-        return this;
-    }
-
-    public ITileMaps GetTileMapInterface()
-    {
-        return this;
-    }
-
-    public IImage GetImage(IRomAccess rom, int mapIndex)
+    public JetSetWillyMap GetImage(IRomAccess rom, int mapIndex)
     {
         return new JetSetWillyMap(rom, mapIndex);
     }
@@ -315,12 +303,18 @@ public class JetSetWilly48 : IRetroPlugin, IImages, ITileMaps, IPlayerWindowExte
         cheat_startRoomY = widget.AddSlider("Start Room YPos", StartRoomY, 0, 15, () => playerControls.Reset());
     }
 
+    public string GetMapName(IRomAccess rom, int idx)
+    {
+        int roomAddress = 0xC000 + (idx * 256);
+        var name = rom.ReadBytes(ReadKind.Ram, (uint)roomAddress+128, 32).ToArray(); 
+        return System.Text.Encoding.ASCII.GetString(name).Trim(' ');
+    }
+
 }
 
-public class JetSetWillyMap : IImage
+public class JetSetWillyMap : IImage, IUserWindow
 {
     byte[] mapData;
-    string mapName;
     int mapIndex;
 
     int conveyorOffset;
@@ -335,13 +329,7 @@ public class JetSetWillyMap : IImage
         this.rom = rom;
         int roomAddress = 0xC000 + (mapIndex * 256);
         this.mapData = rom.ReadBytes(ReadKind.Ram, (uint)roomAddress, 256).ToArray(); 
-        this.mapName = GetMapName();
         this.mapIndex = mapIndex;
-    }
-
-    public string GetMapName()
-    {
-        return System.Text.Encoding.ASCII.GetString(mapData.AsSpan(128, 32)).Trim(' ');
     }
 
 
@@ -349,7 +337,9 @@ public class JetSetWillyMap : IImage
 
     public uint Height => 16*8;
 
-    public string Name => mapName;
+    public float ScaleX => 2.0f;
+
+    public float ScaleY => 2.0f;
 
     public Pixel[] GetImageData(float seconds)
     {
@@ -574,6 +564,17 @@ public class JetSetWillyMap : IImage
 
             }
         }
+    }
+
+    public float UpdateInterval => 1 / 30.0f;
+
+    public void ConfigureWidgets(IRomAccess rom, IWidget widget, IPlayerControls playerControls)
+    {
+        widget.AddImageView(this);
+    }
+
+    public void OnClose()
+    {
     }
 }
 

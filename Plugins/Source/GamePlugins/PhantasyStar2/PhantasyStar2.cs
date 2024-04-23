@@ -3,7 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 
-public class PhantasyStar2 : IRetroPlugin, IImages, IMenuProvider
+public class PhantasyStar2 : IRetroPlugin, IMenuProvider
 {
     // MD5 of Phantasy Star EU-US Rev 2
     private byte[] PhantasyStarUSEURev2 = new byte[] { 15, 163, 139, 18, 207, 10, 176, 22, 61, 134, 86, 0, 172, 115, 26, 154 };
@@ -34,12 +34,6 @@ public class PhantasyStar2 : IRetroPlugin, IImages, IMenuProvider
     public void Close()
     {
     }
-
-    public IImages GetImageInterface()
-    {
-        return this;
-    }
-
 
     public static string GetMapName(int mapIndex)
     {
@@ -151,7 +145,7 @@ public class PhantasyStar2 : IRetroPlugin, IImages, IMenuProvider
         };
     }
 
-    public IImage GetImage(IRomAccess rom, int mapIndex)
+    public PhantasyStar2Map GetImage(IRomAccess rom, int mapIndex)
     {
         return new PhantasyStar2Map(rom, mapIndex);
     }
@@ -162,12 +156,10 @@ public class PhantasyStar2 : IRetroPlugin, IImages, IMenuProvider
         for (int a = 0; a < GetImageCount(rom); a++)
         {
             var idx = a;    // Otherwise lambda captures last value of a
-            var map = GetImage(rom, idx);
-            var mapName = map.Name;
+            var mapName = GetMapName(idx);
             menu.AddItem(imageMenu, mapName, 
                 (editorInterface,menuItem) => {
-                    var editor = new ImageWindow(this, GetImage(rom, idx));
-                    editorInterface.OpenWindow(editor, $"Image {{{mapName}}}");
+                    editorInterface.OpenUserWindow(mapName, GetImage(rom, idx));
                 });
         }
     }
@@ -188,7 +180,7 @@ public class PhantasyStar2 : IRetroPlugin, IImages, IMenuProvider
     }
 }
 
-public class PhantasyStar2Map : IImage
+public class PhantasyStar2Map : IImage, IUserWindow
 {
     int index;
     IRomAccess rom;
@@ -204,7 +196,9 @@ public class PhantasyStar2Map : IImage
 
     public uint Height => GetMapHeight(index);
 
-    public string Name => PhantasyStar2.GetMapName(index);
+    public float ScaleX => 2.0f;
+
+    public float ScaleY => 2.0f;
 
     public Pixel[] GetImageData(float seconds)
     {
@@ -352,4 +346,14 @@ public class PhantasyStar2Map : IImage
         return mapLayer;
     }
 
+    public float UpdateInterval => 1 / 30.0f;
+
+    public void ConfigureWidgets(IRomAccess rom, IWidget widget, IPlayerControls playerControls)
+    {
+        widget.AddImageView(this);
+    }
+
+    public void OnClose()
+    {
+    }
 }

@@ -32,6 +32,8 @@ public interface IWidget
 
     IWidgetCheckable AddCheckbox(string label, bool initialValue, ChangedEventHandler changed);
     IWidgetRanged AddSlider(string label, int initialValue, int min, int max, ChangedEventHandler changed);
+
+    IWidgetItem AddImageView(IImage image);
 }
 
 internal interface IWidgetUpdateDraw
@@ -43,4 +45,12 @@ internal interface IWidgetUpdateDraw
 public interface IPlayerWindowExtension
 {
     void ConfigureWidgets(IRomAccess rom, IWidget widget, IPlayerControls playerControls);
+}
+
+
+public interface IUserWindow
+{
+    public float UpdateInterval { get; }
+    void ConfigureWidgets(IRomAccess rom, IWidget widget, IPlayerControls playerControls);
+    void OnClose();
 }

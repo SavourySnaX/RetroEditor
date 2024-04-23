@@ -1027,4 +1027,12 @@ internal class Editor : IEditor
         windowManager.Close(name);
     }
 
+    public void OpenUserWindow(string name, IUserWindow window)
+    {
+        if (currentActiveProject != null)
+        {
+            var userWindow = new UserWindow(window);
+            OpenWindow(userWindow, name);
+        }
+    }
 }

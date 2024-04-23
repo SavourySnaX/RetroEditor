@@ -61,6 +61,10 @@ internal class WindowManager
             {
                 playerWindowExtension.ConfigureWidgets(activeProject.Value.PlayableRomPlugin, newWindow.WidgetFactory, activeProject);
             }
+            if (window is UserWindow userWindow)
+            {
+                userWindow.UserWindowInterface.ConfigureWidgets(activeProject.Value.PlayableRomPlugin, newWindow.WidgetFactory, activeProject);
+            }
         }
         if (!projectWindows.ContainsKey(settings))
         {
@@ -152,7 +156,7 @@ internal class WindowManager
         {
             if (ImGui.BeginPopupModal(window.Name, ref open))
             {
-                open = !window.Window.Draw();
+                open&=!window.Window.Draw();
                 DrawWidgets(window);
                 if (!open)
                 {
@@ -164,7 +168,7 @@ internal class WindowManager
         else
         {
             ImGui.Begin(window.Name, ref open);
-            open=!window.Window.Draw();
+            open&=!window.Window.Draw();
             DrawWidgets(window);
             ImGui.End();
         }

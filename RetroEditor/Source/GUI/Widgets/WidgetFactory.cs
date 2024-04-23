@@ -35,6 +35,13 @@ internal class WidgetFactory : IWidget
         return t;
     }
 
+    public IWidgetItem AddImageView(IImage image)
+    {
+        var t = new ImageView(image);
+        widgets.Add(t);
+        return t;
+    }
+
 
     private List<IWidgetUpdateDraw> widgets;
 
