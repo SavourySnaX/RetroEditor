@@ -34,6 +34,8 @@ public interface IWidget
     IWidgetRanged AddSlider(string label, int initialValue, int min, int max, ChangedEventHandler changed);
 
     IWidgetItem AddImageView(IImage image);
+    IWidgetItem AddBitmapWidget(IBitmapImage image);
+    IWidgetItem AddTileMapWidget(ITileMap tileMap);
 }
 
 internal interface IWidgetUpdateDraw

@@ -156,18 +156,16 @@ public class JetSetWilly48 : IRetroPlugin, IPlayerWindowExtension, IMenuProvider
             var mapName = GetMapName(rom,idx);
             menu.AddItem(imageMenu, mapName, 
                 (editorInterface,menuItem) => {
-                    editorInterface.OpenUserWindow(mapName, GetImage(rom, idx));
+                    editorInterface.OpenUserWindow($"Image View {{{mapName}}}", GetImage(rom, idx));
                 });
             menu.AddItem(tileMenu, mapName, 
                 (editorInterface,menuItem) => {
-                    var editor = new TileMapEditorWindow(this, GetMap(rom, idx));
-                    editorInterface.OpenWindow(editor, $"Tile Map {{{mapName}}}");
+                    editorInterface.OpenUserWindow($"Tile Map {{{mapName}}}", GetMap(rom, idx));
                 });
         }
         var graphicsMenu = menu.AddItem("Graphics Editor",
             (editorInterface,menuItem) => {
-                var editor = new BitmapWindow(this, GetBitmap(rom));
-                editorInterface.OpenWindow(editor, "Graphics Editor");
+                editorInterface.OpenUserWindow("Graphics Editor", GetBitmap(rom));
             });
     }
 
@@ -176,7 +174,7 @@ public class JetSetWilly48 : IRetroPlugin, IPlayerWindowExtension, IMenuProvider
         return new JetSetWillyMap(rom, mapIndex);
     }
 
-    public IBitmapImage GetBitmap(IRomAccess rom)
+    public JetSetWilly48Bitmap GetBitmap(IRomAccess rom)
     {
         return new JetSetWilly48Bitmap(rom, WillyPage, 0, 16, 16);
     }
@@ -186,7 +184,7 @@ public class JetSetWilly48 : IRetroPlugin, IPlayerWindowExtension, IMenuProvider
         return GetImageCount(rom);
     }
 
-    public ITileMap GetMap(IRomAccess rom,int mapIndex)
+    public JetSetWilly48TileMap GetMap(IRomAccess rom,int mapIndex)
     {
         return new JetSetWilly48TileMap(rom, mapIndex);
     }
@@ -578,7 +576,7 @@ public class JetSetWillyMap : IImage, IUserWindow
     }
 }
 
-public class JetSetWilly48TileMap : ITileMap
+public class JetSetWilly48TileMap : ITileMap, IUserWindow
 {
     byte[] mapData;
     string mapName;
@@ -724,6 +722,8 @@ public class JetSetWilly48TileMap : ITileMap
 
     public uint MaxTiles => 8;
 
+    public float UpdateInterval => 1 / 60.0f;
+
     public ILayer FetchLayer(uint layer)
     {
         return this.layer;
@@ -750,9 +750,19 @@ public class JetSetWilly48TileMap : ITileMap
         var data = layer.GetModifiedMap();
         JetSetWilly48.SetMap(rom, mapIndex, data);
     }
+
+    public void ConfigureWidgets(IRomAccess rom, IWidget widget, IPlayerControls playerControls)
+    {
+        widget.AddTileMapWidget(this);
+    }
+
+    public void OnClose()
+    {
+        Close();
+    }
 }
 
-public class JetSetWilly48Bitmap : IBitmapImage
+public class JetSetWilly48Bitmap : IBitmapImage, IUserWindow
 {
     private IRomAccess rom;
     private uint width;
@@ -775,6 +785,13 @@ public class JetSetWilly48Bitmap : IBitmapImage
 
     public Pixel[] Palette => new Pixel[] { new Pixel(0, 0, 0), new Pixel(255, 255, 255) };
 
+    public float UpdateInterval => 1 / 30.0f;
+
+    public void ConfigureWidgets(IRomAccess rom, IWidget widget, IPlayerControls playerControls)
+    {
+        widget.AddBitmapWidget(this);
+    }
+
     public uint[] GetImageData(float seconds)
     {
         var spriteData = JetSetWilly48.GetSpriteData(rom, (byte)page, (byte)(index));
@@ -787,6 +804,10 @@ public class JetSetWilly48Bitmap : IBitmapImage
             }
         }
         return result;
+    }
+
+    public void OnClose()
+    {
     }
 
     public void SetPixel(uint x, uint y, uint paletteIndex)

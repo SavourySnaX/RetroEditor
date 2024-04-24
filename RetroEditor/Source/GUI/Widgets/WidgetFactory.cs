@@ -42,6 +42,19 @@ internal class WidgetFactory : IWidget
         return t;
     }
 
+    public IWidgetItem AddBitmapWidget(IBitmapImage image)
+    {
+        var t = new BitmapWidget(image);
+        widgets.Add(t);
+        return t;
+    }
+
+    public IWidgetItem AddTileMapWidget(ITileMap tileMap)
+    {
+        var t = new TileMapWidget(tileMap);
+        widgets.Add(t);
+        return t;
+    }
 
     private List<IWidgetUpdateDraw> widgets;
 

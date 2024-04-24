@@ -5,16 +5,16 @@ using rlImGui_cs;
 internal class ImageView : IWidgetItem, IWidgetUpdateDraw
 {
     private Texture2D _bitmap;
-    private IImage _map;
+    private IImage _iImage;
 
-    public ImageView(IImage map)
+    public ImageView(IImage iImage)
     {
-        _map = map;
+        _iImage = iImage;
 
         var image = new Image
         {
-            Width = (int)map.Width,
-            Height = (int)map.Height,
+            Width = (int)iImage.Width,
+            Height = (int)iImage.Height,
             Mipmaps = 1,
             Format = PixelFormat.UncompressedR8G8B8A8
         };
@@ -23,7 +23,7 @@ internal class ImageView : IWidgetItem, IWidgetUpdateDraw
 
     public void Update(float seconds)
     {
-        var pixels = _map.GetImageData(seconds);
+        var pixels = _iImage.GetImageData(seconds);
 
         byte[] bitmapData = new byte[pixels.Length*4];
         for (int a = 0; a < pixels.Length; a++)
@@ -39,6 +39,6 @@ internal class ImageView : IWidgetItem, IWidgetUpdateDraw
 
     public void Draw()
     {
-        rlImGui.ImageSize(_bitmap, (int)(_map.Width * _map.ScaleX), (int)(_map.Height * _map.ScaleY));
+        rlImGui.ImageSize(_bitmap, (int)(_iImage.Width * _iImage.ScaleX), (int)(_iImage.Height * _iImage.ScaleY));
     }
 }

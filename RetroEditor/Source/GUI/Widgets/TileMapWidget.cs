@@ -3,34 +3,28 @@ using ImGuiNET;
 using Raylib_cs;
 using rlImGui_cs;
 
-public class TileMapEditorWindow : IWindow
+internal class TileMapWidget : IWidgetItem, IWidgetUpdateDraw
 {
     Texture2D[] bitmaps;
-    ITileMap map;
-    IRetroPlugin plugin;
+    ITileMap _iTileMap;
 
     float scale = 2.0f;
 
     int selectedTile = -1;
-    public TileMapEditorWindow(IRetroPlugin plugin, ITileMap map)
-    {
-        this.plugin = plugin;
-        this.map = map;
-        bitmaps = Array.Empty<Texture2D>();
-    }
 
-    public bool Initialise()
+    public TileMapWidget(ITileMap iTileMap)
     {
-        bitmaps = new Texture2D[map.MaxTiles+1];
+        _iTileMap = iTileMap;
+        bitmaps = new Texture2D[iTileMap.MaxTiles+1];
         var image = new Image
         {
-            Width = (int)map.Width,
-            Height = (int)map.Height,
+            Width = (int)iTileMap.Width,
+            Height = (int)iTileMap.Height,
             Mipmaps = 1,
             Format = PixelFormat.UncompressedR8G8B8A8
         };
         bitmaps[0]=Raylib.LoadTextureFromImage(image);
-        var tiles = map.FetchTiles(0);
+        var tiles = iTileMap.FetchTiles(0);
         for (int a=0;a<tiles.Length;a++)
         {
             image = new Image
@@ -42,15 +36,14 @@ public class TileMapEditorWindow : IWindow
             };
             bitmaps[a+1] = Raylib.LoadTextureFromImage(image);
         }
-        return true;
     }
 
     public void Update(float seconds)
     {
-        map.Update(seconds);
+        _iTileMap.Update(seconds);
 
         // Grab latest version of tile data?
-        var tiles = map.FetchTiles(0);
+        var tiles = _iTileMap.FetchTiles(0);
         for (int a=0;a<tiles.Length;a++)
         {
             var pixels = tiles[a].GetImageData();
@@ -68,11 +61,9 @@ public class TileMapEditorWindow : IWindow
         }
     }
     
-    public float UpdateInterval => 1.0f / 60.0f;
-
-    public bool Draw()
+    public void Draw()
     {
-        var tiles = map.FetchTiles(0);
+        var tiles = _iTileMap.FetchTiles(0);
         for (int a=0;a<tiles.Length;a++)
         {
             ImGui.BeginGroup();
@@ -99,9 +90,9 @@ public class TileMapEditorWindow : IWindow
 
         var currentPos = ImGui.GetCursorPos();
         // Grab latest version of map data?
-        for (int a=0;a<map.NumLayers;a++)
+        for (int a=0;a<_iTileMap.NumLayers;a++)
         {
-            var layer = map.FetchLayer((uint)a);
+            var layer = _iTileMap.FetchLayer((uint)a);
 
             var mapData = layer.GetMapData();
 
@@ -130,11 +121,5 @@ public class TileMapEditorWindow : IWindow
                 }
             }
         }
-
-        return false;
-    }
-    public void Close()
-    {
-        map.Close();
     }
 }
