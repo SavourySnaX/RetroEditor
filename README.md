@@ -2,7 +2,7 @@
 ## About
 Plugin based editor, for working on creating hacks of old games. Uses libretro plugins to provide edit and play without requiring external emulators. Plugins are shipped in source form, allowing modifications / development directly in the editor.
 
-![Screenshot](screenshot.png)
+![Screenshot](docfx/images/screenshot.png)
 
 ## Current state
 

@@ -1,0 +1,8 @@
+- name: Docs
+  items:
+  - name: User Guide
+    href: docs/user-guide.md
+  - name: Developer Guide
+    href: docs/developer-guide.md
+- name: API
+  href: api/
