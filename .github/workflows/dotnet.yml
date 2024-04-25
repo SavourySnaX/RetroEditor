@@ -35,9 +35,7 @@ jobs:
         name: Linux-X64
         path: bin/Release/net8.0/linux-x64/publish
     - name: DocFX Build
-      run:
-        - cd docfx
-        - docfx docfx.json
+      run: cd docfx && docfx docfx.json
       continue-on-error: false
     - name: Archive Docs
       uses: actions/upload-artifact@v4
