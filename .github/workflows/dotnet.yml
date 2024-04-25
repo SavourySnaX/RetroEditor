@@ -15,9 +15,7 @@ jobs:
       with:
         dotnet-version: 8.0.x
     - name: Setup DocFX
-      uses: crazy-max/ghaction-chocolatey@v1
-      with:
-        args: install docfx
+      run: dotnet tool install -g docfx      
     - name: Restore
       run: dotnet restore
     - name: Build Debug
