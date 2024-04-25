@@ -1,5 +1,6 @@
+using RetroEditor.Plugins;
 
-class ZXSpectrum : IRomPlugin
+class ZXSpectrum : ISystemPlugin
 {
     public static string Name => "ZXSpectrum";
 

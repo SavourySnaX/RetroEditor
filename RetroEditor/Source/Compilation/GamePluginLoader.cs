@@ -1,4 +1,6 @@
 using Microsoft.CodeAnalysis;
+using RetroEditor.Logging;
+using RetroEditor.Plugins;
 
 internal class GamePluginLoader
 {
@@ -50,7 +52,7 @@ internal class GamePluginLoader
 
         foreach (var type in assembly.GetTypes())
         {
-            if (type.GetInterface("IRetroPlugin") != null)
+            if (type.GetInterface(nameof(IRetroPlugin)) != null)
             {
                 retroPlugins.Add(type);
             }

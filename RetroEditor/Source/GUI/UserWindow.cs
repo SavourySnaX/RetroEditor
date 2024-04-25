@@ -1,3 +1,4 @@
+using RetroEditor.Plugins;
 
 internal class UserWindow : IWindow
 {

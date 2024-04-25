@@ -1,6 +1,8 @@
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Raylib_cs;
+using RetroEditor.Plugins;
+using RetroEditor.Logging;
 
 internal class LibRetroPlugin : IDisposable
 {
@@ -594,7 +596,7 @@ internal class LibRetroPlugin : IDisposable
         nativeRun.Invoke();
     }
 
-    public void AutoLoad(IRomAccess romAccess, Func<IRomAccess,bool> condition)
+    public void AutoLoad(IMemoryAccess romAccess, Func<IMemoryAccess,bool> condition)
     {
         disableVideo = true;
         while (!condition(romAccess))

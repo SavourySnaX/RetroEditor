@@ -1,5 +1,6 @@
 
 using ImGuiNET;
+using RetroEditor.Plugins;
 
 internal class Checkbox : IWidgetCheckable, IWidgetUpdateDraw
 {

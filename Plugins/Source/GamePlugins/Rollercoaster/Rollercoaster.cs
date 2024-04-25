@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
+using RetroEditor.Plugins;
 
 public class Rollercoaster : IRetroPlugin, IMenuProvider
 {
@@ -49,26 +50,22 @@ public class Rollercoaster : IRetroPlugin, IMenuProvider
     }
 
 
-    public int GetImageCount(IRomAccess rom)
+    public int GetImageCount(IMemoryAccess rom)
     {
         return 16+16+16+12;
     }
 
-    public void Close()
-    {
-    }
-
-    public RollercoasterImage GetImage(IRomAccess rom,int mapIndex)
+    public RollercoasterImage GetImage(IMemoryAccess rom,int mapIndex)
     {
         return new RollercoasterImage(rom,mapIndex);
     }
 
-    public static ReadOnlySpan<byte> GetLevelTile(IRomAccess rom, int tileIndex)
+    public static ReadOnlySpan<byte> GetLevelTile(IMemoryAccess rom, int tileIndex)
     {
         return rom.ReadBytes(ReadKind.Ram, (uint)(0x7D00 + (tileIndex * 8)), 8);
     }
 
-    public void ConfigureMenu(IRomAccess rom, IMenu menu)
+    public void ConfigureMenu(IMemoryAccess rom, IMenu menu)
     {
         var imageMenu = menu.AddItem("Images");
         for (int a = 0; a < GetImageCount(rom); a++)
@@ -82,7 +79,7 @@ public class Rollercoaster : IRetroPlugin, IMenuProvider
         }
     }
 
-    public bool AutoLoadCondition(IRomAccess romAccess)
+    public bool AutoLoadCondition(IMemoryAccess romAccess)
     {
         var memory = romAccess.ReadBytes(ReadKind.Ram, 0x4000, 0x800);  // Load until first third of screen contains title bitmap
         var hash = IncrementalHash.CreateHash(HashAlgorithmName.MD5);
@@ -92,12 +89,12 @@ public class Rollercoaster : IRetroPlugin, IMenuProvider
 
     private readonly byte[] rollerCoasterAutoLoadHash = { 127, 247, 134, 25, 56, 220, 59, 199, 13, 96, 96, 187, 253, 12, 28, 200 };
 
-    public void SetupGameTemporaryPatches(IRomAccess romAccess)
+    public void SetupGameTemporaryPatches(IMemoryAccess romAccess)
     {
         
     }
 
-    public ISave Export(IRomAccess romAcess)
+    public ISave Export(IMemoryAccess romAcess)
     {
         // Blankety blank tape for now?
         var tape = new ZXSpectrumTape.Tape();
@@ -133,9 +130,9 @@ public class RollercoasterImage : IImage, IUserWindow
 
     ZXSpectrum48ImageHelper imageHelper;
 
-    IRomAccess rom;
+    IMemoryAccess rom;
 
-    public RollercoasterImage(IRomAccess rom, int mapIndex)
+    public RollercoasterImage(IMemoryAccess rom, int mapIndex)
     {
         this.mapIndex = mapIndex;
         this.rom = rom;
@@ -660,7 +657,7 @@ public class RollercoasterImage : IImage, IUserWindow
 
     public float UpdateInterval => 1 / 30.0f;
 
-    public void ConfigureWidgets(IRomAccess rom, IWidget widget, IPlayerControls playerControls)
+    public void ConfigureWidgets(IMemoryAccess rom, IWidget widget, IPlayerControls playerControls)
     {
         widget.AddImageView(this);
     }

@@ -1,5 +1,7 @@
 
 
+using RetroEditor.Plugins;
+
 internal class WidgetFactory : IWidget
 {
     internal WidgetFactory()

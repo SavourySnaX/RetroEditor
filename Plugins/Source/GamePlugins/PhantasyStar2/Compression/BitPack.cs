@@ -1,9 +1,10 @@
 using System.Collections.Generic;
+using RetroEditor.Plugins;
 
 public class BitPack
 {
 
-    public byte[] Decompress(IRomAccess rom, uint sourceAddress)
+    public byte[] Decompress(IMemoryAccess rom, uint sourceAddress)
     {
         byte[] scratch = new byte[32];
         List<byte> output = new List<byte>();

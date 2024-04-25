@@ -3,6 +3,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
+using RetroEditor.Plugins;
 
 public class JetSetWilly48 : IRetroPlugin, IPlayerWindowExtension, IMenuProvider
 {
@@ -53,12 +54,12 @@ public class JetSetWilly48 : IRetroPlugin, IPlayerWindowExtension, IMenuProvider
         return false;
     }
 
-    public int GetImageCount(IRomAccess rom)
+    public int GetImageCount(IMemoryAccess rom)
     {
         return 61;
     }
     
-    public ISave Export(IRomAccess romAccess)
+    public ISave Export(IMemoryAccess romAccess)
     {
         // Make this easier (e.g. add BASIC code helpers)
         // encode start address is spectrum basic format :
@@ -89,7 +90,7 @@ public class JetSetWilly48 : IRetroPlugin, IPlayerWindowExtension, IMenuProvider
         return outTape;
     }
 
-    public bool AutoLoadCondition(IRomAccess romAccess)
+    public bool AutoLoadCondition(IMemoryAccess romAccess)
     {
         var checkMemory = romAccess.ReadBytes(ReadKind.Ram, 0x5800, 768);
         var hash = IncrementalHash.CreateHash(HashAlgorithmName.MD5);
@@ -97,7 +98,7 @@ public class JetSetWilly48 : IRetroPlugin, IPlayerWindowExtension, IMenuProvider
         return hash.GetCurrentHash().SequenceEqual(screenHash);
     }
 
-    public void SetupGameTemporaryPatches(IRomAccess romAccess)
+    public void SetupGameTemporaryPatches(IMemoryAccess romAccess)
     {
         romAccess.WriteBytes(WriteKind.TemporaryRam, 0x8785, new byte[] { 0xC9 });          // Store return to force out of cheat code key wait
         romAccess.WriteBytes(WriteKind.TemporaryRam, 0x872C, new byte[] { 0xCA, 0x87 });    // Jump to game start
@@ -142,11 +143,7 @@ public class JetSetWilly48 : IRetroPlugin, IPlayerWindowExtension, IMenuProvider
 
     private readonly byte[] screenHash = { 27, 10, 249, 194, 93, 180, 162, 138, 198, 11, 210, 12, 245, 143, 226, 53 };
 
-    public void Close()
-    {
-    }
-
-    public void ConfigureMenu(IRomAccess rom, IMenu menu)
+    public void ConfigureMenu(IMemoryAccess rom, IMenu menu)
     {
         var imageMenu = menu.AddItem("Image Viewer");
         var tileMenu = menu.AddItem("Tile Map Editor");
@@ -169,33 +166,33 @@ public class JetSetWilly48 : IRetroPlugin, IPlayerWindowExtension, IMenuProvider
             });
     }
 
-    public JetSetWillyMap GetImage(IRomAccess rom, int mapIndex)
+    public JetSetWillyMap GetImage(IMemoryAccess rom, int mapIndex)
     {
         return new JetSetWillyMap(rom, mapIndex);
     }
 
-    public JetSetWilly48Bitmap GetBitmap(IRomAccess rom)
+    public JetSetWilly48Bitmap GetBitmap(IMemoryAccess rom)
     {
         return new JetSetWilly48Bitmap(rom, WillyPage, 0, 16, 16);
     }
     
-    public int GetMapCount(IRomAccess rom)
+    public int GetMapCount(IMemoryAccess rom)
     {
         return GetImageCount(rom);
     }
 
-    public JetSetWilly48TileMap GetMap(IRomAccess rom,int mapIndex)
+    public JetSetWilly48TileMap GetMap(IMemoryAccess rom,int mapIndex)
     {
         return new JetSetWilly48TileMap(rom, mapIndex);
     }
 
-    public static void SetMap(IRomAccess rom, int mapIndex, byte[] modified)
+    public static void SetMap(IMemoryAccess rom, int mapIndex, byte[] modified)
     {
         int roomAddress = 0xC000 + (mapIndex * 256);
         rom.WriteBytes(WriteKind.SerialisedRam, (uint)roomAddress, modified);
     }
 
-    public static ushort GetItemCode(IRomAccess rom, byte itemIndex)
+    public static ushort GetItemCode(IMemoryAccess rom, byte itemIndex)
     {
         uint itemTable = 41984;
         var hicode = rom.ReadBytes(ReadKind.Ram, itemTable+itemIndex, 1)[0];
@@ -203,7 +200,7 @@ public class JetSetWilly48 : IRetroPlugin, IPlayerWindowExtension, IMenuProvider
         return (ushort)((hicode<<8) + locode);
     }
 
-    public static byte GetInitialItemIndex(IRomAccess rom)
+    public static byte GetInitialItemIndex(IMemoryAccess rom)
     {
         return rom.ReadBytes(ReadKind.Ram, 419783,1)[0];
     }
@@ -245,7 +242,7 @@ public class JetSetWilly48 : IRetroPlugin, IPlayerWindowExtension, IMenuProvider
         public byte ArrowBitPattern => bytes[6];
     }
 
-    public static GuardianData GetGuardianData(IRomAccess rom, uint guardianIndex,byte roomByte)
+    public static GuardianData GetGuardianData(IMemoryAccess rom, uint guardianIndex,byte roomByte)
     {
         // Guardian data is 8 bytes long and starts at 40960 - There is space 15 extra guardians - 0-127 (127 reservered, 112-126 empty)
         var guardianData = rom.ReadBytes(ReadKind.Ram, 40960 + guardianIndex * 8, 8);
@@ -256,17 +253,17 @@ public class JetSetWilly48 : IRetroPlugin, IPlayerWindowExtension, IMenuProvider
         return guardian;
     }
 
-    public static ReadOnlySpan<byte> GetSpriteData(IRomAccess rom, byte page, byte spriteIndex)
+    public static ReadOnlySpan<byte> GetSpriteData(IMemoryAccess rom, byte page, byte spriteIndex)
     {
         return rom.ReadBytes(ReadKind.Ram, GetSpriteBaseAddresss(rom, page, spriteIndex), 32);
     }
 
-    public static uint GetSpriteBaseAddresss(IRomAccess rom, byte page, byte spriteIndex)
+    public static uint GetSpriteBaseAddresss(IMemoryAccess rom, byte page, byte spriteIndex)
     {
         return (uint)(page * 256 + spriteIndex * 32);
     }
 
-    public static ReadOnlySpan<byte> GetRopeTable(IRomAccess rom)
+    public static ReadOnlySpan<byte> GetRopeTable(IMemoryAccess rom)
     {
         return rom.ReadBytes(ReadKind.Ram, 33536, 256);
     }
@@ -287,7 +284,7 @@ public class JetSetWilly48 : IRetroPlugin, IPlayerWindowExtension, IMenuProvider
         return mapData.Slice(offset, 9);
     }
 
-    public void ConfigureWidgets(IRomAccess rom, IWidget widget, IPlayerControls playerControls)
+    public void ConfigureWidgets(IMemoryAccess rom, IWidget widget, IPlayerControls playerControls)
     {
         cheat_infiniteLives = widget.AddCheckbox("Infinite Lives", false, () => playerControls.Reset());
         cheat_noFall = widget.AddCheckbox("No Fall Death", false, () => playerControls.Reset());
@@ -301,7 +298,7 @@ public class JetSetWilly48 : IRetroPlugin, IPlayerWindowExtension, IMenuProvider
         cheat_startRoomY = widget.AddSlider("Start Room YPos", StartRoomY, 0, 15, () => playerControls.Reset());
     }
 
-    public string GetMapName(IRomAccess rom, int idx)
+    public string GetMapName(IMemoryAccess rom, int idx)
     {
         int roomAddress = 0xC000 + (idx * 256);
         var name = rom.ReadBytes(ReadKind.Ram, (uint)roomAddress+128, 32).ToArray(); 
@@ -320,9 +317,9 @@ public class JetSetWillyMap : IImage, IUserWindow
     int frameCounter;
     int animFrameCounter;
 
-    IRomAccess rom;
+    IMemoryAccess rom;
 
-    public JetSetWillyMap(IRomAccess rom, int mapIndex)
+    public JetSetWillyMap(IMemoryAccess rom, int mapIndex)
     {
         this.rom = rom;
         int roomAddress = 0xC000 + (mapIndex * 256);
@@ -566,7 +563,7 @@ public class JetSetWillyMap : IImage, IUserWindow
 
     public float UpdateInterval => 1 / 30.0f;
 
-    public void ConfigureWidgets(IRomAccess rom, IWidget widget, IPlayerControls playerControls)
+    public void ConfigureWidgets(IMemoryAccess rom, IWidget widget, IPlayerControls playerControls)
     {
         widget.AddImageView(this);
     }
@@ -586,7 +583,7 @@ public class JetSetWilly48TileMap : ITileMap, IUserWindow
     ZXSpectrum48ImageHelper[] helpers;
     JetSetWilly48Tile[] tiles;
     JetSetWilly48Layer layer;
-    IRomAccess rom;
+    IMemoryAccess rom;
 
     public class JetSetWilly48Tile : ITile
     {
@@ -684,7 +681,7 @@ public class JetSetWilly48TileMap : ITileMap, IUserWindow
 
     }
 
-    public JetSetWilly48TileMap(IRomAccess rom, int mapIndex)
+    public JetSetWilly48TileMap(IMemoryAccess rom, int mapIndex)
     {
         int roomAddress = 0xC000 + (mapIndex * 256);
         this.rom = rom;
@@ -715,8 +712,6 @@ public class JetSetWilly48TileMap : ITileMap, IUserWindow
     public uint Width => 32 * 8;
 
     public uint Height => 16 * 8;
-
-    public string Name => mapName;
 
     public uint NumLayers => 1;
 
@@ -751,7 +746,7 @@ public class JetSetWilly48TileMap : ITileMap, IUserWindow
         JetSetWilly48.SetMap(rom, mapIndex, data);
     }
 
-    public void ConfigureWidgets(IRomAccess rom, IWidget widget, IPlayerControls playerControls)
+    public void ConfigureWidgets(IMemoryAccess rom, IWidget widget, IPlayerControls playerControls)
     {
         widget.AddTileMapWidget(this);
     }
@@ -764,13 +759,13 @@ public class JetSetWilly48TileMap : ITileMap, IUserWindow
 
 public class JetSetWilly48Bitmap : IBitmapImage, IUserWindow
 {
-    private IRomAccess rom;
+    private IMemoryAccess rom;
     private uint width;
     private uint height;
     private byte page;
     private byte index;
 
-    public JetSetWilly48Bitmap(IRomAccess rom, byte page, byte index, uint width, uint height)
+    public JetSetWilly48Bitmap(IMemoryAccess rom, byte page, byte index, uint width, uint height)
     {
         this.rom = rom;
         this.width = width;
@@ -787,7 +782,7 @@ public class JetSetWilly48Bitmap : IBitmapImage, IUserWindow
 
     public float UpdateInterval => 1 / 30.0f;
 
-    public void ConfigureWidgets(IRomAccess rom, IWidget widget, IPlayerControls playerControls)
+    public void ConfigureWidgets(IMemoryAccess rom, IWidget widget, IPlayerControls playerControls)
     {
         widget.AddBitmapWidget(this);
     }

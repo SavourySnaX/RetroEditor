@@ -1,6 +1,7 @@
 using System;
+using RetroEditor.Plugins;
 
-class Megadrive : IRomPlugin
+class Megadrive : ISystemPlugin
 {
     public static string Name => "Megadrive";
 
@@ -10,7 +11,7 @@ class Megadrive : IRomPlugin
 
     public bool RequiresReload => true;
 
-    public ReadOnlySpan<byte> ChecksumCalculation(IRomAccess rom, out int address)
+    public ReadOnlySpan<byte> ChecksumCalculation(IMemoryAccess rom, out int address)
     {
         ushort chk = 0;
         int length = rom.RomSize;

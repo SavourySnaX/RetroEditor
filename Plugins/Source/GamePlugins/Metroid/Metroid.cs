@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
+using RetroEditor.Plugins;
 
 public class Metroid : IRetroPlugin
 {
@@ -16,7 +17,7 @@ public class Metroid : IRetroPlugin
         0x5f, 0xdd, 0x33, 0x42, 0xaa, 0x23, 0x06, 0xb2, 0x94, 0xae, 0xd9, 0x0a, 0x3f, 0xa0, 0xe8, 0x59
     };
 
-    public bool AutoLoadCondition(IRomAccess romAccess)
+    public bool AutoLoadCondition(IMemoryAccess romAccess)
     {
         throw new NotImplementedException();
     }
@@ -30,16 +31,12 @@ public class Metroid : IRetroPlugin
         return hash.SequenceEqual(chkSum);
     }
 
-    public void Close()
-    {
-    }
-
-    public ISave Export(IRomAccess romAcess)
+    public ISave Export(IMemoryAccess romAcess)
     {
         throw new NotImplementedException();
     }
 
-    public void SetupGameTemporaryPatches(IRomAccess romAccess)
+    public void SetupGameTemporaryPatches(IMemoryAccess romAccess)
     {
         romAccess.WriteBytes(WriteKind.TemporaryRom, 16+0x0a, new byte[] { 0x80 }); // Press Start - advance to new game screen
         romAccess.WriteBytes(WriteKind.TemporaryRom, 16+0x10DD, new byte[] { 0x80 }); // Press new game

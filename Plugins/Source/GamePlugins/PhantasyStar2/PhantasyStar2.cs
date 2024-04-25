@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
+using RetroEditor.Plugins;
 
 public class PhantasyStar2 : IRetroPlugin, IMenuProvider
 {
@@ -26,13 +27,9 @@ public class PhantasyStar2 : IRetroPlugin, IMenuProvider
         return false;
     }
 
-    public int GetImageCount(IRomAccess rom)
+    public int GetImageCount(IMemoryAccess rom)
     {
         return MapDataTableEntries;
-    }
-
-    public void Close()
-    {
     }
 
     public static string GetMapName(int mapIndex)
@@ -145,12 +142,12 @@ public class PhantasyStar2 : IRetroPlugin, IMenuProvider
         };
     }
 
-    public PhantasyStar2Map GetImage(IRomAccess rom, int mapIndex)
+    public PhantasyStar2Map GetImage(IMemoryAccess rom, int mapIndex)
     {
         return new PhantasyStar2Map(rom, mapIndex);
     }
 
-    public void ConfigureMenu(IRomAccess rom, IMenu menu)
+    public void ConfigureMenu(IMemoryAccess rom, IMenu menu)
     {
         var imageMenu = menu.AddItem("Image Viewer");
         for (int a = 0; a < GetImageCount(rom); a++)
@@ -164,17 +161,17 @@ public class PhantasyStar2 : IRetroPlugin, IMenuProvider
         }
     }
 
-    public bool AutoLoadCondition(IRomAccess romAccess)
+    public bool AutoLoadCondition(IMemoryAccess romAccess)
     {
         throw new NotImplementedException();
     }
 
-    public void SetupGameTemporaryPatches(IRomAccess romAccess)
+    public void SetupGameTemporaryPatches(IMemoryAccess romAccess)
     {
         romAccess.WriteBytes(WriteKind.TemporaryRom, 0x2b2, new byte[] { 0x73, 0x48 });     // Skip Sega logo
     }
 
-    public ISave Export(IRomAccess romAcess)
+    public ISave Export(IMemoryAccess romAcess)
     {
         throw new NotImplementedException();
     }
@@ -183,10 +180,10 @@ public class PhantasyStar2 : IRetroPlugin, IMenuProvider
 public class PhantasyStar2Map : IImage, IUserWindow
 {
     int index;
-    IRomAccess rom;
+    IMemoryAccess rom;
     const uint MapDataTableAddress = 0x27C0A;
 
-    public PhantasyStar2Map(IRomAccess rom, int index)
+    public PhantasyStar2Map(IMemoryAccess rom, int index)
     {
         this.rom = rom;
         this.index = index;
@@ -348,7 +345,7 @@ public class PhantasyStar2Map : IImage, IUserWindow
 
     public float UpdateInterval => 1 / 30.0f;
 
-    public void ConfigureWidgets(IRomAccess rom, IWidget widget, IPlayerControls playerControls)
+    public void ConfigureWidgets(IMemoryAccess rom, IWidget widget, IPlayerControls playerControls)
     {
         widget.AddImageView(this);
     }

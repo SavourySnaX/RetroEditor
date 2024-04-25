@@ -1,35 +1,59 @@
-using System.Text; 
+using System.Diagnostics;
+using System.Text;
+using RetroEditor.Plugins;
 
 namespace ZXSpectrumTape
 {
+    /// <summary>
+    /// The kind of header block to create. Maps to the ZX Spectrum Rom Tape Header types.
+    /// </summary>
     public enum HeaderKind
     {
+        /// <summary>
+        /// ZX Spectrum Basic Program Header
+        /// </summary>
         Program = 0,
+        /// <summary>
+        /// ZX Spectrum Number Array Header
+        /// </summary>
         NumberArray = 1,
+        /// <summary>
+        /// ZX Spectrum Character Array Header
+        /// </summary>
         CharacterArray = 2,
+        /// <summary>
+        /// ZX Spectrum Machine Code Header
+        /// </summary>
         Code = 3
     }
 
+    /// <summary>
+    /// Data Block for a ZX Spectrum Tape, generally follows a header block.
+    /// </summary>
     public ref struct DataBlock
     {
-        ReadOnlySpan<byte> data;
+        private ReadOnlySpan<byte> _data;
 
+        /// <summary>
+        /// Create a new Data Block from a byte array
+        /// </summary>
+        /// <param name="bytes">Contents of the data block, only the data block, headers are applied internally</param>
         public DataBlock(ReadOnlySpan<byte> bytes)
         {
-            data = bytes;
+            _data = bytes;
         }
 
-        public bool ReadDataBlock(ReadOnlySpan<byte> bytes, int length)
+        internal bool ReadDataBlock(ReadOnlySpan<byte> bytes, int length)
         {
-            data = bytes.Slice(0, length - 1);
-            if (bytes[length - 1] != (CheckSum(data) ^ 0xFF))
+            _data = bytes.Slice(0, length - 1);
+            if (bytes[length - 1] != (CheckSum(_data) ^ 0xFF))
             {
                 throw new Exception($"ChkSum Mismatch");
             }
             return true;
         }
 
-        byte CheckSum(ReadOnlySpan<byte> slice)
+        private static byte CheckSum(ReadOnlySpan<byte> slice)
         {
             byte chk = 0;
             foreach (var b in slice)
@@ -40,14 +64,18 @@ namespace ZXSpectrumTape
         }
 
 
-        public string Dump()
+        /// <summary>
+        /// Fetches a textual representation of the data block
+        /// </summary>
+        /// <returns>string representing the contents of the data block</returns>
+        public override string ToString()
         {
             var s = new StringBuilder();
             s.AppendLine("Data:");
-            s.AppendLine($"Length:{data.Length}");
+            s.AppendLine($"Length:{_data.Length}");
             int w = 0;
             var t = new byte[16];
-            foreach (var b in data)
+            foreach (var b in _data)
             {
                 s.Append($"{b:X2} ");
                 t[w] = b;
@@ -87,43 +115,57 @@ namespace ZXSpectrumTape
             return s.ToString();
         }
 
-        public byte[] GetBytes()
+        internal byte[] GetBytes()
         {
-            var t = new byte[4 + data.Length];  // Tap Length | Flag | bytes | chksum
+            var t = new byte[4 + _data.Length];  // Tap Length | Flag | bytes | chksum
             var s = new Span<byte>(t);
             WriteUInt16(s.Slice(0, 2), (UInt16)(t.Length - 2));
             s[2] = 0xFF;
-            for (int a = 0; a < data.Length; a++)
+            for (int a = 0; a < _data.Length; a++)
             {
-                s[3 + a] = data[a];
+                s[3 + a] = _data[a];
             }
             var chkSlice = new Span<byte>(t, 2, t.Length - 3);
             s[t.Length - 1] = CheckSum(chkSlice);
             return t;
         }
 
-        void WriteUInt16(Span<byte> bytes, UInt16 len)
+        private void WriteUInt16(Span<byte> bytes, UInt16 len)
         {
             bytes[0] = (byte)len;
             bytes[1] = (byte)(len >> 8);
         }
 
 
-        public ReadOnlySpan<byte> Data => data;
+        /// <summary>
+        /// Returns a ReadOnlySpan of the data in the block
+        /// </summary>
+        public ReadOnlySpan<byte> Data => _data;
     }
 
+    /// <summary>
+    /// Header Block for a ZX Spectrum Tape
+    /// </summary>
     public struct HeaderBlock
     {
+        /// <summary>
+        /// Create a new Header Block
+        /// </summary>
+        /// <param name="inType">Header block type</param>
+        /// <param name="inTitle">Name of block, limited to 10 characters, will be padded if less</param>
+        /// <param name="inDataLength">Length of data block that follows</param>
+        /// <param name="inParam1">If Header is Program - AutoStart Line Number, If Header is Code - StartAddress</param>
+        /// <param name="inParam2">If Header is Program - Variable Area Address Offset, If Header is Code - (ignored)</param>
         public HeaderBlock(HeaderKind inType, string inTitle, UInt16 inDataLength, UInt16 inParam1, UInt16 inParam2)
         {
-            type = inType;
-            title = inTitle;
-            dataLength = inDataLength;
-            param1 = inParam1;
-            param2 = inParam2;
+            _type = inType;
+            _title = inTitle;
+            _dataLength = inDataLength;
+            _param1 = inParam1;
+            _param2 = inParam2;
         }
 
-        public UInt16 ReadUInt16(ReadOnlySpan<byte> bytes)
+        private static UInt16 ReadUInt16(ReadOnlySpan<byte> bytes)
         {
             UInt16 len = bytes[1];
             len <<= 8;
@@ -131,34 +173,34 @@ namespace ZXSpectrumTape
             return len;
         }
 
-        public bool ReadHeaderBlock(ReadOnlySpan<byte> bytes)
+        internal bool ReadHeaderBlock(ReadOnlySpan<byte> bytes)
         {
             var chkSlice = bytes.Slice(0, 17);
             switch (bytes[0])
             {
                 case 0:
-                    type = HeaderKind.Program;
+                    _type = HeaderKind.Program;
                     break;
                 case 1:
-                    type = HeaderKind.NumberArray;
+                    _type = HeaderKind.NumberArray;
                     break;
                 case 2:
-                    type = HeaderKind.CharacterArray;
+                    _type = HeaderKind.CharacterArray;
                     break;
                 case 3:
-                    type = HeaderKind.Code;
+                    _type = HeaderKind.Code;
                     break;
                 default:
                     return false;
             }
             bytes = bytes.Slice(1);
-            title = System.Text.ASCIIEncoding.ASCII.GetString(bytes.Slice(0, 10)).Trim();
+            _title = System.Text.ASCIIEncoding.ASCII.GetString(bytes.Slice(0, 10)).Trim();
             bytes = bytes.Slice(10);
-            dataLength = ReadUInt16(bytes.Slice(0, 2));
+            _dataLength = ReadUInt16(bytes.Slice(0, 2));
             bytes = bytes.Slice(2);
-            param1 = ReadUInt16(bytes.Slice(0, 2));
+            _param1 = ReadUInt16(bytes.Slice(0, 2));
             bytes = bytes.Slice(2);
-            param2 = ReadUInt16(bytes.Slice(0, 2));
+            _param2 = ReadUInt16(bytes.Slice(0, 2));
             bytes = bytes.Slice(2);
             if (bytes[0] != CheckSum(chkSlice))
             {
@@ -167,10 +209,14 @@ namespace ZXSpectrumTape
             return true;
         }
 
-        public string Dump()
+        /// <summary>
+        /// Fetches a textual representation of the header block
+        /// </summary>
+        /// <returns>string representing the contents of the header block</returns>
+        public override string ToString()
         {
             var s = new StringBuilder();
-            switch (type)
+            switch (_type)
             {
                 case HeaderKind.Program:
                     s.AppendLine("Program:");
@@ -179,22 +225,22 @@ namespace ZXSpectrumTape
                     s.AppendLine("Code:");
                     break;
             }
-            s.AppendLine($"Title: {title}");
-            s.AppendLine($"Length: {dataLength}");
-            switch (type)
+            s.AppendLine($"Title: {_title}");
+            s.AppendLine($"Length: {_dataLength}");
+            switch (_type)
             {
                 case HeaderKind.Program:
-                    s.AppendLine($"AutoStart: {param1}");
-                    s.AppendLine($"Variables Offset: {param2}");
+                    s.AppendLine($"AutoStart: {_param1}");
+                    s.AppendLine($"Variables Offset: {_param2}");
                     break;
                 case HeaderKind.Code:
-                    s.AppendLine($"Start: {param1}");
+                    s.AppendLine($"Start: {_param1}");
                     break;
             }
             return s.ToString();
         }
 
-        public byte[] GetBytes()
+        internal byte[] GetBytes()
         {
             var t = new byte[21];   // Tap Length | Flag | Header | chksum
             var s = new Span<byte>(t, 0, 21);
@@ -202,8 +248,8 @@ namespace ZXSpectrumTape
             var chkSlice = new Span<byte>(t, 2, 18);
             s[2] = 00;    // Header Block
             s = s.Slice(3, 18);
-            s[0] = (byte)type;
-            var name = System.Text.Encoding.ASCII.GetBytes(title);
+            s[0] = (byte)_type;
+            var name = System.Text.Encoding.ASCII.GetBytes(_title);
             for (int a = 0; a < 10; a++)
             {
                 s[1 + a] = 0x20;
@@ -212,15 +258,15 @@ namespace ZXSpectrumTape
             {
                 s[1 + a] = name[a];
             }
-            WriteUInt16(s.Slice(11, 2), dataLength);
-            WriteUInt16(s.Slice(13, 2), param1);
-            WriteUInt16(s.Slice(15, 2), param2);
+            WriteUInt16(s.Slice(11, 2), _dataLength);
+            WriteUInt16(s.Slice(13, 2), _param1);
+            WriteUInt16(s.Slice(15, 2), _param2);
             s[17] = CheckSum(chkSlice);
 
             return t;
         }
 
-        byte CheckSum(ReadOnlySpan<byte> slice)
+        private static byte CheckSum(ReadOnlySpan<byte> slice)
         {
             byte chk = 0;
             foreach (var b in slice)
@@ -237,96 +283,108 @@ namespace ZXSpectrumTape
         }
 
 
-        HeaderKind type;
-        string title;
-        UInt16 dataLength;
-        UInt16 param1;
-        UInt16 param2;
+        private HeaderKind _type;
+        private string _title;
+        private UInt16 _dataLength;
+        private UInt16 _param1;
+        private UInt16 _param2;
 
-        public HeaderKind Kind => type;
+        /// <summary>
+        /// The kind of header of this header block
+        /// </summary>
+        public HeaderKind Kind => _type;
 
-        public int VariablesOffset => (type == HeaderKind.Program) ? param2 : throw new Exception($"Not a Program Block");
-        public int CodeStart => (type == HeaderKind.Code) ? param1 : throw new Exception($"Not a Code Block");
-
-        public string Title => title;
+        /// <summary>
+        /// The title of this header block
+        /// </summary>
+        public string Title => _title;
     }
 
-    public enum BlockKind
+    internal enum BlockKind
     {
         Header,
         Data
     }
 
+    /// <summary>
+    /// Represents a ZX Spectrum Tape image
+    /// </summary>
     public class Tape : ISave
     {
-        private string filepath;
-        private byte[]? tapeData;
+        private byte[]? _tapeData;
 
-        public string Filename => Path.GetFileNameWithoutExtension(filepath);
-        public string Filepath => filepath;
-
+        /// <summary>
+        /// Create a new Tape object
+        /// </summary>
         public Tape()
         {
-            filepath = "";
-            tapeData = null;
+            _tapeData = null;
         }
 
+        /// <summary>
+        /// Create a new Tape object from a file
+        /// </summary>
+        /// <param name="filename">Path to a .Tap format tape image</param>
         public void Load(string filename)
         {
-            filepath = filename;
-            tapeData = File.ReadAllBytes(filename);
+            _tapeData = File.ReadAllBytes(filename);
         }
         
-        public void Load(byte[] data)
+        /// <summary>
+        /// Write the current tape object to a file (.Tap format image)
+        /// </summary>
+        /// <param name="path">Path to save tape image to</param>
+        /// <exception cref="Exception">Throws an exception if the tape is empty</exception>
+        public void Save(string path)
         {
-            filepath = "";
-            tapeData = data;
-        }
-
-        public void Save(string filename)
-        {
-            if (tapeData == null)
+            if (_tapeData == null)
             {
                 throw new Exception($"Cannot save with empty tape data");
             }
-            File.WriteAllBytes(filename, tapeData);
-            filepath = filename;
+            File.WriteAllBytes(path, _tapeData);
         }
 
+        /// <summary>
+        /// Add a header block to the tape
+        /// </summary>
+        /// <param name="header">HeaderBlock object to add</param>
         public void AddHeader(HeaderBlock header)
         {
             var headerBytes = header.GetBytes();
-            if (tapeData == null)
+            if (_tapeData == null)
             {
-                tapeData = headerBytes;
+                _tapeData = headerBytes;
             }
             else
             {
-                var t = new byte[tapeData.Length + headerBytes.Length];
-                Array.Copy(tapeData, t, tapeData.Length);
-                Array.Copy(headerBytes, 0, t, tapeData.Length, headerBytes.Length);
-                tapeData = t;
+                var t = new byte[_tapeData.Length + headerBytes.Length];
+                Array.Copy(_tapeData, t, _tapeData.Length);
+                Array.Copy(headerBytes, 0, t, _tapeData.Length, headerBytes.Length);
+                _tapeData = t;
             }
         }
 
+        /// <summary>
+        /// Add a data block to the tape
+        /// </summary>
+        /// <param name="data">DataBlock object to add</param>
         public void AddBlock(DataBlock data)
         {
             var dataBytes = data.GetBytes();
-            if (tapeData == null)
+            if (_tapeData == null)
             {
-                tapeData = dataBytes;
+                _tapeData = dataBytes;
             }
             else
             {
-                var t = new byte[tapeData.Length + dataBytes.Length];
-                Array.Copy(tapeData, t, tapeData.Length);
-                Array.Copy(dataBytes, 0, t, tapeData.Length, dataBytes.Length);
-                tapeData = t;
+                var t = new byte[_tapeData.Length + dataBytes.Length];
+                Array.Copy(_tapeData, t, _tapeData.Length);
+                Array.Copy(dataBytes, 0, t, _tapeData.Length, dataBytes.Length);
+                _tapeData = t;
             }
         }
 
-
-        UInt16 GetBlockLength(ReadOnlySpan<byte> bytes)
+        private UInt16 GetBlockLength(ReadOnlySpan<byte> bytes)
         {
             UInt16 len = bytes[1];
             len <<= 8;
@@ -334,28 +392,32 @@ namespace ZXSpectrumTape
             return len;
         }
 
-        BlockKind GetBlockKind(ReadOnlySpan<byte> bytes)
+        private BlockKind GetBlockKind(ReadOnlySpan<byte> bytes)
         {
             return bytes[0] == 0 ? BlockKind.Header : BlockKind.Data;
         }
 
-        HeaderBlock GetHeaderBlock(ReadOnlySpan<byte> bytes)
+        private HeaderBlock GetHeaderBlock(ReadOnlySpan<byte> bytes)
         {
             HeaderBlock t = new HeaderBlock();
             t.ReadHeaderBlock(bytes);
             return t;
         }
 
-        DataBlock GetDataBlock(ReadOnlySpan<byte> bytes, int length)
+        private DataBlock GetDataBlock(ReadOnlySpan<byte> bytes, int length)
         {
             DataBlock t = new DataBlock();
             t.ReadDataBlock(bytes, length);
             return t;
         }
 
+        /// <summary>
+        /// Allows iteration of all basic programs on the tape, returning the HeaderBlock and the contents of the data block
+        /// </summary>
+        /// <returns>A Tuple containing the HeaderBlock and the contents of the data block for each basic program</returns>
         public IEnumerable<(HeaderBlock header, byte[] data)> BasicPrograms()
         {
-            var slice = new Memory<byte>(tapeData);
+            var slice = new Memory<byte>(_tapeData);
             HeaderKind lastHeaderKind = HeaderKind.NumberArray;
             HeaderBlock lastHeader = default;
             while (slice.Length > 0)
@@ -385,9 +447,13 @@ namespace ZXSpectrumTape
 
         }
 
+        /// <summary>
+        /// Allows iteration of all machine code files on the tape, returning the HeaderBlock and the contents of the data block
+        /// </summary>
+        /// <returns>A Tuple containing the HeaderBlock and the contents of the data block for each machine code block in the image</returns>
         public IEnumerable<(HeaderBlock header, byte[] data)> RegularCodeFiles()
         {
-            var slice = new Memory<byte>(tapeData);
+            var slice = new Memory<byte>(_tapeData);
             HeaderKind lastHeaderKind = HeaderKind.NumberArray;
             HeaderBlock lastHeader = default;
             while (slice.Length > 0)
@@ -417,12 +483,15 @@ namespace ZXSpectrumTape
 
         }
 
-
-        public string Dump()
+        /// <summary>
+        /// Fetches a textual representation of the tape
+        /// </summary>
+        /// <returns>A string representing the tape object</returns>
+        public override string ToString()
         {
             var s = new StringBuilder();
             // Dump tape information
-            var slice = new ReadOnlySpan<byte>(tapeData);
+            var slice = new ReadOnlySpan<byte>(_tapeData);
             HeaderKind lastHeaderKind = HeaderKind.NumberArray;
             HeaderBlock lastHeader = default;
             while (slice.Length > 0)
@@ -436,13 +505,13 @@ namespace ZXSpectrumTape
                 {
                     case BlockKind.Header:
                         var block = GetHeaderBlock(slice);
-                        s.AppendLine(block.Dump());
+                        s.AppendLine(block.ToString());
                         lastHeaderKind = block.Kind;
                         lastHeader = block;
                         break;
                     case BlockKind.Data:
                         var data = GetDataBlock(slice, len);
-                        s.AppendLine(data.Dump());
+                        s.AppendLine(data.ToString());
                         break;
                 }
                 slice = slice.Slice(len);

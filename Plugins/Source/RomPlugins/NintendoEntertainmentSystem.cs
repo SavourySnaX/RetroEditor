@@ -1,4 +1,5 @@
-class NintendEntertainmentSystem : IRomPlugin
+using RetroEditor.Plugins;
+class NintendEntertainmentSystem : ISystemPlugin
 {
     public static string Name => "NES";
 

@@ -1,6 +1,7 @@
 
+using RetroEditor.Plugins;
 
-class MasterSystem : IRomPlugin
+class MasterSystem : ISystemPlugin
 {
     public static string Name => "MasterSystem";
 
