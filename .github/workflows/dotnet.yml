@@ -14,6 +14,10 @@ jobs:
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: 8.0.x
+    - name: Setup DocFX
+      uses: crazy-max/ghaction-chocolatey@v1
+      with:
+        args: install docfx
     - name: Restore
       run: dotnet restore
     - name: Build Debug
@@ -32,4 +36,12 @@ jobs:
       with:
         name: Linux-X64
         path: bin/Release/net8.0/linux-x64/publish
-
+    - name: DocFX Build
+      working-directory: docfx
+      run: docfx .\docfx.json
+      continue-on-error: false
+    - name: Archive Docs
+      uses: actions/upload-artifact@v4
+      with:
+        name: Docs
+        path: docfx/_site
