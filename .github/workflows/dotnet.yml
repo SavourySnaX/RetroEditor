@@ -3,6 +3,9 @@ name: .NET
 
 on: push
 
+permissions:
+  contents: write
+
 jobs:
   build:
 
