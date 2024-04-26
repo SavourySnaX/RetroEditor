@@ -1,0 +1,5 @@
+<Project>
+  <PropertyGroup>
+    <RetroEditorBuilding>Yes</RetroEditorBuilding> <!-- Makes plugins build after retroeditor --> 
+  </PropertyGroup>
+</Project>

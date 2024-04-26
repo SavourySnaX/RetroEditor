@@ -1,3 +1,4 @@
+using RetroEditor.Plugins;
 public struct PTR_ARRAY_9342
 {
     const uint EntriesInRom = 7;
@@ -9,7 +10,7 @@ public struct PTR_ARRAY_9342
         internal uint addressB;
     }
 
-    public void Load(IRomAccess rom, uint address)
+    public void Load(IMemoryAccess rom, uint address)
     {
         ptrs=new PTR_9342[EntriesInRom];
         var bytes = rom.ReadBytes(ReadKind.Rom, address, (uint)(EntriesInRom * 8));

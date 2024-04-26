@@ -1,6 +1,7 @@
 
 using System.Runtime.InteropServices;
 using ImGuiNET;
+using RetroEditor.Plugins;
 
 internal class LibMameDebugger
 {
@@ -58,7 +59,7 @@ internal class LibMameDebugger
 
     }*/
 
-    public void Menus(IEditor editor)
+    public void Menus(IEditorInternal editor)
     {
         if (ImGui.MenuItem("CPU State"))
         {

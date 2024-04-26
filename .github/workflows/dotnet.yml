@@ -14,10 +14,10 @@ jobs:
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: 8.0.x
+    - name: Setup DocFX
+      run: dotnet tool install -g docfx      
     - name: Restore
       run: dotnet restore
-    - name: Build Debug RetroEditor (to ensure reference assembly exists before building projects)
-      run: dotnet build -c Debug RetroEditor/RetroEditor.csproj
     - name: Build Debug
       run: dotnet build -c Debug
     - name: Build Windows
@@ -34,4 +34,18 @@ jobs:
       with:
         name: Linux-X64
         path: bin/Release/net8.0/linux-x64/publish
-
+    - name: DocFX Build
+      run: cd docfx && docfx docfx.json
+      continue-on-error: false
+    - name: Archive Docs
+      uses: actions/upload-artifact@v4
+      with:
+        name: Docs
+        path: docfx/_site
+    - name: Publish
+      if: github.ref == 'refs/heads/main'
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: docfx/_site
+        force_orphan: true

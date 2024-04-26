@@ -3,8 +3,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
+using RetroEditor.Plugins;
 
-public class Fairlight : IRetroPlugin, IImages, IMenuProvider
+public class Fairlight : IRetroPlugin, IMenuProvider
 {
     // This is MD5 of a ram dump of the game, will update with tap/tzx version later 
     private byte[][] supportedMD5s = new byte[][] {
@@ -55,24 +56,22 @@ public class Fairlight : IRetroPlugin, IImages, IMenuProvider
         return false;
     }
 
-    public void ConfigureMenu(IRomAccess rom, IMenu menu)
+    public void ConfigureMenu(IMemoryAccess rom, IMenu menu)
     {
         var imageMenu = menu.AddItem("Images");
         for (int a = 0; a < GetImageCount(rom); a++)
         {
             var idx = a;    // Otherwise lambda captures last value of a
-            var map = GetImage(rom, idx);
-            var mapName = map.Name;
+            var mapName = GetMapName(idx);
             menu.AddItem(imageMenu, mapName, 
                 (editorInterface,menuItem) => {
-                    var editor = new ImageWindow(this, GetImage(rom, idx));
-                    editorInterface.OpenWindow(editor, $"Image {{{mapName}}}");
+                    editorInterface.OpenUserWindow(mapName, GetImage(rom, idx));
                 });
         }
     }
 
     private int fastLoadWait = 0;
-    public bool AutoLoadCondition(IRomAccess romAccess)
+    public bool AutoLoadCondition(IMemoryAccess romAccess)
     {
         // Since there is no unique screen to catch after loading, we wait for a sequence of patterns in memory instead
         var memory = romAccess.ReadBytes(ReadKind.Ram, 0xFF58, 24);
@@ -85,39 +84,36 @@ public class Fairlight : IRetroPlugin, IImages, IMenuProvider
 
     private byte[] matchRam = new byte[] { 0xFF, 0xFD, 0xB6, 0x16, 0xC8, 0xE5, 0xCD, 0x03, 0xF2, 0xE1, 0x3A, 0x83, 0xFF, 0xFD, 0x34, 0x03, 0xFD, 0xBE, 0x00, 0xCA, 0x68, 0xFE, 0x11, 0x14 };
 
-    public void SetupGameTemporaryPatches(IRomAccess romAccess)
+    public void SetupGameTemporaryPatches(IMemoryAccess romAccess)
     {
         
     }
 
-    public ISave Export(IRomAccess romAcess)
+    public ISave Export(IMemoryAccess romAcess)
     {
         // Blankety blank tape for now?
         var tape = new ZXSpectrumTape.Tape();
         return tape;
     }
 
-    public int GetImageCount(IRomAccess rom)
+    public int GetImageCount(IMemoryAccess rom)
     {
         return 64;
     }
 
-    public void Close()
-    {
-    }
-
-    public IImages GetImageInterface()
-    {
-        return this;
-    }
-
-    public IImage GetImage(IRomAccess rom,int mapIndex)
+    public FairlightImage GetImage(IMemoryAccess rom,int mapIndex)
     {
         var tableStart = FetchTableAddress(rom, 0x68B0, mapIndex);
         return new FairlightImage(rom, mapIndex, tableStart);
     }
+    
+    public string GetMapName(int mapIndex)
+    {
+        return $"Room {mapIndex}";
+    }
 
-    public static ushort FetchTableAddress(IRomAccess rom,ushort baseAddress,int mapIndex)
+
+    public static ushort FetchTableAddress(IMemoryAccess rom,ushort baseAddress,int mapIndex)
     {
         var tableStart = baseAddress;
         ushort skip = 0;
@@ -133,24 +129,23 @@ public class Fairlight : IRetroPlugin, IImages, IMenuProvider
         return tableStart;
     }
 
-    public static byte GetByte(IRomAccess rom, uint address)
+    public static byte GetByte(IMemoryAccess rom, uint address)
     {
         return rom.ReadBytes(ReadKind.Ram, address, 1)[0];
     }
 
-    public static ReadOnlySpan<byte> GetBytes(IRomAccess rom,uint address, uint length)
+    public static ReadOnlySpan<byte> GetBytes(IMemoryAccess rom,uint address, uint length)
     {
         return rom.ReadBytes(ReadKind.Ram, address, length);
     }
 }
 
-public class FairlightImage : IImage
+public class FairlightImage : IImage, IUserWindow
 {
-    string mapName;
     int mapIndex;
     ushort mapAddress;
 
-    IRomAccess rom;
+    IMemoryAccess rom;
 
     ZXSpectrum48ImageHelper screen;
     ZXSpectrum48ImageHelper fillScreen;
@@ -216,26 +211,22 @@ public class FairlightImage : IImage
         public bool flagBit7;
     }
 
-    public FairlightImage(IRomAccess rom, int mapIndex, ushort mapAddress)
+    public FairlightImage(IMemoryAccess rom, int mapIndex, ushort mapAddress)
     {
         this.rom = rom;
         this.mapAddress = mapAddress;
         this.mapIndex = mapIndex;
-        this.mapName = GetMapName();
         screen = new ZXSpectrum48ImageHelper(Width, Height);
         fillScreen = new ZXSpectrum48ImageHelper(Width, Height);
-    }
-
-    public string GetMapName()
-    {
-        return $"Room {mapIndex}";
     }
 
     public uint Width => 256;
 
     public uint Height => 192;
 
-    public string Name => mapName;
+    public float ScaleX => 2.0f;
+
+    public float ScaleY => 2.0f;
 
     public Pixel[] GetImageData(float seconds)
     {
@@ -667,5 +658,16 @@ public class FairlightImage : IImage
             }
             D = D + 2 * dx;
         }
+    }
+
+    public float UpdateInterval => 1 / 30.0f;
+
+    public void ConfigureWidgets(IMemoryAccess rom, IWidget widget, IPlayerControls playerControls)
+    {
+        widget.AddImageView(this);
+    }
+
+    public void OnClose()
+    {
     }
 }

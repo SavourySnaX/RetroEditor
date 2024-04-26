@@ -10,6 +10,7 @@
     <Deterministic>true</Deterministic>
     <ProduceReferenceAssembly>true</ProduceReferenceAssembly>
     <TargetRefPath>$(MSBuildThisFileDirectory)../ReferenceAssemblies/RetroEditor.dll</TargetRefPath>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
 
   <ItemGroup>

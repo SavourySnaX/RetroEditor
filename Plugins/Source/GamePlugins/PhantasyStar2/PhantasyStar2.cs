@@ -2,8 +2,9 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
+using RetroEditor.Plugins;
 
-public class PhantasyStar2 : IRetroPlugin, IImages, IMenuProvider
+public class PhantasyStar2 : IRetroPlugin, IMenuProvider
 {
     // MD5 of Phantasy Star EU-US Rev 2
     private byte[] PhantasyStarUSEURev2 = new byte[] { 15, 163, 139, 18, 207, 10, 176, 22, 61, 134, 86, 0, 172, 115, 26, 154 };
@@ -26,20 +27,10 @@ public class PhantasyStar2 : IRetroPlugin, IImages, IMenuProvider
         return false;
     }
 
-    public int GetImageCount(IRomAccess rom)
+    public int GetImageCount(IMemoryAccess rom)
     {
         return MapDataTableEntries;
     }
-
-    public void Close()
-    {
-    }
-
-    public IImages GetImageInterface()
-    {
-        return this;
-    }
-
 
     public static string GetMapName(int mapIndex)
     {
@@ -151,50 +142,48 @@ public class PhantasyStar2 : IRetroPlugin, IImages, IMenuProvider
         };
     }
 
-    public IImage GetImage(IRomAccess rom, int mapIndex)
+    public PhantasyStar2Map GetImage(IMemoryAccess rom, int mapIndex)
     {
         return new PhantasyStar2Map(rom, mapIndex);
     }
 
-    public void ConfigureMenu(IRomAccess rom, IMenu menu)
+    public void ConfigureMenu(IMemoryAccess rom, IMenu menu)
     {
         var imageMenu = menu.AddItem("Image Viewer");
         for (int a = 0; a < GetImageCount(rom); a++)
         {
             var idx = a;    // Otherwise lambda captures last value of a
-            var map = GetImage(rom, idx);
-            var mapName = map.Name;
+            var mapName = GetMapName(idx);
             menu.AddItem(imageMenu, mapName, 
                 (editorInterface,menuItem) => {
-                    var editor = new ImageWindow(this, GetImage(rom, idx));
-                    editorInterface.OpenWindow(editor, $"Image {{{mapName}}}");
+                    editorInterface.OpenUserWindow(mapName, GetImage(rom, idx));
                 });
         }
     }
 
-    public bool AutoLoadCondition(IRomAccess romAccess)
+    public bool AutoLoadCondition(IMemoryAccess romAccess)
     {
         throw new NotImplementedException();
     }
 
-    public void SetupGameTemporaryPatches(IRomAccess romAccess)
+    public void SetupGameTemporaryPatches(IMemoryAccess romAccess)
     {
         romAccess.WriteBytes(WriteKind.TemporaryRom, 0x2b2, new byte[] { 0x73, 0x48 });     // Skip Sega logo
     }
 
-    public ISave Export(IRomAccess romAcess)
+    public ISave Export(IMemoryAccess romAcess)
     {
         throw new NotImplementedException();
     }
 }
 
-public class PhantasyStar2Map : IImage
+public class PhantasyStar2Map : IImage, IUserWindow
 {
     int index;
-    IRomAccess rom;
+    IMemoryAccess rom;
     const uint MapDataTableAddress = 0x27C0A;
 
-    public PhantasyStar2Map(IRomAccess rom, int index)
+    public PhantasyStar2Map(IMemoryAccess rom, int index)
     {
         this.rom = rom;
         this.index = index;
@@ -204,7 +193,9 @@ public class PhantasyStar2Map : IImage
 
     public uint Height => GetMapHeight(index);
 
-    public string Name => PhantasyStar2.GetMapName(index);
+    public float ScaleX => 2.0f;
+
+    public float ScaleY => 2.0f;
 
     public Pixel[] GetImageData(float seconds)
     {
@@ -352,4 +343,14 @@ public class PhantasyStar2Map : IImage
         return mapLayer;
     }
 
+    public float UpdateInterval => 1 / 30.0f;
+
+    public void ConfigureWidgets(IMemoryAccess rom, IWidget widget, IPlayerControls playerControls)
+    {
+        widget.AddImageView(this);
+    }
+
+    public void OnClose()
+    {
+    }
 }

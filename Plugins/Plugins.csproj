@@ -6,7 +6,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Reference Include="$(MSBuildThisFileDirectory)..\ReferenceAssemblies\*.dll" />
+    <Reference Include="..\ReferenceAssemblies\*.dll" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(RetroEditorBuilding)' == 'Yes'">
+    <ProjectReference Include="..\RetroEditor\RetroEditor.csproj" />
   </ItemGroup>
 
 </Project>

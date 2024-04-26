@@ -2,8 +2,9 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
+using RetroEditor.Plugins;
 
-public class Rollercoaster : IRetroPlugin, IImages, IMenuProvider
+public class Rollercoaster : IRetroPlugin, IMenuProvider
 {
     private byte[][] supportedMD5s = new byte[][] {
         new byte[] { 0xd0, 0x64, 0xb9, 0x2f, 0x76, 0xcb, 0xd3, 0x35, 0xad, 0xc9, 0x84, 0x0f, 0x69, 0x2a, 0x1a, 0xf6 },  // ./Roller Coaster (1986)(Elite Systems).tap
@@ -49,47 +50,36 @@ public class Rollercoaster : IRetroPlugin, IImages, IMenuProvider
     }
 
 
-    public int GetImageCount(IRomAccess rom)
+    public int GetImageCount(IMemoryAccess rom)
     {
         return 16+16+16+12;
     }
 
-    public void Close()
-    {
-    }
-
-    public IImages GetImageInterface()
-    {
-        return this;
-    }
-
-    public IImage GetImage(IRomAccess rom,int mapIndex)
+    public RollercoasterImage GetImage(IMemoryAccess rom,int mapIndex)
     {
         return new RollercoasterImage(rom,mapIndex);
     }
 
-    public static ReadOnlySpan<byte> GetLevelTile(IRomAccess rom, int tileIndex)
+    public static ReadOnlySpan<byte> GetLevelTile(IMemoryAccess rom, int tileIndex)
     {
         return rom.ReadBytes(ReadKind.Ram, (uint)(0x7D00 + (tileIndex * 8)), 8);
     }
 
-    public void ConfigureMenu(IRomAccess rom, IMenu menu)
+    public void ConfigureMenu(IMemoryAccess rom, IMenu menu)
     {
         var imageMenu = menu.AddItem("Images");
         for (int a = 0; a < GetImageCount(rom); a++)
         {
             var idx = a;    // Otherwise lambda captures last value of a
-            var map = GetImage(rom, idx);
-            var mapName = map.Name;
+            var mapName = GetMapName(idx);
             menu.AddItem(imageMenu, mapName, 
                 (editorInterface,menuItem) => {
-                    var editor = new ImageWindow(this, GetImage(rom, idx));
-                    editorInterface.OpenWindow(editor, $"Image {{{mapName}}}");
+                    editorInterface.OpenUserWindow(mapName, GetImage(rom, idx));
                 });
         }
     }
 
-    public bool AutoLoadCondition(IRomAccess romAccess)
+    public bool AutoLoadCondition(IMemoryAccess romAccess)
     {
         var memory = romAccess.ReadBytes(ReadKind.Ram, 0x4000, 0x800);  // Load until first third of screen contains title bitmap
         var hash = IncrementalHash.CreateHash(HashAlgorithmName.MD5);
@@ -99,36 +89,54 @@ public class Rollercoaster : IRetroPlugin, IImages, IMenuProvider
 
     private readonly byte[] rollerCoasterAutoLoadHash = { 127, 247, 134, 25, 56, 220, 59, 199, 13, 96, 96, 187, 253, 12, 28, 200 };
 
-    public void SetupGameTemporaryPatches(IRomAccess romAccess)
+    public void SetupGameTemporaryPatches(IMemoryAccess romAccess)
     {
         
     }
 
-    public ISave Export(IRomAccess romAcess)
+    public ISave Export(IMemoryAccess romAcess)
     {
         // Blankety blank tape for now?
         var tape = new ZXSpectrumTape.Tape();
         return tape;
     }
+
+    public string GetMapName(int mapIndex)
+    {
+        if (mapIndex < 12)
+        {
+            return $"Level 0 Room {mapIndex}";
+        }
+        if (mapIndex < 12 + 16)
+        {
+            return $"Level 1 Room {mapIndex - 12}";
+        }
+        if (mapIndex < 12 + 16 + 16)
+        {
+            return $"Level 2 Room {mapIndex - 12 - 16}";
+        }
+        else
+        {
+            return $"Level 3 Room {mapIndex - 12 - 16 - 16}";
+        }
+    }
 }
 
-public class RollercoasterImage : IImage
+public class RollercoasterImage : IImage, IUserWindow
 {
     byte[] mapData;
-    string mapName;
     int mapIndex;
     int frameCounter;
 
     ZXSpectrum48ImageHelper imageHelper;
 
-    IRomAccess rom;
+    IMemoryAccess rom;
 
-    public RollercoasterImage(IRomAccess rom, int mapIndex)
+    public RollercoasterImage(IMemoryAccess rom, int mapIndex)
     {
         this.mapIndex = mapIndex;
         this.rom = rom;
         this.mapData = rom.ReadBytes(ReadKind.Ram, GetImageAddress(), 256).ToArray();
-        this.mapName = GetMapName();
         imageHelper = new ZXSpectrum48ImageHelper(Width, Height);
 
         var cnt = mapData[(int)RollerCoaster_MapDataOffsets.NumberOfSprites];
@@ -158,32 +166,14 @@ public class RollercoasterImage : IImage
 
     }
 
-    public string GetMapName()
-    {
-        if (mapIndex < 12)
-        {
-            return $"Level 0 Room {mapIndex}";
-        }
-        if (mapIndex < 12 + 16)
-        {
-            return $"Level 1 Room {mapIndex - 12}";
-        }
-        if (mapIndex < 12 + 16 + 16)
-        {
-            return $"Level 2 Room {mapIndex - 12 - 16}";
-        }
-        else
-        {
-            return $"Level 3 Room {mapIndex - 12 - 16 - 16}";
-        }
-    }
-
 
     public uint Width => 256;
 
     public uint Height => 18 * 8;
 
-    public string Name => mapName;
+    public float ScaleX => 2.0f;
+
+    public float ScaleY => 2.0f;
 
     public Pixel[] GetImageData(float seconds)
     {
@@ -665,6 +655,16 @@ public class RollercoasterImage : IImage
         }
     }
 
+    public float UpdateInterval => 1 / 30.0f;
+
+    public void ConfigureWidgets(IMemoryAccess rom, IWidget widget, IPlayerControls playerControls)
+    {
+        widget.AddImageView(this);
+    }
+
+    public void OnClose()
+    {
+    }
 
     enum RollerCoaster_MapDataOffsets
     {

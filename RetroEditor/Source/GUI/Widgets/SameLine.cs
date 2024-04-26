@@ -1,7 +1,8 @@
 
 using ImGuiNET;
+using RetroEditor.Plugins;
 
-public class SameLine : IWidgetItem, IWidgetUpdateDraw
+internal class SameLine : IWidgetItem, IWidgetUpdateDraw
 {
     public SameLine()
     {

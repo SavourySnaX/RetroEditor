@@ -3,6 +3,7 @@
 // Example of va_list interop: https://github.com/jeremyVignelles/va-list-interop-demo
 using System;
 using System.Runtime.InteropServices;
+using RetroEditor.Logging;
 
 namespace Raylib_cs;
 

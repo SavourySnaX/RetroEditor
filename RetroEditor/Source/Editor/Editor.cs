@@ -9,6 +9,8 @@ using System.Security.Cryptography;
 using System.Text.Json;
 using System.Runtime.InteropServices;
 using System.IO.Compression;
+using RetroEditor.Plugins;
+using RetroEditor.Logging;
 
 internal class MenuData : IMenuItem
 {
@@ -45,7 +47,7 @@ internal class UIData
 
 internal struct ActiveProject : IPlayerControls, IMenu
 {
-    public ActiveProject(string name, IRetroPlugin retroPlugin, LibRetroPlugin libRetroPlugin, IRomPlugin romPlugin, PlayableRom playableRom, ProjectSettings settings, UIData ui)
+    public ActiveProject(string name, IRetroPlugin retroPlugin, LibRetroPlugin libRetroPlugin, ISystemPlugin romPlugin, PlayableRom playableRom, ProjectSettings settings, UIData ui)
     {
         this.name = name;
         this.retroPlugin = retroPlugin;
@@ -59,14 +61,14 @@ internal struct ActiveProject : IPlayerControls, IMenu
     private string name;
     private IRetroPlugin retroPlugin;
     private LibRetroPlugin libRetroPlugin;
-    private IRomPlugin romPlugin;
+    private ISystemPlugin romPlugin;
     private PlayableRom playableRom;
     private ProjectSettings settings;
     private UIData ui;
 
     public readonly IRetroPlugin RetroPlugin => retroPlugin;
     public readonly LibRetroPlugin LibRetroPlugin => libRetroPlugin;
-    public readonly IRomPlugin RomPlugin => romPlugin;
+    public readonly ISystemPlugin RomPlugin => romPlugin;
     public readonly ProjectSettings Settings => settings;
     public readonly PlayableRom PlayableRomPlugin => playableRom;
     public readonly UIData UI => ui;
@@ -84,7 +86,6 @@ internal struct ActiveProject : IPlayerControls, IMenu
     {
         ui.Menus.Clear();
         PlayableRomPlugin.Close();
-        RetroPlugin.Close();
         libRetroPlugin.Dispose();
     }
 
@@ -102,6 +103,13 @@ internal struct ActiveProject : IPlayerControls, IMenu
         return item;
     }
 
+    public IMenuItem AddItem(IMenuItem parent, string name)
+    {
+        var item = new MenuData(name, null);
+        ((MenuData)parent).Children.Add(item);
+        return item;
+    }
+
     public IMenuItem AddItem(IMenuItem parent, string name, MenuEventHandler handler)
     {
         var item = new MenuData(name, handler);
@@ -111,7 +119,7 @@ internal struct ActiveProject : IPlayerControls, IMenu
 }
 
 
-public class Editor : IEditor
+internal class Editor : IEditor, IEditorInternal
 {
     private Dictionary<string, Type> romPlugins;
     private Dictionary<string, Type> plugins;
@@ -315,7 +323,6 @@ public class Editor : IEditor
         foreach (var active in activeProjects)
         {
             active.PlayableRomPlugin.Serialise(active.Settings);
-            active.RetroPlugin.Close();
         }
 
         var json = JsonSerializer.Serialize<EditorSettings>(settings, new JsonSerializerOptions { WriteIndented = true });
@@ -622,11 +629,11 @@ public class Editor : IEditor
         }
     }
 
-    internal IRomPlugin? GetRomInstance(string romKind)
+    internal ISystemPlugin? GetRomInstance(string romKind)
     {
         if (romPlugins.TryGetValue(romKind, out var Type))
         {
-            return Activator.CreateInstance(Type) as IRomPlugin;
+            return Activator.CreateInstance(Type) as ISystemPlugin;
         }
         return null;
     }
@@ -696,7 +703,7 @@ public class Editor : IEditor
         pluginWindow.InitWindow();
     }
 
-    private ActiveProject InternalAddDefaultWindowAndProject(ProjectSettings projectSettings, IRetroPlugin plugin, LibRetroPlugin retroPluginInstance, IRomPlugin romPlugin, PlayableRom playableRom)
+    private ActiveProject InternalAddDefaultWindowAndProject(ProjectSettings projectSettings, IRetroPlugin plugin, LibRetroPlugin retroPluginInstance, ISystemPlugin romPlugin, PlayableRom playableRom)
     {
         var activeProjectName = projectSettings.projectName + $" [{activeProjects.Count + 1}]";
         var project = new ActiveProject(activeProjectName, plugin, retroPluginInstance, romPlugin, playableRom, projectSettings, new UIData());
@@ -815,7 +822,7 @@ public class Editor : IEditor
         return Path.Combine(projectSettings.projectPath, "Editor", $"{projectSettings.RetroCoreName}_{serialiseName}.json");
     }
 
-    public LibRetroPlugin? GetLibRetroInstance(string pluginName, ProjectSettings? projectSettings)
+    internal LibRetroPlugin? GetLibRetroInstance(string pluginName, ProjectSettings? projectSettings)
     {
         var OS=RuntimeInformation.OSDescription;
         var platform = "";
@@ -887,7 +894,7 @@ public class Editor : IEditor
         }
     }
 
-    public LibRetroPlugin? GetDeveloperMame()
+    internal LibRetroPlugin? GetDeveloperMame()
     {
         var OS=RuntimeInformation.OSDescription;
         var platform = "";
@@ -1027,4 +1034,12 @@ public class Editor : IEditor
         windowManager.Close(name);
     }
 
+    public void OpenUserWindow(string name, IUserWindow window)
+    {
+        if (currentActiveProject != null)
+        {
+            var userWindow = new UserWindow(window);
+            OpenWindow(userWindow, name);
+        }
+    }
 }

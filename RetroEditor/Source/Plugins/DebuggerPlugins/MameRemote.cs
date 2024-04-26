@@ -4,7 +4,7 @@
 // only tested with above command line - limitted to 64k transfer at once
 using System.Net.Sockets;
 
-public class MameRemoteClient
+internal class MameRemoteClient
 {
     TcpClient gdb;
     BinaryReader? reader;

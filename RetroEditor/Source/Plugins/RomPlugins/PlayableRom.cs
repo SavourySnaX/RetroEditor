@@ -4,12 +4,14 @@
 
 */
 
-public class PlayableRom : IRomAccess
+using RetroEditor.Plugins;
+
+internal class PlayableRom : IMemoryAccess
 {
     public MemoryEndian Endian => endian;
 
     private LibRetroPlugin plugin;
-    private IEditor editorInterface;
+    private IEditorInternal editorInterface;
 
     private byte[] state;
     private MemoryEndian endian;
@@ -19,11 +21,11 @@ public class PlayableRom : IRomAccess
     MemoryblockCollection temporaryBlocksRom;
     MemoryblockCollection serialisedBlocksRam { get; set; }
 
-    public delegate ReadOnlySpan<byte> CheckSumDelegate(IRomAccess rom,out int address);
+    public delegate ReadOnlySpan<byte> CheckSumDelegate(IMemoryAccess rom,out int address);
 
     private CheckSumDelegate checkSumDelegate;
 
-    public PlayableRom(IEditor editorInterface,LibRetroPlugin plugin, MemoryEndian endian, bool needsReload, CheckSumDelegate checkSumDelegate)
+    public PlayableRom(IEditorInternal editorInterface,LibRetroPlugin plugin, MemoryEndian endian, bool needsReload, CheckSumDelegate checkSumDelegate)
     {
         this.endian = endian;
         this.editorInterface = editorInterface;
@@ -36,7 +38,7 @@ public class PlayableRom : IRomAccess
         state=Array.Empty<byte>();
     }
 
-    public bool Setup(ProjectSettings settings, string filename, Func<IRomAccess,bool>? autoLoad = null)
+    public bool Setup(ProjectSettings settings, string filename, Func<IMemoryAccess,bool>? autoLoad = null)
     {
         var romData = File.ReadAllBytes(filename);
         plugin.LoadGame(settings.OriginalRomName, romData);
@@ -198,7 +200,7 @@ public class PlayableRom : IRomAccess
     public int RomSize => (int)plugin.RomLength();
 }
 
-public enum MemoryRegion
+internal enum MemoryRegion
 {
     Rom,        // Applies to cartridge rom (so not useful for tape/disk based systems)
     Ram         // Applies to system ram (usually used for tape/disk based systems)

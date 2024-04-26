@@ -5,7 +5,7 @@ using System;
 
 namespace IconFonts
 {
-    public partial class FontAwesome6
+    internal partial class FontAwesome6
     {
         internal static IntPtr IconFontRanges = IntPtr.Zero;
 

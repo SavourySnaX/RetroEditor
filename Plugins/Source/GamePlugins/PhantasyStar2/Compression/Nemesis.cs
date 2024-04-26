@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using RetroEditor.Plugins;
 
 public class Nemesis
 {
@@ -19,7 +20,7 @@ public class Nemesis
         return (byte)((CodeTable[offset] >> 4)&0xF);
     }
 
-    public byte[] Decompress(IRomAccess rom, uint sourceAddress)
+    public byte[] Decompress(IMemoryAccess rom, uint sourceAddress)
     {
         bool xorMode = false;
         var bytes = rom.ReadBytes(ReadKind.Rom, sourceAddress, 2);
@@ -43,7 +44,7 @@ public class Nemesis
         return ProcessCompData(rom,sourceAddress,firstCompWord,numPatterns,xorMode);
     }
 
-    private byte[] ProcessCompData(IRomAccess rom, uint address, ushort compWord, ushort numPatterns, bool xorMode)
+    private byte[] ProcessCompData(IMemoryAccess rom, uint address, ushort compWord, ushort numPatterns, bool xorMode)
     {
         var patternRow = 8;
         int d2 = 0;
@@ -140,7 +141,7 @@ public class Nemesis
 
     }
 
-    private void BuildCodeTable(IRomAccess rom,ref uint address)
+    private void BuildCodeTable(IMemoryAccess rom,ref uint address)
     {
         var firstByte = rom.ReadBytes(ReadKind.Rom, address++, 1)[0];
         var palIndex = firstByte;

@@ -1,3 +1,4 @@
+using RetroEditor.Plugins;
 public struct MapDataEntry
 {
     byte data0;
@@ -9,7 +10,7 @@ public struct MapDataEntry
     byte data2; // loc_283ee  offset (high bit cleared, high bit means ? ? )
     byte musicID;
 
-    public void LoadDataFromAddress(IRomAccess rom, uint address)
+    public void LoadDataFromAddress(IMemoryAccess rom, uint address)
     {
         var bytes = rom.ReadBytes(ReadKind.Rom, address, 20);
         data0 = bytes[0]; //rom.ReadByte(address);

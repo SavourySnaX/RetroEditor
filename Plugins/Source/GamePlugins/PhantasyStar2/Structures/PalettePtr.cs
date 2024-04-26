@@ -1,3 +1,4 @@
+using RetroEditor.Plugins;
 public struct PalettePtr
 {
     const uint fixedAddress = 0x1197C;
@@ -26,7 +27,7 @@ public struct PalettePtr
             public byte B => b;
         }
 
-        public RGB GetColour(IRomAccess rom, int index)
+        public RGB GetColour(IMemoryAccess rom, int index)
         {
             uint address = ptrToPalette + (uint)(index * 2);
             var bytes=rom.ReadBytes(ReadKind.Rom, address, 2);
@@ -40,12 +41,12 @@ public struct PalettePtr
 
     PaletteEntry[] entries;
 
-    public void Load(IRomAccess rom)
+    public void Load(IMemoryAccess rom)
     {
         LoadDataFromAddress(rom, fixedAddress, numPalettes);
     }
 
-    private void LoadDataFromAddress(IRomAccess rom, uint address, int numEntries)
+    private void LoadDataFromAddress(IMemoryAccess rom, uint address, int numEntries)
     {
         entries = new PaletteEntry[numEntries];
         var bytes = rom.ReadBytes(ReadKind.Rom, address, (uint)(numEntries * 8));

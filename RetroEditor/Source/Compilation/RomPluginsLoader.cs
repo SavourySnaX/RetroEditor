@@ -1,8 +1,10 @@
 
 // For now, rom plugins never reload?
 using Microsoft.CodeAnalysis;
+using RetroEditor.Logging;
+using RetroEditor.Plugins;
 
-public class RomPluginsLoader
+internal class RomPluginsLoader
 {
     private PluginBuilder _iromPlugin;
 
@@ -48,7 +50,7 @@ public class RomPluginsLoader
 
         foreach (var type in assembly.GetTypes())
         {
-            if (type.GetInterface("IRomPlugin") != null)
+            if (type.GetInterface(nameof(ISystemPlugin)) != null)
             {
                 romPlugins.Add(type);
             }
