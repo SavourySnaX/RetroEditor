@@ -16,6 +16,10 @@ There is a Metroid (Nintendo Entertainment System) base plugin - it does nothing
 
 If building from source, there is a developer mode (although I intend to enable this in future), this adds another menu, that allows loading a custom fork of libretro mame.
 
+## Documentations
+
+[Retro Editor Documentation Portal](https://savourysnax.github.io/RetroEditor/)
+
 ## Documenting Formats
 
 See the wiki for documentation on the data formats for supported games.
