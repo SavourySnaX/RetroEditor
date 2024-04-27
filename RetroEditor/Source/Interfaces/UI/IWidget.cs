@@ -15,6 +15,17 @@ namespace RetroEditor.Plugins
     }
 
     /// <summary>
+    /// Interface for a widget that can display a label
+    /// </summary>
+    public interface IWidgetLabel : IWidgetItem
+    {
+        /// <summary>
+        /// Name (used to allow changing the label dynamically)
+        /// </summary>
+        string Name { get; set; }
+    }
+
+    /// <summary>
     /// Interface for a widget that can be enabled or disabled
     /// </summary>
     public interface IWidgetEnableable : IWidgetItem
@@ -75,6 +86,13 @@ namespace RetroEditor.Plugins
         IWidgetItem SameLine();
 
         /// <summary>
+        /// Add a label to the window
+        /// </summary>
+        /// <param name="label">Label text</param>
+        /// <returns>Widget</returns>
+        IWidgetLabel AddLabel(string label);
+
+        /// <summary>
         /// Add a checkbox to the window
         /// </summary>
         /// <param name="label">Label of the checkbox</param>
@@ -99,12 +117,21 @@ namespace RetroEditor.Plugins
         /// <param name="image">Object implementing the IImage interface</param>
         /// <returns>Widget</returns>
         IWidgetItem AddImageView(IImage image);
+
+        /// <summary>
+        /// Adds a palette widget to the window
+        /// </summary>
+        /// <param name="palette">Object implementing the IBitmapPalette interface</param>
+        /// <returns>Widget</returns>
+        IWidgetItem AddPaletteWidget(IBitmapPalette palette);
+
         /// <summary>
         /// Adds a bitmap image editor to the window
         /// </summary>
         /// <param name="image">Object implmenting the IBitmapImage interface</param>
         /// <returns>Widget</returns>
         IWidgetItem AddBitmapWidget(IBitmapImage image);
+
         /// <summary>
         /// Adds a tile map editor to the window
         /// </summary>

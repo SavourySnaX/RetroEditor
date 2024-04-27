@@ -37,9 +37,23 @@ internal class WidgetFactory : IWidget
         return t;
     }
 
+    public IWidgetLabel AddLabel(string label)
+    {
+        var t = new Label(label);
+        widgets.Add(t);
+        return t;
+    }
+
     public IWidgetItem AddImageView(IImage image)
     {
         var t = new ImageView(image);
+        widgets.Add(t);
+        return t;
+    }
+
+    public IWidgetItem AddPaletteWidget(IBitmapPalette palette)
+    {
+        var t = new PaletteWidget(palette);
         widgets.Add(t);
         return t;
     }

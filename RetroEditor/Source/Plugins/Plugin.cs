@@ -317,6 +317,35 @@ namespace RetroEditor.Plugins
     }
 
     /// <summary>
+    /// Interface for a palette - used with the PaletteWidget class
+    /// </summary>
+    public interface IBitmapPalette
+    {
+        /// <summary>
+        /// Colours to display per row
+        /// </summary>
+        uint ColoursPerRow{ get; }
+        /// <summary>
+        /// Width of each colour in pixels
+        /// </summary>
+        uint Width { get; }
+        /// <summary>
+        /// Height of each colour in pixels
+        /// </summary>
+        uint Height { get; }
+        /// <summary>
+        /// Get the palette
+        /// </summary>
+        /// <returns>Array of colours</returns>
+        ReadOnlySpan<Pixel> GetPalette();
+
+        /// <summary>
+        /// Current chosen palette index
+        /// </summary>
+        int SelectedColour { get; set; }
+    }
+
+    /// <summary>
     /// Interface for a bitmap image - used with the BitmapWidget class
     /// </summary>
     public interface IBitmapImage
@@ -331,16 +360,25 @@ namespace RetroEditor.Plugins
         uint Height { get; }
 
         /// <summary>
-        /// Array representing the palette of the image.
+        /// Width of a pixel in pixels
         /// </summary>
-        Pixel[] Palette { get; }
+        uint PixelWidth { get; }
+        /// <summary>
+        /// Height of a pixel in pixels
+        /// </summary>
+        uint PixelHeight { get; }
+
+        /// <summary>
+        /// Palette for the image
+        /// </summary>
+        IBitmapPalette Palette { get; }
 
         /// <summary>
         /// Image data as a flat array of palette indices
         /// </summary>
         /// <param name="seconds">Number of seconds since startup</param>
         /// <returns>pixel index array</returns>
-        uint[] GetImageData(float seconds);
+        ReadOnlySpan<uint> GetImageData(float seconds);
 
         /// <summary>
         /// Set a pixel in the image
@@ -409,7 +447,7 @@ namespace RetroEditor.Plugins
         /// </summary>
         /// <param name="seconds">Time since editor started</param>
         /// <returns>Flat array of Pixel values representing the image</returns>
-        Pixel[] GetImageData(float seconds);
+        ReadOnlySpan<Pixel> GetImageData(float seconds);
     }
 
     /// <summary>

@@ -1,137 +1,85 @@
 
 using System.Numerics;
 using ImGuiNET;
-using Raylib_cs;
 using RetroEditor.Plugins;
-using rlImGui_cs;
 
-/// <summary>
-/// A widget that displays a bitmap image and allows editing of the image. (transitional, will be split later)
-/// </summary>
 internal class BitmapWidget : IWidgetItem, IWidgetUpdateDraw
 {
-    Texture2D bitmap;
-    IBitmapImage iBitmap;
-
-    float scale = 2.0f;
+    private IBitmapImage _iBitmap;
 
     public BitmapWidget(IBitmapImage iBitmap)
     {
-        this.iBitmap = iBitmap;
-        var image = new Image
-        {
-            Width = (int)iBitmap.Width,
-            Height = (int)iBitmap.Height,
-            Mipmaps = 1,
-            Format = PixelFormat.UncompressedR8G8B8A8
-        };
-        bitmap=Raylib.LoadTextureFromImage(image);
+        _iBitmap = iBitmap;
     }
 
     public void Update(float seconds)
     {
-        // Draw palette :
-        var palette = iBitmap.Palette;
-        var pixels = iBitmap.GetImageData(seconds);
-
-        byte[] bitmapData = new byte[pixels.Length*4];
-        for (int a = 0; a < pixels.Length; a++)
-        {
-            var colour = palette[pixels[a]];
-            bitmapData[a * 4 + 0] = colour.Red;
-            bitmapData[a * 4 + 1] = colour.Green;
-            bitmapData[a * 4 + 2] = colour.Blue;
-            bitmapData[a * 4 + 3] = colour.Alpha;
-        }
-
-        Raylib.UpdateTexture(bitmap, bitmapData);
-
     }
-
-    int selectedColour = -1;
 
     public void Draw()
     {
-        var palette = iBitmap.Palette;
-        var pixels = iBitmap.GetImageData(0.0f);
-        rlImGui.ImageSize(bitmap, (int)(iBitmap.Width * scale), (int)(iBitmap.Height * scale));
-
-        ImGui.Text("Palette");
-
-        // ColourPaletteWidget & interface
-        int w = 20;
-        int h = 20;
-
-        var size = new Vector2(w,h*palette.Length);
-        ImGui.BeginChild($"palette", size, 0, 0);
+        var palette = _iBitmap.Palette.GetPalette();
+        var pixels = _iBitmap.GetImageData(0.0f);
+        var pixelWidth = _iBitmap.PixelWidth;
+        var pixelHeight = _iBitmap.PixelHeight;
 
         var drawList = ImGui.GetWindowDrawList();
-        Vector2 pos = ImGui.GetCursorScreenPos();
-
-        for (int a=0;a<palette.Length;a++)
-        {
-            var colour = palette[a];
-            var mousePos = ImGui.GetMousePos();
-            var localPos = mousePos - pos;
-            if (localPos.X >= 0 && localPos.Y >= a * h && localPos.X < w && localPos.Y < a * h + h && ImGui.IsMouseDown(ImGuiMouseButton.Left))
-            {
-                selectedColour = a;
-            }
-            drawList.AddRectFilled(new Vector2(pos.X + 4, pos.Y + a * h + 4), new Vector2(pos.X + w - 4, pos.Y + a * h + h - 4), MakeColour(colour.Red, colour.Green, colour.Blue, colour.Alpha));
-            if (selectedColour==a)
-            {
-                drawList.AddRect(new Vector2(pos.X, pos.Y + a * h), new Vector2(pos.X + w, pos.Y + a * h + h), MakeColour(255,255,255,255));
-            }
-        }
-
-        ImGui.EndChild();
-
-        ImGui.Text("Edit");
-
-        size = new Vector2(iBitmap.Width * w, iBitmap.Height * h);
+        var size = new Vector2(_iBitmap.Width * pixelWidth, _iBitmap.Height * pixelHeight);
         ImGui.BeginChild($"pixels", size, 0, 0);
-        pos = ImGui.GetCursorScreenPos();
+        var hx = -1;
+        var hy = -1;
+        var pos = ImGui.GetCursorScreenPos();
         {
             var mousePos = ImGui.GetMousePos();
             var localPos = mousePos - pos;
             if (localPos.X >= 0 && localPos.Y >= 0 && localPos.X < size.X && localPos.Y < size.Y)
             {
-                var x = (uint)(localPos.X / w);
-                var y = (uint)(localPos.Y / h);
+                var x = (uint)(localPos.X / pixelWidth);
+                var y = (uint)(localPos.Y / pixelHeight);
 
-                if (x >= 0 && x < iBitmap.Width && y >= 0 && y < iBitmap.Height)
+                if (x >= 0 && x < _iBitmap.Width && y >= 0 && y < _iBitmap.Height)
                 {
-                    if (selectedColour >= 0 && ImGui.IsMouseDown(ImGuiMouseButton.Left))
+                    hx= (int)x;
+                    hy = (int)y;
+                    if (_iBitmap.Palette.SelectedColour >= 0 && ImGui.IsMouseDown(ImGuiMouseButton.Left))
                     {
-                        iBitmap.SetPixel(x, y, (uint)selectedColour);
-                        pixels[x + y * iBitmap.Width] = (uint)selectedColour;
+                        _iBitmap.SetPixel(x, y, (uint)_iBitmap.Palette.SelectedColour);
                     }
                     else if (ImGui.IsMouseDown(ImGuiMouseButton.Right))
                     {
-                        selectedColour = (int)pixels[x + y * iBitmap.Width];
+                        _iBitmap.Palette.SelectedColour = (int)pixels[(int)(x + y * _iBitmap.Width)];
                     }
                 }
             }
         }
-
-        drawList = ImGui.GetWindowDrawList();
-
-        for (int y=0;y<iBitmap.Height;y++)
+        uint yOffs = 0;
+        for (int y=0;y<_iBitmap.Height;y++)
         {
-            for (int x=0;x<iBitmap.Width;x++)
+            uint xOffs = 0;
+            for (int x=0;x<_iBitmap.Width;x++)
             {
-                var pixel = pixels[x + y * iBitmap.Width];
-                var colour = palette[pixel];
-                drawList.AddRectFilled(new Vector2(pos.X + x * w, pos.Y + y * w), new Vector2(pos.X + x * w + w, pos.Y + y * h + h), MakeColour(colour.Red, colour.Green, colour.Blue, colour.Alpha));
+                var pixel = pixels[(int)(x + y * _iBitmap.Width)];
+                var colour = palette[(int)pixel];
+                if (hx == x && hy == y)
+                {
+                    if (pixelWidth > 2 && pixelHeight > 2)
+                    {
+                        drawList.AddRectFilled(new Vector2(pos.X + xOffs + 1, pos.Y + yOffs + 1), new Vector2(pos.X + xOffs + pixelWidth - 1, pos.Y + yOffs + pixelHeight - 1), ImGuiHelper.MakeColour(colour.Red, colour.Green, colour.Blue, colour.Alpha));
+                    }
+                    drawList.AddRect(new Vector2(pos.X + xOffs, pos.Y + yOffs), new Vector2(pos.X + xOffs + pixelWidth, pos.Y + yOffs + pixelHeight), 0xFFFFFF00 ^ ImGuiHelper.MakeColour(colour.Red, colour.Green, colour.Blue, colour.Alpha));
+                }
+                else
+                {
+                    drawList.AddRectFilled(new Vector2(pos.X + xOffs, pos.Y + yOffs), new Vector2(pos.X + xOffs + pixelWidth, pos.Y + yOffs + pixelHeight), ImGuiHelper.MakeColour(colour.Red, colour.Green, colour.Blue, colour.Alpha));
+                }
+                xOffs += pixelWidth;
             }
+            yOffs += pixelHeight;
         }
+
 
         ImGui.EndChild();
     }
 
-    uint MakeColour(byte r, byte g, byte b, byte a)
-    {
-        return (uint)((r << 24) | (g << 16) | (b << 8) | a);
-    }
 
 }

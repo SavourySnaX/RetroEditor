@@ -11,6 +11,7 @@
     <ProduceReferenceAssembly>true</ProduceReferenceAssembly>
     <TargetRefPath>$(MSBuildThisFileDirectory)../ReferenceAssemblies/RetroEditor.dll</TargetRefPath>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <warningsAsErrors>true</warningsAsErrors>
   </PropertyGroup>
 
   <ItemGroup>

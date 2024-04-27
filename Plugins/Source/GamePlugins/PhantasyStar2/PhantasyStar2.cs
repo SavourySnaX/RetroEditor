@@ -197,7 +197,7 @@ public class PhantasyStar2Map : IImage, IUserWindow
 
     public float ScaleY => 2.0f;
 
-    public Pixel[] GetImageData(float seconds)
+    public ReadOnlySpan<Pixel> GetImageData(float seconds)
     {
         return RenderMap(index);
     }
