@@ -71,7 +71,17 @@ internal class BitmapWidget : IWidgetItem, IWidgetUpdateDraw
         for (int a=0;a<palette.Length;a++)
         {
             var colour = palette[a];
-            drawList.AddRectFilled(new Vector2(pos.X, pos.Y + a * h), new Vector2(pos.X + w, pos.Y + a * h + h), MakeColour(colour.Red, colour.Green, colour.Blue, colour.Alpha));
+            var mousePos = ImGui.GetMousePos();
+            var localPos = mousePos - pos;
+            if (localPos.X >= 0 && localPos.Y >= a * h && localPos.X < w && localPos.Y < a * h + h && ImGui.IsMouseDown(ImGuiMouseButton.Left))
+            {
+                selectedColour = a;
+            }
+            drawList.AddRectFilled(new Vector2(pos.X + 4, pos.Y + a * h + 4), new Vector2(pos.X + w - 4, pos.Y + a * h + h - 4), MakeColour(colour.Red, colour.Green, colour.Blue, colour.Alpha));
+            if (selectedColour==a)
+            {
+                drawList.AddRect(new Vector2(pos.X, pos.Y + a * h), new Vector2(pos.X + w, pos.Y + a * h + h), MakeColour(255,255,255,255));
+            }
         }
 
         ImGui.EndChild();
