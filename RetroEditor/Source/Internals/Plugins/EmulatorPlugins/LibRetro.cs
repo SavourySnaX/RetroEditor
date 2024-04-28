@@ -708,6 +708,7 @@ internal class LibRetroPlugin : IDisposable
     private enum EnvironmentCommand
     {
         ENVIRONMENT_SET_ROTATION = 1,
+        ENVIRONMENT_GET_CAN_DUPE = 3,
         ENVIRONMENT_GET_SYSTEM_DIRECTORY = 9,
         ENVIRONMENT_SET_PIXEL_FORMAT = 10,
         ENVIRONMENT_SET_INPUT_DESCRIPTORS = 11,
@@ -924,6 +925,11 @@ internal class LibRetroPlugin : IDisposable
             case EnvironmentCommand.ENVIRONMENT_SET_ROTATION:
                 {
                     Marshal.WriteInt32(data, 0);
+                    return 1;
+                }
+            case EnvironmentCommand.ENVIRONMENT_GET_CAN_DUPE:
+                {
+                    Marshal.WriteByte(data, 1);
                     return 1;
                 }
             case EnvironmentCommand.ENVIRONMENT_GET_SYSTEM_DIRECTORY:
