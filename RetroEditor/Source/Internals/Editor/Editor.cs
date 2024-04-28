@@ -1,6 +1,3 @@
-#if DEBUG
-#define ENABLE_DEVELOPER
-#endif
 
 using Raylib_cs;
 using rlImGui_cs;
@@ -136,6 +133,7 @@ internal class Editor : IEditor, IEditorInternal
         public string LogFolder { get; set; }
         public List<string> RecentProjects { get; set;}
         public string Version { get; set; }
+        public bool DeveloperMode { get; set; }
 
         public static string CurrentVersion => $"{MajorVersion}.{MinorVersion}.{PatchVersion}";
 
@@ -147,6 +145,7 @@ internal class Editor : IEditor, IEditorInternal
             LogFolder = Path.Combine(Directory.GetCurrentDirectory(), "Logs");
             LastImportedLocation = "";
             RecentProjects = new List<string>();
+            DeveloperMode = false;
         }
     }
 
@@ -421,92 +420,93 @@ internal class Editor : IEditor, IEditorInternal
                 ImGui.EndDisabled();
                 ImGui.EndMenu();
             }
-#if ENABLE_DEVELOPER
-            if (ImGui.BeginMenu("Developer"))
+            if (settings.DeveloperMode)
             {
-                if (ImGui.BeginMenu("Plugin Player"))
+                if (ImGui.BeginMenu("Developer"))
                 {
-                    foreach (var plugin in romPlugins)
+                    if (ImGui.BeginMenu("Plugin Player"))
                     {
-                        if (ImGui.MenuItem(plugin.Key))
+                        foreach (var plugin in romPlugins)
                         {
+                            if (ImGui.MenuItem(plugin.Key))
+                            {
+                                var result = NativeFileDialogSharp.Dialog.FileOpen();
+                                if (result.IsOk)
+                                {
+                                    var instance = GetRomInstance(plugin.Key);
+                                    if (instance != null)
+                                    {
+                                        var retro = GetLibRetroInstance(instance.LibRetroPluginName, null);
+                                        if (retro != null)
+                                        {
+                                            var pluginWindow = new LibRetroPlayerWindow(retro);
+                                            var playableRom = new PlayableRom(this, retro, instance.Endian, instance.RequiresReload, instance.ChecksumCalculation);
+                                            pluginWindow.Initialise();
+                                            retro.LoadGame(result.Path);
+                                            pluginWindow.OtherStuff();
+                                            pluginWindow.InitWindow();
+                                            windowManager.AddWindow(pluginWindow, plugin.Key, null);
+                                        }
+                                    }
+                                }
+
+                            }
+                        }
+
+                        ImGui.EndMenu();
+                    }
+                    if (ImGui.BeginMenu("LibMame Debugger"))
+                    {
+                        var initialMameInstance = mameInstance;
+                        if (initialMameInstance != null)
+                        {
+                            ImGui.BeginDisabled();
+                        }
+                        if (ImGui.MenuItem("Launch"))
+                        {
+                            // We use Mame for debugging mostly because it means I only needed to modify one of the lib retro plugins
                             var result = NativeFileDialogSharp.Dialog.FileOpen();
                             if (result.IsOk)
                             {
-                                var instance = GetRomInstance(plugin.Key);
-                                if (instance != null)
+                                var retro = GetDeveloperMame();
+                                if (retro != null)
                                 {
-                                    var retro = GetLibRetroInstance(instance.LibRetroPluginName, null);
-                                    if (retro != null)
-                                    {
-                                        var pluginWindow = new LibRetroPlayerWindow(retro);
-                                        var playableRom = new PlayableRom(this, retro, instance.Endian, instance.RequiresReload, instance.ChecksumCalculation);
-                                        pluginWindow.Initialise();
-                                        retro.LoadGame(result.Path);
-                                        pluginWindow.OtherStuff();
-                                        pluginWindow.InitWindow();
-                                        windowManager.AddWindow(pluginWindow, plugin.Key, null);
-                                    }
+                                    mameInstance = new LibMameDebugger(retro);
+
+                                    var pluginWindow = new LibRetroDebuggerWindow(retro);
+                                    pluginWindow.Initialise();
+                                    retro.LoadGame(result.Path);
+                                    pluginWindow.InitWindow();
+                                    windowManager.AddWindow(pluginWindow, "MAME RETRO", null);
+
                                 }
                             }
-
                         }
-                    }
-
-                    ImGui.EndMenu();
-                }
-                if (ImGui.BeginMenu("LibMame Debugger"))
-                {
-                    var initialMameInstance = mameInstance;
-                    if (initialMameInstance != null)
-                    {
-                        ImGui.BeginDisabled();
-                    }
-                    if (ImGui.MenuItem("Launch"))
-                    {
-                        // We use Mame for debugging mostly because it means I only needed to modify one of the lib retro plugins
-                        var result = NativeFileDialogSharp.Dialog.FileOpen();
-                        if (result.IsOk)
+                        if (initialMameInstance != null)
                         {
-                            var retro = GetDeveloperMame();
-                            if (retro != null)
+                            ImGui.EndDisabled();
+                        }
+                        if (mameInstance == null)
+                        {
+                            ImGui.BeginDisabled();
+                        }
+                        mameInstance?.Menus(this);
+                        if (ImGui.MenuItem("Open Player Window"))
+                        {
+                            if (!windowManager.IsOpen("MAME RETRO"))
                             {
-                                mameInstance = new LibMameDebugger(retro);
-
-                                var pluginWindow = new LibRetroDebuggerWindow(retro);
-                                pluginWindow.Initialise();
-                                retro.LoadGame(result.Path);
-                                pluginWindow.InitWindow();
-                                windowManager.AddWindow(pluginWindow, "MAME RETRO", null);
-
+                                // TODO
                             }
                         }
-                    }
-                    if (initialMameInstance != null)
-                    {
-                        ImGui.EndDisabled();
-                    }
-                    if (mameInstance == null)
-                    {
-                        ImGui.BeginDisabled();
-                    }
-                    mameInstance?.Menus(this);
-                    if (ImGui.MenuItem("Open Player Window"))
-                    {
-                        if (!windowManager.IsOpen("MAME RETRO"))
+                        if (mameInstance == null)
                         {
-                            // TODO
+                            ImGui.EndDisabled();
                         }
-                    }
-                    if (mameInstance == null)
-                    {
-                        ImGui.EndDisabled();
+                        ImGui.EndMenu();
                     }
                     ImGui.EndMenu();
                 }
-                ImGui.EndMenu();
             }
-#endif
             if (ImGui.BeginMenu("Window"))
             {
                 bool logOpen = windowManager.IsOpen("Log");
