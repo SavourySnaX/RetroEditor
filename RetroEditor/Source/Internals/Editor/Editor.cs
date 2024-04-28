@@ -392,7 +392,19 @@ internal class Editor : IEditor, IEditorInternal
                                 // Before export, we need to restore the original state, and only apply the serialised part
                                 active.PlayableRomPlugin.Reset(false);
 
-                                active.RetroPlugin.Export(active.PlayableRomPlugin).Save(result.Path);
+                                ISave? save=null;
+                                try
+                                {
+                                    save = active.RetroPlugin.Export(active.PlayableRomPlugin);
+                                }
+                                catch (Exception e)
+                                {
+                                    Log(LogType.Error, $"Exporting {active.Name}", e.Message);
+                                }
+                                if (save != null)
+                                {
+                                    save.Save(result.Path);
+                                }
 
                                 active.PlayableRomPlugin.Reset(true);
                             }
