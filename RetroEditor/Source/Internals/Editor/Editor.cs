@@ -10,7 +10,6 @@ using System.Text.Json;
 using System.Runtime.InteropServices;
 using System.IO.Compression;
 using RetroEditor.Plugins;
-using RetroEditor.Logging;
 
 internal class MenuData : IMenuItem
 {
@@ -1040,6 +1039,19 @@ internal class Editor : IEditor, IEditorInternal
         {
             var userWindow = new UserWindow(window);
             OpenWindow(userWindow, name);
+        }
+    }
+
+    public void Log(LogType type, string message)
+    {
+        if (currentActiveProject!=null)
+        {
+            var active = currentActiveProject.Value;
+            Editor.Log(type, active.RetroPlugin.GetType().Name, message);
+        }
+        else
+        {
+            Editor.Log(type, "Unknown", message);
         }
     }
 }

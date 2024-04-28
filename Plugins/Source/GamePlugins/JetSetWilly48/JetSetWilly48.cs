@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using RetroEditor.Plugins;
+using RetroEditor.Plugins.ZXSpectrumTape;
 
 public class JetSetWilly48 : IRetroPlugin, IPlayerWindowExtension, IMenuProvider
 {
@@ -77,14 +78,14 @@ public class JetSetWilly48 : IRetroPlugin, IPlayerWindowExtension, IMenuProvider
             Concat(clearCode).Concat(clearAscii).Concat(clearInteger).
             Concat(loadCodeRandUsr).Concat(ascii).Concat(integer).Concat(endBasic).ToArray();
         var assembled = romAccess.ReadBytes(ReadKind.Ram, 0x8000, 0x8000);
-        var outTape = new ZXSpectrumTape.Tape();
-        var basicHeader = new ZXSpectrumTape.HeaderBlock(ZXSpectrumTape.HeaderKind.Program, "JSW", (UInt16)loader.Length, 10, (UInt16)loader.Length);
+        var outTape = new Tape();
+        var basicHeader = new HeaderBlock(HeaderKind.Program, "JSW", (UInt16)loader.Length, 10, (UInt16)loader.Length);
         outTape.AddHeader(basicHeader);
-        var basicBlock = new ZXSpectrumTape.DataBlock(loader);
+        var basicBlock = new DataBlock(loader);
         outTape.AddBlock(basicBlock);
-        var header = new ZXSpectrumTape.HeaderBlock(ZXSpectrumTape.HeaderKind.Code, "JSW", (UInt16)assembled.Length,0x8000, 0);
+        var header = new HeaderBlock(HeaderKind.Code, "JSW", (UInt16)assembled.Length,0x8000, 0);
         outTape.AddHeader(header);
-        var block = new ZXSpectrumTape.DataBlock(assembled);
+        var block = new DataBlock(assembled);
         outTape.AddBlock(block);
 
         return outTape;

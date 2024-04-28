@@ -1,8 +1,6 @@
-using System.Diagnostics;
 using System.Text;
-using RetroEditor.Plugins;
 
-namespace ZXSpectrumTape
+namespace RetroEditor.Plugins.ZXSpectrumTape
 {
     /// <summary>
     /// The kind of header block to create. Maps to the ZX Spectrum Rom Tape Header types.

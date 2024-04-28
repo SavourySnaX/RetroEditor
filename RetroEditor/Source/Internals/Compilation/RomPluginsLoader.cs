@@ -1,7 +1,6 @@
 
 // For now, rom plugins never reload?
 using Microsoft.CodeAnalysis;
-using RetroEditor.Logging;
 using RetroEditor.Plugins;
 
 internal class RomPluginsLoader

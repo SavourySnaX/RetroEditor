@@ -92,7 +92,7 @@ public class Fairlight : IRetroPlugin, IMenuProvider
     public ISave Export(IMemoryAccess romAcess)
     {
         // Blankety blank tape for now?
-        var tape = new ZXSpectrumTape.Tape();
+        var tape = new RetroEditor.Plugins.ZXSpectrumTape.Tape();
         return tape;
     }
 

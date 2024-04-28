@@ -1,9 +1,8 @@
 // Adapted mfkl and jeremyVignelles work on libvlcsharp for marshalling va_list arguments
 // For more information see the dotnet issue: https://github.com/dotnet/runtime/issues/9316
 // Example of va_list interop: https://github.com/jeremyVignelles/va-list-interop-demo
-using System;
 using System.Runtime.InteropServices;
-using RetroEditor.Logging;
+using RetroEditor.Plugins;
 
 namespace Raylib_cs;
 

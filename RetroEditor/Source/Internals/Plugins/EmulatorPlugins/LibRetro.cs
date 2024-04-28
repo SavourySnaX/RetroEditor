@@ -2,7 +2,6 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Raylib_cs;
 using RetroEditor.Plugins;
-using RetroEditor.Logging;
 
 internal class LibRetroPlugin : IDisposable
 {

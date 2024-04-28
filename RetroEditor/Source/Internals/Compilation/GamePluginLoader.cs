@@ -1,5 +1,4 @@
 using Microsoft.CodeAnalysis;
-using RetroEditor.Logging;
 using RetroEditor.Plugins;
 
 internal class GamePluginLoader
