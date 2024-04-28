@@ -65,6 +65,13 @@ internal class WidgetFactory : IWidget
         return t;
     }
 
+    public IWidgetItem AddTilePaletteWidget(TilePaletteStore tilePalette)
+    {
+        var t = new TilePaletteWidget(tilePalette);
+        widgets.Add(t);
+        return t;
+    }
+
     public IWidgetItem AddTileMapWidget(ITileMap tileMap)
     {
         var t = new TileMapWidget(tileMap);

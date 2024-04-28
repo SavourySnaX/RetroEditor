@@ -133,6 +133,13 @@ namespace RetroEditor.Plugins
         IWidgetItem AddBitmapWidget(IBitmapImage image);
 
         /// <summary>
+        /// Adds a tile palette editor to the window
+        /// </summary>
+        /// <param name="tilePalette">TilePaletteStore object initialized with an ITilePalette object</param>
+        /// <returns>Widget</returns>
+        IWidgetItem AddTilePaletteWidget(TilePaletteStore tilePalette);
+
+        /// <summary>
         /// Adds a tile map editor to the window
         /// </summary>
         /// <param name="tileMap">Object implementing the ITileMap interface</param>

@@ -573,7 +573,7 @@ public class JetSetWillyMap : IImage, IUserWindow
     }
 }
 
-public class JetSetWilly48TileMap : ITileMap, IUserWindow
+public class JetSetWilly48TileMap : ITileMap, ITilePalette, IUserWindow
 {
     byte[] mapData;
     string mapName;
@@ -583,6 +583,7 @@ public class JetSetWilly48TileMap : ITileMap, IUserWindow
     ZXSpectrum48ImageHelper[] helpers;
     JetSetWilly48Tile[] tiles;
     JetSetWilly48Layer layer;
+    TilePaletteStore palette;
     IMemoryAccess rom;
 
     public class JetSetWilly48Tile : ITile
@@ -674,11 +675,10 @@ public class JetSetWilly48TileMap : ITileMap, IUserWindow
             return packedData;
         }
 
-        public uint[] GetMapData()
+        ReadOnlySpan<uint> ILayer.GetMapData()
         {
             return this.mapData;
         }
-
     }
 
     public JetSetWilly48TileMap(IMemoryAccess rom, int mapIndex)
@@ -702,6 +702,7 @@ public class JetSetWilly48TileMap : ITileMap, IUserWindow
         this.tiles[2] = new JetSetWilly48Tile(helpers[2].Render(0), $"Earth");
         this.tiles[3] = new JetSetWilly48Tile(helpers[3].Render(0), $"Fire");
         this.layer = new JetSetWilly48Layer(this);
+        palette=new TilePaletteStore(this);
     }
 
     public string GetMapName()
@@ -719,14 +720,17 @@ public class JetSetWilly48TileMap : ITileMap, IUserWindow
 
     public float UpdateInterval => 1 / 60.0f;
 
+    public int SelectedTile { get; set; }
+
+    public float ScaleX => 2.0f;
+
+    public float ScaleY => 2.0f;
+
+    public uint TilesPerRow => 4;
+
     public ILayer FetchLayer(uint layer)
     {
         return this.layer;
-    }
-
-    public ITile[] FetchTiles(uint layer)
-    {
-        return this.tiles;
     }
 
     public void Update(float seconds)
@@ -748,12 +752,25 @@ public class JetSetWilly48TileMap : ITileMap, IUserWindow
 
     public void ConfigureWidgets(IMemoryAccess rom, IWidget widget, IPlayerControls playerControls)
     {
+        widget.AddLabel("Tile Palette");
+        widget.AddTilePaletteWidget(palette);
+        widget.AddLabel("Tile Map Editor");
         widget.AddTileMapWidget(this);
     }
 
     public void OnClose()
     {
         Close();
+    }
+
+    public TilePaletteStore FetchPalette(uint layer)
+    {
+        return palette;
+    }
+
+    public ReadOnlySpan<ITile> FetchTiles()
+    {
+        return tiles;
     }
 }
 

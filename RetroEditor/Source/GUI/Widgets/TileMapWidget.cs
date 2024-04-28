@@ -1,126 +1,75 @@
 using System.Numerics;
 using ImGuiNET;
-using Raylib_cs;
 using RetroEditor.Plugins;
-using rlImGui_cs;
 
 internal class TileMapWidget : IWidgetItem, IWidgetUpdateDraw
 {
-    Texture2D[] bitmaps;
-    ITileMap _iTileMap;
-
-    float scale = 2.0f;
-
-    int selectedTile = -1;
+    private ITileMap _iTileMap;
 
     public TileMapWidget(ITileMap iTileMap)
     {
         _iTileMap = iTileMap;
-        bitmaps = new Texture2D[iTileMap.MaxTiles+1];
-        var image = new Image
-        {
-            Width = (int)iTileMap.Width,
-            Height = (int)iTileMap.Height,
-            Mipmaps = 1,
-            Format = PixelFormat.UncompressedR8G8B8A8
-        };
-        bitmaps[0]=Raylib.LoadTextureFromImage(image);
-        var tiles = iTileMap.FetchTiles(0);
-        for (int a=0;a<tiles.Length;a++)
-        {
-            image = new Image
-            {
-                Width = (int)tiles[a].Width,
-                Height = (int)tiles[a].Height,
-                Mipmaps = 1,
-                Format = PixelFormat.UncompressedR8G8B8A8
-            };
-            bitmaps[a+1] = Raylib.LoadTextureFromImage(image);
-        }
     }
 
     public void Update(float seconds)
     {
-        _iTileMap.Update(seconds);
-
-        // Grab latest version of tile data?
-        var tiles = _iTileMap.FetchTiles(0);
-        for (int a=0;a<tiles.Length;a++)
-        {
-            var pixels = tiles[a].GetImageData();
-
-            byte[] bitmapData = new byte[pixels.Length*4];
-            for (int b = 0; b < pixels.Length; b++)
-            {
-                bitmapData[b * 4 + 0] = pixels[b].Red;
-                bitmapData[b * 4 + 1] = pixels[b].Green;
-                bitmapData[b * 4 + 2] = pixels[b].Blue;
-                bitmapData[b * 4 + 3] = pixels[b].Alpha;
-            }
-
-            Raylib.UpdateTexture(bitmaps[a+1], bitmapData);
-        }
     }
     
     public void Draw()
     {
-        var tiles = _iTileMap.FetchTiles(0);
-        for (int a=0;a<tiles.Length;a++)
-        {
-            ImGui.BeginGroup();
-            rlImGui.ImageSize(bitmaps[a + 1], (int)(tiles[a].Width * scale), (int)(tiles[a].Height * scale));
-            if (ImGui.IsItemHovered())
-            {
-                ImGui.BeginTooltip();
-                ImGui.Text(tiles[a].Name);
-                ImGui.EndTooltip();
-            }
-            if (ImGui.IsItemClicked())
-            {
-                if (selectedTile ==a)
-                {
-                    selectedTile = -1;
-                }
-                else
-                {
-                    selectedTile = a;
-                }
-            }
-            ImGui.EndGroup();
-        }
-
-        var currentPos = ImGui.GetCursorPos();
+        var drawList = ImGui.GetWindowDrawList();
+        var size = new Vector2(_iTileMap.Width * _iTileMap.ScaleX, _iTileMap.Height * _iTileMap.ScaleY);
+        ImGui.BeginChild($"map", size, 0, 0);
+        var pos = ImGui.GetCursorScreenPos();
+        var hx = -1;
+        var hy = -1;
         // Grab latest version of map data?
         for (int a=0;a<_iTileMap.NumLayers;a++)
         {
             var layer = _iTileMap.FetchLayer((uint)a);
+            var palette = _iTileMap.FetchPalette((uint)a);
+            var bitmaps = palette.Bitmaps;
 
             var mapData = layer.GetMapData();
 
-            for (uint y = 0; y < layer.Height; y++)
+            var mousePos = ImGui.GetMousePos();
+            var localPos = mousePos - pos;
+            if (localPos.X >= 0 && localPos.Y >= 0 && localPos.X < size.X && localPos.Y < size.Y)
             {
-                for (uint x = 0; x < layer.Width; x++)
+                var x = (uint)(localPos.X / (palette.LargestWidth * _iTileMap.ScaleX));
+                var y = (uint)(localPos.Y / (palette.LargestHeight * _iTileMap.ScaleY));
+
+                if (x >= 0 && x < _iTileMap.Width && y >= 0 && y < _iTileMap.Height)
                 {
-                    var tilenum = mapData[y * layer.Width + x];
-                    var tileData = tiles[tilenum];
-                    var tile = tileData.GetImageData();
-
-                    uint xpos = x * tileData.Width;
-                    uint ypos = y * tileData.Height;
-
-                    ImGui.SetCursorPos(new Vector2((currentPos.X + xpos) * scale, (currentPos.Y + ypos) * scale));
-                    rlImGui.ImageSize(bitmaps[1+tilenum], (int)(tileData.Width * scale), (int)(tileData.Height * scale));
-
-                    if (ImGui.IsItemHovered() && ImGui.IsMouseDown(ImGuiMouseButton.Left))
+                    hx= (int)x;
+                    hy = (int)y;
+                    if (palette.TilePalette.SelectedTile >= 0 && ImGui.IsMouseDown(ImGuiMouseButton.Left))
                     {
-                        if (selectedTile!=-1)
-                        {
-                            layer.SetTile(x, y, (uint)selectedTile);
-                        }
+                        layer.SetTile(x, y, (uint)palette.TilePalette.SelectedTile);
                     }
-
+                    else if (palette.TilePalette.SelectedTile >= 0 && ImGui.IsMouseDown(ImGuiMouseButton.Right))
+                    {
+                        var tilenum = mapData[(int)(y * layer.Width + x)];
+                        palette.TilePalette.SelectedTile = (int)tilenum;
+                    }
                 }
             }
+            var offY = 0;
+            for (uint y = 0; y < layer.Height; y++)
+            {
+                var offX = 0;
+                for (uint x = 0; x < layer.Width; x++)
+                {
+                    var tilenum = mapData[(int)(y * layer.Width + x)];
+                    var tiles = palette.TilePalette.FetchTiles();
+                    var tileData = tiles[(int)tilenum];
+
+                    drawList.AddImage((nint)bitmaps[(int)tilenum].Id, new Vector2(pos.X + offX, pos.Y + offY), new Vector2(pos.X + offX + tileData.Width * _iTileMap.ScaleX, pos.Y + offY + tileData.Height * _iTileMap.ScaleY));
+                    offX += (int)(palette.LargestWidth * _iTileMap.ScaleX);
+                }
+                offY += (int)(palette.LargestHeight * _iTileMap.ScaleY);
+            }
         }
+        ImGui.EndChild();
     }
 }

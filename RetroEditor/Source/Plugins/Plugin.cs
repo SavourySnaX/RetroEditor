@@ -493,7 +493,7 @@ namespace RetroEditor.Plugins
         /// Get the map data for the layer
         /// </summary>
         /// <returns>Flat array of tile indices</returns>
-        uint[] GetMapData();
+        ReadOnlySpan<uint> GetMapData();
 
         /// <summary>
         /// Called when a tile is set in the editor, this should be used to make the change in the games memory
@@ -502,6 +502,48 @@ namespace RetroEditor.Plugins
         /// <param name="y">y offset of modified tile in tiles</param>
         /// <param name="tile">tile index</param>
         void SetTile(uint x, uint y, uint tile);
+    }
+
+    /// <summary>
+    /// Interface for a tile map palette - used by the TileMapWidget class
+    /// </summary>
+    public interface ITilePalette
+    {
+        /// <summary>
+        /// Maximum number of tiles that can be selected from
+        /// </summary>
+        uint MaxTiles { get; }
+
+        /// <summary>
+        /// Can be used to refresh the tile map graphics
+        /// </summary>
+        /// <param name="seconds">seconds since editor started</param>
+        void Update(float seconds);
+
+        /// <summary>
+        /// Get the tile palette 
+        /// </summary>
+        /// <returns>Array of tiles</returns>
+        ReadOnlySpan<ITile> FetchTiles();
+        
+        /// <summary>
+        /// Current chosen palette index
+        /// </summary>
+        int SelectedTile { get; set; }
+
+        /// <summary>
+        /// X Scale of the tiles
+        /// </summary>
+        float ScaleX { get; }
+        /// <summary>
+        /// Y Scale of the tiles
+        /// </summary>
+        float ScaleY { get; }
+
+        /// <summary>
+        /// Number of tiles per row in the palette
+        /// </summary>
+        uint TilesPerRow { get; }
     }
 
     /// <summary>
@@ -524,30 +566,27 @@ namespace RetroEditor.Plugins
         uint NumLayers { get; }
 
         /// <summary>
-        /// Maximum number of tiles that can be selected from
-        /// </summary>
-        uint MaxTiles { get; }
-
-        /// <summary>
-        /// Can be used to refresh the tile map graphics
-        /// </summary>
-        /// <param name="seconds">seconds since editor started</param>
-        void Update(float seconds);
-
-        /// <summary>
-        /// Get the tile palette for the specified layer
-        /// </summary>
-        /// <param name="layer">layer to get tiles for</param>
-        /// <returns>Array of tiles</returns>
-        ITile[] FetchTiles(uint layer);
-
-        /// <summary>
         /// Get the layer data for the specified layer
         /// </summary>
         /// <param name="layer">layer to get tiles for</param>
         /// <returns>Array of tiles</returns>
         ILayer FetchLayer(uint layer);
 
+        /// <summary>
+        /// Fetch tile palette for the map
+        /// </summary>
+        /// <param name="layer">layer to get tiles for</param>
+        /// <returns>Tile palette storage</returns>
+        TilePaletteStore FetchPalette(uint layer);
+
+        /// <summary>
+        /// X Scale of the tiles
+        /// </summary>
+        float ScaleX { get; }
+        /// <summary>
+        /// Y Scale of the tiles
+        /// </summary>
+        float ScaleY { get; }
 
         // What else do we need - 
         // List of tiles that can be used for this map
