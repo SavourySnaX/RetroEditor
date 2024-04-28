@@ -1,2 +1,4 @@
 _site/**
 api/**
+node_modules/**
+package*.json
