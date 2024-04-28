@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using RetroEditor.Plugins;
+using RetroEditor.Plugins.ZXSpectrumTape;
 
 public class JetSetWilly48 : IRetroPlugin, IPlayerWindowExtension, IMenuProvider
 {
@@ -77,14 +78,14 @@ public class JetSetWilly48 : IRetroPlugin, IPlayerWindowExtension, IMenuProvider
             Concat(clearCode).Concat(clearAscii).Concat(clearInteger).
             Concat(loadCodeRandUsr).Concat(ascii).Concat(integer).Concat(endBasic).ToArray();
         var assembled = romAccess.ReadBytes(ReadKind.Ram, 0x8000, 0x8000);
-        var outTape = new ZXSpectrumTape.Tape();
-        var basicHeader = new ZXSpectrumTape.HeaderBlock(ZXSpectrumTape.HeaderKind.Program, "JSW", (UInt16)loader.Length, 10, (UInt16)loader.Length);
+        var outTape = new Tape();
+        var basicHeader = new HeaderBlock(HeaderKind.Program, "JSW", (UInt16)loader.Length, 10, (UInt16)loader.Length);
         outTape.AddHeader(basicHeader);
-        var basicBlock = new ZXSpectrumTape.DataBlock(loader);
+        var basicBlock = new DataBlock(loader);
         outTape.AddBlock(basicBlock);
-        var header = new ZXSpectrumTape.HeaderBlock(ZXSpectrumTape.HeaderKind.Code, "JSW", (UInt16)assembled.Length,0x8000, 0);
+        var header = new HeaderBlock(HeaderKind.Code, "JSW", (UInt16)assembled.Length,0x8000, 0);
         outTape.AddHeader(header);
-        var block = new ZXSpectrumTape.DataBlock(assembled);
+        var block = new DataBlock(assembled);
         outTape.AddBlock(block);
 
         return outTape;
@@ -336,7 +337,7 @@ public class JetSetWillyMap : IImage, IUserWindow
 
     public float ScaleY => 2.0f;
 
-    public Pixel[] GetImageData(float seconds)
+    public ReadOnlySpan<Pixel> GetImageData(float seconds)
     {
         return RenderMap(seconds);
     }
@@ -573,7 +574,7 @@ public class JetSetWillyMap : IImage, IUserWindow
     }
 }
 
-public class JetSetWilly48TileMap : ITileMap, IUserWindow
+public class JetSetWilly48TileMap : ITileMap, ITilePalette, IUserWindow
 {
     byte[] mapData;
     string mapName;
@@ -583,6 +584,7 @@ public class JetSetWilly48TileMap : ITileMap, IUserWindow
     ZXSpectrum48ImageHelper[] helpers;
     JetSetWilly48Tile[] tiles;
     JetSetWilly48Layer layer;
+    TilePaletteStore palette;
     IMemoryAccess rom;
 
     public class JetSetWilly48Tile : ITile
@@ -674,11 +676,10 @@ public class JetSetWilly48TileMap : ITileMap, IUserWindow
             return packedData;
         }
 
-        public uint[] GetMapData()
+        ReadOnlySpan<uint> ILayer.GetMapData()
         {
             return this.mapData;
         }
-
     }
 
     public JetSetWilly48TileMap(IMemoryAccess rom, int mapIndex)
@@ -702,6 +703,7 @@ public class JetSetWilly48TileMap : ITileMap, IUserWindow
         this.tiles[2] = new JetSetWilly48Tile(helpers[2].Render(0), $"Earth");
         this.tiles[3] = new JetSetWilly48Tile(helpers[3].Render(0), $"Fire");
         this.layer = new JetSetWilly48Layer(this);
+        palette=new TilePaletteStore(this);
     }
 
     public string GetMapName()
@@ -719,14 +721,17 @@ public class JetSetWilly48TileMap : ITileMap, IUserWindow
 
     public float UpdateInterval => 1 / 60.0f;
 
+    public int SelectedTile { get; set; }
+
+    public float ScaleX => 2.0f;
+
+    public float ScaleY => 2.0f;
+
+    public uint TilesPerRow => 4;
+
     public ILayer FetchLayer(uint layer)
     {
         return this.layer;
-    }
-
-    public ITile[] FetchTiles(uint layer)
-    {
-        return this.tiles;
     }
 
     public void Update(float seconds)
@@ -748,6 +753,9 @@ public class JetSetWilly48TileMap : ITileMap, IUserWindow
 
     public void ConfigureWidgets(IMemoryAccess rom, IWidget widget, IPlayerControls playerControls)
     {
+        widget.AddLabel("Tile Palette");
+        widget.AddTilePaletteWidget(palette);
+        widget.AddLabel("Tile Map Editor");
         widget.AddTileMapWidget(this);
     }
 
@@ -755,15 +763,27 @@ public class JetSetWilly48TileMap : ITileMap, IUserWindow
     {
         Close();
     }
+
+    public TilePaletteStore FetchPalette(uint layer)
+    {
+        return palette;
+    }
+
+    public ReadOnlySpan<ITile> FetchTiles()
+    {
+        return tiles;
+    }
 }
 
-public class JetSetWilly48Bitmap : IBitmapImage, IUserWindow
+public class JetSetWilly48Bitmap : IBitmapImage, IBitmapPalette, IImage, IUserWindow
 {
     private IMemoryAccess rom;
     private uint width;
     private uint height;
     private byte page;
     private byte index;
+    private uint[] _cachedBitmapData;
+    private Pixel[] _cachedImageData;
 
     public JetSetWilly48Bitmap(IMemoryAccess rom, byte page, byte index, uint width, uint height)
     {
@@ -772,6 +792,30 @@ public class JetSetWilly48Bitmap : IBitmapImage, IUserWindow
         this.height = height;
         this.page = page;
         this.index = index;
+        _cachedImageData = new Pixel[width * height];
+        _cachedBitmapData = new uint[width * height];
+        FillCaches();
+    }
+
+    private void FillCaches()
+    {
+        var spriteData = JetSetWilly48.GetSpriteData(rom, (byte)page, (byte)(index));
+        for (int a = 0; a < width * height / 8; a++)
+        {
+            for (int b = 0; b < 8; b++)
+            {
+                _cachedBitmapData[a * 8 + b] = (uint)(spriteData[a] >> (7 - b)) & 1;
+            }
+        }
+        var imageHelper = new ZXSpectrum48ImageHelper(Width, Height);
+        for (int y=0;y<Height;y++)
+        {
+            for (int x=0;x<Width;x++)
+            {
+                imageHelper.DrawBit((uint)x, (uint)y, ((spriteData[y * 2 + (x / 8)] >> (7 - (x & 7))) & 1) == 1, 0x07);
+            }
+        }
+        _cachedImageData = imageHelper.Render(0);
     }
 
     public uint Width => width;
@@ -782,23 +826,39 @@ public class JetSetWilly48Bitmap : IBitmapImage, IUserWindow
 
     public float UpdateInterval => 1 / 30.0f;
 
+    public uint PixelWidth => 20;
+
+    public uint PixelHeight => 20;
+
+    public uint ColoursPerRow => 2;
+
+    public int SelectedColour { get; set; }
+
+    IBitmapPalette IBitmapImage.Palette => this;
+
+    public float ScaleX => 2.0f;
+
+    public float ScaleY => 2.0f;
+
     public void ConfigureWidgets(IMemoryAccess rom, IWidget widget, IPlayerControls playerControls)
     {
+        widget.AddImageView(this);
+        widget.AddLabel("Palette Selector");
+        widget.AddPaletteWidget(this);
+        widget.AddLabel("Bitmap Editor");
         widget.AddBitmapWidget(this);
     }
 
-    public uint[] GetImageData(float seconds)
+    public ReadOnlySpan<uint> GetImageData(float seconds)
     {
-        var spriteData = JetSetWilly48.GetSpriteData(rom, (byte)page, (byte)(index));
-        var result = new uint[width * height];
-        for (int a = 0; a < width * height / 8; a++)
-        {
-            for (int b = 0; b < 8; b++)
-            {
-                result[a * 8 + b] = (uint)(spriteData[a] >> (7 - b)) & 1;
-            }
-        }
-        return result;
+        return _cachedBitmapData;
+    }
+
+    private Pixel[] _palette = new Pixel[] { new Pixel(0, 0, 0), new Pixel(255, 255, 255) };
+
+    public ReadOnlySpan<Pixel> GetPalette()
+    {
+        return _palette;
     }
 
     public void OnClose()
@@ -820,5 +880,12 @@ public class JetSetWilly48Bitmap : IBitmapImage, IUserWindow
             current |= (byte)(1 << bit);
         }
         rom.WriteBytes(WriteKind.SerialisedRam, spriteAddress + offs, new byte[] { current });
+        // Lazy update cache
+        FillCaches();
+    }
+
+    ReadOnlySpan<Pixel> IImage.GetImageData(float seconds)
+    {
+        return _cachedImageData;
     }
 }

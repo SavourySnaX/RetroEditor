@@ -92,7 +92,7 @@ public class Fairlight : IRetroPlugin, IMenuProvider
     public ISave Export(IMemoryAccess romAcess)
     {
         // Blankety blank tape for now?
-        var tape = new ZXSpectrumTape.Tape();
+        var tape = new RetroEditor.Plugins.ZXSpectrumTape.Tape();
         return tape;
     }
 
@@ -228,7 +228,7 @@ public class FairlightImage : IImage, IUserWindow
 
     public float ScaleY => 2.0f;
 
-    public Pixel[] GetImageData(float seconds)
+    public ReadOnlySpan<Pixel> GetImageData(float seconds)
     {
         return RenderMap(seconds);
     }
