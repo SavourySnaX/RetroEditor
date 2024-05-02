@@ -36,7 +36,7 @@ internal class Log
 
     public void Add(LogType type, string logSource, string message)
     {
-#if DEBUG
+#if !DEBUG
         if (type == LogType.Debug)
         {
             return;
