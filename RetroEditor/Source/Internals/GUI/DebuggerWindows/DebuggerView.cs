@@ -126,23 +126,24 @@ internal class DebuggerView : IWindow
             pos.X = ImGui.GetCursorScreenPos().X;
             pos.Y += sizeOfMonoText.Y;
         }
-        ImGui.EndChild();
-        ImGui.PopStyleVar(2);
-
-        var size = ImGui.GetWindowSize();
-        size.Y -= YOff;
-        if (size.Y > 0)
+        
+        if (ImGui.IsWindowFocused() || ImGui.IsItemActivated())
         {
-            var expectedSize = (int)Math.Floor(size.Y / sizeOfMonoText.Y) - 2;
-            if (view.view.H != expectedSize)
+            if (this.view.view.Kind == LibRetroPlugin.debug_view_type.Disassembly)
             {
-                view.view.H = expectedSize;
-                view.state = new byte[view.view.W * view.view.H * 2];
+                if (ImGui.IsKeyPressed(ImGuiKey.F5))
+                {
+                    debugger.SendCommand("go");
+                }
+                if (ImGui.IsKeyPressed(ImGuiKey.F7))
+                {
+                    debugger.SendCommand("s");
+                }
+                if (ImGui.IsKeyPressed(ImGuiKey.F8))
+                {
+                    debugger.SendCommand("o");
+                }
             }
-        }
-
-        if (ImGui.IsWindowFocused())
-        {
             if (this.view.view.Kind == LibRetroPlugin.debug_view_type.Memory || this.view.view.Kind == LibRetroPlugin.debug_view_type.Disassembly)
             {
                 if (ImGui.IsKeyPressed(ImGuiKey.DownArrow))
@@ -191,6 +192,23 @@ internal class DebuggerView : IWindow
                 }
             }
         }
+
+
+        ImGui.EndChild();
+        ImGui.PopStyleVar(2);
+
+        var size = ImGui.GetWindowSize();
+        size.Y -= YOff;
+        if (size.Y > 0)
+        {
+            var expectedSize = (int)Math.Floor(size.Y / sizeOfMonoText.Y) - 2;
+            if (view.view.H != expectedSize)
+            {
+                view.view.H = expectedSize;
+                view.state = new byte[view.view.W * view.view.H * 2];
+            }
+        }
+
 
         return false;
     }
