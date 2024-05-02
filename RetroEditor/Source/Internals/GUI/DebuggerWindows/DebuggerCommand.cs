@@ -9,7 +9,7 @@ internal class DebuggerCommand : IWindow
     public DebuggerCommand(LibMameDebugger debugger)
     {
         this.debugger = debugger;
-        log = "";
+        log = new List<string>();
         inputBuffer = "";
     }
 
@@ -25,13 +25,35 @@ internal class DebuggerCommand : IWindow
             var result = debugger.SendCommand(inputBuffer);
             if (result.Length > 0)
             {
-                log += result + "\n";
+                var split = result.Split('\n');
+                log.AddRange(split);
             }
         }
 
-        ImGui.BeginChild("Log", new Vector2(0, 0), 0, ImGuiWindowFlags.HorizontalScrollbar|ImGuiWindowFlags.AlwaysVerticalScrollbar);
-        ImGui.Text(log);
-        ImGui.EndChild();
+
+        if (ImGui.BeginChild("Scrolling", new System.Numerics.Vector2(0, 0), ImGuiChildFlags.None, ImGuiWindowFlags.HorizontalScrollbar))
+        {
+            unsafe
+            {
+                var clipper = ImGuiNative.ImGuiListClipper_ImGuiListClipper();
+                ImGuiNative.ImGuiListClipper_Begin(clipper, log.Count, -1.0f);
+                while (ImGuiNative.ImGuiListClipper_Step(clipper) != 0)
+                {
+                    for (int i = clipper->DisplayStart; i < clipper->DisplayEnd; i++)
+                    {
+                        ImGui.TextUnformatted(log[i]);
+                    }
+                }
+                ImGuiNative.ImGuiListClipper_End(clipper);
+                ImGuiNative.ImGuiListClipper_destroy(clipper);
+            }
+            if (ImGui.GetScrollY() >= ImGui.GetScrollMaxY())
+            {
+                ImGui.SetScrollHereY(1.0f);
+            }
+
+            ImGui.EndChild();
+        }
 
         return false;
     }
@@ -47,5 +69,5 @@ internal class DebuggerCommand : IWindow
 
     private LibMameDebugger debugger;
     private string inputBuffer;
-    private string log;
+    private List<string> log;
 }
