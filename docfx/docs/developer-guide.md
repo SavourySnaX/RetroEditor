@@ -126,6 +126,63 @@ At this point, we can restart the editor, and __File__->__Create New Project__ s
 
 You will now see a player window with the game starting up. In addition, the __Window__ menu will now have an item for our newly created project, but the only items available are __Open Player__ and __Reload Plugin__. At this point we are in a position where we should be able to iterate on the plugin, without needing to restart the Editor.
 
+### Ghidra Setup
+
+Ghidra is a great tool for doing reverse engineering to figure out data formats etc, there is a [plugin (GhidraBoy)](https://github.com/Gekkio/GhidraBoy/releases/download/20231227_ghidra_11.0/ghidra_11.0_PUBLIC_20231227_GhidraBoy.zip) available for [Ghidra 11](https://github.com/NationalSecurityAgency/ghidra/releases/download/Ghidra_11.0.3_build/ghidra_11.0.3_PUBLIC_20240410.zip) so grab both.
+
+Unzip Ghidra (but not the GhidraBoy extension), and then launch Ghidra (This is not a Ghidra tutorial, but I will try to cover aspects as needed). Once open, __File__->__Install Extension__ , click the + add locate the ghidraboy zip. After installation, restart Ghidra.
+
+Create a new project, and then press __I__ to import, selecting the manicminer image. GhidraBoy should configure everything correctly, so click __OK__, and __OK__ once again on the summary dialog.
+
+Now double click on the imported file, clicking __YES__ to the Analyze? dialog and then click __Analyze__. This will attempt to automatically disassemble the rom, giving us an initial starting point.
+
+### Initial Goal
+
+Our initial goal is to try to skip any logos, intros, start menus, so that our player is on the first level when ever we open the plugin. This will give us a good basis for exploring patching, and also lead into figuring out where the level data is stored.
+
+Open the retro editor if it isn't already. And open __Developer__->__LibMame Debugger__->__Launch__ selecting the manic miner rom, if it fails, its probably because you haven't put the required gb roms in the right place. _Note when the libMame debugger is launched, the execution starts paused_. You should open the __Developer__->__LibMame Debugger__->__Cpu State__, __Disassembly__, __Memory__ and __Console__ views as we will need them going forward.
+
+So at this point, we should have Ghidra and the Retro Editor open, with Manic Miner paused in the debugger. What we are now going to do, is to try to figure out how to skip the initial screen presented before the menu. Since we don't know anything about this rom, we use a combination of static (Ghidra) and dynamic (The debugger windows in Retro Editor) in order to figure out what we need. You probably will want to make notes too, but for this tutorial I will mostly guiding you explicitly (again, this isn't a Ghidra or reverse engineering tutorial per se).
+
+Another handy resource would be documentation about the Game Boy system itself, the [Pan Docs](https://gbdev.io/pandocs/Specifications.html) will suffice for this.
+
+Ghidra should have opened with the entry() function at address 0x100 within view, if not, you can jump to the entry() via the Symbol Tree window, expand Functions and entry should be at the top. If you are observant you will notice that the debugger (Retro Editor) seems to be showing us stopped at address 0x0000. This is becaause the debugger stops at the first executable point, which in the case of the GameBoy happens to be inside the bios. We don't care about the bios, so using the console add a breakpoint at address 100 (__bp 100__) and then resume execution (__go__) until we stop at the same address.
+
+```
+bp 100
+go
+```
+
+The bios should flash up the colour Gameboy logo and then the debugger should stop at the entry function we could see in Ghidra.
+
+I usually begin by stepping forward (__F7__ when the disassembly view is focused), and when i reach a __CALL__ instruction, I step over it (__F8__). If the debugger pauses, then i continue, if the game (or intros or main menu) starts running. Then I reset and start again, but step into the call this time. This attempts to discover if the games intro/start menu are seperated from the level logic (e.g. handled in a custom function). In the case of Manic Miner, we get lucky.
+
+From the entry point, we meet a bunch of __CALL__ instructions, but the one located at __0x01D7__ does not return. So we start again, this time we step into the call at __0x01D7__, and then continue forward, this time when reach __0x2981__, stepping over the intro runs, and then the main menu is shown, but when we press start, we find ourselves back in the debugger. So, if we were to knock out the call at __0x2981__ then in theory in our plugin, the game will start on the first level straight away. 
+
+Load your saved Manic Miner project into the editor. Now in your editor modify :
+
+```cs
+    public void SetupGameTemporaryPatches(IMemoryAccess romAccess)
+    {
+    }
+```
+
+to make it look like this :
+
+```cs
+    public void SetupGameTemporaryPatches(IMemoryAccess romAccess)
+    {
+        // Patch out the main menu/intro ()
+        romAccess.WriteBytes(WriteKind.TemporaryRom, 0x2981, new byte[] { 0x00, 0x00, 0x00 });s
+    }
+```
+
+save the file, then go back to the editor and select __Window__->__<project_name>__->__Reload Plugin__. Now the player window should re-open and gameplay should start at level 1 without showing the intro/menu.
+
+### Adding a level select cheat
+
+As great as starting at level 1 is, when editing it is helpful if the editor can skip to the level they are currently working. In order to do this, we need to figure out where in the code levels are setup, fortunately this will also help us figure out where the level data is for editor.
+
 _to be continued_
 
 _under construction_
