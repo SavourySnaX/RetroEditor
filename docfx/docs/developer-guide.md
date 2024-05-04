@@ -157,7 +157,7 @@ The bios should flash up the colour Gameboy logo and then the debugger should st
 
 I usually begin by stepping forward (__F7__ when the disassembly view is focused), and when i reach a __CALL__ instruction, I step over it (__F8__). If the debugger pauses, then i continue, if the game (or intros or main menu) starts running. Then I reset and start again, but step into the call this time. This attempts to discover if the games intro/start menu are seperated from the level logic (e.g. handled in a custom function). In the case of Manic Miner, we get lucky.
 
-From the entry point, we meet a bunch of __CALL__ instructions, but the one located at __0x01D7__ does not return. So we start again, this time we step into the call at __0x01D7__, and then continue forward, this time when reach __0x2981__, stepping over the intro runs, and then the main menu is shown, but when we press start, we find ourselves back in the debugger. So, if we were to knock out the call at __0x2981__ then in theory in our plugin, the game will start on the first level straight away. 
+From the entry point, we meet a bunch of __CALL__ instructions, but the one located at __0x01D7__ does not return. So we start again, this time we step  (__F7__) into the call at __0x01D7__, and then continue forward, this time when reach __0x2981__ and step over (__F8__), the intro runs, and then the main menu is shown, but when we press start, we find ourselves back in the debugger. So, if we were to knock out the call at __0x2981__ then in theory in our plugin, the game will start on the first level straight away. 
 
 Load your saved Manic Miner project into the editor. Now in your editor modify :
 
@@ -173,7 +173,7 @@ to make it look like this :
     public void SetupGameTemporaryPatches(IMemoryAccess romAccess)
     {
         // Patch out the main menu/intro ()
-        romAccess.WriteBytes(WriteKind.TemporaryRom, 0x2981, new byte[] { 0x00, 0x00, 0x00 });s
+        romAccess.WriteBytes(WriteKind.TemporaryRom, 0x2981, new byte[] { 0x00, 0x00, 0x00 });
     }
 ```
 
@@ -181,7 +181,267 @@ save the file, then go back to the editor and select __Window__->__<project_name
 
 ### Adding a level select cheat
 
-As great as starting at level 1 is, when editing it is helpful if the editor can skip to the level they are currently working. In order to do this, we need to figure out where in the code levels are setup, fortunately this will also help us figure out where the level data is for editor.
+As great as starting at level 1 is, when editing it is helpful if the editor can skip to the level that is being worked on. In order to do this, we need to figure out where in the code the levels are setup, fortunately this will also help us figure out where the level data is for an editor later.
+
+According to the [Pan Docs Memory Map](https://gbdev.io/pandocs/Memory_Map.html) video RAM can be directly accessed via 0x8000 to 0x9FFF, there is also DMA, but for this particular game, we don't need to worry about that. Now the GameBoy Colour splits it video memory into [Tile Data](https://gbdev.io/pandocs/Tile_Data.html) (0x8000-0x97FF) and [Tile Maps](https://gbdev.io/pandocs/Tile_Maps.html) (0x9800-0x9FFF). 
+
+In order to figure out where the game data is stored, we could try staring at the Ghidra Code, or maybe looking at the raw rom data, but a smarter solution would be to allow the debugger to find it for us. The libretro_MAME debugger, allows us to stop execution when memory addresses are accessed. Since we know that the tile maps are written to address 0x9800-0x9FFF, we should be able to use this knowledge to isolate the location of the levels.
+
+To begin, lets reset the rom we are debugging, and setup an initial watchpoint (a breakpoint that stops on memory access) on the first tile address 0x9800 (length 1), setting it to stop on write (w). In the debugger console execute the following :
+
+```
+softreset
+wpset 9800,1,w
+```
+
+Now from the disassembly view, press __F5__ to resume. The debugger will stop on the first write to the tilemap memory, there will be a number of these, firstly by the bios, then by initialisation in the rom, then by the main menu, and finally by the level setup. Keep resuming, until the main menu is reached, at the main menu press __M__ on the MAME RETRO player window (to start the game). The next time the debugger stops, in theory it is setting up the level. If you wish to see what the tilemap looks like, you can use the memory view and select __CGB PPU/:ppu/0/m_vram__ in the source view and __1800__ in the expression. Since we have stopped at the first tile being written, address 1800 will contain a __02__ in this case. If we resume, then we can see the whole tilemap in the memory view, if you do this, just repeat the steps from softreset (but don't set another watchpoint) in order to continue with the tutorial below. Assuming you did resume, lets try to see if the tilemap matches the level we are looking at in the player. The Tilemap is 32 bytes wide, each byte representing a tile number to use for that 8x8 block of the image. So we can see 1800 holds a __02__, and on the screen the top left tile is a brick pattern. We then see a number of __00__'s, which seem to represent blank space, then an __08__ which seems to be a key, and then a blank followed by a __06__ a stalagtite like formation. This all seems to line up with the screen, feel free to try lining up the other items, then softreset etc, and resume the tutorial below.
+
+Ok, at this point, we have stopped just after writing the first tile. We can see in the disassembly view that the next instruction is at __716C__, and the previous instruction __ld (de),a__ must have written the memory. In the CPU State view, register __A__ contains __02__ and registers __D__&__E__ contain the values __98__&__00__ respectively. Interestingly, looking up, we can see that a __ld a,$02__ was used to place the value __02__ into A, which is odd (if the rom data was just copied to the screen, this wouldn't be the pattern). This means we cannot directly see where the rom data is being read, fortunately, all is not lost. Another handy trick we can use, is to generate a trace of the execution of the processor and record the values in the registers all to a file. We are looking for a pattern or sequence of memory accessing, that would betray the rom location of the tile data. 
+
+Lets trace writes to the tilemap for the first line, in order to do that, we need to add another watchpoint to stop at the 32nd write, I clear the old watchpoint here, just to avoid stopping again before we hit the added watchpoint, the reason for the second stop, is the CGB has an alternate bank of memory at the same location, which holds the attribute info for a tile (palette colours etc) :
+
+```
+wpclear
+wpset 9820,1,w
+```
+
+Now setup the trace, to log to a file named tilemap.txt :
+
+```
+trace tilemap.txt,,,{tracelog "A=%02X BC=%02X%02X DE=%02X%02X HL=%02X%02X  ",a,b,c,d,e,h,l}
+```
+
+The above command will pair up the BC,DE,HL registers (because we are looking for an address, and on the GameBoy register pairs are used for that kind of access). Press __F5__, and once the debugger stops again, enter the below to stop the trace :
+
+```
+trace off
+```
+
+Now, lets open the file we just created in a text editor (you can use notepad if you don't have a favourite), the file should be in the root directory of the Editor application. Search for the address we saw writing to memory __716B__, there will only be two (this is because there are only 2 bricks drawn between the first and 32nd - one at the end of the first line, and the other other at the start of the second). If you look up from one of these you should be able to find a __jp (hl)__ at __70F2__. This implies there is some sort of jump table going on when drawing out the screen. If we search for __70F2__ you will discover there are 32 of these. Which lines up with drawing 1 tile to each location between __9801__ and __9820__ inclusive. So now we need to look at how the __hl__ value is derived, since presumably __hl__ controls what is drawn for each tile in the screen. 
+
+Looking up a little from __70F2__, there is a __ld hl,$7DF3__ at __70E9__, so lets look at the code between these two locations :
+
+```asm
+ld hl,$7DF3             ; address of 2 byte wide table.. (jump table)
+add hl,de               ; de must contain the offset into the table
+ld d,h                  ; save the calculated jump table address to de
+ld e,l
+ld a,(hl+)              ; put the value of the entry in the jump table into hl
+ld h,(hl)
+ld l,a
+jp (hl)                 ; jump to the location in hl
+```
+
+Address __7DF3__ contains a table of addresses, we can use Ghidra to examine this table, and the code reachable from this table. There is however a snag, the gameboy memory is banked, addresses from __4000__ to __7FFF__ are banked rom, meaning the 16k of memory in that area can be pointed to any of the 256k of rom data in the cartridge (in the case of manicminer). There is a special hardware register inside a chip (memory controller) inside the cartridge that controls which 16k section of the cartridge is visible to the cpu in addresses __4000__ to __7FFF__. We need to know which 16k block is visible at the point of this routine, in order to locate the correct place in Ghidra. You can use the memory view and change the source to __Game Boy MBC1 Cartridge/:cartslot:rom_mbc1/0/m_bank_sel_rom__ in order to figure out which bank is active, the first four hexdigits are for the addresses __0000__ to __3FFF__, the second four are what we are interested in, these are used for the switchable bank. You should see the value __0004__ here. This means it currently points to the 5th 16k bank (0,1,2,3,4), in Ghidra (thanks to the Gameboy plugin), the banks are already setup, so if you press __g__ (goto address) and choose the entry from the pop up in rom4:7df3, it should take you to the correct address. At present, Ghidra does not know what this data is, so we need to tell it. While the cursor is placed on the rom4:7df3 line (on the ??'s), press __p__ (pointer). This will convert the data into a pointer (which is what our jump table contains), looking at the data, I can see what looks like 9 entries, (the addresses seem to be related), so in addition press __[__ and enter __9__, to  create an array of 9 entries. You can press __enter__ on one of the entries to jump to the address, and __alt+left cursor__ to go back to the table. If Ghidra hasn't realised there is supposed to be code at a location, pressing __c__ will get Ghidra to disassemble the code.
+
+For now, we don't really need to use Ghidra, we can go back to the text file, and try to figure out where the __de__ value is computed. Looking above the code we examined last time, there is 
+
+```asm
+A=00 BC=D812 DE=DA00 HL=0000  708D: ld   hl,sp+$44
+A=00 BC=D812 DE=DA00 HL=DFE3  708F: ld   a,(hl+)
+A=13 BC=D812 DE=DA00 HL=DFE4  7090: ld   b,(hl)
+A=13 BC=D812 DE=DA00 HL=DFE4  7091: ld   c,a
+A=13 BC=D813 DE=DA00 HL=DFE4  7092: ld   a,(bc)
+A=00 BC=D813 DE=DA00 HL=DFE4  7093: ld   c,a
+A=00 BC=D800 DE=DA00 HL=DFE4  7094: cp   e
+A=00 BC=D800 DE=DA00 HL=DFE4  7095: jp   nz,$709B
+A=00 BC=D800 DE=DA00 HL=DFE4  7098: jp   $70C9
+A=00 BC=D800 DE=DA00 HL=DFE4  70C9: ld   hl,sp+$48
+A=00 BC=D800 DE=DA00 HL=DFE7  70CB: ld   a,(hl+)
+A=00 BC=D800 DE=DA00 HL=DFE8  70CC: ld   d,(hl)
+A=00 BC=D800 DE=0000 HL=DFE8  70CD: ld   e,a
+A=00 BC=D800 DE=0000 HL=DFE8  70CE: ld   a,($7E26)
+A=00 BC=D800 DE=0000 HL=DFE8  70D1: ld   b,a
+A=00 BC=0000 DE=0000 HL=DFE8  70D2: ld   a,($7E25)
+A=08 BC=0000 DE=0000 HL=DFE8  70D5: ld   c,a
+A=08 BC=0008 DE=0000 HL=DFE8  70D6: ld   a,d
+A=00 BC=0008 DE=0000 HL=DFE8  70D7: add  a,$80
+A=80 BC=0008 DE=0000 HL=DFE8  70D9: ld   l,a
+A=80 BC=0008 DE=0000 HL=DF80  70DA: ld   a,b
+A=00 BC=0008 DE=0000 HL=DF80  70DB: add  a,$80
+A=80 BC=0008 DE=0000 HL=DF80  70DD: cp   l
+A=80 BC=0008 DE=0000 HL=DF80  70DE: jr   nz,$70E2
+A=80 BC=0008 DE=0000 HL=DF80  70E0: ld   a,c
+A=08 BC=0008 DE=0000 HL=DF80  70E1: cp   e
+A=08 BC=0008 DE=0000 HL=DF80  70E2: jp   c,$722B
+A=08 BC=0008 DE=0000 HL=DF80  70E5: sla  e
+A=08 BC=0008 DE=0000 HL=DF80  70E7: rl   d
+```
+
+This is a big block, however if we compare this block (specifically the register values, with a few other times in the file e.g. search for __708D__) :
+
+the top 6 lines seem to show BC= moving past consecutive address for example here are 2 sets (side by side) :
+
+```asm
+A=00 BC=D812 DE=DA00 HL=0000  708D: ld   hl,sp+$44    A=00 BC=D812 DE=DA00 HL=0000  708D: ld   hl,sp+$44
+A=00 BC=D812 DE=DA00 HL=DFE3  708F: ld   a,(hl+)      A=00 BC=D812 DE=DA00 HL=DFE3  708F: ld   a,(hl+)
+A=1B BC=D812 DE=DA00 HL=DFE4  7090: ld   b,(hl)       A=1C BC=D812 DE=DA00 HL=DFE4  7090: ld   b,(hl)
+A=1B BC=D812 DE=DA00 HL=DFE4  7091: ld   c,a          A=1C BC=D812 DE=DA00 HL=DFE4  7091: ld   c,a
+A=1B BC=D81B DE=DA00 HL=DFE4  7092: ld   a,(bc)       A=1C BC=D81C DE=DA00 HL=DFE4  7092: ld   a,(bc)
+A=00 BC=D81B DE=DA00 HL=DFE4  7093: ld   c,a          A=00 BC=D81C DE=DA00 HL=DFE4  7093: ld   c,a
+```
+
+Looking at the bottom line here, __A=00 BC=D81B__ && __A=00 BC=D81C__ I'm reasonably confident that A is the tile number and BC is the address it is fetched from. __D81B__ is according to [Pan Docs Memory Map](https://gbdev.io/pandocs/Memory_Map.html), within the work ram (the bank switchable 4k block),
+this unfortunately means that some other code is responsible for getting the data to that address from the cartridge. Before we try to locate that, lets make sure the memory around __D81B__ looks like our tilemap. Set the memory view source to __Sharp LR35902 ':mainpu' program space memory__ and the address to __D81B__. This certainly looks like it could be the tilemap (the tile numbers are different, but the layout seems possible), if you can't see it, try changing the address to __D812__ and you should see a 16 which would seem to be the wall tile this time. 
+
+We can use the same tactic we used to find the writes to video ram, to find the code that is performing the copy :
+
+```
+softreset
+wpclear
+wpset D812,1,w
+```
+
+Set the game running, resume past the first several times the debugger stops (memory being used for bios then clearing) until you get to the main menu. Once you start the game (__m__), a breakpoint should fire and we will now be in the code responsible for putting the tilemap into ram. This code, looks like a standard copy loop :
+
+```asm
+2D0B ld a,(bc)          ; get byte from source pointer (BC)
+2D0C ld (hl+),a         ; save byte into dest pointer and increment it (HL)
+2D0D inc bc             ; increment source pointer
+2D0E dec de             ; decrement count (DE)
+2D0F ld a,b
+2D10 or e               ; or D and E together
+2D11 jr nz,$2D0B        ; if the combined result is non zero, we need to loop around and copy more
+```
+
+Now, if you look at the value of __B__ & __C__ in the CPU State view, you should see __40__ & __00__ respectively, so this register pair is pointing into the cartridge, again into the bankable rom slot. So using the memory view (Note _you can open multiple memory views_), set source to __Game Boy MBC1 Cartridge/:cartslot:rom_mbc1/0/m_bank_sel_rom__ and taking a look at the second set of four digits, we see __0006__. Lets goto that address in Ghidra (__g__ enter 0x4000 and then select rom6), and you should see a familiar string of data - We've found the tilemap for the first level.
+
+However, we are not finished here, our task for this part of the tutorial was to figure out how to add a level select widget to our plugin. So far we have located the tilemap (which will be useful in a later section, when we turn to making an editor), but we don't yet know how the levels are chosen between.
+
+The first thing to do is to find the code that performed the memory copy, we could use ghidra to find the xref's to the memory copy routine and then examine each one by hand, but I suspect quite a few places perform memory copies. So instead, we return the Editor, where we should still be stopped at the point we copied the first byte. Now we use the __history__ command to list the code addresses that were executed leading up to the breakpoint. 
+
+Enter the following in the console view :
+
+```
+history
+```
+
+This will list the last 256 addresses and instructions the cpu on the Game Boy executed, they are listed in oldest to newest order. Reading from the bottom upwards, we can see a __2D23: call $2D09__, which will be the parent function calling the copy, so lets look at that code in Ghidra (__g__ enter __0x2D23__). This appears to be a wrapper function, if you look at the right hand side (the Decompile window) of Ghidra, it appears to be a function that just directly calls the copy function. So we can ignore this one, go back to the history and find the next oldest call instruction, in this case __17F4: call $2D14__. If we look at that function in Ghidra again looking at the Decompile view, this looks more promising :
+
+```c
+void FUN_178f(byte param_5)
+{
+  byte bVar1;
+  
+  DAT_c17c = 0x12;
+  DAT_c17d = 0xd8;
+  DAT_c118 = param_5;
+  if (param_5 < 0x10)
+  {
+    FUN_0317();
+    CopyMemory(CONCAT11(DAT_c17d,DAT_c17c),
+               (uint)(byte)((((((((byte)(param_5 << 2) >> 7) << 1 | (byte)(param_5 << 3) >> 7) << 1
+                               | (byte)(param_5 << 4) >> 7) << 1 | (byte)(param_5 << 5) >> 7) << 1 |
+                             (byte)(param_5 << 6) >> 7) << 1 | param_5 & 1) << 2) * 0x100 + 0x4000,
+               0x400);
+    FUN_034f();
+  }
+  else
+  {
+    FUN_0317();
+    bVar1 = param_5 - 0x10;
+    CopyMemory(CONCAT11(DAT_c17d,DAT_c17c),
+               (uint)(byte)((((((((byte)(bVar1 * '\x04') >> 7) << 1 | (byte)(bVar1 * '\b') >> 7) <<
+                                1 | (byte)(param_5 * '\x10') >> 7) << 1 | (byte)(param_5 * ' ') >> 7
+                              ) << 1 | (byte)(param_5 * '@') >> 7) << 1 | bVar1 & 1) << 2) * 0x100 +
+               0x6ddc,0x400);
+    FUN_034f();
+  }
+  bVar1 = LCDC;
+  LCDC = bVar1 & 0x7f;
+  FUN_0317();
+  func_0x6f3b();
+  FUN_034f();
+  return;
+}
+```
+
+__param_5__ in the above code seems important, there is a comparison against __0x10__ which seems to be used to modify the calculation for the memory copy, perhaps the first 16 levels are stored in a different location to the last few. __DAT_c118__ seems to have param_5 copied into it, perhaps __DAT_c118__ is used to store the current level number. In the Decompile view in Ghidra, place the cursor on the __DAT_c118__ and press __enter__, which will cause the Listing view to show the location of that variable. It will be ?? because Ghidra is only a static analysis tool, it can't have knowledge of writes to ram. We could look at address __C118__ in the memory view in the debugger, but for now, lets continue with Ghidra. In the listing view, you should see something like : 
+
+```
+                             DAT_c118                                        XREF[8]:     FUN_146f:16d6(R), 
+                                                                                          FUN_178f:179d(W), 
+                                                                                          FUN_186e:187c(W), 
+                                                                                          FUN_1cff:1faa(R), 
+                                                                                          FUN_1cff:2268(R), 
+                                                                                          FUN_1cff:231d(R), 
+                                                                                          FUN_1cff:2323(W), 
+                                                                                          FUN_1cff:2473(R)  
+            c118                 undefined1 ??
+```
+
+The XREF's show reads and writes to the address, the write at __FUN_178f:179d__ is the one we already saw, that leaves two other writes. We are looking for something that reads and increments the value and puts it back. We can double click on the references to follow them, allowing us to look at the code in place. The write at __FUN_186e:187c__ appears to be a similar (but simpler) version of the first function. However the write at __FUN_1cff:2323__ shows the following code.
+
+```
+            231d fa 18 c1        LD         A,(DAT_c118)                                     = ??
+            2320 5f              LD         E,A
+            2321 1c              INC        E
+            2322 7b              LD         A,E
+            2323 ea 18 c1        LD         (DAT_c118),A                                     = ??
+```
+
+This certainly looks like something incrementing the level counter, this code lives inside a huge function at __1CFF__, in order to save time in this tutorial, I can tell you it is the function that handles the gameplay (winning levels, level logic, death etc). Scrolling up a little from our current location you should find a label __LAB_22f7__, I think this is probably the code responsible for setting up the next level after you complete a level. It turns out that there is code specifically for setting up the first level near the top of this function, but I've spent long enough on getting us to this point, and we haven't actually got to the point of adding some code to our plugin. 
+
+So taking a small shortcut, lets update the SetupGameTemporaryPatches method and I will explain it below :
+
+```c#
+    public void SetupGameTemporaryPatches(IMemoryAccess romAccess)
+    {
+        // Patch out the main menu/intro ()
+        romAccess.WriteBytes(WriteKind.TemporaryRom, 0x2981, new byte[] { 0x00, 0x00, 0x00 });
+
+        // Try forcing level 4  (4 - 2 == 2nd byte)
+        romAccess.WriteBytes(WriteKind.TemporaryRom, 0x1d7d, new byte[] { 
+            0x3E, 0x02,                     // LD A, 2
+            0xEA, 0x18 , 0xC1,              // LD (C118), A
+            0xC3, 0xF7, 0x22 });            // JP 22F7
+    }
+```
+
+This patches the start of the game level code function (__1CFF__) to store a value into the level counter, and then jump to the code responsible for setting up the next level after completing it. We use 2 even though we want level 4, because the code that sets up a new level (__22F7__) increments the level variable, we need to subtract 1. In addtion, the level variable is 0 based, ie __00__ is level 1, so we need to subtract another 1.
+
+Reload the plugin with this code in place, and after a few seconds (at some point we should try and remove this stall), the game should start on __Abandoned Uranium Workings__. It seems to work (although if all lives are lost, things do go wrong), so lets try adding a control to choose which level is currently running. In order to add a control to the player window (which is built in), we need to implement [IPlayerWindowExtension](xref:RetroEditor.Plugins.IPlayerWindowExtension), so add the interface to our plugin :
+
+```c#
+class ManicMinerGBC : IRetroPlugin, IPlayerWindowExtension
+```
+
+This extension requires a new method to be implemented : 
+
+```c#
+    public void ConfigureWidgets(IMemoryAccess rom, IWidget widget, IPlayerControls playerControls);
+```
+
+So lets add the following code (which will add a slider widget to the player screen) into the ManicMinerGBC class :
+
+```c#
+    IWidgetRanged levelValue;
+
+    public void ConfigureWidgets(IMemoryAccess rom, IWidget widget, IPlayerControls playerControls)
+    {
+        levelValue = widget.AddSlider("Level", 1, 1, 20, () => playerControls.Reset());
+    }
+```
+
+And reload the plugin. You will need to make the player view a little bigger vertically, in order to see the slider (window sizes are automatically computed, however when adding controls to windows that have existed, they retain their position and size from the previous time). Moving the slider, will reset the game, but it will always be on level 4 (because we haven't yet used the value in the slider), lets fix that :
+
+```c#
+    public void SetupGameTemporaryPatches(IMemoryAccess romAccess)
+    {
+        // Patch out the main menu/intro ()
+        romAccess.WriteBytes(WriteKind.TemporaryRom, 0x2981, new byte[] { 0x00, 0x00, 0x00 });
+
+        // Set level to match slider value
+        romAccess.WriteBytes(WriteKind.TemporaryRom, 0x1d7d, new byte[] { 
+            0x3E, (byte)(levelValue.Value-2),   // LD A, (slider value - 2)
+            0xEA, 0x18 , 0xC1,                  // LD (C118), A
+            0xC3, 0xF7, 0x22 });                // JP 22F7
+    }
+```
+
+Now, when you reload the plugin, the slider will change the level as we would expect.
+
+### Adding a tilemap editor
 
 _to be continued_
 
