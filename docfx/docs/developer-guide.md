@@ -544,7 +544,7 @@ public class ManicMinerTile : ITile
 }
 ```
 
-This class will hold our tile representations, it implements the [ITile](xref:RetroEditor.Plugins.ITIle) interface. The next class will hold our palette of tiles, implementing the [ITilePalette](xref:RetroEditor.Plugins.ITilePalette) interface.
+This class will hold our tile representations, it implements the [ITile](xref:RetroEditor.Plugins.ITile) interface. The next class will hold our palette of tiles, implementing the [ITilePalette](xref:RetroEditor.Plugins.ITilePalette) interface.
 
 ```cs
 class ManicMinerTilePalette : ITilePalette
