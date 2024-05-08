@@ -384,7 +384,7 @@ This certainly looks like something incrementing the level counter, this code li
 
 So taking a small shortcut, lets update the SetupGameTemporaryPatches method and I will explain it below :
 
-```c#
+```cs
     public void SetupGameTemporaryPatches(IMemoryAccess romAccess)
     {
         // Patch out the main menu/intro ()
@@ -402,19 +402,19 @@ This patches the start of the game level code function (__1CFF__) to store a val
 
 Reload the plugin with this code in place, and after a few seconds (at some point we should try and remove this stall), the game should start on __Abandoned Uranium Workings__. It seems to work (although if all lives are lost, things do go wrong), so lets try adding a control to choose which level is currently running. In order to add a control to the player window (which is built in), we need to implement [IPlayerWindowExtension](xref:RetroEditor.Plugins.IPlayerWindowExtension), so add the interface to our plugin :
 
-```c#
+```cs
 class ManicMinerGBC : IRetroPlugin, IPlayerWindowExtension
 ```
 
 This extension requires a new method to be implemented : 
 
-```c#
+```cs
     public void ConfigureWidgets(IMemoryAccess rom, IWidget widget, IPlayerControls playerControls);
 ```
 
 So lets add the following code (which will add a slider widget to the player screen) into the ManicMinerGBC class :
 
-```c#
+```cs
     IWidgetRanged levelValue;
 
     public void ConfigureWidgets(IMemoryAccess rom, IWidget widget, IPlayerControls playerControls)
@@ -425,7 +425,7 @@ So lets add the following code (which will add a slider widget to the player scr
 
 And reload the plugin. You will need to make the player view a little bigger vertically, in order to see the slider (window sizes are automatically computed, however when adding controls to windows that have existed, they retain their position and size from the previous time). Moving the slider, will reset the game, but it will always be on level 4 (because we haven't yet used the value in the slider), lets fix that :
 
-```c#
+```cs
     public void SetupGameTemporaryPatches(IMemoryAccess romAccess)
     {
         // Patch out the main menu/intro ()
@@ -442,6 +442,230 @@ And reload the plugin. You will need to make the player view a little bigger ver
 Now, when you reload the plugin, the slider will change the level as we would expect.
 
 ### Adding a tilemap editor
+
+The function at __178F__ seems to indicate that levels 1-16 are located at address __4000__ - __7FFF__ in rom6, and levels 17-20 are located at address __6DDC__ - __7DDB__  in rom7. Each block of level data is __400__ (1k) in size. We know the tilemap is at the start of the data block, but not much else.
+
+The Game Boy screen is 160x144 pixels, there are 2 tile rows used for the levelname and status row, so that would leave 16 tiles high (144/8 - 2). 16*32 = 512, so the first 512 bytes are the tile map. We still need to figure out where the tile data is, we could use the same technique of putting a watch for a write to memory, this time a write to the tile data area __8000__ to __97FF__ and then try to track it back to where the data is coming from in the rom cartridge.  
+
+However, manicminer.gbc appears to use the same level data as the original (zx spectrum) game, which means we can use someone elses work to figure out how to build a tilemap editor. [Manic Miner Room-Format](https://www.icemark.com/dataformats/manic/mmformat.htm) has a lot of details about the original, I've reproduced a little here in case the website goes down.
+
+If we look at the first level (__18000__ - __183FF__ in absolute offset from start of rom), it breaks down roughly as follows :
+
+| Offset In Rom | Offset from start of level data | Size | Meaning      |
+|---|---|---|---|
+| 0x18000       | 0                               | 512  | Level Layout |
+| 0x18200       | 512                             | 32   | Level name   |
+| 0x18220       | 544                             | 72   | Block Graphics |
+
+This should be enough to make a start on our tilemap editor. 
+
+The first thing we need to do, is add a menu in order to bring up our editing window. For now, lets keep things simple and just work on the first level. We can add a menu by implementing the [IMenuProvider](xref:RetroEditor.Plugins.IMenuProvider), so add the interface to our plugin :
+
+```cs
+class ManicMinerGBC : IRetroPlugin, IPlayerWindowExtension, IMenuProvider
+```
+
+We are required to implement :
+
+```cs
+    public void ConfigureMenu(IMemoryAccess rom, IMenu menu)
+```
+
+This method lets us add custom menus to our plugin, they will appear under __Window__->__<plugin name>__-> and you can create submenus as you see fit.
+For now, we just need a window in order to experiment. Add the following code :
+
+```cs
+    public void ConfigureMenu(IMemoryAccess rom, IMenu menu)
+    {
+        menu.AddItem("Edit Level 1",
+                (editorInterface,menuItem) => {
+                    //editorInterface.OpenUserWindow($"Edit Level 1", new ManicMinerTileEditor(rom));
+                });
+    }
+```
+
+If you reload the plugin, you will now see a new menu item, although since we commented out the open window call, it won't do anything just yet.
+
+Next up, we need to add a class that implements the IUserWindow interface, this will allow us to comment out the line above.
+
+```cs
+class ManicMinerTileEditor : IUserWindow
+{
+    public float UpdateInterval => 1 / 30.0f;
+
+    public ManicMinerTileEditor(IMemoryAccess rom)
+    {
+        // Do nothing for now
+    }
+
+    public void ConfigureWidgets(IMemoryAccess rom, IWidget widget, IPlayerControls playerControls)
+    {
+        // Do nothing for now
+    }
+
+    public void OnClose()
+    {
+        // Do nothing for now
+    }
+}
+```
+
+Now, if you uncomment the line in ConfigureMenu, and reload the plugin, you can use the menu to open a window, although we haven't yet done anything useful with the window. The window will be tiny, because we haven't given it any widgets, lets deal with that next. At present when reloading a plugin, all windows apart from the player window are closed, at some point I hope to change that, but for now, you will have to re-open the edit level window when you reload the plugin.
+
+Since we are trying to make an editor to edit the layout of the room, we will need two widgets, a TilePaletteWidget and a TileMapWidget. The first is used to represent the tiles that can be used, and the second is the layout of the map. Lets begin with the palette, we will need a couple of helper classes adding, lets start with the ManicMinerTile :
+
+```cs
+public class ManicMinerTile : ITile
+{
+    Pixel[] imageData;
+    string name;
+
+    public ManicMinerTile(IMemoryAccess rom, uint offset, string name)
+    {
+        this.imageData = Array.Empty<Pixel>();
+        this.name = name;
+    }
+
+    public uint Width => 8;
+
+    public uint Height => 8;
+
+    public string Name => name;
+
+    public void Update(Pixel[] imageData)
+    {
+        this.imageData = imageData;
+    }
+
+    public Pixel[] GetImageData()
+    {
+        return imageData;
+    }
+}
+```
+
+This class will hold our tile representations, it implements the [ITile](xref:RetroEditor.Plugins.ITIle) interface. The next class will hold our palette of tiles, implementing the [ITilePalette](xref:RetroEditor.Plugins.ITilePalette) interface.
+
+```cs
+class ManicMinerTilePalette : ITilePalette
+{
+    public uint MaxTiles => 8;
+
+    public int SelectedTile { get; set; }
+
+    public float ScaleX => 2.0f;
+
+    public float ScaleY => 2.0f;
+
+    public uint TilesPerRow => 4;
+
+    public TilePaletteStore tilePaletteStore;
+
+    ManicMinerTile[] tiles;
+    public ManicMinerTilePalette(IMemoryAccess rom)
+    {
+        tiles = Array.Empty<ManicMinerTile>();
+        tilePaletteStore = new TilePaletteStore(this);
+    }
+
+    public void Update(float seconds)
+    {
+        // Do nothing for now
+    }
+
+    public ReadOnlySpan<ITile> FetchTiles()
+    {
+        return tiles;
+    }
+}
+```
+
+Finally update the ManicMinerTileEditor as follows :
+
+```cs
+class ManicMinerTileEditor : IUserWindow
+{
+    public float UpdateInterval => 1 / 30.0f;
+
+    private ManicMinerTilePalette tilePalette;
+
+    public ManicMinerTileEditor(IMemoryAccess rom)
+    {
+        tilePalette = new ManicMinerTilePalette(rom);
+    }
+
+    public void ConfigureWidgets(IMemoryAccess rom, IWidget widget, IPlayerControls playerControls)
+    {
+        widget.AddLabel("Palette");
+        widget.AddTilePaletteWidget(tilePalette.tilePaletteStore);
+    }
+
+    public void OnClose()
+    {
+        // Do nothing for now
+    }
+}
+```
+
+You should be able to reload the plugin at this point, although the only change to the editor window will be the word Palette.
+
+However don't fret, we can try and extract the graphics we will need for the palette. According to [Manic Miner Room-Format](https://www.icemark.com/dataformats/manic/mmformat.htm) the block graphics are stored in the offsets 544-615, each of which is 9 bytes in size.
+
+The first byte is the colour attribute, the next 8 bytes are a bitmap representing the 8x8 tile. We need the tilemap to be in non palettised format in order for the editor to render it. So lets modify the constructor of the tile to perform this conversion :
+
+```cs
+    public ManicMinerTile(IMemoryAccess rom, uint offset, string name)
+    {
+        this.imageData = new Pixel[8 * 8];
+        var tileData = rom.ReadBytes(ReadKind.Rom, offset, 9);
+        this.name = name;
+
+        // See appendix A in the manicminer format (or a zx spectrum colour attribute document)
+        var attr = tileData[0];
+        var inkColour = attr & 0x07;                                // The lower 3 bits are the ink colour (RGB)
+        var paperColour = (attr >> 3) & 0x07;                       // The next 3 bits are the paper colour (RGB)
+        var bright = (attr & 0x40) != 0 ? 63 : 0;                   // The 7th bit is the bright flag
+        var inkBright = (inkColour != 0) ? bright : 0;              // bright adds 63 to the colour value if not 0
+        var paperBright = (paperColour != 0) ? bright : 0;          // bright adds 63 to the colour value if not 0
+
+        // combine attributes to form a colour for ink and paper (R = 0 or 192, G = 0 or 192, B = 0 or 192) + bright
+        var ink = new Pixel((byte)((inkColour & 2) * 96 + inkBright),
+                            (byte)((inkColour & 4) * 48 + inkBright),
+                            (byte)((inkColour & 1) * 192 + inkBright));
+        var paper = new Pixel((byte)((paperColour & 2) * 96 + paperBright),
+                              (byte)((paperColour & 4) * 48 + paperBright),
+                              (byte)((paperColour & 1) * 192 + paperBright));
+        for (int y = 0; y < 8; y++)
+        {
+            var row = tileData[y + 1];
+            for (int x = 0; x < 8; x++)
+            {
+                var pixel = (row & (1 << (7 - x))) != 0 ? ink : paper;
+                imageData[y * 8 + x] = pixel;
+            }
+        }
+    }
+```
+
+Now we can initialise our 8 tiles from the offsets we are given in the [Block Graphics Section of the Manic Miner Data Format](http://icemark.com/dataformats/manic/mmformat.htm#block_graphics). So update the constructor of the tile palette as follows :
+
+```cs
+    public ManicMinerTilePalette(IMemoryAccess rom)
+    {
+        tiles = new ManicMinerTile[8];
+        tiles[0] = new ManicMinerTile(rom, 0x4000 * 6 + 544, "Background");
+        tiles[1] = new ManicMinerTile(rom, 0x4000 * 6 + 553, "Floor");
+        tiles[2] = new ManicMinerTile(rom, 0x4000 * 6 + 562, "Crumbling Floor");
+        tiles[3] = new ManicMinerTile(rom, 0x4000 * 6 + 571, "Wall");
+        tiles[4] = new ManicMinerTile(rom, 0x4000 * 6 + 580, "Conveyor");
+        tiles[5] = new ManicMinerTile(rom, 0x4000 * 6 + 589, "Nasty 1");
+        tiles[6] = new ManicMinerTile(rom, 0x4000 * 6 + 598, "Nasty 2");
+        tiles[7] = new ManicMinerTile(rom, 0x4000 * 6 + 607, "Spare");
+        tilePaletteStore = new TilePaletteStore(this);
+    }
+```
+
+Now if you reload, your window should have 8 tiles you can select between.
 
 _to be continued_
 
