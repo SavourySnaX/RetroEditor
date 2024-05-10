@@ -20,6 +20,7 @@ internal class PlayableRom : IMemoryAccess
     MemoryblockCollection temporaryBlocksRam;
     MemoryblockCollection temporaryBlocksRom;
     MemoryblockCollection serialisedBlocksRam { get; set; }
+    MemoryblockCollection serialisedBlocksRom { get; set; }
 
     public delegate ReadOnlySpan<byte> CheckSumDelegate(IMemoryAccess rom,out int address);
 
@@ -35,6 +36,7 @@ internal class PlayableRom : IMemoryAccess
         temporaryBlocksRam = new MemoryblockCollection();
         temporaryBlocksRom = new MemoryblockCollection();
         serialisedBlocksRam = new MemoryblockCollection();
+        serialisedBlocksRom = new MemoryblockCollection();
         state=Array.Empty<byte>();
     }
 
@@ -70,6 +72,12 @@ internal class PlayableRom : IMemoryAccess
         {
             var json = File.ReadAllText(path);
             serialisedBlocksRam.Deserialise(json);
+        }
+        path=editorInterface.GetEditorDataPath(settings, "Rom");
+        if (File.Exists(path))
+        {
+            var json = File.ReadAllText(path);
+            serialisedBlocksRom.Deserialise(json);
         }
         
         return true;
@@ -108,12 +116,19 @@ internal class PlayableRom : IMemoryAccess
         {
             plugin.SetMemory(block.address, block.data);
         }
+        foreach (var block in serialisedBlocksRom.Blocks)
+        {
+            plugin.WriteRom(block.address, block.data);
+        }
     }
 
     public void Serialise(ProjectSettings settings)
     {
         var json = serialisedBlocksRam.Serialise();
         var path=editorInterface.GetEditorDataPath(settings, "Ram");
+        File.WriteAllText(path, json);
+        json = serialisedBlocksRom.Serialise();
+        path=editorInterface.GetEditorDataPath(settings, "Rom");
         File.WriteAllText(path, json);
     }
 
@@ -156,7 +171,8 @@ internal class PlayableRom : IMemoryAccess
         }
         else
         {
-            throw new Exception("Not implemented");
+            serialisedBlocksRom.AddRegion(address, data);
+            plugin.WriteRom(address, data);
         }
     }
 
