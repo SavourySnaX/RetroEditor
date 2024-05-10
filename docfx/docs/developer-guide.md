@@ -609,7 +609,7 @@ class ManicMinerTileEditor : IUserWindow
 
 You should be able to reload the plugin at this point, although the only change to the editor window will be the word Palette.
 
-However don't fret, we can try and extract the graphics we will need for the palette. According to [Manic Miner Room-Format](https://www.icemark.com/dataformats/manic/mmformat.htm) the block graphics are stored in the offsets 544-615, each of which is 9 bytes in size.
+However don't fret, we can try and extract the graphics we will need for the palette. According to [Block Graphics Section of the Manic Miner Data Format](http://icemark.com/dataformats/manic/mmformat.htm#block_graphics) the block graphics are stored in the offsets 544-615, each of which is 9 bytes in size.
 
 The first byte is the colour attribute, the next 8 bytes are a bitmap representing the 8x8 tile. We need the tilemap to be in non palettised format in order for the editor to render it. So lets modify the constructor of the tile to perform this conversion :
 
@@ -665,7 +665,250 @@ Now we can initialise our 8 tiles from the offsets we are given in the [Block Gr
     }
 ```
 
-Now if you reload, your window should have 8 tiles you can select between.
+Now if you reload, your window should have 8 tiles you can select between. 
+
+In order to be able to make modifications to the level, we will need another widget. The TileMapWidget also needs a few interfaces implementing, first up, we need a layer [ILayer](xref:RetroEditor.Plugins.ILayer).
+
+```cs
+class ManicMinerTileMapLayer : ILayer
+{
+    public uint Width => 32;
+
+    public uint Height => 16;
+
+    uint[] mapData;
+    public ManicMinerTileMapLayer(IMemoryAccess rom, uint offset, ManicMinerTilePalette tilePalette)
+    {
+        mapData = new uint[Width * Height];
+    }
+
+    public ReadOnlySpan<uint> GetMapData()
+    {
+        return mapData;
+    }
+
+    public void SetTile(uint x, uint y, uint tile)
+    {
+        mapData[y * Width + x] = tile;
+    }
+}
+```
+
+The width and height for the layer are expressed in tiles, and we temporarily construct an empty map, which we will populate from the games level data a little later.
+
+Next up, we need an implementation of [ITileMap](xref:RetroEditor.Plugins.ITileMap) this defines the maximum pixel size of the map, along with accessors for the layers and palette in use by the map.
+
+```cs
+class ManicMinerTileMap : ITileMap
+{
+    public uint Width => 32 * 8;
+
+    public uint Height => 16 * 8;
+
+    public uint NumLayers => 1;
+
+    public float ScaleX => 2.0f;
+
+    public float ScaleY => 2.0f;
+
+    private TilePaletteStore _tilePaletteStore;
+    private ManicMinerTileMapLayer _layer;
+
+    public ManicMinerTileMap(IMemoryAccess rom, uint offset, ManicMinerTilePalette tilePalette)
+    {
+        _tilePaletteStore = tilePalette.tilePaletteStore;
+        _layer = new ManicMinerTileMapLayer(rom, offset, tilePalette);
+    }
+
+    public ILayer FetchLayer(uint layer)
+    {
+        return _layer;
+    }
+
+    public TilePaletteStore FetchPalette(uint layer)
+    {
+        return _tilePaletteStore;
+    }
+}
+```
+
+Finally, we update the ManicMinerTileEditor class as follows (adding the tilemap widget) :
+
+```cs
+class ManicMinerTileEditor : IUserWindow
+{
+    public float UpdateInterval => 1 / 30.0f;
+
+    private ManicMinerTilePalette tilePalette;
+    private ManicMinerTileMap tileMap;
+
+    public ManicMinerTileEditor(IMemoryAccess rom)
+    {
+        tilePalette = new ManicMinerTilePalette(rom);
+        tileMap = new ManicMinerTileMap(rom, 0x4000 * 6 + 0, tilePalette);
+    }
+
+    public void ConfigureWidgets(IMemoryAccess rom, IWidget widget, IPlayerControls playerControls)
+    {
+        widget.AddLabel("Palette");
+        widget.AddTilePaletteWidget(tilePalette.tilePaletteStore);
+        widget.AddLabel("TileMap");
+        widget.AddTileMapWidget(tileMap);
+    }
+
+    public void OnClose()
+    {
+        // Do nothing for now
+    }
+}
+```
+
+Note in the above, we are passing the address of the data in the cartridge that contains the data we will need to edit the actual level (__4000__*6+0), but we are not using it yet.
+
+At this point, you can reload the plugin. and now you can paint tiles onto the map, but the map does not contain the data from the game, and we can't affect the game either. Looking at the [Manic Miner Screen Layout](https://www.icemark.com/dataformats/manic/mmformat.htm#screen_layout), it turns out the data is stored in a slighty odd fashion. The 512 (32*16) bytes of the screen layout map 1 to 1 with tiles in our tilemap, however instead of the byte containing a tile number, it contains the attribute used to colour the particular tile. So we need to map tile attributes to our tile indices.
+
+First up, adjust the __ManicMinerTile__ class so we can access the attribute for a tile, here is the full code, but essentially I've just added an __Attr__ property to return the attribute value from the first byte in the tiledata :
+
+```cs
+public class ManicMinerTile : ITile
+{
+    Pixel[] imageData;
+    string name;
+    byte _attr;
+
+    // Assume offset points to the start of the tile
+    public ManicMinerTile(IMemoryAccess rom, uint offset, string name)
+    {
+        this.imageData = new Pixel[8 * 8];
+        var tileData = rom.ReadBytes(ReadKind.Rom, offset, 9);
+        this.name = name;
+
+        // See appendix A in the manicminer format (or a zx spectrum colour attribute document)
+        _attr = tileData[0];
+        var inkColour = _attr & 0x07;                                // The lower 3 bits are the ink colour (RGB)
+        var paperColour = (_attr >> 3) & 0x07;                       // The next 3 bits are the paper colour (RGB)
+        var bright = (_attr & 0x40) != 0 ? 63 : 0;                   // The 7th bit is the bright flag
+        var inkBright = (inkColour != 0) ? bright : 0;     // bright adds 63 to the colour value if not 0
+        var paperBright = (paperColour != 0) ? bright : 0; // bright adds 63 to the colour value if not 0
+
+        // combine attributes to form a colour for ink and paper (R = 0 or 192, G = 0 or 192, B = 0 or 192) + bright
+        var ink = new Pixel((byte)((inkColour & 2) * 96 + inkBright),
+                            (byte)((inkColour & 4) * 48 + inkBright),
+                            (byte)((inkColour & 1) * 192 + inkBright));
+        var paper = new Pixel((byte)((paperColour & 2) * 96 + paperBright),
+                              (byte)((paperColour & 4) * 48 + paperBright),
+                              (byte)((paperColour & 1) * 192 + paperBright));
+        for (int y = 0; y < 8; y++)
+        {
+            var row = tileData[y + 1];
+            for (int x = 0; x < 8; x++)
+            {
+                var pixel = (row & (1 << (7 - x))) != 0 ? ink : paper;
+                imageData[y * 8 + x] = pixel;
+            }
+        }
+    }
+
+    public uint Width => 8;
+
+    public uint Height => 8;
+
+    public string Name => name;
+
+    public void Update(Pixel[] imageData)
+    {
+        this.imageData = imageData;
+    }
+
+    public Pixel[] GetImageData()
+    {
+        return imageData;
+    }
+
+    public byte Attr => _attr;
+}
+```
+
+Now we can access the attribute value from a tile, we can create a dictionary to map between 
+Add the following to the __ManicMinerTilePalette__ class :
+
+```cs
+    Dictionary<byte,uint> attrToIndex;
+    Dictionary<uint,byte> indexToAttr;
+    internal uint AttrToIndex(byte attr)
+    {
+        return attrToIndex[attr];
+    }
+    internal byte IndexToAttr(uint index)
+    {
+        return indexToAttr[index];
+    }
+```
+
+also modify the constructor to initialise __attrToIndex__ :
+
+```cs
+    public ManicMinerTilePalette(IMemoryAccess rom)
+    {
+        tiles = new ManicMinerTile[8];
+        tiles[0] = new ManicMinerTile(rom, 0x4000 * 6 + 544, "Background");
+        tiles[1] = new ManicMinerTile(rom, 0x4000 * 6 + 553, "Floor");
+        tiles[2] = new ManicMinerTile(rom, 0x4000 * 6 + 562, "Crumbling Floor");
+        tiles[3] = new ManicMinerTile(rom, 0x4000 * 6 + 571, "Wall");
+        tiles[4] = new ManicMinerTile(rom, 0x4000 * 6 + 580, "Conveyor");
+        tiles[5] = new ManicMinerTile(rom, 0x4000 * 6 + 589, "Nasty 1");
+        tiles[6] = new ManicMinerTile(rom, 0x4000 * 6 + 598, "Nasty 2");
+        tiles[7] = new ManicMinerTile(rom, 0x4000 * 6 + 607, "Spare");
+        tilePaletteStore = new TilePaletteStore(this);
+        attrToIndex = new Dictionary<byte, uint>();
+        indexToAttr = new Dictionary<uint, byte>();
+        for (int i = 0; i < 8; i++)
+        {
+            attrToIndex[tiles[i].Attr] = (uint)i;
+            indexToAttr[(uint)i] = tiles[i].Attr;
+        }
+    }
+```
+
+We now have a way to get from an attribute value to the tile, so we should be able to convert the game representation of the screen data into our tilemap format. To do this, we need to update the __ManicMinerTileMapLayer__ constructor as follows :
+
+```cs
+    IMemoryAccess _rom;
+    ManicMinerTilePalette _tilePalette;
+    public ManicMinerTileMapLayer(IMemoryAccess rom, uint offset, ManicMinerTilePalette tilePalette)
+    {
+        _rom = rom;                 // We record these because they will be useful when we modify the rom
+        _tilePalette = tilePalette;
+        mapData = new uint[Width * Height];
+        var tileData = rom.ReadBytes(ReadKind.Rom, offset, Width * Height);
+        for (uint y = 0; y < Height; y++)
+        {
+            for (uint x = 0; x < Width; x++)
+            {
+                mapData[y * Width + x] = tilePalette.AttrToIndex(tileData[(int)(y * Width + x)]);
+            }
+        }
+    }
+```
+
+Reload the plugin, and you should now see the first level in the tilemap editor. There are some things missing :
+- Enemies
+- Items
+- Exit
+
+Before we worry about those things, we should make sure changes are applied back to the game. The easiest way to do this, is to update the __SetTile__ method in __ManicMinerTileMapLayer__. 
+
+```cs
+    public void SetTile(uint x, uint y, uint tile)
+    {
+        mapData[y * Width + x] = tile;
+        _rom.WriteBytes(WriteKind.SerialisedRom, 0x4000 * 6 + 0 + y * Width + x, new byte[] { _tilePalette.IndexToAttr(tile) });
+    }
+```
+
+At this point, reload the plugin, and you can modify the level, and if you move the slider on the player window away and back to level 1, your changes should be playable. 
+
+### Adding pickups
 
 _to be continued_
 
