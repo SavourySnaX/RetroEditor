@@ -910,6 +910,23 @@ At this point, reload the plugin, and you can modify the level, and if you move 
 
 ### Adding pickups
 
+According to [Manic Miner Items](https://www.icemark.com/dataformats/manic/mmformat.htm#items) each level can have between 0 and 5 items. This means we need to limit the number of times an item can be placed. Items can also overlay ontop of background items (as their positions are stored seperately), although they are still placed on tile positions. We can use layers to implement this, by adding a second layer and using it only for pickups and limiting the number placed to 5. We will need a second tile palette, which is used for the item graphic as well as an empty background tile for erasing pick ups, and a counter label to indicate the number of items in use. 
+
+The graphic for the item is stored at offset 692-699, just the bitmap this time, the colours are stored in the item table.
+
+The item table is 5 bytes per item with 5 items per room occupying offsets 629-653, an items 5 bytes break down as :
+
+| Offset | Use |
+|---|---|
+| 0      | Colour attribute of item. Or 0 for not used or 255 to terminate the item list |
+| 1      | YYYXXXXX where X is the tile column and Y is the tile row (the most significant bit of Y is held in offset 2/3) |
+| 2      | 0101110Y the most significant bit of the tile row (same as offset 3) |
+| 3      | 0110Y000 the most significant bit of the tile row (same as offset 2) |
+| 4      | 11111111 always 255 |
+
+
+
+
 _to be continued_
 
 _under construction_
