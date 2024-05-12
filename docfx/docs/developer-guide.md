@@ -37,12 +37,12 @@ Open the Plugins/Plugins.csproj in your C# Editor of choice, I used Visual Studi
 Copy and paste the following code block into the file :
 
 ```cs
-using RetroEditor.plugins;
+using RetroEditor.Plugins;
 
 class GameBoyColour : ISystemPlugin
 {
     // Name used to identify the system by plugins
-    public static Name => "GameBoyColour";
+    public static string Name => "GameBoyColour";
 
     // libretro plugin name responsible for running gameboy colour roms
     public string LibRetroPluginName => "gambatte_libretro";
