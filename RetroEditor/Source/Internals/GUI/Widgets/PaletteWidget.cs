@@ -13,11 +13,11 @@ internal class PaletteWidget : IWidgetItem, IWidgetUpdateDraw
         _iPalette.SelectedColour = -1;
     }
 
-    public void Update(float seconds)
+    public void Update(IWidgetLog logger, float seconds)
     {
     }
 
-    public void Draw()
+    public void Draw(IWidgetLog logger)
     {
         var palette = _iPalette.GetPalette();
         var width = _iPalette.Width;
@@ -39,7 +39,8 @@ internal class PaletteWidget : IWidgetItem, IWidgetUpdateDraw
         for (int y = 0; y < rows; y++)
         {
             uint xOffs = 0;
-            for (int x = 0; x < coloursPerRow; x++)
+            var numColours = (y == rows - 1) ? palette.Length % coloursPerRow : coloursPerRow;
+            for (int x = 0; x < numColours; x++)
             {
                 var colour = palette[a];
                 var mousePos = ImGui.GetMousePos();

@@ -8,11 +8,11 @@ internal class SameLine : IWidgetItem, IWidgetUpdateDraw
     {
     }
 
-    public void Update(float seconds)
+    public void Update(IWidgetLog logger, float seconds)
     {
     }
 
-    public void Draw()
+    public void Draw(IWidgetLog logger)
     {
         ImGui.SameLine();
     }

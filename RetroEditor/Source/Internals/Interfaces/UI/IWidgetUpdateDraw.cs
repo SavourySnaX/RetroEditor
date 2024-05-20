@@ -1,6 +1,7 @@
-    internal interface IWidgetUpdateDraw
-    {
-        void Update(float seconds);
-        void Draw();
-    }
+
+internal interface IWidgetUpdateDraw
+{
+    void Update(IWidgetLog logger, float seconds);
+    void Draw(IWidgetLog logger);
+}
 

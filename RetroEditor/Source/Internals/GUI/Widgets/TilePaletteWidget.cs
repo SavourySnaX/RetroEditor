@@ -14,12 +14,12 @@ internal class TilePaletteWidget : IWidgetItem, IWidgetUpdateDraw
         _tilePaletteStore.TilePalette.SelectedTile = -1;
     }
 
-    public void Update(float seconds)
+    public void Update(IWidgetLog logger, float seconds)
     {
         _tilePaletteStore.Update(seconds);
     }
     
-    public void Draw()
+    public void Draw(IWidgetLog logger)
     {
         var tilePalette = _tilePaletteStore.TilePalette;
         var tiles = tilePalette.FetchTiles();
@@ -43,7 +43,8 @@ internal class TilePaletteWidget : IWidgetItem, IWidgetUpdateDraw
         for (int y = 0; y < rows; y++)
         {
             uint xOffs = 0;
-            for (int x = 0; x < tilesPerRow; x++)
+            var numTiles = (y == rows - 1) ? tiles.Length % tilesPerRow : tilesPerRow;
+            for (int x = 0; x < numTiles; x++)
             {
                 if (tilePalette.SelectedTile == a)
                 {

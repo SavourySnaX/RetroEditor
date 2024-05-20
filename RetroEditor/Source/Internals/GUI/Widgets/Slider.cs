@@ -23,11 +23,11 @@ internal class Slider : IWidgetRanged, IWidgetUpdateDraw
     public int Value { get => _value; set => _value = value; }
     public bool Enabled { get; set; }
 
-    public void Update(float seconds)
+    public void Update(IWidgetLog logger, float seconds)
     {
     }
 
-    public void Draw()
+    public void Draw(IWidgetLog logger)
     {
         if (!Enabled)
         {

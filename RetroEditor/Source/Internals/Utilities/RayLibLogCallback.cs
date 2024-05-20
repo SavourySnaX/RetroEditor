@@ -43,24 +43,29 @@ struct VaListLinuxX64
 internal static unsafe class RayLibLoggingWrapper
 {
     [UnmanagedCallersOnly(CallConvs = new[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
-    internal static unsafe void Log(int msgType, sbyte* text, sbyte* args)
+    internal static unsafe void Log(void* instance, int msgType, sbyte* text, sbyte* args)
     {
+        var editor = GCHandle.FromIntPtr(new IntPtr(instance)).Target as IEditorInternal;
+        if (editor == null)
+        {
+            return;
+        }
         var message = GetLogMessage(new IntPtr(text), new IntPtr(args));
         switch (msgType)
         {
             case 0:
             case 1:
             case 2:
-                Editor.Log(LogType.Debug, "RayLib", message);
+                editor.Log(LogType.Debug, "RayLib", message);
                 break;
             case 3:
-                Editor.Log(LogType.Info, "RayLib", message);
+                editor.Log(LogType.Info, "RayLib", message);
                 break;
             case 4:
-                Editor.Log(LogType.Warning, "RayLib", message);
+                editor.Log(LogType.Warning, "RayLib", message);
                 break;
             default:
-                Editor.Log(LogType.Error, "RayLib", message);
+                editor.Log(LogType.Error, "RayLib", message);
                 break;
         }
     }

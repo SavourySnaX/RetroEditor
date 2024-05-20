@@ -12,11 +12,11 @@ internal class BitmapWidget : IWidgetItem, IWidgetUpdateDraw
         _iBitmap = iBitmap;
     }
 
-    public void Update(float seconds)
+    public void Update(IWidgetLog logger, float seconds)
     {
     }
 
-    public void Draw()
+    public void Draw(IWidgetLog logger)
     {
         var palette = _iBitmap.Palette.GetPalette();
         var pixels = _iBitmap.GetImageData(0.0f);

@@ -6,9 +6,11 @@ using RetroEditor.Plugins;
 internal class RomPluginsLoader
 {
     private PluginBuilder _iromPlugin;
+    private IEditorInternal _editor;
 
-    public RomPluginsLoader()
+    public RomPluginsLoader(IEditorInternal editor)
     {
+        _editor = editor;
         _iromPlugin = new PluginBuilder("RomPlugins");
         var referenceAssembliesRoot = "ReferenceAssemblies";
         _iromPlugin.AddReferences(referenceAssembliesRoot);
@@ -20,23 +22,23 @@ internal class RomPluginsLoader
         var result = _iromPlugin.BuildPlugin("Plugins/Source/RomPlugins");
         if (!result.Success)
         {
-            Editor.Log(LogType.Error, "Compilation", "Compilation failed!");
+            _editor.Log(LogType.Error, "Compilation", "Compilation failed!");
         }
         foreach (var diagnostic in result.Diagnostics)
         {
             switch (diagnostic.Severity)
             {
                 case DiagnosticSeverity.Error:
-                    Editor.Log(LogType.Error, "Compilation", diagnostic.ToString());
+                    _editor.Log(LogType.Error, "Compilation", diagnostic.ToString());
                     break;
                 case DiagnosticSeverity.Warning:
-                    Editor.Log(LogType.Warning, "Compilation", diagnostic.ToString());
+                    _editor.Log(LogType.Warning, "Compilation", diagnostic.ToString());
                     break;
                 case DiagnosticSeverity.Hidden:
-                    Editor.Log(LogType.Debug, "Compilation", diagnostic.ToString());
+                    _editor.Log(LogType.Debug, "Compilation", diagnostic.ToString());
                     break;
                 default:
-                    Editor.Log(LogType.Info, "Compilation", diagnostic.ToString());
+                    _editor.Log(LogType.Info, "Compilation", diagnostic.ToString());
                     break;
             }
         }

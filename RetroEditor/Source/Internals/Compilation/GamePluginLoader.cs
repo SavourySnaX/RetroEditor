@@ -5,9 +5,11 @@ internal class GamePluginLoader
 {
     private PluginBuilder _plugin;
     private string _pathToPlugin;
+    private IEditorInternal _editor;
 
-    public GamePluginLoader(string path)
+    public GamePluginLoader(IEditorInternal editor, string path)
     {
+        _editor = editor;
         var directoryName = new DirectoryInfo(path).Name;
         _plugin = new PluginBuilder(directoryName);
         var referenceAssembliesRoot = "ReferenceAssemblies";
@@ -21,23 +23,23 @@ internal class GamePluginLoader
         var result = _plugin.BuildPlugin(_pathToPlugin);
         if (!result.Success)
         {
-            Editor.Log(LogType.Error, "Compilation", "Compilation failed!");
+            _editor.Log(LogType.Error, "Compilation", "Compilation failed!");
         }
         foreach (var diagnostic in result.Diagnostics)
         {
             switch (diagnostic.Severity)
             {
                 case DiagnosticSeverity.Error:
-                    Editor.Log(LogType.Error, "Compilation", diagnostic.ToString());
+                    _editor.Log(LogType.Error, "Compilation", diagnostic.ToString());
                     break;
                 case DiagnosticSeverity.Warning:
-                    Editor.Log(LogType.Warning, "Compilation", diagnostic.ToString());
+                    _editor.Log(LogType.Warning, "Compilation", diagnostic.ToString());
                     break;
                 case DiagnosticSeverity.Hidden:
-                    Editor.Log(LogType.Debug, "Compilation", diagnostic.ToString());
+                    _editor.Log(LogType.Debug, "Compilation", diagnostic.ToString());
                     break;
                 default:
-                    Editor.Log(LogType.Info, "Compilation", diagnostic.ToString());
+                    _editor.Log(LogType.Info, "Compilation", diagnostic.ToString());
                     break;
             }
         }

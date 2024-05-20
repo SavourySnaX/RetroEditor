@@ -1,16 +1,15 @@
-using System.ComponentModel;
 using ImGuiNET;
 
 class LogView : IWindow
 {
     public float UpdateInterval => 0.5f;
 
-    private Editor editor;
+    private IEditorInternal editor;
 
     private string[] cachedLog = Array.Empty<string>();
     private Dictionary<string, string[]> cachedLogPerSource = new Dictionary<string, string[]>();
 
-    public LogView(Editor editor)
+    public LogView(IEditorInternal editor)
     {
         this.editor = editor;
     }
@@ -77,32 +76,32 @@ class LogView : IWindow
 
     public void Update(float seconds)
     {
-        if (Editor.AccessLog == null)
+        if (editor.AccessLog == null)
         {
             return;
         }
-        var count = Editor.AccessLog.Count();
+        var count = editor.AccessLog.Count();
         if (cachedLog.Length != count)
         {
             var index = 0;
             cachedLog = new string[count];
             while (index < count)
             {
-                cachedLog[index] = Editor.AccessLog.Entry(index).ToString();
+                cachedLog[index] = editor.AccessLog.Entry(index).ToString();
                 index++;
             }
         }
         // Cache seperate log areas too
-        foreach (var source in Editor.AccessLog.Sources())
+        foreach (var source in editor.AccessLog.Sources())
         {
-            var sourceCount = Editor.AccessLog.Count(source);
+            var sourceCount = editor.AccessLog.Count(source);
             if (!cachedLogPerSource.ContainsKey(source) || cachedLogPerSource[source].Length != sourceCount)
             {
                 var index = 0;
                 var sourceLog = new string[sourceCount];
                 while (index < sourceCount)
                 {
-                    sourceLog[index] = Editor.AccessLog.Entry(source, index).ToString();
+                    sourceLog[index] = editor.AccessLog.Entry(source, index).ToString();
                     index++;
                 }
                 cachedLogPerSource[source] = sourceLog;
