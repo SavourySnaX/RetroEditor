@@ -11,11 +11,11 @@ internal class TileMapWidget : IWidgetItem, IWidgetUpdateDraw
         _iTileMap = iTileMap;
     }
 
-    public void Update(float seconds)
+    public void Update(IWidgetLog logger, float seconds)
     {
     }
     
-    public void Draw()
+    public void Draw(IWidgetLog logger)
     {
         var drawList = ImGui.GetWindowDrawList();
         var size = new Vector2(_iTileMap.Width * _iTileMap.ScaleX, _iTileMap.Height * _iTileMap.ScaleY);
@@ -45,7 +45,14 @@ internal class TileMapWidget : IWidgetItem, IWidgetUpdateDraw
                     hy = (int)y;
                     if (palette.TilePalette.SelectedTile >= 0 && ImGui.IsMouseDown(ImGuiMouseButton.Left))
                     {
-                        layer.SetTile(x, y, (uint)palette.TilePalette.SelectedTile);
+                        try
+                        {
+                            layer.SetTile(x, y, (uint)palette.TilePalette.SelectedTile);
+                        }
+                        catch (Exception e)
+                        {
+                            logger.Log(LogType.Error, $"Failed to set tile at {x},{y} - {e.Message}");
+                        }
                     }
                     else if (palette.TilePalette.SelectedTile >= 0 && ImGui.IsMouseDown(ImGuiMouseButton.Right))
                     {

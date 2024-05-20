@@ -11,11 +11,11 @@ internal class Label : IWidgetLabel, IWidgetUpdateDraw
         Name = name;
     }
 
-    public void Update(float seconds)
+    public void Update(IWidgetLog logger, float seconds)
     {
     }
 
-    public void Draw()
+    public void Draw(IWidgetLog logger)
     {
         ImGui.Text(Name);
     }

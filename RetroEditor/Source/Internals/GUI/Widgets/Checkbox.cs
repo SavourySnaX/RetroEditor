@@ -12,11 +12,11 @@ internal class Checkbox : IWidgetCheckable, IWidgetUpdateDraw
         Enabled= true;
     }
 
-    public void Update(float seconds)
+    public void Update(IWidgetLog logger, float seconds)
     {
     }
 
-    public void Draw()
+    public void Draw(IWidgetLog logger)
     {
         if (!Enabled)
         {

@@ -2,12 +2,16 @@
 using ImGuiNET;
 using RetroEditor.Plugins;
 
-internal class WindowManager
+internal class WindowManager : IWidgetLog
 {
-    private List<WindowWrapper> activeWindows;
-    private PriorityQueue<UpdateQueueWrapper, float> priorityQueue;
-    private Dictionary<ProjectSettings, List<WindowWrapper>> projectWindows;
+    private List<WindowWrapper> _activeWindows;
+    private PriorityQueue<UpdateQueueWrapper, float> _priorityQueue;
+    private Dictionary<ProjectSettings, List<WindowWrapper>> _projectWindows;
+    private Dictionary<WindowWrapper, ProjectSettings> _windowProjects;
     private float totalTime;
+    private Editor _editor;
+    private string _activeWindowProjectName = "Unknown";
+
 
     private class WindowWrapper
     {
@@ -40,18 +44,20 @@ internal class WindowManager
 
     private ProjectSettings developerDummyProject = new ProjectSettings("Developer", "", "", "", "");
 
-    public WindowManager()
+    public WindowManager(Editor editor)
     {
-        activeWindows = new List<WindowWrapper>();
-        priorityQueue = new PriorityQueue<UpdateQueueWrapper, float>();
-        projectWindows = new Dictionary<ProjectSettings, List<WindowWrapper>>();
+        _editor = editor;
+        _activeWindows = new List<WindowWrapper>();
+        _priorityQueue = new PriorityQueue<UpdateQueueWrapper, float>();
+        _projectWindows = new Dictionary<ProjectSettings, List<WindowWrapper>>();
+        _windowProjects = new Dictionary<WindowWrapper, ProjectSettings>();
         totalTime = 0.0f;
     }
 
     public void AddWindow(IWindow window, string name, ActiveProject? activeProject)
     {
         var newWindow = new WindowWrapper(window, name , false);
-        activeWindows.Add(newWindow);
+        _activeWindows.Add(newWindow);
 
         var settings = developerDummyProject;
         if (activeProject != null)
@@ -67,30 +73,31 @@ internal class WindowManager
                 userWindow.UserWindowInterface.ConfigureWidgets(activeProject.Value.PlayableRomPlugin, newWindow.WidgetFactory, activeProject);
             }
         }
-        if (!projectWindows.ContainsKey(settings))
+        if (!_projectWindows.ContainsKey(settings))
         {
-            projectWindows.Add(settings, new List<WindowWrapper>());
+            _projectWindows.Add(settings, new List<WindowWrapper>());
         }
-        projectWindows[settings].Add(newWindow);
-        priorityQueue.Enqueue(new UpdateQueueWrapper { Window = newWindow, Action = InternalUpdate, Time = totalTime }, totalTime);
+        _projectWindows[settings].Add(newWindow);
+        _windowProjects.Add(newWindow, settings);
+        _priorityQueue.Enqueue(new UpdateQueueWrapper { Window = newWindow, Action = InternalUpdate, Time = totalTime }, totalTime);
     }
 
     public void AddBlockingPopup(IWindow window, string name)
     {
         var newWindow = new WindowWrapper(window, name, true);
-        activeWindows.Add(newWindow);
-        priorityQueue.Enqueue(new UpdateQueueWrapper { Window = newWindow, Action = InternalPopup, Time = totalTime }, totalTime);
-        priorityQueue.Enqueue(new UpdateQueueWrapper { Window = newWindow, Action = InternalUpdate, Time = totalTime }, totalTime);
+        _activeWindows.Add(newWindow);
+        _priorityQueue.Enqueue(new UpdateQueueWrapper { Window = newWindow, Action = InternalPopup, Time = totalTime }, totalTime);
+        _priorityQueue.Enqueue(new UpdateQueueWrapper { Window = newWindow, Action = InternalUpdate, Time = totalTime }, totalTime);
     }
 
     public void Update(float deltaTime)
     {
         totalTime += deltaTime;
         // Update all windows in the priority queue
-        while (priorityQueue.Count > 0 && priorityQueue.Peek().Time <= totalTime)
+        while (_priorityQueue.Count > 0 && _priorityQueue.Peek().Time <= totalTime)
         {
-            var next = priorityQueue.Dequeue();
-            if (activeWindows.IndexOf(next.Window) == -1)
+            var next = _priorityQueue.Dequeue();
+            if (_activeWindows.IndexOf(next.Window) == -1)
             {
                 continue;
             }
@@ -103,19 +110,19 @@ internal class WindowManager
                     newTime = totalTime + next.Window.Window.UpdateInterval;
                 }
                 next.Time = newTime;
-                priorityQueue.Enqueue(next, newTime);
+                _priorityQueue.Enqueue(next, newTime);
             }
         }
     }
 
     public void Draw()
     {
-        foreach (var window in activeWindows)
+        foreach (var window in _activeWindows)
         {
             if (!InternalDraw(window))
             {
                 window.Window.Close();
-                activeWindows.Remove(window);
+                _activeWindows.Remove(window);
                 break;
             }
         }
@@ -136,18 +143,22 @@ internal class WindowManager
 
     private void UpdateWidgets(WindowWrapper window, float totalTime)
     {
+        _activeWindowProjectName = _windowProjects[window].RetroPluginName;
         foreach (var widget in window.Widgets)
         {
-            widget.Update(totalTime);
+            widget.Update(this, totalTime);
         }
+        _activeWindowProjectName = "Unknown";
     }
 
     private void DrawWidgets(WindowWrapper window)
     {
+        _activeWindowProjectName = _windowProjects[window].RetroPluginName;
         foreach (var widget in window.Widgets)
         {
-            widget.Draw();
+            widget.Draw(this);
         }
+        _activeWindowProjectName = "Unknown";
     }
 
     private bool InternalDraw(WindowWrapper window)
@@ -178,17 +189,17 @@ internal class WindowManager
 
     public void CloseAll()
     {
-        foreach (var window in activeWindows)
+        foreach (var window in _activeWindows)
         {
             window.Window.Close();
         }
 
-        activeWindows.Clear();
+        _activeWindows.Clear();
     }
 
     internal bool IsOpen(string v)
     {
-        foreach (var window in activeWindows)
+        foreach (var window in _activeWindows)
         {
             if (window.Name == v)
                 return true;
@@ -198,7 +209,7 @@ internal class WindowManager
 
     private void CloseWindow(WindowWrapper window)
     {
-        foreach (var kp in projectWindows)
+        foreach (var kp in _projectWindows)
         {
             if (kp.Value.Contains(window))
             {
@@ -206,12 +217,13 @@ internal class WindowManager
             }
         }
         window.Window.Close();
-        activeWindows.Remove(window);
+        _windowProjects.Remove(window);
+        _activeWindows.Remove(window);
     }
 
     internal void Close(string name)
     {
-        foreach (var window in activeWindows)
+        foreach (var window in _activeWindows)
         {
             if (window.Name == name)
             {
@@ -223,10 +235,10 @@ internal class WindowManager
 
     internal void CloseAll(ProjectSettings activeProject)
     {
-        if (projectWindows.ContainsKey(activeProject))
+        if (_projectWindows.ContainsKey(activeProject))
         {
             List<WindowWrapper> windowsToClear = new List<WindowWrapper>();
-            foreach (var window in projectWindows[activeProject])
+            foreach (var window in _projectWindows[activeProject])
             {
                 windowsToClear.Add(window);
             }
@@ -234,7 +246,12 @@ internal class WindowManager
             {
                 CloseWindow(window);
             }
-            projectWindows[activeProject].Clear();
+            _projectWindows[activeProject].Clear();
         }
+    }
+
+    public void Log(LogType type, string message)
+    {
+        _editor.Log(type, _activeWindowProjectName, message);
     }
 }

@@ -217,9 +217,13 @@ internal class LibRetroPlugin : IDisposable
     }
 
     public const int RetroKeyArrayCount = 512;
+    private IEditorInternal _editor;
+    private GCHandle _pinnedEditor;
 
-    public LibRetroPlugin(string path)
+    public LibRetroPlugin(IEditorInternal editor, string path)
     {
+        _editor = editor;
+        _pinnedEditor = GCHandle.Alloc(_editor);
         var pathOverride = Environment.GetEnvironmentVariable("RETROEDITOR_OVERRIDE_LIBRETRO_PATH");
         if (pathOverride != null)
         {
@@ -622,6 +626,7 @@ internal class LibRetroPlugin : IDisposable
     {
         NativeLibrary.Free(libraryHandle);
         Marshal.FreeHGlobal(loadedRom);
+        _pinnedEditor.Free();
     }
 
     private bool disableVideo;
@@ -658,6 +663,7 @@ internal class LibRetroPlugin : IDisposable
     private DebuggerCallbackDelegate? debuggerCallback;             // Prevent collection of delegate
 
     private unsafe delegate* unmanaged[Cdecl]<UInt64, void*, void> logCallbackDelegate;
+    private unsafe delegate* unmanaged[Cdecl]<void*, UInt64, void*, void> logCallbackInstanceDelegate;
     private nint logCallbackTrampoline;
     private nint debuggerTrampoline;
 
@@ -904,13 +910,17 @@ internal class LibRetroPlugin : IDisposable
     }
 
     [UnmanagedCallersOnly(CallConvs = new Type[] { typeof(CallConvCdecl) })]
-    private unsafe static void LogCallback(UInt64 level, void* stringPtr)
+    private unsafe static void LogCallback(void* instance, UInt64 level, void* stringPtr)
     {
-        // We may have to add a param here to give us an instance for the plugin, if we plan to record logs
+        var editor = GCHandle.FromIntPtr(new IntPtr(instance)).Target as IEditorInternal;
+        if (editor == null)
+        {
+            return;
+        }
         var fmtString = Marshal.PtrToStringAnsi(new IntPtr(stringPtr));
         if (fmtString != null)
         {
-            Editor.Log(LogType.Info, "LibRetro", fmtString);
+            editor.Log(LogType.Info, "LibRetro", fmtString);
         }
     }
 
@@ -957,7 +967,7 @@ internal class LibRetroPlugin : IDisposable
                         var index = descriptor.index;
                         var id = descriptor.id;
                         var description = Marshal.PtrToStringAnsi(descriptor.description);
-                        Editor.Log(LogType.Debug, "LibRetro", $"INPUT DESCRIPTOR : {port}, {device}, {index}, {id}, {description}");
+                        _editor.Log(LogType.Debug, "LibRetro", $"INPUT DESCRIPTOR : {port}, {device}, {index}, {id}, {description}");
                         data += descSize;
                     }
                     return 1;
@@ -971,7 +981,7 @@ internal class LibRetroPlugin : IDisposable
                 {
                     var variable = Marshal.PtrToStructure<retro_variable>(data);
                     var key = Marshal.PtrToStringAnsi(variable.key);
-                    Editor.Log(LogType.Debug, "LibRetro", $"Get variable: {key}");
+                    _editor.Log(LogType.Debug, "LibRetro", $"Get variable: {key}");
                     if (key == "mame_media_type")
                     {
                         variable.value = Marshal.StringToHGlobalAnsi("cart");
@@ -1004,7 +1014,7 @@ internal class LibRetroPlugin : IDisposable
                         }
                         var key = Marshal.PtrToStringAnsi(variable.key);
                         var value = Marshal.PtrToStringAnsi(variable.value);
-                        Editor.Log(LogType.Debug, "LibRetro", $"Set variable: {key}, {value}");
+                        _editor.Log(LogType.Debug, "LibRetro", $"Set variable: {key}, {value}");
                         data += varSize;
                     }
                     return 1;
@@ -1015,14 +1025,15 @@ internal class LibRetroPlugin : IDisposable
                 }
             case EnvironmentCommand.ENVIRONMENT_SET_SUPPORT_NO_GAME:
                 {
-                    Editor.Log(LogType.Debug, "LibRetro", $"Supports No Game : {Marshal.ReadByte(data)}");
+                    _editor.Log(LogType.Debug, "LibRetro", $"Supports No Game : {Marshal.ReadByte(data)}");
                     return 1;
                 }
             case EnvironmentCommand.ENVIRONMENT_GET_LOG_INTERFACE:
                 {
                     unsafe
                     {
-                        logCallbackDelegate = &LogCallback;
+                        logCallbackInstanceDelegate = &LogCallback;
+                        logCallbackDelegate = (delegate* unmanaged[Cdecl]<UInt64, void*, void>)InstanceTrampoline.InterfaceTrampoline.AllocateTrampoline(GCHandle.ToIntPtr(_pinnedEditor), 2, (nint)logCallbackInstanceDelegate);
                         logCallbackTrampoline = InstanceTrampoline.InterfaceTrampoline.AllocatePrinter((nint)logCallbackDelegate);
                     }
 
@@ -1059,7 +1070,7 @@ internal class LibRetroPlugin : IDisposable
                             var controllerDesc = Marshal.PtrToStructure<retro_controller_description>(controller.types + (a * descSize));
                             var description = Marshal.PtrToStringAnsi(controllerDesc.description);
                             var id = controllerDesc.id;
-                            Editor.Log(LogType.Debug, "LibRetro", $"CONTROLLER INFO : {description}, {id}");
+                            _editor.Log(LogType.Debug, "LibRetro", $"CONTROLLER INFO : {description}, {id}");
                         }
                         data += controllerSize;
                     }
@@ -1086,14 +1097,14 @@ internal class LibRetroPlugin : IDisposable
                             len = (UInt64)descriptor.len,
                             addressSpace = Marshal.PtrToStringAnsi(descriptor.addressSpace)??""
                         };
-                        Editor.Log(LogType.Debug, "LibRetro", $"MEMORY MAP : {memoryMaps[a].flags}, {memoryMaps[a].ptr}, {memoryMaps[a].offset}, {memoryMaps[a].start}, {memoryMaps[a].select}, {memoryMaps[a].disconnect}, {memoryMaps[a].len}, {memoryMaps[a].addressSpace}");
+                        _editor.Log(LogType.Debug, "LibRetro", $"MEMORY MAP : {memoryMaps[a].flags}, {memoryMaps[a].ptr}, {memoryMaps[a].offset}, {memoryMaps[a].start}, {memoryMaps[a].select}, {memoryMaps[a].disconnect}, {memoryMaps[a].len}, {memoryMaps[a].addressSpace}");
                     }
                     return 1;
                 }
             case EnvironmentCommand.ENVIRONMENT_SET_GEOMETRY:
                 {
                     var geometry = Marshal.PtrToStructure<retro_game_geometry>(data);
-                    Editor.Log(LogType.Debug, "LibRetro", $"GEOMETRY : {geometry.base_width}, {geometry.base_height}, {geometry.max_width}, {geometry.max_height}, {geometry.aspect_ratio}");
+                    _editor.Log(LogType.Debug, "LibRetro", $"GEOMETRY : {geometry.base_width}, {geometry.base_height}, {geometry.max_width}, {geometry.max_height}, {geometry.aspect_ratio}");
                     return 1;
                 }
             case EnvironmentCommand.ENVIRONMENT_GET_LED_INTERFACE:
@@ -1154,7 +1165,7 @@ internal class LibRetroPlugin : IDisposable
 
             default:
                 {
-                    Editor.Log(LogType.Warning, "LibRetro", $"Unhandled Environment callback :  {cmd} {(experimental?"Experimental":"")} {(frontendPrivate?"Private":"")}");
+                    _editor.Log(LogType.Warning, "LibRetro", $"Unhandled Environment callback :  {cmd} {(experimental?"Experimental":"")} {(frontendPrivate?"Private":"")}");
                 }
                 return 0;
         }
@@ -1300,7 +1311,7 @@ internal class LibRetroPlugin : IDisposable
 
     private void KeyboardCallback(byte down, uint keycode, uint character, ushort key_modifiers)
     {
-        Editor.Log(LogType.Debug, "LibRetro", $"Keyboard callback: {down}, {keycode}, {character}, {key_modifiers}");
+        _editor.Log(LogType.Debug, "LibRetro", $"Keyboard callback: {down}, {keycode}, {character}, {key_modifiers}");
         if (keycode < RetroKeyArrayCount)
         {
             keyArray[keycode] = down != 0;
@@ -1317,7 +1328,7 @@ internal class LibRetroPlugin : IDisposable
 
     private void AudioSampleCallback(short left, short right)
     {
-        Editor.Log(LogType.Debug, "LibRetro", $"Unhandled Audio sample callback: {left}, {right}");
+        _editor.Log(LogType.Debug, "LibRetro", $"Unhandled Audio sample callback: {left}, {right}");
     }
 
     // * One frame is defined as a sample of left and right channels, interleaved.
