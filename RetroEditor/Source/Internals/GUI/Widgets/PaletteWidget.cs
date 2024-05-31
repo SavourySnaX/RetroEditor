@@ -29,6 +29,7 @@ internal class PaletteWidget : IWidgetItem, IWidgetUpdateDraw
         var rows = (availColours + coloursPerRow - 1) / coloursPerRow;
 
         var size = new Vector2(width * coloursPerRow, height * rows);
+        var remainder = availColours == coloursPerRow ? availColours : availColours % coloursPerRow;
         ImGui.BeginChild($"palette", size, 0, 0);
 
         var drawList = ImGui.GetWindowDrawList();
@@ -39,7 +40,7 @@ internal class PaletteWidget : IWidgetItem, IWidgetUpdateDraw
         for (int y = 0; y < rows; y++)
         {
             uint xOffs = 0;
-            var numColours = (y == rows - 1) ? palette.Length % coloursPerRow : coloursPerRow;
+            var numColours = (y == rows - 1) ? remainder : coloursPerRow;
             for (int x = 0; x < numColours; x++)
             {
                 var colour = palette[a];

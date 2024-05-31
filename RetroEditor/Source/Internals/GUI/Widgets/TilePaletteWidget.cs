@@ -29,6 +29,7 @@ internal class TilePaletteWidget : IWidgetItem, IWidgetUpdateDraw
 
         // Compute the size of the palette
         var rows = (tiles.Length + tilesPerRow - 1) / tilesPerRow;
+        var remainder = (tiles.Length == tilesPerRow) ? tiles.Length : tiles.Length % tilesPerRow;
 
         var size = new Vector2(width * tilesPerRow + 4 * tilesPerRow, height * rows + 4 * rows);
         ImGui.BeginChild($"tilepalette", size, 0, 0);
@@ -43,7 +44,7 @@ internal class TilePaletteWidget : IWidgetItem, IWidgetUpdateDraw
         for (int y = 0; y < rows; y++)
         {
             uint xOffs = 0;
-            var numTiles = (y == rows - 1) ? tiles.Length % tilesPerRow : tilesPerRow;
+            var numTiles = (y == rows - 1) ? remainder : tilesPerRow;
             for (int x = 0; x < numTiles; x++)
             {
                 if (tilePalette.SelectedTile == a)
