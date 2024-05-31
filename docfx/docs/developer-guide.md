@@ -926,6 +926,467 @@ The item table is 5 bytes per item with 5 items per room occupying offsets 629-6
 
 For simplicity we will extend our current tilemap and palette, adding the items as another tile, and some code to control number of items placed etc.
 
+For this, I will just post the full completed code included the changes.
+
+```cs
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Security.Cryptography;
+using RetroEditor.Plugins;
+
+class ManicMinerGBC : IRetroPlugin, IPlayerWindowExtension, IMenuProvider
+{
+    // This is the name of the plugin that will be displayed in the UI
+    public static string Name => "Manic Miner GameBoy Colour";
+
+    // This is the name of the system (that we created above) used to load this game
+    public string RomPluginName => "GameBoyColour";
+
+    // Cartridge based games don't typically require an auto-loader (unlike disc/tape based games)
+    public bool RequiresAutoLoad => false;
+
+    // We can stub this function, it's not required for this plugin
+    public bool AutoLoadCondition(IMemoryAccess romAccess)
+    {
+        return false;
+    }
+
+    // This function is used to determine if the plugin can handle the given file
+    // So we check if the MD5 hash matches the one for Manic Miner (b13061a4a1a84ef2edb4c9d47f794093)
+    public bool CanHandle(string path)
+    {
+        var manicMinerMD5 = new byte[] { 0xb1, 0x30, 0x61, 0xa4, 0xa1, 0xa8, 0x4e, 0xf2, 0xed, 0xb4, 0xc9, 0xd4, 0x7f, 0x79, 0x40, 0x93 };
+        
+        if (!File.Exists(path))
+        {
+            return false;
+        }
+        var md5 = MD5.Create().ComputeHash(File.ReadAllBytes(path));
+
+        if (manicMinerMD5.SequenceEqual(md5))
+        {
+            return true;
+        }
+        return false;
+    }
+
+    // We dont yet support exporting saves for Manic Miner GBC, so just throw
+    public ISave Export(IMemoryAccess romAcess)
+    {
+        //`File.WriteAllBytes("modified.gbc", romAcess.ReadBytes(ReadKind.Rom, 0, (uint)romAcess.RomSize).ToArray());
+        throw new System.NotImplementedException("Manic Miner GBC does not support exporting saves, yet");
+    }
+
+    public void SetupGameTemporaryPatches(IMemoryAccess romAccess)
+    {
+        // Patch out the main menu/intro ()
+        romAccess.WriteBytes(WriteKind.TemporaryRom, 0x2981, new byte[] { 0x00, 0x00, 0x00 });
+        // Disable bung logo
+        romAccess.WriteBytes(WriteKind.TemporaryRom, 0x296C, new byte[] { 0x00, 0x00, 0x00 });
+
+        // Set level to match slider value
+        romAccess.WriteBytes(WriteKind.TemporaryRom, 0x1d7d, new byte[] { 
+            0x3E, (byte)(levelValue.Value-2),   // LD A, (slider value - 2)
+            0xEA, 0x18 , 0xC1,                  // LD (C118), A
+            0xC3, 0xF7, 0x22 });                // JP 22F7
+    }
+
+    IWidgetRanged levelValue;
+
+    public void ConfigureWidgets(IMemoryAccess rom, IWidget widget, IPlayerControls playerControls)
+    {
+        levelValue = widget.AddSlider("Level", 1, 1, 20, () => playerControls.Reset());
+    }
+
+    public void ConfigureMenu(IMemoryAccess rom, IMenu menu)
+    {
+        menu.AddItem("Edit Level 1",
+                (editorInterface,menuItem) => {
+                    editorInterface.OpenUserWindow($"Edit Level 1", new ManicMinerTileEditor(rom));
+                });
+    }
+}
+
+public class ManicMinerTile : ITile
+{
+    Pixel[] imageData;
+    string name;
+    byte _attr;
+
+    // Assume offset points to the start of the tile
+    public ManicMinerTile(IMemoryAccess rom, uint offset, string name, bool hasAttributes = true, byte overrideAttr = 0)
+    {
+        this.imageData = new Pixel[8 * 8];
+        ReadOnlySpan<byte> tileData = hasAttributes ? rom.ReadBytes(ReadKind.Rom, offset, 9) : rom.ReadBytes(ReadKind.Rom, offset, 8);
+        this.name = name;
+
+        // See appendix A in the manicminer format (or a zx spectrum colour attribute document)
+        SetupAttribute(hasAttributes ? tileData[0] : overrideAttr, out Pixel ink, out Pixel paper);
+        if (hasAttributes)
+        {
+            tileData = tileData[1..];
+        }
+        for (int y = 0; y < 8; y++)
+        {
+            var row = tileData[y];
+            for (int x = 0; x < 8; x++)
+            {
+                var pixel = (row & (1 << (7 - x))) != 0 ? ink : paper;
+                imageData[y * 8 + x] = pixel;
+            }
+        }
+    }
+
+    public void SetupAttribute(byte attr, out Pixel ink, out Pixel paper)
+    {
+        _attr = attr;
+        var inkColour = _attr & 0x07;                                // The lower 3 bits are the ink colour (RGB)
+        var paperColour = (_attr >> 3) & 0x07;                       // The next 3 bits are the paper colour (RGB)
+        var bright = (_attr & 0x40) != 0 ? 63 : 0;                   // The 7th bit is the bright flag
+        var inkBright = (inkColour != 0) ? bright : 0;     // bright adds 63 to the colour value if not 0
+        var paperBright = (paperColour != 0) ? bright : 0; // bright adds 63 to the colour value if not 0
+
+        // combine attributes to form a colour for ink and paper (R = 0 or 192, G = 0 or 192, B = 0 or 192) + bright
+        ink = new Pixel((byte)((inkColour & 2) * 96 + inkBright),
+                            (byte)((inkColour & 4) * 48 + inkBright),
+                            (byte)((inkColour & 1) * 192 + inkBright));
+        paper = new Pixel((byte)((paperColour & 2) * 96 + paperBright),
+                              (byte)((paperColour & 4) * 48 + paperBright),
+                              (byte)((paperColour & 1) * 192 + paperBright));
+    }
+
+    public uint Width => 8;
+
+    public uint Height => 8;
+
+    public string Name => name;
+
+    public void Update(Pixel[] imageData)
+    {
+        this.imageData = imageData;
+    }
+
+    public Pixel[] GetImageData()
+    {
+        return imageData;
+    }
+
+    public byte Attr => _attr;
+}
+
+class ManicMinerTilePalette : ITilePalette
+{
+    public uint MaxTiles => 9;
+
+    public int SelectedTile { get; set; }
+
+    public float ScaleX => 2.0f;
+
+    public float ScaleY => 2.0f;
+
+    public uint TilesPerRow => 4;
+
+    public TilePaletteStore tilePaletteStore;
+
+    ManicMinerTile[] tiles;
+    public ManicMinerTilePalette(IMemoryAccess rom)
+    {
+        tiles = new ManicMinerTile[9];
+        tiles[0] = new ManicMinerTile(rom, 0x4000 * 6 + 544, "Background");
+        tiles[1] = new ManicMinerTile(rom, 0x4000 * 6 + 553, "Floor");
+        tiles[2] = new ManicMinerTile(rom, 0x4000 * 6 + 562, "Crumbling Floor");
+        tiles[3] = new ManicMinerTile(rom, 0x4000 * 6 + 571, "Wall");
+        tiles[4] = new ManicMinerTile(rom, 0x4000 * 6 + 580, "Conveyor");
+        tiles[5] = new ManicMinerTile(rom, 0x4000 * 6 + 589, "Nasty 1");
+        tiles[6] = new ManicMinerTile(rom, 0x4000 * 6 + 598, "Nasty 2");
+        tiles[7] = new ManicMinerTile(rom, 0x4000 * 6 + 607, "Spare");
+        tiles[8] = new ManicMinerTile(rom, 0x4000 * 6 + 692, "Pickup", false, 0x07);
+        tilePaletteStore = new TilePaletteStore(this);
+        attrToIndex = new Dictionary<byte, uint>();
+        indexToAttr = new Dictionary<uint, byte>();
+        for (int i = 0; i < 8; i++)
+        {
+            attrToIndex[tiles[i].Attr] = (uint)i;
+            indexToAttr[(uint)i] = tiles[i].Attr;
+        }
+    }
+
+    public void Update(float seconds)
+    {
+        // Do nothing for now
+    }
+
+    public ReadOnlySpan<ITile> FetchTiles()
+    {
+        return tiles;
+    }
+
+    Dictionary<byte,uint> attrToIndex;
+    Dictionary<uint,byte> indexToAttr;
+    internal uint AttrToIndex(byte attr)
+    {
+        return attrToIndex[attr];
+    }
+    internal byte IndexToAttr(uint index)
+    {
+        return indexToAttr[index];
+    }
+}
+
+class ManicMinerTileMapLayer : ILayer
+{
+    public uint Width => 32;
+
+    public uint Height => 16;
+
+    uint[] mapData;
+    IMemoryAccess _rom;
+    ManicMinerTilePalette _tilePalette;
+    public ManicMinerTileMapLayer(IMemoryAccess rom, uint offset, ManicMinerTilePalette tilePalette)
+    {
+        _rom = rom;                 // We record these because they will be useful when we modify the rom
+        _tilePalette = tilePalette;
+        mapData = new uint[Width * Height];
+        var tileData = rom.ReadBytes(ReadKind.Rom, offset, Width * Height);
+        for (uint y = 0; y < Height; y++)
+        {
+            for (uint x = 0; x < Width; x++)
+            {
+                mapData[y * Width + x] = tilePalette.AttrToIndex(tileData[(int)(y * Width + x)]);
+            }
+        }
+        // Add pickup locations
+        _pickupOffset = offset + 629;
+        _pickups = new List<Pickup>();
+        GetPickups();
+        foreach (var pickup in _pickups)
+        {
+            mapData[pickup.y * Width + pickup.x] = 8;
+        }
+    }
+    private uint _pickupOffset;
+    private List<Pickup> _pickups;
+
+    struct Pickup
+    {
+        public byte x;
+        public byte y;
+        public byte attr;
+    }
+
+    // Convert in memory format to our simple list format
+    public void GetPickups()
+    {
+        _pickups.Clear();
+        var pickups = _rom.ReadBytes(ReadKind.Rom, _pickupOffset, 5 * 5);
+        for (int i=0;i<5;i++)
+        {
+            if (pickups[i * 5 + 0] == 255)
+            {
+                // no more pickups
+                break;
+            }
+            if (pickups[i * 5 + 0] == 0)
+            {
+                // ignore this pickup
+                continue;
+            }
+            // Get coordinates :
+            var yyyxxxxx = pickups[i * 5 + 1];
+            var nnnnnnny = pickups[i * 5 + 2];
+            var x= yyyxxxxx & 0x1f;
+            var y= (yyyxxxxx >> 5) | ((nnnnnnny & 0x1) << 3);
+            _pickups.Add(new Pickup { x = (byte)x, y = (byte)y, attr = pickups[i * 5 + 0] });
+        }
+        UpdateItemCount();
+    }
+
+    // Convert our simple list format to in memory format
+    public void StorePickups()
+    {
+        byte[] pickups = new byte[5 * 5];
+        int pickupOffset = 0;
+        foreach (var pickup in _pickups)
+        {
+            pickups[pickupOffset++] = pickup.attr;                                      // Attribute
+            pickups[pickupOffset++] = (byte)((pickup.y << 5) | (pickup.x & 0x1f));      // YYYXXXXX
+            var topYBit = (pickup.y >> 3) & 1;
+            pickups[pickupOffset++] = (byte)(topYBit | 0b01011100);                     // 0101110Y
+            pickups[pickupOffset++] = (byte)((topYBit<<3) | 0b01100000);                // 0110Y000
+            pickups[pickupOffset++] = 255;                                              // Always 255
+        }
+        if (pickupOffset<5*5)
+        {
+            // Mark end of list
+            pickups[pickupOffset++] = 255;
+        }
+        for (int i=0;i<5;i++)
+        {
+            if (i < _pickups.Count)
+            {
+                var pickup = _pickups[i];
+                pickups[i * 5 + 0] = pickup.attr;
+                pickups[i * 5 + 1] = (byte)((pickup.y << 5) | (pickup.x & 0x1f));
+                pickups[i * 5 + 2] = (byte)(pickup.y >> 3);
+            }
+            else
+            {
+                pickups[i * 5 + 0] = 0;
+            }
+        }
+        _rom.WriteBytes(WriteKind.SerialisedRom, _pickupOffset, pickups);
+    }
+    
+    private IWidgetLabel _itemCounter;
+
+    public void SetItemCounterWidget(IWidgetLabel widget)
+    {
+        _itemCounter = widget;
+        UpdateItemCount();
+    }
+
+    void DeletePickup(byte x, byte y)
+    {
+        for (int i=0;i<_pickups.Count;i++)
+        {
+            if (_pickups[i].x == x && _pickups[i].y == y)
+            {
+                _pickups.RemoveAt(i);
+                UpdateItemCount();
+                return;
+            }
+        }
+    }
+
+    // Valid colours are magenta=3, green=4, cyan=5, yellow=6 - for now just cycle it based on count
+    private static readonly byte[] _pickupAttributes = new byte[] { 3, 4, 5, 6 };
+
+    bool AddPickup(byte x, byte y)
+    {
+        if (_pickups.Count >= 5)
+        {
+            return false;
+        }
+        var pickupAttr = _pickupAttributes[_pickups.Count & 3];
+        _pickups.Add(new Pickup { x = x, y = y, attr = pickupAttr });
+        UpdateItemCount();
+        return true;
+    }
+
+    void UpdateItemCount()
+    {
+        if (_itemCounter != null)
+        {
+            _itemCounter.Name = $"Items: {_pickups.Count} / 5";
+        }
+    }
+
+    public ReadOnlySpan<uint> GetMapData()
+    {
+        return mapData;
+    }
+
+    public void SetTile(uint x, uint y, uint tile)
+    {
+        // If we overwrite a pickup, we need to update the pickup data
+        if (mapData[y*Width+x]==8)
+        {
+            // Remove pickup from pickup data
+            DeletePickup((byte)x, (byte)y);
+        }
+        // If we are adding a pickup, we need to update the pickup data
+        if (tile == 8)
+        {
+            // Add pickup to pickup data
+            if (!AddPickup((byte)x, (byte)y))
+            {
+                // Failed to add pickup - too many pickups in use
+                return;
+            }
+        }
+        else
+        {
+            // Regular tile, just update the map data
+            _rom.WriteBytes(WriteKind.SerialisedRom, 0x4000 * 6 + 0 + y * Width + x, new byte[] { _tilePalette.IndexToAttr(tile) });
+        }
+        StorePickups(); // Update the pickup data
+        mapData[y * Width + x] = tile;
+    }
+}
+
+class ManicMinerTileMap : ITileMap
+{
+    public uint Width => 32 * 8;
+
+    public uint Height => 16 * 8;
+
+    public uint NumLayers => 1;
+
+    public float ScaleX => 2.0f;
+
+    public float ScaleY => 2.0f;
+
+    private TilePaletteStore _tilePaletteStore;
+    private ManicMinerTileMapLayer _layer;
+
+    public ManicMinerTileMap(IMemoryAccess rom, uint offset, ManicMinerTilePalette tilePalette)
+    {
+        _tilePaletteStore = tilePalette.tilePaletteStore;
+        _layer = new ManicMinerTileMapLayer(rom, offset, tilePalette);
+    }
+
+    public void SetItemCounterWidget(IWidgetLabel widget)
+    {
+        _layer.SetItemCounterWidget(widget);
+    }
+
+    public ILayer FetchLayer(uint layer)
+    {
+        return _layer;
+    }
+
+    public TilePaletteStore FetchPalette(uint layer)
+    {
+        return _tilePaletteStore;
+    }
+}
+
+class ManicMinerTileEditor : IUserWindow
+{
+    public float UpdateInterval => 1 / 30.0f;
+
+    private ManicMinerTilePalette tilePalette;
+    private ManicMinerTileMap tileMap;
+
+    public ManicMinerTileEditor(IMemoryAccess rom)
+    {
+        tilePalette = new ManicMinerTilePalette(rom);
+        tileMap = new ManicMinerTileMap(rom, 0x4000 * 6 + 0, tilePalette);
+    }
+
+    public void ConfigureWidgets(IMemoryAccess rom, IWidget widget, IPlayerControls playerControls)
+    {
+        widget.AddLabel("Palette");
+        widget.AddTilePaletteWidget(tilePalette.tilePaletteStore);
+        tileMap.SetItemCounterWidget(widget.AddLabel("Items: 0 / 5"));
+        widget.AddLabel("TileMap");
+        widget.AddTileMapWidget(tileMap);
+    }
+
+    public void OnClose()
+    {
+        // Do nothing for now
+    }
+}
+```
+
+The way this works; is we detect if a pickup is added or deleted on the tile map, and adjust the list of pickups each time (see `ManicMinerTileMapLayer::SetTile`). For convenience, we convert the tilemap data from the rom format into a local array (see `ManicMinerTileMapLayer::GetPickups()`) and back to rom format as required.
+
+A label widget is used to show a counter of how many items can be placed.
+
+At this point, I have a challenge - Can you update the code so that you can edit any of the 20 levels?
 
 _to be continued_
 
