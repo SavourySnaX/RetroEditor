@@ -143,7 +143,15 @@ internal class WindowManager : IWidgetLog
 
     private void UpdateWidgets(WindowWrapper window, float totalTime)
     {
-        _activeWindowProjectName = _windowProjects[window].RetroPluginName;
+        var isProjectBasedWindow= _windowProjects.ContainsKey(window);
+        if (isProjectBasedWindow)
+        {
+            _activeWindowProjectName = _windowProjects[window].RetroPluginName;
+        }
+        else
+        {
+            _activeWindowProjectName = "System Window";
+        }
         foreach (var widget in window.Widgets)
         {
             widget.Update(this, totalTime);
@@ -153,7 +161,15 @@ internal class WindowManager : IWidgetLog
 
     private void DrawWidgets(WindowWrapper window)
     {
-        _activeWindowProjectName = _windowProjects[window].RetroPluginName;
+        var isProjectBasedWindow= _windowProjects.ContainsKey(window);
+        if (isProjectBasedWindow)
+        {
+            _activeWindowProjectName = _windowProjects[window].RetroPluginName;
+        }
+        else
+        {
+            _activeWindowProjectName = "System Window";
+        }
         foreach (var widget in window.Widgets)
         {
             widget.Draw(this);
