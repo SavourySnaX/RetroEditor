@@ -851,37 +851,78 @@ internal class Editor : IEditor, IEditorInternal
         return Path.Combine(projectSettings.projectPath, "Editor", $"{projectSettings.RetroCoreName}_{serialiseName}.json");
     }
 
-    internal LibRetroPlugin? GetLibRetroInstance(string pluginName, ProjectSettings? projectSettings)
+    internal enum OSSupportedResult
     {
-        var OS=RuntimeInformation.OSDescription;
-        var platform = "";
-        var extension = "";
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-        {
-            platform = "windows";
-            extension = ".dll";
-        }
-        else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-        {
-            platform = "linux";
-            extension = ".so";
-        }
-        else
-        {
-            Log(LogType.Error, "Editor", $"Unsupported OS: {OS} - Cannot load lib retro plugin");
-            return null;
-        }
-        var architecture = "";
+        Ok,
+        ArchitectureNotSupported,
+        OSArchitectureNotSupported,
+    }
+
+    internal OSSupportedResult GetOSStrings(out string platform, out string extra, out string extension, out string architecture, bool isDeveloperMame)
+    {
+        bool supportsWindows = false;
+        bool supportsLinux = false;
+        bool supportsMacos = false;
+        architecture = "";
+        platform = "";
+        extension = "";
+        extra = "";
         switch (RuntimeInformation.OSArchitecture)
         {
             case Architecture.X64:
                 architecture = "x86_64";
+                supportsLinux = true;
+                supportsWindows = true;
+                break;
+            case Architecture.Arm64:
+                architecture = "arm64";
+                if (isDeveloperMame)
+                {
+                    return OSSupportedResult.ArchitectureNotSupported;
+                }
+                supportsMacos = true;
                 break;
             default:
+                return OSSupportedResult.ArchitectureNotSupported;
+        }
+        if (supportsWindows && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        {
+            platform = "windows";
+            extension = ".dll";
+        }
+        else if (supportsLinux && RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+        {
+            platform = "linux";
+            extension = ".so";
+        }
+        else if (supportsMacos && RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+        {
+            extra = "apple";
+            platform = "osx";
+            extension = ".dylib";
+        }
+        else
+        {
+            return OSSupportedResult.OSArchitectureNotSupported;
+        }
+        return OSSupportedResult.Ok;
+    }
+
+    internal LibRetroPlugin? GetLibRetroInstance(string pluginName, ProjectSettings? projectSettings)
+    {
+        var OS=RuntimeInformation.OSDescription;
+        var supported = GetOSStrings(out var platform, out var extra, out var extension, out var architecture, false);
+        switch (supported)
+        {
+            case OSSupportedResult.Ok:
+                break;
+            case OSSupportedResult.ArchitectureNotSupported:
                 Log(LogType.Error, "Editor", $"Unsupported Architecture: {RuntimeInformation.OSArchitecture} - Cannot load lib retro plugin");
                 return null;
+            case OSSupportedResult.OSArchitectureNotSupported:
+                Log(LogType.Error, "Editor", $"Unsupported OS + {RuntimeInformation.OSArchitecture}: {OS} - Cannot load lib retro plugin");
+                return null;
         }
-
 
         var sourcePlugin = Path.Combine(settings.RetroCoreFolder, platform, architecture, $"{pluginName}{extension}");
         string? destinationPlugin;
@@ -898,7 +939,7 @@ internal class Editor : IEditor, IEditorInternal
         {
             if (!File.Exists(sourcePlugin))
             {
-                var task = DownloadLibRetro(platform, architecture, extension, pluginName);
+                var task = DownloadLibRetro(platform, extra, architecture, extension, pluginName);
                 task.Wait();
                 if (task.Result!=true)
                 {
@@ -926,34 +967,18 @@ internal class Editor : IEditor, IEditorInternal
     internal LibRetroPlugin? GetDeveloperMame()
     {
         var OS=RuntimeInformation.OSDescription;
-        var platform = "";
-        var extension = "";
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        var supported = GetOSStrings(out var platform, out _, out var extension, out var architecture, true);
+        switch (supported)
         {
-            platform = "windows";
-            extension = ".dll";
-        }
-        else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-        {
-            platform = "linux";
-            extension = ".so";
-        }
-        else
-        {
-            Log(LogType.Error, "Editor", $"Unsupported OS: {OS} - Cannot load developer mame plugin");
-            return null;
-        }
-        var architecture = "";
-        switch (RuntimeInformation.OSArchitecture)
-        {
-            case Architecture.X64:
-                architecture = "x86_64";
+            case OSSupportedResult.Ok:
                 break;
-            default:
-                Log(LogType.Error, "Editor", $"Unsupported Architecture: {RuntimeInformation.OSArchitecture} - Cannot load developer mame plugin");
+            case OSSupportedResult.ArchitectureNotSupported:
+                Log(LogType.Error, "Editor", $"Unsupported Architecture: {RuntimeInformation.OSArchitecture} - Cannot load lib mame debugger plugin");
+                return null;
+            case OSSupportedResult.OSArchitectureNotSupported:
+                Log(LogType.Error, "Editor", $"Unsupported OS + {RuntimeInformation.OSArchitecture}: {OS} - Cannot load lib mame debugger plugin");
                 return null;
         }
-
 
         var destinationPlugin = Path.Combine(settings.RetroCoreFolder, "developer", platform, architecture, $"mame_libretro{extension}");
         if (!File.Exists(destinationPlugin))
@@ -987,9 +1012,13 @@ internal class Editor : IEditor, IEditorInternal
     }
 
 
-    async Task<bool> DownloadLibRetro(string platform, string architecture, string extension, string pluginName)
+    async Task<bool> DownloadLibRetro(string platform, string extra, string architecture, string extension, string pluginName)
     {
-        var url = $"http://buildbot.libretro.com/nightly/{platform}/{architecture}/latest/{pluginName}{extension}.zip";
+        if (!string.IsNullOrEmpty(extra))
+        {
+            extra = $"{extra}/";
+        }
+        var url = $"http://buildbot.libretro.com/nightly/{extra}{platform}/{architecture}/latest/{pluginName}{extension}.zip";
         var destination = Path.Combine(settings.RetroCoreFolder, platform, architecture, $"{pluginName}{extension}");
         var itemToGrab = $"{pluginName}{extension}";
         return await Download(url, destination, itemToGrab);
