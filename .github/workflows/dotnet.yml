@@ -23,20 +23,27 @@ jobs:
       run: dotnet restore
     - name: Build Debug
       run: dotnet build -c Debug
-    - name: Build Windows
+    - name: Build Windows X64
       run: dotnet publish --os win
-    - name: Build Linux
+    - name: Build Linux X64
       run: dotnet publish --os linux
-    - name: Archive Windows
+    - name: Build MacOS Arm64
+      run: dotnet publish --runtime osx-arm64
+    - name: Archive Windows X64
       uses: actions/upload-artifact@v4
       with:
         name: Windows-X64
         path: bin/Release/net8.0/win-x64/publish
-    - name: Archive Linux
+    - name: Archive Linux X64
       uses: actions/upload-artifact@v4
       with:
         name: Linux-X64
         path: bin/Release/net8.0/linux-x64/publish
+    - name: Archive Macos Arm64
+      uses: actions/upload-artifact@v4
+      with:
+        name: MacOS-Arm64
+        path: bin/Release/net8.0/osx-arm64/publish
     - name: DocFX Build
       run: cd docfx && docfx docfx.json
       continue-on-error: false
