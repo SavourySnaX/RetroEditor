@@ -876,10 +876,6 @@ internal class Editor : IEditor, IEditorInternal
                 break;
             case Architecture.Arm64:
                 architecture = "arm64";
-                if (isDeveloperMame)
-                {
-                    return OSSupportedResult.ArchitectureNotSupported;
-                }
                 supportsMacos = true;
                 break;
             default:
@@ -1005,7 +1001,12 @@ internal class Editor : IEditor, IEditorInternal
     async Task<bool> DownloadDeveloperMame(string platform, string architecture, string extension)
     {
         var api_revision = "v1.261.0"; // TODO - link this to the extension api
-        var url = $"https://github.com/SavourySnaX/lib_mame_retro_custom_fork/releases/download/{api_revision}/build_{platform}.zip";
+        var extra = "";
+        if (architecture != "x86_64")   // To avoid needed to rename initial release
+        {
+            extra = $"_{architecture}";
+        }
+        var url = $"https://github.com/SavourySnaX/lib_mame_retro_custom_fork/releases/download/{api_revision}/build_{platform}{extra}.zip";
         var destination = Path.Combine(settings.RetroCoreFolder, "developer", platform, architecture, $"mame_libretro{extension}");
         var itemToGrab = $"mame_libretro{extension}";
         return await Download(url, destination, itemToGrab);
