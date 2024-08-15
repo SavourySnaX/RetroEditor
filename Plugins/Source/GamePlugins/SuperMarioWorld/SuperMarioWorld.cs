@@ -135,6 +135,18 @@ public static class LC_LZ2
     }
 }
 
+public static class SMWAddresses
+{
+    public const uint LevelDataLayer1 = 0x05E000;
+    public const uint LevelDataLayer2 = 0x05E600;
+    public const uint LevelDataSprites = 0x05EC00;
+    public const uint TileData_000_072 = 0x0D8000;
+    public const uint GFX00_31_LowByteTable = 0x00B933;
+    public const uint GFX00_31_HighByteTable = 0x00B965;
+    public const uint GFX00_31_BankByteTable = 0x00B997;
+    public const uint GFX32 = 0x088000;
+    public const uint GFX33 = 0x08BFC0;
+}
 
 public class SuperMarioWorld : IRetroPlugin , IMenuProvider
 {
@@ -356,9 +368,9 @@ public class SuperMarioWorldTestImage : IImage, IUserWindow
 
             // Get the level select value, index into the layer 1 data etc
             var levelSelect = (uint)temp_levelSelect.Value;
-            var layer1Data = _rom.ReadBytes(ReadKind.Rom, _addressTranslation.ToImage(0x05E000 + 3 * levelSelect), 3);
-            var layer2Data = _rom.ReadBytes(ReadKind.Rom, _addressTranslation.ToImage(0x05E600 + 3 * levelSelect), 3);
-            var spriteData = _rom.ReadBytes(ReadKind.Rom, _addressTranslation.ToImage(0x05EC00 + 2 * levelSelect), 2);
+            var layer1Data = _rom.ReadBytes(ReadKind.Rom, _addressTranslation.ToImage(SMWAddresses.LevelDataLayer1 + 3 * levelSelect), 3);
+            var layer2Data = _rom.ReadBytes(ReadKind.Rom, _addressTranslation.ToImage(SMWAddresses.LevelDataLayer2 + 3 * levelSelect), 3);
+            var spriteData = _rom.ReadBytes(ReadKind.Rom, _addressTranslation.ToImage(SMWAddresses.LevelDataSprites + 2 * levelSelect), 2);
 
             uint layer0Address = _addressTranslation.ToImage((uint)((layer1Data[2] << 16) | (layer1Data[1] << 8) | layer1Data[0]));
 
@@ -554,7 +566,7 @@ public class SuperMarioWorldTestImage : IImage, IUserWindow
             }
 
 
-            var graphicData000_072 = _rom.ReadBytes(ReadKind.Rom, _addressTranslation.ToImage(0x0D8000), 920);   // TTTTTTTT YXPCCCTT  T-Tile, Y-Y flip, X-X flip, P-Palette, C-Colour, T-Top priority
+            var graphicData000_072 = _rom.ReadBytes(ReadKind.Rom, _addressTranslation.ToImage(SMWAddresses.TileData_000_072), 920);   // TTTTTTTT YXPCCCTT  T-Tile, Y-Y flip, X-X flip, P-Palette, C-Colour, T-Top priority
         }
 
         return pixels;
@@ -635,23 +647,22 @@ public class SuperMarioWorldGFXPageImage : IImage, IUserWindow
                 pixels[i] = new Pixel(0, 0, 0, 255);
             }
 
-            // Get GFX00-31 (50 items) -- BEWARE address may be different on different regions
             uint gfxPtr;
             if (temp_pageSelect.Value < 0x32)
             {
-                var lo = _rom.ReadBytes(ReadKind.Rom, _addressTranslation.ToImage(0x00B933 + (uint)temp_pageSelect.Value), 1)[0];
-                var hi = _rom.ReadBytes(ReadKind.Rom, _addressTranslation.ToImage(0x00B965 + (uint)temp_pageSelect.Value), 1)[0];
-                var bk = _rom.ReadBytes(ReadKind.Rom, _addressTranslation.ToImage(0x00B997 + (uint)temp_pageSelect.Value), 1)[0];
+                var lo = _rom.ReadBytes(ReadKind.Rom, _addressTranslation.ToImage(SMWAddresses.GFX00_31_LowByteTable + (uint)temp_pageSelect.Value), 1)[0];
+                var hi = _rom.ReadBytes(ReadKind.Rom, _addressTranslation.ToImage(SMWAddresses.GFX00_31_HighByteTable + (uint)temp_pageSelect.Value), 1)[0];
+                var bk = _rom.ReadBytes(ReadKind.Rom, _addressTranslation.ToImage(SMWAddresses.GFX00_31_BankByteTable + (uint)temp_pageSelect.Value), 1)[0];
 
                 gfxPtr = _addressTranslation.ToImage((uint)((bk << 16) | (hi << 8) | lo));
             }
             else if (temp_pageSelect.Value==0x32)
             {
-                gfxPtr=_addressTranslation.ToImage(0x088000);
+                gfxPtr=_addressTranslation.ToImage(SMWAddresses.GFX32);
             }
             else
             {
-                gfxPtr=_addressTranslation.ToImage(0x08BFC0);
+                gfxPtr=_addressTranslation.ToImage(SMWAddresses.GFX33);
             }
 
             var decomp = new byte[32768];
