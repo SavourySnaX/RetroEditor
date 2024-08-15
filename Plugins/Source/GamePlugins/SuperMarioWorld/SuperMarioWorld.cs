@@ -665,6 +665,7 @@ public class SuperMarioWorldGFXPageImage : IImage, IUserWindow
                 gfxPtr=_addressTranslation.ToImage(SMWAddresses.GFX33);
             }
 
+
             var decomp = new byte[32768];
             var GFX = new ReadOnlySpan<byte>(decomp);
 
