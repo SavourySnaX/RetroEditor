@@ -4,6 +4,7 @@ using System.Linq;
 
 using RetroEditor.Plugins;
 using System;
+using System.Collections.Generic;
 
 // To do - move to editor library
 interface AddressTranslation
@@ -32,6 +33,105 @@ public class LoRom : AddressTranslation
         uint bank = address / 0x8000;
         uint rom = address % 0x8000;
         return (bank << 16) | rom;
+    }
+}
+
+public static class LC_LZ2
+{
+    private static void DecompressCode(ref byte[] decompBuffer, ref ReadOnlySpan<byte> data, ref int offset, int l, int c)
+    {
+        var count=l;
+        switch (c)
+        {
+            case 0: // Direct Copy
+                {
+                    for (int i = 0; i <= count; i++)
+                    {
+                        decompBuffer[offset++] = data[0];
+                        data = data.Slice(1);
+                    }
+                }
+                break;
+            case 1: //Byte Fill
+                {
+                    var value = data[0];
+                    data = data.Slice(1);
+                    for (int i = 0; i <= count; i++)
+                    {
+                        decompBuffer[offset++] = value;
+                    }
+                }
+                break;
+            case 2: //Word Fill
+                {
+                    var v0 = data[0];
+                    var v1 = data[1];
+                    data = data.Slice(2);
+                    bool oddeven=false;
+                    for (int i=0;i<=count;i++)
+                    {
+                        if (!oddeven)
+                            decompBuffer[offset++] = v0;
+                        else
+                            decompBuffer[offset++] = v1;
+                        oddeven = !oddeven;
+                    }
+                }
+                break;
+            case 3: //Increasing Fill
+                {
+                    var value = data[0];
+                    data = data.Slice(1);
+                    for (int i = 0; i <= count; i++)
+                    {
+                        decompBuffer[offset++] = value++;
+                    }
+                }
+                break;
+            case 4: //Repeat
+                {
+                    var h = data[1];
+                    var L = data[0];
+                    var src = (h<<8) | L;
+                    data = data.Slice(2);
+                    for (int i = 0; i <= count; i++)
+                    {
+                        decompBuffer[offset++] = decompBuffer[src++];
+                    }
+                }
+                break;
+            case 7: //LongLength
+                {
+                    var nc = (l&0x1C)>>2;
+                    var nl = (l&3)<<8;
+                    nl |= data[0];
+                    data = data.Slice(1);
+                    DecompressCode(ref decompBuffer, ref data,ref offset,nl,nc);
+                }
+                break;
+            
+        }
+
+    }
+
+    public static int Decompress(ref byte[] toDecompressBuffer, ReadOnlySpan<byte> data)
+    {
+        //LC_LZ2
+        var offset=0;
+
+        while (data.Length>0)
+        {
+            var b = data[0];
+            if (b==0xFF)
+            {
+                break;
+            }
+            data = data.Slice(1);
+            var l = b&0x1F;
+            var c = (b&0xE0)>>5;
+            DecompressCode(ref toDecompressBuffer, ref data,ref offset,l,c);
+        }
+        return offset;
     }
 }
 
@@ -74,9 +174,9 @@ public class SuperMarioWorld : IRetroPlugin , IMenuProvider
                 (editorInterface,menuItem) => {
                     editorInterface.OpenUserWindow($"Level View", GetImage(editorInterface, rom));
                 });
-            menu.AddItem("Map16",
+            menu.AddItem("GFX",
                 (editorInterface,menuItem) => {
-                    editorInterface.OpenUserWindow($"Map16 View", GetMap16Image(editorInterface, rom));
+                    editorInterface.OpenUserWindow($"GFX View", GetMap16Image(editorInterface, rom));
                 });
     }
 
@@ -85,9 +185,9 @@ public class SuperMarioWorld : IRetroPlugin , IMenuProvider
         return new SuperMarioWorldTestImage(editorInterface, rom);
     }
 
-    public SuperMarioWorldMap16Image GetMap16Image(IEditor editorInterface, IMemoryAccess rom)
+    public SuperMarioWorldGFXPageImage GetMap16Image(IEditor editorInterface, IMemoryAccess rom)
     {
-        return new SuperMarioWorldMap16Image(editorInterface, rom);
+        return new SuperMarioWorldGFXPageImage(editorInterface, rom);
     }
 }
 
@@ -307,11 +407,9 @@ public class SuperMarioWorldTestImage : IImage, IUserWindow
                     objectNumber = t2;
                 }
 
-                var newScreen = false;
                 if ((t0 & 0x80) != 0)
                 {
                     screenOffsetNumber++;
-                    newScreen = true;
                 }
 
                 // TODO deal with vertical levels...
@@ -467,39 +565,63 @@ public class SuperMarioWorldTestImage : IImage, IUserWindow
     }
 }
 
-public class SuperMarioWorldMap16Image : IImage, IUserWindow
+public class SuperMarioWorldGFXPageImage : IImage, IUserWindow
 {
-    public uint Width => 512;
+    public uint Width => 256;
 
-    public uint Height => 512;
+    public uint Height => 256;
 
-    public float ScaleX => 1.0f;
+    public float ScaleX => 2.0f;
 
-    public float ScaleY => 1.0f;
+    public float ScaleY => 2.0f;
 
     public float UpdateInterval => 1/60.0f;
 
     private IMemoryAccess _rom;
     private AddressTranslation _addressTranslation;
-    private IWidgetRanged temp_levelSelect;
+    private IWidgetRanged temp_pageSelect;
+    private IWidgetLabel temp_pageInfo;
     private IEditor _editorInterface;
 
-    public SuperMarioWorldMap16Image(IEditor editorInterface, IMemoryAccess rom)
+    public SuperMarioWorldGFXPageImage(IEditor editorInterface, IMemoryAccess rom)
     {
         _rom = rom;
         _addressTranslation = new LoRom();
         _editorInterface = editorInterface;
+
+        for (int i=0;i<=0x33;i++)
+        {
+            GFXPageKind[i] = SNESTileKind.Tile_3bpp;
+        }
+        GFXPageKind[0x27] = SNESTileKind.Tile_3bppMode7;
+        for (int i=0x28;i<=0x2B;i++)
+        {
+            GFXPageKind[i] = SNESTileKind.Tile_2bpp;
+        }
+        GFXPageKind[0x2F] = SNESTileKind.Tile_2bpp;
+        GFXPageKind[0x32] = SNESTileKind.Tile_4bpp;
     }
 
     public void ConfigureWidgets(IMemoryAccess rom, IWidget widget, IPlayerControls playerControls)
     {
         widget.AddImageView(this);
-        temp_levelSelect = widget.AddSlider("Level", 0xC7, 0, 511, () => { runOnce = false; });
+        temp_pageSelect = widget.AddSlider("GFX Page", 0x00, 0, 0x33, () => { runOnce = false; });
+        temp_pageInfo = widget.AddLabel("");
     }
 
     private bool runOnce = false;
 
     Pixel[] pixels;
+
+    enum SNESTileKind
+    {
+        Tile_2bpp,
+        Tile_3bpp,
+        Tile_4bpp,
+        Tile_3bppMode7,
+    }
+
+    SNESTileKind[] GFXPageKind = new SNESTileKind[52];
 
     public ReadOnlySpan<Pixel> GetImageData(float seconds)
     {
@@ -513,23 +635,106 @@ public class SuperMarioWorldMap16Image : IImage, IUserWindow
                 pixels[i] = new Pixel(0, 0, 0, 255);
             }
 
-            // Get the level select value, index into the layer 1 data etc
-            var levelSelect = (uint)temp_levelSelect.Value;
-            var layer1Data = _rom.ReadBytes(ReadKind.Rom, _addressTranslation.ToImage(0x05E000 + 3 * levelSelect), 3);
-            var layer2Data = _rom.ReadBytes(ReadKind.Rom, _addressTranslation.ToImage(0x05E600 + 3 * levelSelect), 3);
-            var spriteData = _rom.ReadBytes(ReadKind.Rom, _addressTranslation.ToImage(0x05EC00 + 2 * levelSelect), 2);
+            // Get GFX00-31 (50 items) -- BEWARE address may be different on different regions
+            uint gfxPtr;
+            if (temp_pageSelect.Value < 0x32)
+            {
+                var lo = _rom.ReadBytes(ReadKind.Rom, _addressTranslation.ToImage(0x00B933 + (uint)temp_pageSelect.Value), 1)[0];
+                var hi = _rom.ReadBytes(ReadKind.Rom, _addressTranslation.ToImage(0x00B965 + (uint)temp_pageSelect.Value), 1)[0];
+                var bk = _rom.ReadBytes(ReadKind.Rom, _addressTranslation.ToImage(0x00B997 + (uint)temp_pageSelect.Value), 1)[0];
 
-            uint layer0Address = _addressTranslation.ToImage((uint)((layer1Data[2] << 16) | (layer1Data[1] << 8) | layer1Data[0]));
+                gfxPtr = _addressTranslation.ToImage((uint)((bk << 16) | (hi << 8) | lo));
+            }
+            else if (temp_pageSelect.Value==0x32)
+            {
+                gfxPtr=_addressTranslation.ToImage(0x088000);
+            }
+            else
+            {
+                gfxPtr=_addressTranslation.ToImage(0x08BFC0);
+            }
 
-            var headerData = _rom.ReadBytes(ReadKind.Rom, layer0Address, 5);
+            var decomp = new byte[32768];
+            var GFX = new ReadOnlySpan<byte>(decomp);
 
-            var byte0 = headerData[0];  // BBBLLLLL  B-BG Palette, L-Number of screens -1
-            var byte1 = headerData[1];  // CCC00000  C-Back area colour
-            var byte2 = headerData[2];  // 3MMMSSSS  3-layer 3 priority, M-Music, S-Sprite GFX Setting
-            var byte3 = headerData[3];  // TTPPPFFF  T - timer setting, P - Sprite Palette, F - FG Palette
-            var byte4 = headerData[4];  // IIVVZZZZ  I - item memory setting, V - vertical scroll setting, Z - FG/BG GFX Setting
+            var size = LC_LZ2.Decompress(ref decomp, _rom.ReadBytes(ReadKind.Rom, gfxPtr, 32768));  // Overread but should be ok
+            temp_pageInfo.Name = $"GFX Page {temp_pageSelect.Value:X2} {GFXPageKind[temp_pageSelect.Value]} Decoded Size {size}";
 
-            var graphicData000_072 = _rom.ReadBytes(ReadKind.Rom, _addressTranslation.ToImage(0x0D8000), 920);   // TTTTTTTT YXPCCCTT  T-Tile, Y-Y flip, X-X flip, P-Palette, C-Colour, T-Top priority
+            var rasteriseAs = GFXPageKind[temp_pageSelect.Value];
+            var tileSize = 32;
+            switch (rasteriseAs)
+            {
+                case SNESTileKind.Tile_2bpp:
+                    tileSize=16;
+                    break;
+                case SNESTileKind.Tile_3bpp:
+                case SNESTileKind.Tile_3bppMode7:
+                    tileSize=24;
+                    break;
+                case SNESTileKind.Tile_4bpp:
+                default:
+                    tileSize=32;
+                    break;
+            }
+            var tileCount = size / tileSize;
+            for (int i = 0; i < tileCount; i++)
+            {
+                var tx = (i % 256) % 16;
+                var ty = (i % 256) / 16;
+                var tzx = ((i / 256) % 2) * Width/2;
+                var tzy = ((i / 256) / 2) * (Height/2) * Width;
+                ReadOnlySpan<byte> tile;
+                tile = GFX.Slice(i * tileSize, tileSize);
+                for (int y = 0; y < 8; y++)
+                {
+                    for (int x = 0; x < 8; x++)
+                    {
+                        switch (rasteriseAs)
+                        {
+                            case SNESTileKind.Tile_2bpp:
+                                {
+                                    var bp0 = tile[y * 2 + 0];
+                                    var bp1 = tile[y * 2 + 1];
+                                    var bit = 7 - x;
+                                    var colour = ((bp0 >> bit) & 1) | (((bp1 >> bit) & 1) << 1);
+                                    pixels[tzx+tzy+(ty * 8 + y) * Width + tx * 8 + x] = new Pixel((byte)(colour * 64), (byte)(colour * 64), (byte)(colour * 64), 255);
+                                }
+                                break;
+                            case SNESTileKind.Tile_3bpp:
+                                {
+                                    var bp0 = tile[y * 2 + 0];
+                                    var bp1 = tile[y * 2 + 1];
+                                    var bp2 = tile[16 + y];
+                                    var bit = 7 - x;
+                                    var colour = ((bp0 >> bit) & 1) | (((bp1 >> bit) & 1) << 1) | (((bp2 >> bit) & 1) << 2);
+                                    pixels[tzx+tzy+(ty * 8 + y) * Width + tx * 8 + x] = new Pixel((byte)(colour * 32), (byte)(colour * 32), (byte)(colour * 32), 255);
+                                }
+                                break;
+                            case SNESTileKind.Tile_4bpp:
+                                {
+                                    var bp0 = tile[y * 2 + 0];
+                                    var bp1 = tile[y * 2 + 1];
+                                    var bp2 = tile[16 + y * 2 + 0];
+                                    var bp3 = tile[16 + y * 2 + 1];
+                                    var bit = 7 - x;
+                                    var colour = ((bp0 >> bit) & 1) | (((bp1 >> bit) & 1) << 1) | (((bp2 >> bit) & 1) << 2) | (((bp3 >> bit) & 1) << 3);
+                                    pixels[tzx+tzy+(ty * 8 + y) * Width + tx * 8 + x] = new Pixel((byte)(colour * 16), (byte)(colour * 16), (byte)(colour * 16), 255);
+                                }
+                                break;
+                            case SNESTileKind.Tile_3bppMode7:
+                                {
+                                    var row = tile[y * 3 + 0] << 16 | tile[y * 3 + 1] << 8 | tile[y * 3 + 2];
+                                    var colour = (byte)((row >> (21 - x * 3)) & 0x07);
+                                    pixels[tzx+tzy+(ty * 8 + y) * Width + tx * 8 + x] = new Pixel((byte)(colour * 32), (byte)(colour * 32), (byte)(colour * 32), 255);
+                                }
+                                break;  
+
+                        }
+                    }
+                }
+            }
+
+
         }
 
         return pixels;
