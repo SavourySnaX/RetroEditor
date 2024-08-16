@@ -190,6 +190,10 @@ public class SuperMarioWorld : IRetroPlugin , IMenuProvider
                 (editorInterface,menuItem) => {
                     editorInterface.OpenUserWindow($"GFX View", GetMap16Image(editorInterface, rom));
                 });
+            menu.AddItem("VRAM",
+                (editorInterface,menuItem) => {
+                    editorInterface.OpenUserWindow($"VRAM View", GetVRAMImage(editorInterface, rom));
+                });
     }
 
     public SuperMarioWorldTestImage GetImage(IEditor editorInterface, IMemoryAccess rom)
@@ -200,6 +204,11 @@ public class SuperMarioWorld : IRetroPlugin , IMenuProvider
     public SuperMarioWorldGFXPageImage GetMap16Image(IEditor editorInterface, IMemoryAccess rom)
     {
         return new SuperMarioWorldGFXPageImage(editorInterface, rom);
+    }
+    
+    public SuperMarioWorldVramImage GetVRAMImage(IEditor editorInterface, IMemoryAccess rom)
+    {
+        return new SuperMarioWorldVramImage(editorInterface, rom);
     }
 }
 
@@ -220,11 +229,55 @@ public class SuperMarioWorldTestImage : IImage, IUserWindow
     private IWidgetRanged temp_levelSelect;
     private IEditor _editorInterface;
 
+    private struct SubTile
+    {
+        public int tile;
+        public int palette;
+        public bool flipx;
+        public bool flipy;
+        public bool priority;
+    }
+
+    private struct Tile16x16
+    {
+        public SubTile TL, TR, BL, BR;
+    }
+    private Dictionary<int, Tile16x16> map16ToTile = new Dictionary<int, Tile16x16>();
+
+    private Tile16x16 GetTile16x16(ReadOnlySpan<byte> data)
+    {
+        var t = data[0];
+        var f = data[1];
+        var tileTL = new SubTile { tile = t + ((f & 3) << 8), palette = (f & 0x1C) >> 2, flipx = (f & 0x40) == 0x40, flipy = (f & 0x80) == 0x80, priority = (f & 0x20) == 0x20 };
+        t = data[2];
+        f = data[3];
+        var tileBL = new SubTile { tile = t + ((f & 3) << 8), palette = (f & 0x1C) >> 2, flipx = (f & 0x40) == 0x40, flipy = (f & 0x80) == 0x80, priority = (f & 0x20) == 0x20 };
+        t = data[4];
+        f = data[5];
+        var tileTR = new SubTile { tile = t + ((f & 3) << 8), palette = (f & 0x1C) >> 2, flipx = (f & 0x40) == 0x40, flipy = (f & 0x80) == 0x80, priority = (f & 0x20) == 0x20 };
+        t = data[6];
+        f = data[7];
+        var tileBR = new SubTile { tile = t + ((f & 3) << 8), palette = (f & 0x1C) >> 2, flipx = (f & 0x40) == 0x40, flipy = (f & 0x80) == 0x80, priority = (f & 0x20) == 0x20 };
+        return new Tile16x16 { TL = tileTL, TR = tileTR, BL = tileBL, BR = tileBR };
+    }
+
     public SuperMarioWorldTestImage(IEditor editorInterface, IMemoryAccess rom)
     {
         _rom = rom;
         _addressTranslation = new LoRom();
         _editorInterface = editorInterface;
+
+        var data = _rom.ReadBytes(ReadKind.Rom, _addressTranslation.ToImage(SMWAddresses.TileData_000_072), 8*115 );
+        for (int a=0;a<=0x72;a++)
+        {
+            var Test2D = data.Slice(a*8, 8);
+
+            map16ToTile[a] = GetTile16x16(Test2D);
+        }
+
+        // Todo other tile data offsets
+
+        map16ToTile[0x100] = new Tile16x16 { TL = new SubTile { tile = 0x182 }, TR = new SubTile { tile = 0x183 }, BL = new SubTile { tile = 0x192 }, BR = new SubTile { tile = 0x193 } };
     }
 
     public void ConfigureWidgets(IMemoryAccess rom, IWidget widget, IPlayerControls playerControls)
@@ -352,6 +405,79 @@ public class SuperMarioWorldTestImage : IImage, IUserWindow
         }
     }
 
+
+    void Draw8x8(int tx, int ty, int xo,int yo, SubTile tile, SuperMarioVRam vram)
+    {
+        var tileNum = tile.tile;
+        var gfx = vram.Tile(tileNum);
+        // compute tile position TL
+        var tileX=tileNum%16;
+        var tileY=tileNum/16;
+
+        int px = tx * 16 + 8 * xo;
+        int py = ty * 16 + 8 * yo;
+        int g=0;
+        for (int y = 0; y < 8; y++)
+        {
+            for (int x = 0; x < 8; x++)
+            {
+                if (px >= 0 && px < Width && py >= 0 && py < Height)
+                {
+                    if (tile.flipx)
+                    {
+                        x = 7 - x;
+                    }
+                    if (tile.flipy)
+                    {
+                        y = 7 - y;
+                    }
+                    pixels[(py+y) * Width + (px+x)] = gfx[g++];
+                }
+            }
+        }
+    }
+
+    void DrawGfxTile(int tx,int ty, int tile, SuperMarioVRam vram)
+    {
+        var tile16 = map16ToTile[tile];
+
+        // TODO Make vram just be an array of 8x8 tiles to make lookups simpler
+
+        // Just draw the TL tile for now
+        Draw8x8(tx, ty, 0, 0, tile16.TL, vram);
+        Draw8x8(tx, ty, 1, 0, tile16.TR, vram);
+        Draw8x8(tx, ty, 0, 1, tile16.BL, vram);
+        Draw8x8(tx, ty, 1, 1, tile16.BR, vram);
+    }
+
+    void DrawGfxTiles(int tx,int ty,int tw,int th, SuperMarioVRam vram, int topTile, int otherRows)
+    {
+        // Just do top tile to test
+        tw++;
+        th++;
+        for (int y = 0; y < th; y++)
+        {
+            for (int x = 0; x < tw; x++)
+            {
+                DrawGfxTile(tx + x, ty + y, topTile, vram);
+            }
+            topTile = otherRows;
+        }
+    }
+
+    void DrawGfxTilesFixed(int tx, int ty, int tw, int th, SuperMarioVRam vram, int[] tiles)
+    {
+        int o=0;
+        for (int y = 0; y < th; y++)
+        {
+            for (int x = 0; x < tw; x++)
+            {
+                DrawGfxTile(tx + x, ty + y, tiles[o++], vram);
+            }
+        }
+    }
+
+
     public ReadOnlySpan<Pixel> GetImageData(float seconds)
     {
         if (!runOnce)
@@ -431,6 +557,7 @@ public class SuperMarioWorldTestImage : IImage, IUserWindow
                 var p0 = (t2 & 0xF0) >> 4;
                 var p1 = t2 & 0x0F;
 
+                var smwVram=new SuperMarioVRam(_rom);
 
                 var screenNumber = t0 & 0x1F;
 
@@ -461,20 +588,33 @@ public class SuperMarioWorldTestImage : IImage, IUserWindow
                         case ExtendedObject.QBlockShell1:
                         case ExtendedObject.QBlockShell2:
                         case ExtendedObject.TranslucentBlock:
-                        case ExtendedObject.YoshiCoin:
                         case ExtendedObject.TopLeftSlope:
                         case ExtendedObject.TopRightSlope:
                         case ExtendedObject.PurpleTriangleLeft:
                         case ExtendedObject.PurpleTriangleRight:
                         case ExtendedObject.MidwayPointRope:
-                        case ExtendedObject.BigBush1:
                         case ExtendedObject.BigBush2:
                         case ExtendedObject.ArrowSign:
                             Draw16x16Tile(xPos, yPos, new Pixel(128, 128, 128, 255));
                             _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(ExtendedObject)objectNumber} @{xPos:X2},{yPos:X2}");
                             break;
+                        case ExtendedObject.BigBush1:
+                            DrawGfxTilesFixed(xPos, yPos, 10, 5, smwVram, new int[] { 
+                                0x25, 0x25, 0x25, 0x4B, 0x4D, 0x4E, 0x25, 0x25, 0x25, 0x25, 
+                                0x25, 0x25, 0x54, 0x49, 0x49, 0x5F, 0x63, 0x25, 0x25, 0x25,
+                                0x25, 0x25, 0x57, 0x49, 0x49, 0x52, 0x4A, 0x5D, 0x25, 0x25,
+                                0x25, 0x5A, 0x49, 0x49, 0x50, 0x51, 0x4A, 0x60, 0x25, 0x25,
+                                0x5A, 0x49, 0x49, 0x49, 0x53, 0x4A, 0x4A, 0x4A, 0x63, 0x25,
+                                });
+                            _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(ExtendedObject)objectNumber} @{xPos:X2},{yPos:X2}");
+                            break;
+                        case ExtendedObject.YoshiCoin:
+                            DrawGfxTiles(xPos, yPos, 0, 1, smwVram, 0x2D, 0x2E);
+                            _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(ExtendedObject)objectNumber} @{xPos:X2},{yPos:X2}");
+                            break;
                         default:
                             Draw16x16Tile(xPos, yPos, new Pixel(32, 32, 32, 255));
+
                             _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} Unknown Extended Object @{xPos:X2},{yPos:X2}");
                             break;
                     }
@@ -483,11 +623,14 @@ public class SuperMarioWorldTestImage : IImage, IUserWindow
                 {
                     switch ((StandardObject)objectNumber)
                     {
+                        case StandardObject.GroundLedge:
+                            DrawGfxTiles(xPos, yPos, p1, p0, smwVram, 0x100, 0x3F);
+                            _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(StandardObject)objectNumber} @{xPos:X2},{yPos:X2} - Height {p0:X2} - Width {p1:X2}");
+                            break;
                         case StandardObject.WaterBlue:
                         case StandardObject.InvisibleCoinBlocks:
                         case StandardObject.InvisibleNoteBlocks:
                         case StandardObject.InvisiblePowCoins:
-                        case StandardObject.Coins:
                         case StandardObject.WalkThroughDirt:
                         case StandardObject.WaterOtherColor:
                         case StandardObject.NoteBlocks:
@@ -497,7 +640,6 @@ public class SuperMarioWorldTestImage : IImage, IUserWindow
                         case StandardObject.BlackPiranhaPlants:
                         case StandardObject.CementBlocks:
                         case StandardObject.BrownBlocks:
-                        case StandardObject.GroundLedge:
                         case StandardObject.BlueCoins:
                         case StandardObject.WaterSurceAnimated:
                         case StandardObject.WaterSurfaceStatic:
@@ -505,6 +647,10 @@ public class SuperMarioWorldTestImage : IImage, IUserWindow
                         case StandardObject.NetTopEdge:
                         case StandardObject.NetBottomEdge:
                             DrawTiles(xPos, yPos, p1, p0, new Pixel(0, 255, 255, 255));
+                            _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(StandardObject)objectNumber} @{xPos:X2},{yPos:X2} - Height {p0:X2} - Width {p1:X2}"); 
+                            break;
+                        case StandardObject.Coins:
+                            DrawGfxTiles(xPos, yPos, p1, p0, smwVram, 0x2B, 0x2B);
                             _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(StandardObject)objectNumber} @{xPos:X2},{yPos:X2} - Height {p0:X2} - Width {p1:X2}"); 
                             break;
                         case StandardObject.VerticalPipes:
@@ -526,7 +672,7 @@ public class SuperMarioWorldTestImage : IImage, IUserWindow
                             _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(StandardObject)objectNumber} @{xPos:X2},{yPos:X2} - Height {p0:X2}");
                             break;
                         case StandardObject.LongGroundLedge:      // Long ground ledge
-                            DrawTiles(xPos, yPos, t2, 1, new Pixel(0, 255, 0, 255));
+                            DrawGfxTiles(xPos, yPos, t2, 1, smwVram, 0x100, 0x3F);
                             _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(StandardObject)objectNumber} @{xPos:X2},{yPos:X2} - Length {t2:X2}"); 
                             break;
                         case StandardObject.DonutBridge:
@@ -564,9 +710,6 @@ public class SuperMarioWorldTestImage : IImage, IUserWindow
 
 
             }
-
-
-            var graphicData000_072 = _rom.ReadBytes(ReadKind.Rom, _addressTranslation.ToImage(SMWAddresses.TileData_000_072), 920);   // TTTTTTTT YXPCCCTT  T-Tile, Y-Y flip, X-X flip, P-Palette, C-Colour, T-Top priority
         }
 
         return pixels;
@@ -757,3 +900,213 @@ public class SuperMarioWorldGFXPageImage : IImage, IUserWindow
     }
 }
 
+public class SuperMarioVRam 
+{
+    public ReadOnlySpan<Pixel> Tile(int tile)
+    {
+        return tileCache[tile];
+    }
+
+    private IMemoryAccess _rom;
+    private AddressTranslation _addressTranslation;
+    private SNESTileKind[] GFXPageKind = new SNESTileKind[52];
+
+    private byte[] decomp = new byte[32768];
+
+    private Pixel[][] tileCache = new Pixel[16*16*6][];
+
+    // TODO needs information from level for vram layout
+    public SuperMarioVRam(IMemoryAccess rom)
+    {
+        _rom = rom;
+        _addressTranslation = new LoRom();
+
+        for (int i=0;i<=0x33;i++)
+        {
+            GFXPageKind[i] = SNESTileKind.Tile_3bpp;
+        }
+        GFXPageKind[0x27] = SNESTileKind.Tile_3bppMode7;
+        for (int i=0x28;i<=0x2B;i++)
+        {
+            GFXPageKind[i] = SNESTileKind.Tile_2bpp;
+        }
+        GFXPageKind[0x2F] = SNESTileKind.Tile_2bpp;
+        GFXPageKind[0x32] = SNESTileKind.Tile_4bpp;
+
+        // Need to fill VRAM with the GFX data that is expected for a level
+        for (int i=0;i<16*16*6;i++)
+        {
+            tileCache[i] = new Pixel[8 * 8];
+        }
+        // Step 1, try and setup the first 128x128 of VRAM with the GFX data for the level
+        // Fetch GFX Page 0x14 data 16x8 tiles
+
+        RasterisePage(0x14, 0x000, 0, 16 * 4);
+        /// TODO Figure out animated tiles here - 16*4
+        RasterisePage(0x17, 0x080, 0, 16 * 8);
+        RasterisePage(0x1B, 0x100, 0, 16 * 8);
+        RasterisePage(0x15, 0x180, 0, 16 * 8);
+        // BLANKPAGE - SKIPPED
+        // BLANKPAGE - SKIPPED
+        RasterisePage(0x00, 0x400, 0, 16 * 8);
+        RasterisePage(0x01, 0x480, 0, 16 * 8);
+        RasterisePage(0x13, 0x500, 0, 16 * 8);
+        RasterisePage(0x20, 0x580, 0, 16 * 8);
+    }
+
+    enum SNESTileKind
+    {
+        Tile_2bpp,
+        Tile_3bpp,
+        Tile_4bpp,
+        Tile_3bppMode7,
+    }
+
+    public ReadOnlySpan<byte> FetchGFXPage(uint pageNumber)
+    {
+        var lo = _rom.ReadBytes(ReadKind.Rom, _addressTranslation.ToImage(SMWAddresses.GFX00_31_LowByteTable + pageNumber), 1)[0];
+        var hi = _rom.ReadBytes(ReadKind.Rom, _addressTranslation.ToImage(SMWAddresses.GFX00_31_HighByteTable + pageNumber), 1)[0];
+        var bk = _rom.ReadBytes(ReadKind.Rom, _addressTranslation.ToImage(SMWAddresses.GFX00_31_BankByteTable + pageNumber), 1)[0];
+        var gfxPtr = _addressTranslation.ToImage((uint)((bk << 16) | (hi << 8) | lo));
+
+        var GFX = new ReadOnlySpan<byte>(decomp);
+
+        LC_LZ2.Decompress(ref decomp, _rom.ReadBytes(ReadKind.Rom, gfxPtr, 32768));  // Overread but should be ok
+
+        return GFX;
+    }
+
+    private void RasterisePage(uint page, uint offset, int tileOffset, uint tileCount)
+    {
+        var GFX = FetchGFXPage(page);
+        var rasteriseAs = GFXPageKind[page];
+        var tileSize = 32;
+        switch (rasteriseAs)
+        {
+            case SNESTileKind.Tile_2bpp:
+                tileSize = 16;
+                break;
+            case SNESTileKind.Tile_3bpp:
+            case SNESTileKind.Tile_3bppMode7:
+                tileSize = 24;
+                break;
+            case SNESTileKind.Tile_4bpp:
+            default:
+                tileSize = 32;
+                break;
+        }
+        for (int i = tileOffset; i < tileOffset+tileCount; i++)
+        {
+            var tx = i % 16;
+            var ty = i / 16;
+            ReadOnlySpan<byte> tile;
+            tile = GFX.Slice(i * tileSize, tileSize);
+
+            var pixels = tileCache[offset++];
+
+            for (int y = 0; y < 8; y++)
+            {
+                for (int x = 0; x < 8; x++)
+                {
+                    switch (rasteriseAs)
+                    {
+                        case SNESTileKind.Tile_2bpp:
+                            {
+                                var bp0 = tile[y * 2 + 0];
+                                var bp1 = tile[y * 2 + 1];
+                                var bit = 7 - x;
+                                var colour = ((bp0 >> bit) & 1) | (((bp1 >> bit) & 1) << 1);
+                                pixels[y * 8 + x] = new Pixel((byte)(colour * 64), (byte)(colour * 64), (byte)(colour * 64), 255);
+                            }
+                            break;
+                        case SNESTileKind.Tile_3bpp:
+                            {
+                                var bp0 = tile[y * 2 + 0];
+                                var bp1 = tile[y * 2 + 1];
+                                var bp2 = tile[16 + y];
+                                var bit = 7 - x;
+                                var colour = ((bp0 >> bit) & 1) | (((bp1 >> bit) & 1) << 1) | (((bp2 >> bit) & 1) << 2);
+                                pixels[y * 8 + x] = new Pixel((byte)(colour * 32), (byte)(colour * 32), (byte)(colour * 32), 255);
+                            }
+                            break;
+                        case SNESTileKind.Tile_4bpp:
+                            {
+                                var bp0 = tile[y * 2 + 0];
+                                var bp1 = tile[y * 2 + 1];
+                                var bp2 = tile[16 + y * 2 + 0];
+                                var bp3 = tile[16 + y * 2 + 1];
+                                var bit = 7 - x;
+                                var colour = ((bp0 >> bit) & 1) | (((bp1 >> bit) & 1) << 1) | (((bp2 >> bit) & 1) << 2) | (((bp3 >> bit) & 1) << 3);
+                                pixels[y * 8 + x] = new Pixel((byte)(colour * 16), (byte)(colour * 16), (byte)(colour * 16), 255);
+                            }
+                            break;
+                        case SNESTileKind.Tile_3bppMode7:
+                            {
+                                var row = tile[y * 3 + 0] << 16 | tile[y * 3 + 1] << 8 | tile[y * 3 + 2];
+                                var colour = (byte)((row >> (21 - x * 3)) & 0x07);
+                                pixels[y * 8 + x] = new Pixel((byte)(colour * 32), (byte)(colour * 32), (byte)(colour * 32), 255);
+                            }
+                            break;
+
+                    }
+                }
+            }
+        }
+    }
+
+
+}
+
+
+
+
+public class SuperMarioWorldVramImage : IImage, IUserWindow
+{
+    public uint Width => 128;
+
+    public uint Height => 128*6;
+
+    public float ScaleX => 2.0f;
+
+    public float ScaleY => 2.0f;
+
+    public float UpdateInterval => 1/60.0f;
+
+    private Pixel[] pixels;
+
+    public SuperMarioWorldVramImage(IEditor editorInterface, IMemoryAccess rom)
+    {
+        var smwVRam = new SuperMarioVRam(rom);
+        pixels = new Pixel[Width*Height];
+
+        for (int tiles=0;tiles<16*16*6;tiles++)
+        {
+            var gfx = smwVRam.Tile(tiles);
+            int g=0;
+            var tx = tiles%16;
+            var ty = tiles/16;
+            for (int y=0;y<8;y++)
+            {
+                for (int x=0;x<8;x++)
+                {
+                    var colour = gfx[g++];
+                    pixels[(ty*8+y)*Width+tx*8+x] = colour;
+                }
+            }
+        }
+    }
+
+    public void ConfigureWidgets(IMemoryAccess rom, IWidget widget, IPlayerControls playerControls)
+    {
+        widget.AddImageView(this);
+    }
+
+    public ReadOnlySpan<Pixel> GetImageData(float seconds)
+    {
+        return pixels;
+    }
+
+    public void OnClose()
+    {
+    }
+}
