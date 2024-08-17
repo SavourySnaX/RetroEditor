@@ -154,6 +154,9 @@ public static class SMWAddresses    // Super Mario World Japan 1.0 (headerless)
     public const uint Layer3PaletteTable = 0x00B110;
     public const uint BerryPaletteTable = 0x00B614;
     public const uint AnimatedPaletteEntryTable = 0x00B5AC;
+    public const uint BackAreaColourTable = 0x00B040;
+    public const uint ObjectGFXList = 0x00A8C9;
+    public const uint SpriteGFXList = 0x00A861;
 }
 
 ref struct SuperMarioWorldRomHelpers
@@ -570,16 +573,17 @@ public class SuperMarioWorldTestImage : IImage, IUserWindow
             var screenOffsetNumber = 0;
 
             pixels = new Pixel[Width * Height];
-            for (int i = 0; i < pixels.Length; i++)
-            {
-                pixels[i] = new Pixel(0, 0, 0, 255);
-            }
 
             // Get the level select value, index into the layer 1 data etc
             var levelSelect = (uint)temp_levelSelect.Value;
             var smwRom = new SuperMarioWorldRomHelpers(_rom, _addressTranslation, levelSelect);
             var smwLevelHeader = smwRom.Header;
             _palette = new SuperMarioPalette(_rom, smwLevelHeader);
+
+            for (int i = 0; i < pixels.Length; i++)
+            {
+                pixels[i] = _palette.BackgroundColour;
+            }
 
             bool layerDone = false;
             uint offset = 0;
@@ -984,6 +988,7 @@ public class SuperMarioWorldGFXPageImage : IImage, IUserWindow
 public class SuperMarioPalette
 {
     Pixel[,] _palette;
+    Pixel _backgroundColour;
 
     Pixel SNESToPixel(ushort c)
     {
@@ -995,13 +1000,13 @@ public class SuperMarioPalette
 
     public SuperMarioPalette(IMemoryAccess rom, SMWLevelHeader header)
     {
-        _palette=new Pixel[16,16];  // Perhaps we should have platform colour constructors e.g. SNESToPixel, etc?
-        var addressTranslation=new LoRom();
+        _palette = new Pixel[16, 16];  // Perhaps we should have platform colour constructors e.g. SNESToPixel, etc?
+        var addressTranslation = new LoRom();
 
         for (int i=0;i<16;i++)
         {
-            _palette[i,0]=SNESToPixel(0x0000);
-            _palette[i,1]=SNESToPixel(0x7FDD);
+            _palette[i, 0] = SNESToPixel(0x0000);
+            _palette[i, 1] = SNESToPixel(0x7FDD);
         }
 
         // BG Palette x = $00B0B0 + (#$18 * x). (Palette 0,2 to 0,7 and 1,2 to 1,7)       
@@ -1009,62 +1014,66 @@ public class SuperMarioPalette
         var bgPalette = rom.ReadBytes(ReadKind.Rom, addressTranslation.ToImage(SMWAddresses.BGPaletteTable + 0x18u * header.BGPalette), 0x18);
         var fgPalette = rom.ReadBytes(ReadKind.Rom, addressTranslation.ToImage(SMWAddresses.FGPaletteTable + 0x18u * header.FGPalette), 0x18);
         var spPalette = rom.ReadBytes(ReadKind.Rom, addressTranslation.ToImage(SMWAddresses.SpritePaletteTable + 0x18u * header.SpritePalette), 0x18);
-        for (int i=2;i<8;i++)
+        for (int i = 2; i < 8; i++)
         {
-            var p=i-2;
-            var c = rom.FetchMachineOrder16(p*2, bgPalette);
-            _palette[0,i]=SNESToPixel(c);
-            c = rom.FetchMachineOrder16(0x0C + p*2, bgPalette);
-            _palette[1,i]=SNESToPixel(c);
-            c = rom.FetchMachineOrder16(p*2, fgPalette);
-            _palette[2,i]=SNESToPixel(c);
-            c = rom.FetchMachineOrder16(0x0C + p*2, fgPalette);
-            _palette[3,i]=SNESToPixel(c);
-            c = rom.FetchMachineOrder16(p*2, spPalette);
-            _palette[14,i]=SNESToPixel(c);
-            c = rom.FetchMachineOrder16(0x0C + p*2, spPalette);
-            _palette[14,i]=SNESToPixel(c);
+            var p = i - 2;
+            var c = rom.FetchMachineOrder16(p * 2, bgPalette);
+            _palette[0, i] = SNESToPixel(c);
+            c = rom.FetchMachineOrder16(0x0C + p * 2, bgPalette);
+            _palette[1, i] = SNESToPixel(c);
+            c = rom.FetchMachineOrder16(p * 2, fgPalette);
+            _palette[2, i] = SNESToPixel(c);
+            c = rom.FetchMachineOrder16(0x0C + p * 2, fgPalette);
+            _palette[3, i] = SNESToPixel(c);
+            c = rom.FetchMachineOrder16(p * 2, spPalette);
+            _palette[14, i] = SNESToPixel(c);
+            c = rom.FetchMachineOrder16(0x0C + p * 2, spPalette);
+            _palette[14, i] = SNESToPixel(c);
         }
-        for (uint row=4;row<14;row++)
+        for (uint row = 4; row < 14; row++)
         {
             var rowPalette = rom.ReadBytes(ReadKind.Rom, addressTranslation.ToImage(SMWAddresses.PaletteRow4ToDTable + 0x0Cu * (row - 4u)), 0x0C);
-            for (int i=2;i<8;i++)
+            for (int i = 2; i < 8; i++)
             {
-                var p=i-2;
-                var c = rom.FetchMachineOrder16(p*2, rowPalette);
-                _palette[row,i]=SNESToPixel(c);
+                var p = i - 2;
+                var c = rom.FetchMachineOrder16(p * 2, rowPalette);
+                _palette[row, i] = SNESToPixel(c);
             }
         }
-        var palette = rom.ReadBytes(ReadKind.Rom, addressTranslation.ToImage(SMWAddresses.PlayerPaletteTable + 0u/*Mario*/*0x14u), 0x14);
-        for (int i=6;i<16;i++)
+        var palette = rom.ReadBytes(ReadKind.Rom, addressTranslation.ToImage(SMWAddresses.PlayerPaletteTable + 0u/*Mario*/* 0x14u), 0x14);
+        for (int i = 6; i < 16; i++)
         {
-            var p=i-6;
-            var c = rom.FetchMachineOrder16(p*2, palette);
-            _palette[8,i]=SNESToPixel(c);
+            var p = i - 6;
+            var c = rom.FetchMachineOrder16(p * 2, palette);
+            _palette[8, i] = SNESToPixel(c);
         }
         var layer3Palette = rom.ReadBytes(ReadKind.Rom, addressTranslation.ToImage(SMWAddresses.Layer3PaletteTable), 0x20);
-        for (int i=8;i<16;i++)
+        for (int i = 8; i < 16; i++)
         {
-            var p=i-8;
-            var c = rom.FetchMachineOrder16(p*2, layer3Palette);
-            _palette[0,i]=SNESToPixel(c);
-            c = rom.FetchMachineOrder16(0x10 + p*2, layer3Palette);
-            _palette[1,i]=SNESToPixel(c);
+            var p = i - 8;
+            var c = rom.FetchMachineOrder16(p * 2, layer3Palette);
+            _palette[0, i] = SNESToPixel(c);
+            c = rom.FetchMachineOrder16(0x10 + p * 2, layer3Palette);
+            _palette[1, i] = SNESToPixel(c);
         }
-        for (uint row=2;row<5;row++)
+        for (uint row = 2; row < 5; row++)
         {
             var rowPalette = rom.ReadBytes(ReadKind.Rom, addressTranslation.ToImage(SMWAddresses.BerryPaletteTable + 0x0Eu * (row - 2u)), 0x0E);
-            for (int i=9;i<16;i++)
+            for (int i = 9; i < 16; i++)
             {
-                var p=i-9;
-                var c = rom.FetchMachineOrder16(p*2, rowPalette);
-                _palette[row,i]=SNESToPixel(c);
+                var p = i - 9;
+                var c = rom.FetchMachineOrder16(p * 2, rowPalette);
+                _palette[row, i] = SNESToPixel(c);
             }
         }
         var animatedPalette = rom.ReadBytes(ReadKind.Rom, addressTranslation.ToImage(SMWAddresses.AnimatedPaletteEntryTable), 0x10);
         // For now, just use first colour
         var animCol = rom.FetchMachineOrder16(0, animatedPalette);
-        _palette[6,4]=SNESToPixel(animCol);
+        _palette[6, 4] = SNESToPixel(animCol);
+
+        var bgColour = rom.ReadBytes(ReadKind.Rom, addressTranslation.ToImage(SMWAddresses.BackAreaColourTable + 0x02u * header.BackAreaColour), 2);
+        var bgSnesColour = rom.FetchMachineOrder16(0, bgColour);
+        _backgroundColour = SNESToPixel(bgSnesColour);
     }
 
     public Pixel this[int palette,int colour]
@@ -1074,6 +1083,8 @@ public class SuperMarioPalette
             return _palette[palette,colour];
         }
     }
+
+    public Pixel BackgroundColour => _backgroundColour;
 }
 
 public class SuperMarioVRam 
@@ -1114,20 +1125,41 @@ public class SuperMarioVRam
         {
             tileCache[i] = new byte[8 * 8];
         }
+
+        // Fetch correct gfx pages from object and sprite tables
+        var objectPages = rom.ReadBytes(ReadKind.Rom, _addressTranslation.ToImage(SMWAddresses.ObjectGFXList + header.FGBGGFXSetting*0x04u), 0x4);
+        var spritePages = rom.ReadBytes(ReadKind.Rom, _addressTranslation.ToImage(SMWAddresses.SpriteGFXList + header.SpriteGFXSetting*0x04u), 0x4);
+
         // Step 1, try and setup the first 128x128 of VRAM with the GFX data for the level
         // Fetch GFX Page 0x14 data 16x8 tiles
 
-        RasterisePage(0x14, 0x000, 0, 16 * 4);
+        RasterisePage(objectPages[0], 0x000, 0, 16 * 4);
         /// TODO Figure out animated tiles here - 16*4
-        RasterisePage(0x17, 0x080, 0, 16 * 8);
-        RasterisePage(0x1B, 0x100, 0, 16 * 8);
-        RasterisePage(0x15, 0x180, 0, 16 * 8);
+        RasterisePage(objectPages[1], 0x080, 0, 16 * 8);
+        RasterisePage(objectPages[2], 0x100, 0, 16 * 8);
+        RasterisePage(objectPages[3], 0x180, 0, 16 * 8);
         // BLANKPAGE - SKIPPED
         // BLANKPAGE - SKIPPED
-        RasterisePage(0x00, 0x400, 0, 16 * 8);
-        RasterisePage(0x01, 0x480, 0, 16 * 8);
-        RasterisePage(0x13, 0x500, 0, 16 * 8);
-        RasterisePage(0x20, 0x580, 0, 16 * 8);
+        RasterisePage(spritePages[0], 0x400, 0, 16 * 8);
+        RasterisePage(spritePages[1], 0x480, 0, 16 * 8);
+        RasterisePage(spritePages[2], 0x500, 0, 16 * 8);
+        RasterisePage(spritePages[3], 0x580, 0, 16 * 8);
+
+
+        //Table5B96B - animation kind , 0 constant, 1 triggered, 2 tileset specific
+        //Table5B97D - 0 blue P switch, 1 silver P Switch, 2 is on/off
+        //Table5B98B - which anim set to use (indexed by tileset - only if anim kind == 2)
+        //Table5B999 - WRAM frame indexes for each anim
+        //Table5Ba39 - remainder of 5B999 table
+
+        //var animatedTileData = rom.ReadBytes(ReadKind.Rom, _addressTranslation.ToImage(SMWAddresses.AnimatedTileData), 0x100);
+
+        // Step 1, Setup by hand...
+        // Start with Coin, because that is easy :
+        CopyAnimFrame(0x54, (12)*16+12, 0, 4);
+        CopyAnimFrame(0x6C, (12)*16+12, 0, 4);
+
+
     }
 
     enum SNESTileKind
@@ -1150,6 +1182,32 @@ public class SuperMarioVRam
         LC_LZ2.Decompress(ref decomp, _rom.ReadBytes(ReadKind.Rom, gfxPtr, 32768));  // Overread but should be ok
 
         return GFX;
+    }
+
+    private void CopyAnimFrame(uint destTile, uint srcTile, uint frame, uint cnt)
+    {
+        var gfxPtr=_addressTranslation.ToImage(SMWAddresses.GFX33);
+        var GFX = new ReadOnlySpan<byte>(decomp);
+        LC_LZ2.Decompress(ref decomp, _rom.ReadBytes(ReadKind.Rom, gfxPtr, 32768));  // Overread but should be ok
+        var tileSize = 24;
+        srcTile += 16 * frame;
+        for (int i = 0; i < cnt; i++)
+        {
+            var pixels = tileCache[destTile++];
+            ReadOnlySpan<byte> tile = GFX.Slice((int)(srcTile++ * tileSize), tileSize);
+            for (int y = 0; y < 8; y++)
+            {
+                for (int x = 0; x < 8; x++)
+                {
+                    var bp0 = tile[y * 2 + 0];
+                    var bp1 = tile[y * 2 + 1];
+                    var bp2 = tile[16 + y];
+                    var bit = 7 - x;
+                    var colour = ((bp0 >> bit) & 1) | (((bp1 >> bit) & 1) << 1) | (((bp2 >> bit) & 1) << 2);
+                    pixels[y * 8 + x] = (byte)colour;
+                }
+            }
+        }
     }
 
     private void RasterisePage(uint page, uint offset, int tileOffset, uint tileCount)
