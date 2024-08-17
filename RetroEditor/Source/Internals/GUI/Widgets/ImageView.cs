@@ -46,15 +46,8 @@ internal class ImageView : IWidgetItem, IWidgetUpdateDraw
             logger.Log(LogType.Error, $"Image data length mismatch expected {_bitmapData.Length / 4} got {pixels.Length} total pixels");
             return;
         }
-        for (int a = 0; a < pixels.Length; a++)
-        {
-            _bitmapData[a * 4 + 0] = pixels[a].Red;
-            _bitmapData[a * 4 + 1] = pixels[a].Green;
-            _bitmapData[a * 4 + 2] = pixels[a].Blue;
-            _bitmapData[a * 4 + 3] = 255;
-        }
 
-        Raylib.UpdateTexture(_bitmap, _bitmapData);
+        Raylib.UpdateTexture(_bitmap, pixels.ToArray());
     }
 
     public void Draw(IWidgetLog logger)
