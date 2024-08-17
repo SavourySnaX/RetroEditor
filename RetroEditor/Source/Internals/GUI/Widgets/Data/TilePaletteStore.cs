@@ -50,16 +50,7 @@ public sealed class TilePaletteStore
         {
             var pixels = tiles[a].GetImageData();
 
-            byte[] bitmapData = new byte[pixels.Length*4];
-            for (int b = 0; b < pixels.Length; b++)
-            {
-                bitmapData[b * 4 + 0] = pixels[b].Red;
-                bitmapData[b * 4 + 1] = pixels[b].Green;
-                bitmapData[b * 4 + 2] = pixels[b].Blue;
-                bitmapData[b * 4 + 3] = pixels[b].Alpha;
-            }
-
-            Raylib.UpdateTexture(_bitmaps[a], bitmapData);
+            Raylib.UpdateTexture(_bitmaps[a], pixels.ToArray());
         }
     }
 
