@@ -141,6 +141,11 @@ public static class SMWAddresses    // Super Mario World Japan 1.0 (headerless)
     public const uint LevelDataLayer2 = 0x05E600;
     public const uint LevelDataSprites = 0x05EC00;
     public const uint TileData_000_072 = 0x0D8000;
+    public const uint TileSet0Base = 0x0D8B70;
+    public const uint TileSet1Base = 0x0DBC00;
+    public const uint TileSet2Base = 0x0DC800;
+    public const uint TileSet3Base = 0x0DD400;
+    public const uint TileSet4Base = 0x0DE300;
     public const uint GFX00_31_LowByteTable = 0x00B933;
     public const uint GFX00_31_HighByteTable = 0x00B965;
     public const uint GFX00_31_BankByteTable = 0x00B997;
@@ -300,7 +305,7 @@ public struct SMWLevelHeader
 
 public class SuperMarioWorldTestImage : IImage, IUserWindow
 {
-    public uint Width => 2048;
+    public uint Width => 16*16*32;
 
     public uint Height => 416;
 
@@ -355,18 +360,6 @@ public class SuperMarioWorldTestImage : IImage, IUserWindow
         _addressTranslation = new LoRom();
         _editorInterface = editorInterface;
 
-        var data = _rom.ReadBytes(ReadKind.Rom, _addressTranslation.ToImage(SMWAddresses.TileData_000_072), 8*115 );
-        for (int a=0;a<=0x72;a++)
-        {
-            var Test2D = data.Slice(a*8, 8);
-
-            map16ToTile[a] = new Tile16x16(Test2D);
-        }
-
-        // Todo other tile data offsets
-
-        map16ToTile[0x100] = new Tile16x16 { TL = new SubTile { tile = 0x182,palette=2 }, TR = new SubTile { tile = 0x183,palette=2 }, 
-            BL = new SubTile { tile = 0x192,palette=2 }, BR = new SubTile { tile = 0x193,palette=2 } };
     }
 
     public void ConfigureWidgets(IMemoryAccess rom, IWidget widget, IPlayerControls playerControls)
@@ -442,6 +435,8 @@ public class SuperMarioWorldTestImage : IImage, IUserWindow
         Invisible1Up3 = 0x1B,
         Invisible1Up4 = 0x1C,
         RedBerry = 0x1D,
+        PinkBerry = 0x1E,
+        GreenBerry = 0x1F,
         QBlockFlower = 0x30,
         QBlockFeather = 0x31,
         QBlockStar = 0x32,
@@ -539,7 +534,6 @@ public class SuperMarioWorldTestImage : IImage, IUserWindow
 
     void DrawGfxTiles(int tx,int ty,int tw,int th, SuperMarioVRam vram, int topTile, int otherRows)
     {
-        // Just do top tile to test
         tw++;
         th++;
         for (int y = 0; y < th; y++)
@@ -552,6 +546,25 @@ public class SuperMarioWorldTestImage : IImage, IUserWindow
         }
     }
 
+    void DrawGfxTiles(int tx,int ty,int tw,int th, SuperMarioVRam vram, int leftTile, int middleTile, int rightTile)
+    {
+        tw++;
+        th++;
+        for (int y = 0; y < th; y++)
+        {
+            for (int x = 0; x < tw; x++)
+            {
+                if (x==0)
+                    DrawGfxTile(tx + x, ty + y, leftTile, vram);
+                else if (x==tw-1)
+                    DrawGfxTile(tx + x, ty + y, rightTile, vram);
+                else
+                    DrawGfxTile(tx + x, ty + y, middleTile, vram);
+            }
+        }
+    }
+
+
     void DrawGfxTilesFixed(int tx, int ty, int tw, int th, SuperMarioVRam vram, int[] tiles)
     {
         int o=0;
@@ -562,6 +575,59 @@ public class SuperMarioWorldTestImage : IImage, IUserWindow
                 DrawGfxTile(tx + x, ty + y, tiles[o++], vram);
             }
         }
+    }
+
+    public void SetupMap16ForLevel(SMWLevelHeader header)
+    {
+        var data = _rom.ReadBytes(ReadKind.Rom, _addressTranslation.ToImage(SMWAddresses.TileData_000_072), 8*0x73 );
+        for (int a=0;a<=0x72;a++)
+        {
+            var Test2D = data.Slice(a*8, 8);
+            map16ToTile[a] = new Tile16x16(Test2D);
+        }
+
+        var baseAddress = _addressTranslation.ToImage(SMWAddresses.TileSet0Base);
+        switch (header.FGBGGFXSetting)
+        {
+            default:
+            case 0x00:                      // Normal 1
+            case 0x07:                      // Normal 2
+            case 0x0C:                      // Cloud/Forest
+                baseAddress = _addressTranslation.ToImage(SMWAddresses.TileSet0Base);
+                break;
+            case 0x01:                      // Castle 1
+                baseAddress = _addressTranslation.ToImage(SMWAddresses.TileSet1Base);
+                break;
+            case 0x02:                      // Rope 1
+            case 0x06:                      // Rope 2
+            case 0x08:                      // Rope 3
+                baseAddress = _addressTranslation.ToImage(SMWAddresses.TileSet2Base);
+                break;
+            case 0x03:                      // Underground 1
+            case 0x09:                      // Underground 2
+            case 0x0E:                      // Underground 3
+            case 0x0A:                      // Switch Palace 2
+            case 0x0B:                      // Castle 2
+                baseAddress = _addressTranslation.ToImage(SMWAddresses.TileSet3Base);
+                break;
+            case 0x04:                      // Switch Palace 1
+            case 0x05:                      // Ghost House 1
+            case 0x0D:                      // Ghost House 2
+                baseAddress = _addressTranslation.ToImage(SMWAddresses.TileSet4Base);
+                break;
+        }
+
+        var tiles73_FF = _rom.ReadBytes(ReadKind.Rom, baseAddress, 8 * (0x100 - 0x73));
+        for (int a=0x73;a<=0xFF;a++)
+        {
+            var Test2D = tiles73_FF.Slice((a-0x73)*8, 8);
+            map16ToTile[a] = new Tile16x16(Test2D);
+        }
+
+        // Todo other tile data offsets
+
+        map16ToTile[0x100] = new Tile16x16 { TL = new SubTile { tile = 0x182,palette=2 }, TR = new SubTile { tile = 0x183,palette=2 }, 
+            BL = new SubTile { tile = 0x192,palette=2 }, BR = new SubTile { tile = 0x193,palette=2 } };
     }
 
     public ReadOnlySpan<Pixel> GetImageData(float seconds)
@@ -579,6 +645,7 @@ public class SuperMarioWorldTestImage : IImage, IUserWindow
             var smwRom = new SuperMarioWorldRomHelpers(_rom, _addressTranslation, levelSelect);
             var smwLevelHeader = smwRom.Header;
             _palette = new SuperMarioPalette(_rom, smwLevelHeader);
+            SetupMap16ForLevel(smwLevelHeader);
 
             for (int i = 0; i < pixels.Length; i++)
             {
@@ -654,7 +721,6 @@ public class SuperMarioWorldTestImage : IImage, IUserWindow
                         case ExtendedObject.Invisible1Up2:
                         case ExtendedObject.Invisible1Up3:
                         case ExtendedObject.Invisible1Up4:
-                        case ExtendedObject.RedBerry:
                         case ExtendedObject.QBlockFlower:
                         case ExtendedObject.QBlockFeather:
                         case ExtendedObject.QBlockStar:
@@ -695,6 +761,12 @@ public class SuperMarioWorldTestImage : IImage, IUserWindow
                             break;
                         case ExtendedObject.YoshiCoin:
                             DrawGfxTiles(xPos, yPos, 0, 1, smwVram, 0x2D, 0x2E);
+                            _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(ExtendedObject)objectNumber} @{xPos:X2},{yPos:X2}");
+                            break;
+                        case ExtendedObject.RedBerry:
+                        case ExtendedObject.PinkBerry:
+                        case ExtendedObject.GreenBerry:
+                            DrawGfxTile(xPos, yPos, (objectNumber-(int)ExtendedObject.RedBerry)+0x45, smwVram);
                             _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(ExtendedObject)objectNumber} @{xPos:X2},{yPos:X2}");
                             break;
                         default:
@@ -782,8 +854,11 @@ public class SuperMarioWorldTestImage : IImage, IUserWindow
                         case StandardObject.TilesetSpecificStart15:
                         case StandardObject.TilesetSpecificStart16:
                         case StandardObject.TilesetSpecificStart17:
-                        case StandardObject.TilesetSpecificStart18:
                             Draw16x16Tile(xPos, yPos, new Pixel(128, 0, 0, 255));
+                            _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(StandardObject)objectNumber} @{xPos:X2},{yPos:X2} - Special {t2:X2}");
+                            break;
+                        case StandardObject.TilesetSpecificStart18:
+                            DrawGfxTiles(xPos, yPos, t2, 0, smwVram, 0x73, 0x74, 0x79);
                             _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(StandardObject)objectNumber} @{xPos:X2},{yPos:X2} - Special {t2:X2}");
                             break;
                         default:
@@ -1154,7 +1229,7 @@ public class SuperMarioVRam
 
         //var animatedTileData = rom.ReadBytes(ReadKind.Rom, _addressTranslation.ToImage(SMWAddresses.AnimatedTileData), 0x100);
 
-        // Step 1, Setup by hand...
+        // Step 1, Setup by hand... (as need to determine how to figure this out from level data)
         // Start with Coin, because that is easy :
         CopyAnimFrame(0x54, (12)*16+12, 0, 4);
         CopyAnimFrame(0x6C, (12)*16+12, 0, 4);
@@ -1285,6 +1360,16 @@ public class SuperMarioVRam
                     }
                 }
             }
+
+            // Berry Colour Fix
+            if (page==0x17 && (i==0||i==1|i==16|i==17))
+            {
+                for (int a=0;a<64;a++)
+                {
+                    pixels[a]|=0x08;
+                }
+            }
+
         }
     }
 
