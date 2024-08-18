@@ -905,7 +905,20 @@ public class SuperMarioWorldTestImage : IImage, IUserWindow
                             _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(StandardObject)objectNumber} @{xPos:X2},{yPos:X2} - Special {t2:X2}");
                             break;
                         case StandardObject.TilesetSpecificStart18:
-                            DrawGfxTiles(xPos, yPos, t2, 0, smwVram, 0x73, 0x74, 0x79);
+                            // grass  - p1 width, p0 style (0,1,2)
+                            switch (p0)
+                            {
+                                default:
+                                case 0:
+                                    DrawGfxTiles(xPos, yPos, p1, 0, smwVram, 0x73, 0x74, 0x79);
+                                    break;
+                                case 1:
+                                    DrawGfxTiles(xPos, yPos, p1, 0, smwVram, 0x7A, 0x7B, 0x80);
+                                    break;
+                                case 2:
+                                    DrawGfxTiles(xPos, yPos, p1, 0, smwVram, 0x85, 0x86, 0x87);
+                                    break;
+                            }
                             _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(StandardObject)objectNumber} @{xPos:X2},{yPos:X2} - Special {t2:X2}");
                             break;
                         default:
