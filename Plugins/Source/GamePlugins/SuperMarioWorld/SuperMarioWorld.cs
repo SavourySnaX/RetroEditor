@@ -141,11 +141,28 @@ public static class SMWAddresses    // Super Mario World Japan 1.0 (headerless)
     public const uint LevelDataLayer2 = 0x05E600;
     public const uint LevelDataSprites = 0x05EC00;
     public const uint TileData_000_072 = 0x0D8000;
-    public const uint TileSet0Base = 0x0D8B70;
-    public const uint TileSet1Base = 0x0DBC00;
-    public const uint TileSet2Base = 0x0DC800;
-    public const uint TileSet3Base = 0x0DD400;
-    public const uint TileSet4Base = 0x0DE300;
+    public const uint TileSet0Base_073 = 0x0D8B70;
+    public const uint TileSet1Base_073 = 0x0DBC00;
+    public const uint TileSet2Base_073 = 0x0DC800;
+    public const uint TileSet3Base_073 = 0x0DD400;
+    public const uint TileSet4Base_073 = 0x0DE300;
+    public const uint TileSet0Base_100 = 0x0D8398;
+    public const uint TileSet1Base_100 = 0x0DC068;
+    public const uint TileSet2Base_100 = 0x0DCC68;
+    public const uint TileSet3Base_100 = 0x0DD868;
+    public const uint TileSet4Base_100 = 0x0DE768;
+    public const uint TileData_107_110 = 0x0DC068;
+    public const uint TileData_111_152 = 0x0D83D0;
+    public const uint TileSet0Base_153 = 0x0D9028;
+    public const uint TileSet1Base_153 = 0x0DC0B8;
+    public const uint TileSet2Base_153 = 0x0DCCB8;
+    public const uint TileSet3Base_153 = 0x0DD8B8;
+    public const uint TileSet4Base_153 = 0x0DE7B8;
+    public const uint TileData_16E_1C3 = 0x0D85E0;
+    public const uint TileData_1C4_1C7 = 0x0D8890;
+    public const uint TileData_1C8_1EB = 0x0D88B0;
+    public const uint TileData_1EC_1EF = 0x0D89D0;
+    public const uint TileData_1F0_1FF = 0x0D89F0;
     public const uint GFX00_31_LowByteTable = 0x00B933;
     public const uint GFX00_31_HighByteTable = 0x00B965;
     public const uint GFX00_31_BankByteTable = 0x00B997;
@@ -162,6 +179,9 @@ public static class SMWAddresses    // Super Mario World Japan 1.0 (headerless)
     public const uint BackAreaColourTable = 0x00B040;
     public const uint ObjectGFXList = 0x00A8C9;
     public const uint SpriteGFXList = 0x00A861;
+
+    public const uint LargeBush = 0x0DA6ED; // Definition of large bush layout
+    public const uint MediumBush = 0x0DA747; // Definition of medium bush layout
 }
 
 ref struct SuperMarioWorldRomHelpers
@@ -238,7 +258,7 @@ public class SuperMarioWorld : IRetroPlugin , IMenuProvider
                 });
             menu.AddItem("GFX",
                 (editorInterface,menuItem) => {
-                    editorInterface.OpenUserWindow($"GFX View", GetMap16Image(editorInterface, rom));
+                    editorInterface.OpenUserWindow($"GFX View", GetGFXPageImage(editorInterface, rom));
                 });
             menu.AddItem("VRAM",
                 (editorInterface,menuItem) => {
@@ -248,6 +268,10 @@ public class SuperMarioWorld : IRetroPlugin , IMenuProvider
                 (editorInterface,menuItem) => {
                     editorInterface.OpenUserWindow($"Palette View", GetPaletteImage(editorInterface, rom));
                 });
+            menu.AddItem("Map 16",
+                (editorInterface,menuItem) => {
+                    editorInterface.OpenUserWindow($"Map16 View", GetMap16Image(editorInterface, rom));
+                });
     }
 
     public SuperMarioWorldTestImage GetImage(IEditor editorInterface, IMemoryAccess rom)
@@ -255,7 +279,7 @@ public class SuperMarioWorld : IRetroPlugin , IMenuProvider
         return new SuperMarioWorldTestImage(editorInterface, rom);
     }
 
-    public SuperMarioWorldGFXPageImage GetMap16Image(IEditor editorInterface, IMemoryAccess rom)
+    public SuperMarioWorldGFXPageImage GetGFXPageImage(IEditor editorInterface, IMemoryAccess rom)
     {
         return new SuperMarioWorldGFXPageImage(editorInterface, rom);
     }
@@ -269,6 +293,12 @@ public class SuperMarioWorld : IRetroPlugin , IMenuProvider
     {
         return new SuperMarioWorldPaletteImage(editorInterface, rom);
     }
+    
+    public SuperMarioWorldMap16Image GetMap16Image(IEditor editorInterface, IMemoryAccess rom)
+    {
+        return new SuperMarioWorldMap16Image(editorInterface, rom);
+    }
+
 }
 
 public struct SMWLevelHeader
@@ -303,6 +333,112 @@ public struct SMWLevelHeader
     }
 }
 
+struct SubTile
+{
+    public int tile;
+    public int palette;
+    public bool flipx;
+    public bool flipy;
+    public bool priority;
+
+    public SubTile(int a, int b)
+    {
+        tile = a + ((b & 3) << 8);
+        palette = (b & 0x1C) >> 2;
+        flipx = (b & 0x40) == 0x40;
+        flipy = (b & 0x80) == 0x80;
+        priority = (b & 0x20) == 0x20;
+    }
+}
+
+struct Tile16x16
+{
+    public SubTile TL, TR, BL, BR;
+
+    public Tile16x16(ReadOnlySpan<byte> data)
+    {
+        TL = new SubTile(data[0], data[1]);
+        BL = new SubTile(data[2], data[3]);
+        TR = new SubTile(data[4], data[5]);
+        BR = new SubTile(data[6], data[7]);
+    }
+}
+
+
+class SMWMap16
+{
+    public bool Has(int index) => map16ToTile.ContainsKey(index);
+    public Tile16x16 this[int index] => map16ToTile[index];
+    private Dictionary<int, Tile16x16> map16ToTile = new Dictionary<int, Tile16x16>();
+
+    private void SetUpTiles(int start, int end, uint Address, IMemoryAccess rom, AddressTranslation addressTranslation)
+    {
+        var data = rom.ReadBytes(ReadKind.Rom, addressTranslation.ToImage(Address), (uint)(8*(end-start+1)));
+        for (int a=start;a<=end;a++)
+        {
+            var Test2D = data.Slice((a-start)*8, 8);
+            map16ToTile[a] = new Tile16x16(Test2D);
+        }
+    }
+
+    public SMWMap16(IMemoryAccess rom, AddressTranslation addressTranslation, SMWLevelHeader header)
+    {
+        var baseAddressTileSpecific073 = SMWAddresses.TileSet0Base_073;
+        var baseAddressTileSpecific100 = SMWAddresses.TileSet0Base_100;
+        var baseAddressTileSpecific153 = SMWAddresses.TileSet0Base_153;
+        switch (header.FGBGGFXSetting)
+        {
+            default:
+            case 0x00:                      // Normal 1
+            case 0x07:                      // Normal 2
+            case 0x0C:                      // Cloud/Forest
+                break;
+            case 0x01:                      // Castle 1
+                baseAddressTileSpecific073 = SMWAddresses.TileSet1Base_073;
+                baseAddressTileSpecific100 = SMWAddresses.TileSet1Base_100;
+                baseAddressTileSpecific153 = SMWAddresses.TileSet1Base_153;
+                break;
+            case 0x02:                      // Rope 1
+            case 0x06:                      // Rope 2
+            case 0x08:                      // Rope 3
+                baseAddressTileSpecific073 = SMWAddresses.TileSet2Base_073;
+                baseAddressTileSpecific100 = SMWAddresses.TileSet2Base_100;
+                baseAddressTileSpecific153 = SMWAddresses.TileSet2Base_153;
+                break;
+            case 0x03:                      // Underground 1
+            case 0x09:                      // Underground 2
+            case 0x0E:                      // Underground 3
+            case 0x0A:                      // Switch Palace 2
+            case 0x0B:                      // Castle 2
+                baseAddressTileSpecific073 = SMWAddresses.TileSet3Base_073;
+                baseAddressTileSpecific100 = SMWAddresses.TileSet3Base_100;
+                baseAddressTileSpecific153 = SMWAddresses.TileSet3Base_153;
+                break;
+            case 0x04:                      // Switch Palace 1
+            case 0x05:                      // Ghost House 1
+            case 0x0D:                      // Ghost House 2
+                baseAddressTileSpecific073 = SMWAddresses.TileSet4Base_073;
+                baseAddressTileSpecific100 = SMWAddresses.TileSet4Base_100;
+                baseAddressTileSpecific153 = SMWAddresses.TileSet4Base_153;
+                break;
+        }
+
+        SetUpTiles(0x000,0x072,SMWAddresses.TileData_000_072,rom,addressTranslation);
+        SetUpTiles(0x073,0x0FF,baseAddressTileSpecific073,rom,addressTranslation);
+        SetUpTiles(0x100,0x106,baseAddressTileSpecific100,rom,addressTranslation);
+        SetUpTiles(0x107,0x110,SMWAddresses.TileData_107_110,rom,addressTranslation);
+        SetUpTiles(0x111,0x152,SMWAddresses.TileData_111_152,rom,addressTranslation);
+        SetUpTiles(0x153,0x16D,baseAddressTileSpecific153,rom,addressTranslation);
+        SetUpTiles(0x16E,0x1C3,SMWAddresses.TileData_16E_1C3,rom,addressTranslation);
+        SetUpTiles(0x1C4,0x1C7,SMWAddresses.TileData_1C4_1C7,rom,addressTranslation);
+        SetUpTiles(0x1C8,0x1EB,SMWAddresses.TileData_1C8_1EB,rom,addressTranslation);
+        SetUpTiles(0x1EC,0x1EF,SMWAddresses.TileData_1EC_1EF,rom,addressTranslation);
+        SetUpTiles(0x1F0,0x1FF,SMWAddresses.TileData_1F0_1FF,rom,addressTranslation);
+    }
+
+
+}
+
 public class SuperMarioWorldTestImage : IImage, IUserWindow
 {
     public uint Width => 16*16*32;
@@ -321,45 +457,14 @@ public class SuperMarioWorldTestImage : IImage, IUserWindow
     private IEditor _editorInterface;
 
     private SuperMarioPalette _palette;
+    private SMWMap16 _map16ToTile;
 
-    private struct SubTile
-    {
-        public int tile;
-        public int palette;
-        public bool flipx;
-        public bool flipy;
-        public bool priority;
-
-        public SubTile(int a, int b)
-        {
-            tile = a + ((b & 3) << 8);
-            palette = (b & 0x1C) >> 2;
-            flipx = (b & 0x40) == 0x40;
-            flipy = (b & 0x80) == 0x80;
-            priority = (b & 0x20) == 0x20;
-        }
-    }
-
-    private struct Tile16x16
-    {
-        public SubTile TL, TR, BL, BR;
-
-        public Tile16x16(ReadOnlySpan<byte> data)
-        {
-            TL = new SubTile(data[0], data[1]);
-            BL = new SubTile(data[2], data[3]);
-            TR = new SubTile(data[4], data[5]);
-            BR = new SubTile(data[6], data[7]);
-        }
-    }
-    private Dictionary<int, Tile16x16> map16ToTile = new Dictionary<int, Tile16x16>();
 
     public SuperMarioWorldTestImage(IEditor editorInterface, IMemoryAccess rom)
     {
         _rom = rom;
         _addressTranslation = new LoRom();
         _editorInterface = editorInterface;
-
     }
 
     public void ConfigureWidgets(IMemoryAccess rom, IWidget widget, IPlayerControls playerControls)
@@ -521,7 +626,7 @@ public class SuperMarioWorldTestImage : IImage, IUserWindow
 
     void DrawGfxTile(int tx,int ty, int tile, SuperMarioVRam vram)
     {
-        var tile16 = map16ToTile[tile];
+        var tile16 = _map16ToTile[tile];
 
         // TODO Make vram just be an array of 8x8 tiles to make lookups simpler
 
@@ -565,69 +670,21 @@ public class SuperMarioWorldTestImage : IImage, IUserWindow
     }
 
 
-    void DrawGfxTilesFixed(int tx, int ty, int tw, int th, SuperMarioVRam vram, int[] tiles)
+    void DrawGfxTilesFixedPattern(int tx, int ty, int tw, uint totalCount, SuperMarioVRam vram, uint snesAddress)
     {
+        var data = _rom.ReadBytes(ReadKind.Rom, _addressTranslation.ToImage(snesAddress), totalCount);
         int o=0;
-        for (int y = 0; y < th; y++)
+        while (true)
         {
             for (int x = 0; x < tw; x++)
             {
-                DrawGfxTile(tx + x, ty + y, tiles[o++], vram);
+                DrawGfxTile(tx + x, ty, data[o++], vram);
+                totalCount--;
+                if (totalCount==0)
+                    return;
             }
+            ty++;
         }
-    }
-
-    public void SetupMap16ForLevel(SMWLevelHeader header)
-    {
-        var data = _rom.ReadBytes(ReadKind.Rom, _addressTranslation.ToImage(SMWAddresses.TileData_000_072), 8*0x73 );
-        for (int a=0;a<=0x72;a++)
-        {
-            var Test2D = data.Slice(a*8, 8);
-            map16ToTile[a] = new Tile16x16(Test2D);
-        }
-
-        var baseAddress = _addressTranslation.ToImage(SMWAddresses.TileSet0Base);
-        switch (header.FGBGGFXSetting)
-        {
-            default:
-            case 0x00:                      // Normal 1
-            case 0x07:                      // Normal 2
-            case 0x0C:                      // Cloud/Forest
-                baseAddress = _addressTranslation.ToImage(SMWAddresses.TileSet0Base);
-                break;
-            case 0x01:                      // Castle 1
-                baseAddress = _addressTranslation.ToImage(SMWAddresses.TileSet1Base);
-                break;
-            case 0x02:                      // Rope 1
-            case 0x06:                      // Rope 2
-            case 0x08:                      // Rope 3
-                baseAddress = _addressTranslation.ToImage(SMWAddresses.TileSet2Base);
-                break;
-            case 0x03:                      // Underground 1
-            case 0x09:                      // Underground 2
-            case 0x0E:                      // Underground 3
-            case 0x0A:                      // Switch Palace 2
-            case 0x0B:                      // Castle 2
-                baseAddress = _addressTranslation.ToImage(SMWAddresses.TileSet3Base);
-                break;
-            case 0x04:                      // Switch Palace 1
-            case 0x05:                      // Ghost House 1
-            case 0x0D:                      // Ghost House 2
-                baseAddress = _addressTranslation.ToImage(SMWAddresses.TileSet4Base);
-                break;
-        }
-
-        var tiles73_FF = _rom.ReadBytes(ReadKind.Rom, baseAddress, 8 * (0x100 - 0x73));
-        for (int a=0x73;a<=0xFF;a++)
-        {
-            var Test2D = tiles73_FF.Slice((a-0x73)*8, 8);
-            map16ToTile[a] = new Tile16x16(Test2D);
-        }
-
-        // Todo other tile data offsets
-
-        map16ToTile[0x100] = new Tile16x16 { TL = new SubTile { tile = 0x182,palette=2 }, TR = new SubTile { tile = 0x183,palette=2 }, 
-            BL = new SubTile { tile = 0x192,palette=2 }, BR = new SubTile { tile = 0x193,palette=2 } };
     }
 
     public ReadOnlySpan<Pixel> GetImageData(float seconds)
@@ -645,7 +702,7 @@ public class SuperMarioWorldTestImage : IImage, IUserWindow
             var smwRom = new SuperMarioWorldRomHelpers(_rom, _addressTranslation, levelSelect);
             var smwLevelHeader = smwRom.Header;
             _palette = new SuperMarioPalette(_rom, smwLevelHeader);
-            SetupMap16ForLevel(smwLevelHeader);
+            _map16ToTile = new SMWMap16(_rom, _addressTranslation, smwLevelHeader);
 
             for (int i = 0; i < pixels.Length; i++)
             {
@@ -741,22 +798,12 @@ public class SuperMarioWorldTestImage : IImage, IUserWindow
                             _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(ExtendedObject)objectNumber} @{xPos:X2},{yPos:X2}");
                             break;
                         case ExtendedObject.BigBush1:
-                            DrawGfxTilesFixed(xPos, yPos, 10, 5, smwVram, new int[] { 
-                                0x25, 0x25, 0x25, 0x4B, 0x4D, 0x4E, 0x25, 0x25, 0x25, 0x25, 
-                                0x25, 0x25, 0x54, 0x49, 0x49, 0x5F, 0x63, 0x25, 0x25, 0x25,
-                                0x25, 0x25, 0x57, 0x49, 0x49, 0x52, 0x4A, 0x5D, 0x25, 0x25,
-                                0x25, 0x5A, 0x49, 0x49, 0x50, 0x51, 0x4A, 0x60, 0x25, 0x25,
-                                0x5A, 0x49, 0x49, 0x49, 0x53, 0x4A, 0x4A, 0x4A, 0x63, 0x25,
-                                });
+                            // See table referenced by code at DA106 - For now, I've just done things by hand, but perhaps we should automate this
+                            DrawGfxTilesFixedPattern(xPos, yPos, 9, 45, smwVram, SMWAddresses.LargeBush);
                             _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(ExtendedObject)objectNumber} @{xPos:X2},{yPos:X2}");
                             break;
                         case ExtendedObject.BigBush2:
-                            DrawGfxTilesFixed(xPos, yPos, 6, 4, smwVram, new int[] { 
-                                0x25, 0x25, 0x4B, 0x4C, 0x25, 0x25, 
-                                0x25, 0x54, 0x49, 0x5F, 0x63, 0x25,
-                                0x25, 0x57, 0x49, 0x52, 0x4A, 0x5D,
-                                0x5A, 0x49, 0x49, 0x49, 0x4F, 0x60,
-                                });
+                            DrawGfxTilesFixedPattern(xPos, yPos, 6, 24, smwVram, SMWAddresses.MediumBush); 
                             _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(ExtendedObject)objectNumber} @{xPos:X2},{yPos:X2}");
                             break;
                         case ExtendedObject.YoshiCoin:
@@ -1507,6 +1554,106 @@ public class SuperMarioWorldPaletteImage : IImage, IUserWindow
                 }
             }
         }
+        return pixels;
+    }
+
+    public void OnClose()
+    {
+    }
+}
+
+public class SuperMarioWorldMap16Image : IImage, IUserWindow
+{
+    public uint Width => 256;
+
+    public uint Height => 256*2;
+
+    public float ScaleX => 1.5f;
+
+    public float ScaleY => 1.5f;
+
+    public float UpdateInterval => 1/60.0f;
+
+    private Pixel[] pixels;
+
+    private IMemoryAccess _rom;
+    private AddressTranslation _addressTranslation;
+    private IWidgetRanged temp_levelSelect;
+    private bool runOnce = false;
+
+    public SuperMarioWorldMap16Image(IEditor editorInterface, IMemoryAccess rom)
+    {
+        _rom=rom;
+        _addressTranslation=new LoRom();
+    }
+
+    public void ConfigureWidgets(IMemoryAccess rom, IWidget widget, IPlayerControls playerControls)
+    {
+        widget.AddImageView(this);
+        temp_levelSelect = widget.AddSlider("Level", 0xC7, 0, 511, () => { runOnce = false; });
+    }
+    private const uint NumberOfTiles = 0x200;
+
+    void Draw8x8(int tx, int ty, int xo,int yo, SubTile tile, SuperMarioVRam vram, SuperMarioPalette palette)
+    {
+        var tileNum = tile.tile;
+        var gfx = vram.Tile(tileNum);
+        // compute tile position TL
+        var tileX=tileNum%16;
+        var tileY=tileNum/16;
+
+        int ox = tx * 16 + 8 * xo;
+        int oy = ty * 16 + 8 * yo;
+        int g=0;
+        for (int y = 0; y < 8; y++)
+        {
+            for (int x = 0; x < 8; x++)
+            {
+                var px =ox + (tile.flipx ? 7 - x : x);
+                var py =oy + (tile.flipy ? 7 - y : y);
+                if (px >= 0 && px < Width && py >= 0 && py < Height)
+                {
+                    var c = gfx[g++];
+                    if (c!=0)
+                    {
+                        pixels[py * Width + px] = palette[tile.palette,c];
+                    }
+                }
+            }
+        }
+    }
+
+    public ReadOnlySpan<Pixel> GetImageData(float seconds)
+    {
+        if (!runOnce)
+        {
+            runOnce = true;
+            var levelSelect = (uint)temp_levelSelect.Value;
+            var smwRom = new SuperMarioWorldRomHelpers(_rom, _addressTranslation, levelSelect);
+            var smwLevelHeader = smwRom.Header;
+            var smwVRam = new SuperMarioVRam(_rom, smwLevelHeader);
+            var map16 = new SMWMap16(_rom, _addressTranslation, smwLevelHeader);
+            var palette = new SuperMarioPalette(_rom, smwLevelHeader);
+            pixels = new Pixel[Width * Height];
+
+            for (int tiles = 0; tiles < NumberOfTiles; tiles++)
+            {
+                var tx = tiles % 16;
+                var ty = tiles / 16;
+
+                // Fetch map16 tile and render
+                if (map16.Has(tiles))
+                {
+                    var map16Tile = map16[tiles];
+
+                    Draw8x8(tx, ty, 0, 0, map16Tile.TL, smwVRam, palette);
+                    Draw8x8(tx, ty, 1, 0, map16Tile.TR, smwVRam, palette);
+                    Draw8x8(tx, ty, 0, 1, map16Tile.BL, smwVRam, palette);
+                    Draw8x8(tx, ty, 1, 1, map16Tile.BR, smwVRam, palette);
+                }
+            }
+        }
+
         return pixels;
     }
 
