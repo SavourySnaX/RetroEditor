@@ -687,6 +687,7 @@ public class SuperMarioWorldTestImage : IImage, IUserWindow
         }
     }
 
+
     public ReadOnlySpan<Pixel> GetImageData(float seconds)
     {
         if (!runOnce)
@@ -784,7 +785,6 @@ public class SuperMarioWorldTestImage : IImage, IUserWindow
                         case ExtendedObject.QBlockStar2:
                         case ExtendedObject.QBlockMultipleCoins:
                         case ExtendedObject.QBlockKeyWingsBalloonShell:
-                        case ExtendedObject.QBlockYoshi:
                         case ExtendedObject.QBlockShell1:
                         case ExtendedObject.QBlockShell2:
                         case ExtendedObject.TranslucentBlock:
@@ -795,6 +795,10 @@ public class SuperMarioWorldTestImage : IImage, IUserWindow
                         case ExtendedObject.MidwayPointRope:
                         case ExtendedObject.ArrowSign:
                             Draw16x16Tile(xPos, yPos, new Pixel(128, 128, 128, 255));
+                            _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(ExtendedObject)objectNumber} @{xPos:X2},{yPos:X2}");
+                            break;
+                        case ExtendedObject.QBlockYoshi:
+                            DrawGfxTile(xPos, yPos, 0x126, smwVram);
                             _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(ExtendedObject)objectNumber} @{xPos:X2},{yPos:X2}");
                             break;
                         case ExtendedObject.BigBush1:
@@ -858,13 +862,31 @@ public class SuperMarioWorldTestImage : IImage, IUserWindow
                             _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(StandardObject)objectNumber} @{xPos:X2},{yPos:X2} - Height {p0:X2} - Width {p1:X2}"); 
                             break;
                         case StandardObject.VerticalPipes:
-                        case StandardObject.Slopes:
                         case StandardObject.LedgeEdges:
                         case StandardObject.MidwayGoalPoint:
                         case StandardObject.NetVerticalEdge:
                             DrawTiles(xPos, yPos, 1, p0, new Pixel(255, 0, 255, 255));
                             _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(StandardObject)objectNumber} @{xPos:X2},{yPos:X2} - Height {p0:X2} - Type {p1:X2}"); 
                             break;
+                        case StandardObject.Slopes:
+                            if (p1 == 5)
+                            {
+                                // NOTE PADS next hieght with 3Fs on the left
+                                DrawGfxTile(xPos, yPos, 0x182, smwVram);
+                                DrawGfxTile(xPos + 1, yPos, 0x187, smwVram);
+                                DrawGfxTile(xPos + 2, yPos, 0x18C, smwVram);
+                                DrawGfxTile(xPos + 3, yPos, 0x191, smwVram);
+                                yPos += 1;
+                                DrawGfxTile(xPos, yPos, 0x1E6, smwVram);
+                                DrawGfxTile(xPos + 1, yPos, 0x1E6, smwVram);
+                                DrawGfxTile(xPos + 2, yPos, 0x1DB, smwVram);
+                                DrawGfxTile(xPos + 3, yPos, 0x1DC, smwVram);
+                            }
+                            else
+                                DrawTiles(xPos, yPos, 1, p0, new Pixel(255, 0, 255, 255));
+                            _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(StandardObject)objectNumber} @{xPos:X2},{yPos:X2} - Height {p0:X2} - Type {p1:X2}"); 
+                            break;
+
                         case StandardObject.HorizontalPipes:
                         case StandardObject.RopeOrClouds:
                             DrawTiles(xPos, yPos, p1, 1, new Pixel(255, 255, 0, 255));
@@ -896,12 +918,117 @@ public class SuperMarioWorldTestImage : IImage, IUserWindow
                         case StandardObject.TilesetSpecificStart10:
                         case StandardObject.TilesetSpecificStart11:
                         case StandardObject.TilesetSpecificStart12:
-                        case StandardObject.TilesetSpecificStart13:
-                        case StandardObject.TilesetSpecificStart14:
                         case StandardObject.TilesetSpecificStart15:
                         case StandardObject.TilesetSpecificStart16:
                         case StandardObject.TilesetSpecificStart17:
                             Draw16x16Tile(xPos, yPos, new Pixel(128, 0, 0, 255));
+                            _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(StandardObject)objectNumber} @{xPos:X2},{yPos:X2} - Special {t2:X2}");
+                            break;
+                        case StandardObject.TilesetSpecificStart13:
+                            // Left facing diagonal ledge (see right, just different codes basically)
+                            {
+                                DrawGfxTile(xPos, yPos, 0x1AA, smwVram);
+                                DrawGfxTile(xPos+1,yPos, 0x0A1, smwVram);
+                                yPos += 1;
+                                xPos -= 1;
+                                DrawGfxTile(xPos, yPos, 0x1AA, smwVram);
+                                DrawGfxTile(xPos+1, yPos, 0x1E2, smwVram);
+                                DrawGfxTile(xPos+2, yPos, 0x03F, smwVram);
+                                DrawGfxTile(xPos+3, yPos, 0x0A6, smwVram);
+                                yPos += 1;
+                                xPos -= 1;
+                                DrawGfxTile(xPos, yPos, 0x1AA, smwVram);
+                                DrawGfxTile(xPos+1, yPos, 0x1E2, smwVram);
+                                DrawGfxTile(xPos+2, yPos, 0x03F, smwVram);
+                                DrawGfxTile(xPos+3, yPos, 0x03F, smwVram);
+                                DrawGfxTile(xPos+4, yPos, 0x03F, smwVram);
+                                DrawGfxTile(xPos+5, yPos, 0x0A6, smwVram);
+                                yPos += 1;
+                                xPos -= 1;
+                                DrawGfxTile(xPos, yPos, 0x1AA, smwVram);
+                                DrawGfxTile(xPos+1, yPos, 0x1E2, smwVram);
+                                DrawGfxTile(xPos+2, yPos, 0x03F, smwVram);
+                                DrawGfxTile(xPos+3, yPos, 0x03F, smwVram);
+                                DrawGfxTile(xPos+4, yPos, 0x03F, smwVram);
+                                DrawGfxTile(xPos+5, yPos, 0x03F, smwVram);
+                                DrawGfxTile(xPos+6, yPos, 0x03F, smwVram);
+                                DrawGfxTile(xPos+7, yPos, 0x0A6, smwVram);
+                                yPos += 1;
+                                DrawGfxTile(xPos, yPos, 0x1F7, smwVram);
+                                DrawGfxTile(xPos+1, yPos, 0x03F, smwVram);
+                                DrawGfxTile(xPos+2, yPos, 0x03F, smwVram);
+                                DrawGfxTile(xPos+3, yPos, 0x03F, smwVram);
+                                DrawGfxTile(xPos+4, yPos, 0x03F, smwVram);
+                                DrawGfxTile(xPos+5, yPos, 0x03F, smwVram);
+                                DrawGfxTile(xPos+6, yPos, 0x03F, smwVram);
+                                DrawGfxTile(xPos+7, yPos, 0x03F, smwVram);
+                                DrawGfxTile(xPos+8, yPos, 0x0A6, smwVram);
+                                yPos += 1;
+                                xPos += 1;
+                                DrawGfxTile(xPos, yPos, 0x0A3, smwVram);
+                                DrawGfxTile(xPos+1, yPos, 0x03F, smwVram);
+                                DrawGfxTile(xPos+2, yPos, 0x03F, smwVram);
+                                DrawGfxTile(xPos+3, yPos, 0x03F, smwVram);
+                                DrawGfxTile(xPos+4, yPos, 0x03F, smwVram);
+                                DrawGfxTile(xPos+5, yPos, 0x03F, smwVram);
+                                DrawGfxTile(xPos+6, yPos, 0x03F, smwVram);
+                                DrawGfxTile(xPos+7, yPos, 0x03F, smwVram);
+                                DrawGfxTile(xPos+8, yPos, 0x0A6, smwVram);
+                                yPos += 1;
+                                xPos += 1;
+                                DrawGfxTile(xPos, yPos, 0x0A3, smwVram);
+                                DrawGfxTile(xPos+1, yPos, 0x03F, smwVram);
+                                DrawGfxTile(xPos+2, yPos, 0x03F, smwVram);
+                                DrawGfxTile(xPos+3, yPos, 0x03F, smwVram);
+                                DrawGfxTile(xPos+4, yPos, 0x03F, smwVram);
+                                DrawGfxTile(xPos+5, yPos, 0x03F, smwVram);
+                                DrawGfxTile(xPos+6, yPos, 0x03F, smwVram);
+                                DrawGfxTile(xPos+7, yPos, 0x03F, smwVram);
+                                DrawGfxTile(xPos+8, yPos, 0x0A6, smwVram);
+
+
+                            }
+                            break;
+                        case StandardObject.TilesetSpecificStart14:
+                            // Right facing diagonal ledge (
+                            //
+                            // A                         0x0AF 0x1AF
+                            // B                   0x0A9 0x03F 0x1E4 0x1AF
+                            // C             0x0A9 0x03F 0x03F 0x03F 0x1E4 0x1AF
+                            // D       0x0A9 0x03F 0x03F 0x03F 0x03F 0x03F 0x1F9
+                            // E 0x0A9 0x03F 0x03F 0x03F 0x03F 0x03F 0x0AC            <- when P0>0 append rows like this
+                            //
+                            // p1 is done first, then p0 using longest length computed in p1
+                            // e.g. 0 0 would produce row A then a row 0x0A9 0x3F 0x1AF
+                            /// 02
+                            {
+                                DrawGfxTile(xPos, yPos, 0x0AF, smwVram);
+                                DrawGfxTile(xPos+1,yPos, 0x1AF, smwVram);
+                                yPos += 1;
+                                xPos -= 1;
+                                DrawGfxTile(xPos, yPos, 0x0A9, smwVram);
+                                DrawGfxTile(xPos+1, yPos, 0x03F, smwVram);
+                                DrawGfxTile(xPos+2, yPos, 0x1E4, smwVram);
+                                DrawGfxTile(xPos+3, yPos, 0x1AF, smwVram);
+                                yPos += 1;
+                                xPos -= 1;
+                                DrawGfxTile(xPos, yPos, 0x0A9, smwVram);
+                                DrawGfxTile(xPos+1, yPos, 0x03F, smwVram);
+                                DrawGfxTile(xPos+2, yPos, 0x03F, smwVram);
+                                DrawGfxTile(xPos+3, yPos, 0x03F, smwVram);
+                                DrawGfxTile(xPos+4, yPos, 0x1E4, smwVram);
+                                DrawGfxTile(xPos+5, yPos, 0x1AF, smwVram);
+                                yPos += 1;
+                                xPos -= 1;
+                                DrawGfxTile(xPos, yPos, 0x0A9, smwVram);
+                                DrawGfxTile(xPos+1, yPos, 0x03F, smwVram);
+                                DrawGfxTile(xPos+2, yPos, 0x03F, smwVram);
+                                DrawGfxTile(xPos+3, yPos, 0x03F, smwVram);
+                                DrawGfxTile(xPos+4, yPos, 0x03F, smwVram);
+                                DrawGfxTile(xPos+5, yPos, 0x03F, smwVram);
+                                DrawGfxTile(xPos+6, yPos, 0x1F9, smwVram);
+                            }
+
                             _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(StandardObject)objectNumber} @{xPos:X2},{yPos:X2} - Special {t2:X2}");
                             break;
                         case StandardObject.TilesetSpecificStart18:
@@ -1293,6 +1420,8 @@ public class SuperMarioVRam
         // Start with Coin, because that is easy :
         CopyAnimFrame(0x54, (12)*16+12, 0, 4);
         CopyAnimFrame(0x6C, (12)*16+12, 0, 4);
+        // QBlock
+        CopyAnimFrame(0x60, (12)*16+0, 0, 4);
 
 
     }
