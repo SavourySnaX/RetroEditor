@@ -601,6 +601,8 @@ public class SuperMarioWorldTestImage : IImage, IUserWindow
     enum SpriteObject
     {
 
+        RedKoopa = 0x05,
+
     }
 
 
@@ -752,7 +754,7 @@ public class SuperMarioWorldTestImage : IImage, IUserWindow
 
             if (smwRom.Layer2IsImage)
             {
-                RenderLayer2Image(ref smwRom, smwLevelHeader, smwRom.Layer2Data);
+                //RenderLayer2Image(ref smwRom, smwLevelHeader, smwRom.Layer2Data);
             }
             else
             {
@@ -761,7 +763,7 @@ public class SuperMarioWorldTestImage : IImage, IUserWindow
 
             RenderObjectLayer(ref smwRom, smwLevelHeader, smwRom.Layer1Data);
 
-            //RenderSpriteLayer(ref smwRom, smwLevelHeader, smwRom.SpriteData);
+            RenderSpriteLayer(ref smwRom, smwLevelHeader);
         }
 
         return pixels;
@@ -1179,6 +1181,49 @@ public class SuperMarioWorldTestImage : IImage, IUserWindow
             }
         }
     }
+
+    private void RenderSpriteLayer(ref SuperMarioWorldRomHelpers smwRom, SMWLevelHeader smwLevelHeader)
+    {
+        var spriteData = smwRom.SpriteData;
+        bool layerDone = false;
+        uint offset = 0;
+        _editorInterface.Log(LogType.Info, $"Sprites:");
+        while (!layerDone)
+        {
+            var triple = _rom.ReadBytes(ReadKind.Rom, spriteData + offset, 3);
+            if (triple[0] == 0xFF)
+            {
+                return;
+            }
+            // Check if Standard Object / Extended Object
+
+            var t0 = triple[0];  // yyyyEESY
+            var t1 = triple[1];  // XXXXssss
+            var t2 = triple[2];  // NNNNNNNN
+
+            offset += 3;
+
+            var spriteY = ((t0 & 1) << 4) | (t0 >> 4);
+            var spriteX = (t1 & 0xF0) >> 4;
+            var screenNumber = ((t0 & 0x02) << 3) | (t1 & 0x0F);
+            var spriteId = t2;
+            var spriteExtra = (t0 & 0x0C) >> 2;
+            
+            var yPos = spriteY;
+            var xPos = screenNumber * 16 + spriteX;
+
+            switch ((SpriteObject)spriteId)
+            {
+                default:
+                case SpriteObject.RedKoopa:
+                    Draw16x16Tile(xPos, yPos, new Pixel(255, 255, 128, 255));
+                    _editorInterface.Log(LogType.Info, $"{screenNumber:X2} | {spriteId:X2} {(SpriteObject)spriteId} @{xPos:X2},{yPos:X2} - Extra {spriteExtra:X2}");
+                    break;
+            }
+
+        }
+    }
+
 
     public void OnClose()
     {
