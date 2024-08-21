@@ -185,7 +185,10 @@ public static class SMWAddresses    // Super Mario World Japan 1.0 (headerless)
     public const uint MediumBush = 0x0DA747; // Definition of medium bush layout
 }
 
-
+public static class SomeConstants
+{
+    public const int DefaultLevel = 511;
+}
 
 ref struct SuperMarioWorldRomHelpers
 {
@@ -524,7 +527,7 @@ public class SuperMarioWorldTestImage : IImage, IUserWindow
     public void ConfigureWidgets(IMemoryAccess rom, IWidget widget, IPlayerControls playerControls)
     {
         widget.AddImageView(this);
-        temp_levelSelect = widget.AddSlider("Level", 0xC7, 0, 511, () => { runOnce = false; });
+        temp_levelSelect = widget.AddSlider("Level", SomeConstants.DefaultLevel, 0, 511, () => { runOnce = false; });
         widgetLabel = widget.AddLabel("");
     }
 
@@ -700,7 +703,7 @@ public class SuperMarioWorldTestImage : IImage, IUserWindow
         Draw8x8(tx, ty, 1, 1, tile16.BR, vram);
     }
 
-    void DrawGfxTiles(int tx,int ty,int tw,int th, SuperMarioVRam vram, int topTile, int otherRows)
+    void DrawGfxTilesYTopOther(int tx,int ty,int tw,int th, SuperMarioVRam vram, int topTile, int otherRows)
     {
         tw++;
         th++;
@@ -713,7 +716,7 @@ public class SuperMarioWorldTestImage : IImage, IUserWindow
             topTile = otherRows;
         }
     }
-
+    
     void DrawGfxTiles(int tx,int ty,int tw,int th, SuperMarioVRam vram, int leftTile, int middleTile, int rightTile)
     {
         tw++;
@@ -952,7 +955,7 @@ public class SuperMarioWorldTestImage : IImage, IUserWindow
                         _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(ExtendedObject)objectNumber} @{xPos:X2},{yPos:X2}");
                         break;
                     case ExtendedObject.YoshiCoin:
-                        DrawGfxTiles(xPos, yPos, 0, 1, vram, 0x2D, 0x2E);
+                        DrawGfxTilesYTopOther(xPos, yPos, 0, 1, vram, 0x2D, 0x2E);
                         _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(ExtendedObject)objectNumber} @{xPos:X2},{yPos:X2}");
                         break;
                     case ExtendedObject.RedBerry:
@@ -973,7 +976,7 @@ public class SuperMarioWorldTestImage : IImage, IUserWindow
                 switch ((StandardObject)objectNumber)
                 {
                     case StandardObject.GroundLedge:
-                        DrawGfxTiles(xPos, yPos, p1, p0, vram, 0x100, 0x3F);
+                        DrawGfxTilesYTopOther(xPos, yPos, p1, p0, vram, 0x100, 0x3F);
                         _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(StandardObject)objectNumber} @{xPos:X2},{yPos:X2} - Height {p0:X2} - Width {p1:X2}");
                         break;
                     case StandardObject.WaterBlue:
@@ -999,7 +1002,7 @@ public class SuperMarioWorldTestImage : IImage, IUserWindow
                         _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(StandardObject)objectNumber} @{xPos:X2},{yPos:X2} - Height {p0:X2} - Width {p1:X2}");
                         break;
                     case StandardObject.Coins:
-                        DrawGfxTiles(xPos, yPos, p1, p0, vram, 0x2B, 0x2B);
+                        DrawGfxTilesYTopOther(xPos, yPos, p1, p0, vram, 0x2B, 0x2B);
                         _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(StandardObject)objectNumber} @{xPos:X2},{yPos:X2} - Height {p0:X2} - Width {p1:X2}");
                         break;
                     case StandardObject.VerticalPipes:
@@ -1029,6 +1032,31 @@ public class SuperMarioWorldTestImage : IImage, IUserWindow
                         break;
 
                     case StandardObject.HorizontalPipes:
+                        switch (p0)
+                        {
+                            case 0: // Ends on left
+                            case 1: // exit enabled
+                                DrawGfxTile(xPos, yPos, 0x13B, vram);
+                                DrawGfxTile(xPos, yPos+1, 0x13C, vram);
+                                for (int a=1;a<=p1;a++)
+                                {
+                                    DrawGfxTile(xPos+a, yPos, 0x13D, vram);
+                                    DrawGfxTile(xPos+a, yPos+1, 0x13E, vram);
+                                }
+                                break;
+                            case 2: // Ends on right
+                            case 3: // exit enabled
+                                for (int a=0;a<p1;a++)
+                                {
+                                    DrawGfxTile(xPos+a, yPos, 0x13D, vram);
+                                    DrawGfxTile(xPos+a, yPos+1, 0x13E, vram);
+                                }
+                                DrawGfxTile(xPos+p1, yPos, 0x13B, vram);
+                                DrawGfxTile(xPos+p1, yPos+1, 0x13C, vram);
+                                break;
+                        }
+                        _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(StandardObject)objectNumber} @{xPos:X2},{yPos:X2} - Type {p0:X2} - Width {p1:X2}");
+                        break;
                     case StandardObject.RopeOrClouds:
                         DrawTiles(xPos, yPos, p1, 1, new Pixel(255, 255, 0, 255));
                         _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(StandardObject)objectNumber} @{xPos:X2},{yPos:X2} - Type {p0:X2} - Width {p1:X2}");
@@ -1039,7 +1067,7 @@ public class SuperMarioWorldTestImage : IImage, IUserWindow
                         _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(StandardObject)objectNumber} @{xPos:X2},{yPos:X2} - Height {p0:X2}");
                         break;
                     case StandardObject.LongGroundLedge:      // Long ground ledge
-                        DrawGfxTiles(xPos, yPos, t2, 1, vram, 0x100, 0x3F);
+                        DrawGfxTilesYTopOther(xPos, yPos, t2, 1, vram, 0x100, 0x3F);
                         _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(StandardObject)objectNumber} @{xPos:X2},{yPos:X2} - Length {t2:X2}");
                         break;
                     case StandardObject.DonutBridge:
@@ -1777,7 +1805,7 @@ public class SuperMarioWorldVramImage : IImage, IUserWindow
     public void ConfigureWidgets(IMemoryAccess rom, IWidget widget, IPlayerControls playerControls)
     {
         widget.AddImageView(this);
-        temp_levelSelect = widget.AddSlider("Level", 0xC7, 0, 511, () => { runOnce = false; });
+        temp_levelSelect = widget.AddSlider("Level", SomeConstants.DefaultLevel, 0, 511, () => { runOnce = false; });
     }
 
     public ReadOnlySpan<Pixel> GetImageData(float seconds)
@@ -1845,7 +1873,7 @@ public class SuperMarioWorldPaletteImage : IImage, IUserWindow
     public void ConfigureWidgets(IMemoryAccess rom, IWidget widget, IPlayerControls playerControls)
     {
         widget.AddImageView(this);
-        temp_levelSelect = widget.AddSlider("Level", 0xC7, 0, 511, () => { runOnce = false; });
+        temp_levelSelect = widget.AddSlider("Level",SomeConstants.DefaultLevel, 0, 511, () => { runOnce = false; });
     }
 
     public ReadOnlySpan<Pixel> GetImageData(float seconds)
@@ -1912,7 +1940,7 @@ public class SuperMarioWorldMap16Image : IImage, IUserWindow
     public void ConfigureWidgets(IMemoryAccess rom, IWidget widget, IPlayerControls playerControls)
     {
         widget.AddImageView(this);
-        temp_levelSelect = widget.AddSlider("Level", 0xC7, 0, 511, () => { runOnce = false; });
+        temp_levelSelect = widget.AddSlider("Level", SomeConstants.DefaultLevel, 0, 511, () => { runOnce = false; });
         temp_ShowBGMap = widget.AddCheckbox("Show BG Map", false, () => { runOnce = false; });
     }
 
