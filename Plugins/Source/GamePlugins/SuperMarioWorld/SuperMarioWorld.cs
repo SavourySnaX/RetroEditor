@@ -163,6 +163,7 @@ public static class SMWAddresses    // Super Mario World Japan 1.0 (headerless)
     public const uint TileData_1C8_1EB = 0x0D88B0;
     public const uint TileData_1EC_1EF = 0x0D89D0;
     public const uint TileData_1F0_1FF = 0x0D89F0;
+    public const uint TileData_Map16BG = 0x0D9100;
     public const uint GFX00_31_LowByteTable = 0x00B933;
     public const uint GFX00_31_HighByteTable = 0x00B965;
     public const uint GFX00_31_BankByteTable = 0x00B997;
@@ -191,9 +192,13 @@ ref struct SuperMarioWorldRomHelpers
     public uint Layer1Data => _layer1Address + 5;
     public uint Layer2Data => _layer2Address;
     public uint SpriteData => _spriteAddress + 1;
+    public uint Layer1SnesAddress => _layer1SnesAddress;
+    public uint Layer2SnesAddress => _layer2SnesAddress;
+    public uint SpriteSnesAddress => _spriteSnesAddress;
     public bool Layer2IsImage => _layer2Image;
     public SMWLevelHeader Header => _header;
     public SMWSpriteHeader SpriteHeader => _spriteHeader;
+    public bool Layer2ImagePage01 => _layer2ImagePage01;
 
     public SuperMarioWorldRomHelpers(IMemoryAccess rom, AddressTranslation addressTranslation, uint levelNumber)
     {
@@ -204,20 +209,26 @@ ref struct SuperMarioWorldRomHelpers
         var layer2Data = _rom.ReadBytes(ReadKind.Rom, _addressTranslation.ToImage(SMWAddresses.LevelDataLayer2 + 3 * levelNumber), 3);
         var spriteData = _rom.ReadBytes(ReadKind.Rom, _addressTranslation.ToImage(SMWAddresses.LevelDataSprites + 2 * levelNumber), 2);
 
-        _layer1Address = addressTranslation.ToImage((uint)((layer1Data[2] << 16) | (layer1Data[1] << 8) | layer1Data[0]));
+        _layer1SnesAddress = (uint)((layer1Data[2] << 16) | (layer1Data[1] << 8) | layer1Data[0]);
+        _layer2SnesAddress = (uint)(0x0C << 16) | (uint)((layer2Data[1] << 8) | layer2Data[0]);
+        _spriteSnesAddress = (uint)((0x07 << 16) | (spriteData[1] << 8) | spriteData[0]);
+
+
+        _layer1Address = addressTranslation.ToImage(_layer1SnesAddress);
         // Todo - grab secondary level header information from $05F000	$05F200	$05F400	$05F600	 <- check against J rom
         // Todo - handle identifying layer 2 as Background, or layer data
         _layer2Image = layer2Data[2] == 0xFF;
+        _layer2ImagePage01 = (_layer2SnesAddress & 0xFFFF) >= 0xE8FE;
         if (_layer2Image)
         {
             // Unclear if header present for this... 
-            _layer2Address = addressTranslation.ToImage((uint)(0x0C << 16) | (uint)((layer2Data[1] << 8) | layer2Data[0]));
+            _layer2Address = addressTranslation.ToImage(_layer2SnesAddress);
         }
         else
         {
-            _layer2Address = addressTranslation.ToImage((uint)((layer2Data[2] << 16) | (layer2Data[1] << 8) | layer2Data[0])) + 5;
+            _layer2Address = addressTranslation.ToImage(_layer2SnesAddress) + 5;
         }
-        _spriteAddress = addressTranslation.ToImage((uint)((0x07 << 16) | (spriteData[1] << 8) | spriteData[0]));
+        _spriteAddress = addressTranslation.ToImage(_spriteSnesAddress);
 
         var headerData = rom.ReadBytes(ReadKind.Rom, _layer1Address, 5);
         _header = new SMWLevelHeader(headerData);
@@ -229,9 +240,13 @@ ref struct SuperMarioWorldRomHelpers
     private IMemoryAccess _rom;
     private AddressTranslation _addressTranslation;
 
+    private uint _layer1SnesAddress;
+    private uint _layer2SnesAddress;
+    private uint _spriteSnesAddress;
     private uint _layer1Address;
     private uint _layer2Address;
     private bool _layer2Image;
+    private bool _layer2ImagePage01;
     private uint _spriteAddress;
     private SMWLevelHeader _header;
     private SMWSpriteHeader _spriteHeader;
@@ -469,6 +484,9 @@ class SMWMap16
         SetUpTiles(0x1C8,0x1EB,SMWAddresses.TileData_1C8_1EB,rom,addressTranslation);
         SetUpTiles(0x1EC,0x1EF,SMWAddresses.TileData_1EC_1EF,rom,addressTranslation);
         SetUpTiles(0x1F0,0x1FF,SMWAddresses.TileData_1F0_1FF,rom,addressTranslation);
+
+        // Finally, setup the map16 BG data (stored in slots 512-1023)
+        SetUpTiles(0x200,0x3FF,SMWAddresses.TileData_Map16BG,rom,addressTranslation);
     }
 
 
@@ -489,6 +507,7 @@ public class SuperMarioWorldTestImage : IImage, IUserWindow
     private IMemoryAccess _rom;
     private AddressTranslation _addressTranslation;
     private IWidgetRanged temp_levelSelect;
+    private IWidgetLabel widgetLabel;
     private IEditor _editorInterface;
 
     private SuperMarioPalette _palette;
@@ -506,6 +525,7 @@ public class SuperMarioWorldTestImage : IImage, IUserWindow
     {
         widget.AddImageView(this);
         temp_levelSelect = widget.AddSlider("Level", 0xC7, 0, 511, () => { runOnce = false; });
+        widgetLabel = widget.AddLabel("");
     }
 
     private bool runOnce = false;
@@ -746,6 +766,9 @@ public class SuperMarioWorldTestImage : IImage, IUserWindow
             var smwLevelHeader = smwRom.Header;
             _palette = new SuperMarioPalette(_rom, smwLevelHeader);
             _map16ToTile = new SMWMap16(_rom, _addressTranslation, smwLevelHeader);
+            var vram = new SuperMarioVRam(_rom, smwLevelHeader);
+
+            widgetLabel.Name = $"Layer 1 : {smwRom.Layer1SnesAddress:X6} Layer 2 : {smwRom.Layer2SnesAddress:X6} Sprite : {smwRom.SpriteSnesAddress:X6}";
 
             for (int i = 0; i < pixels.Length; i++)
             {
@@ -754,22 +777,22 @@ public class SuperMarioWorldTestImage : IImage, IUserWindow
 
             if (smwRom.Layer2IsImage)
             {
-                //RenderLayer2Image(ref smwRom, smwLevelHeader, smwRom.Layer2Data);
+                RenderLayer2Image(ref smwRom, smwLevelHeader, vram, smwRom.Layer2Data, smwRom.Layer2ImagePage01);
             }
             else
             {
-                RenderObjectLayer(ref smwRom, smwLevelHeader, smwRom.Layer2Data);
+                RenderObjectLayer(ref smwRom, smwLevelHeader, vram, smwRom.Layer2Data);
             }
 
-            RenderObjectLayer(ref smwRom, smwLevelHeader, smwRom.Layer1Data);
+            RenderObjectLayer(ref smwRom, smwLevelHeader, vram, smwRom.Layer1Data);
 
-            RenderSpriteLayer(ref smwRom, smwLevelHeader);
+            RenderSpriteLayer(ref smwRom, smwLevelHeader, vram);
         }
 
         return pixels;
     }
 
-    private void RenderLayer2Image(ref SuperMarioWorldRomHelpers smwRom, SMWLevelHeader smwLevelHeader, uint layerAddress)
+    private void RenderLayer2Image(ref SuperMarioWorldRomHelpers smwRom, SMWLevelHeader smwLevelHeader, SuperMarioVRam vram, uint layerAddress, bool useUpperPage)
     {
         var decompBuffer = new byte [32768];
         var writeOffs = 0;
@@ -798,6 +821,7 @@ public class SuperMarioWorldTestImage : IImage, IUserWindow
                         decompBuffer[writeOffs++] = data[i];
                     }
                 }
+                layerAddress += (uint)length;
             }
             else
             {
@@ -809,31 +833,25 @@ public class SuperMarioWorldTestImage : IImage, IUserWindow
             }
         }
 
-        // At this point we have uncompressed data, now what?
-        _editorInterface.Log(LogType.Info, $"Decompressed Layer 2 data to {writeOffs} bytes");
-
-        for (int a=0;a<writeOffs;a+=16)
+        // The decompBuffer is data to directly index the map16 second half data.
+        var offset = 512 + (useUpperPage ? 256 : 0);
+        for (int a=0;a<Width/256;a++)
         {
-            if (a+16>writeOffs)
+            var wOffset=a*16;
+            var decompBufferOffset = (a&1)*16*27;
+            for (int y = 0; y < 27; y++)
             {
-                break;
-            }
-            _editorInterface.Log(LogType.Info, $": {decompBuffer[a+0]:X2} {decompBuffer[a+1]:X2} {decompBuffer[a+2]:X2} {decompBuffer[a+3]:X2} {decompBuffer[a+4]:X2} {decompBuffer[a+5]:X2} {decompBuffer[a+6]:X2} {decompBuffer[a+7]:X2} {decompBuffer[a+8]:X2} {decompBuffer[a+9]:X2} {decompBuffer[a+10]:X2} {decompBuffer[a+11]:X2} {decompBuffer[a+12]:X2} {decompBuffer[a+13]:X2} {decompBuffer[a+14]:X2} {decompBuffer[a+15]:X2}");
-        }
-
-        // needs to draw with page80 version.. how is that unpacked though....
-        for (int y=0;y<26;y++)
-        {
-            for (int x=0;x<16;x++)
-            {
-                var tile = decompBuffer[y*32+x];
-                DrawGfxTile(x, y, tile, new SuperMarioVRam(_rom, smwLevelHeader));
+                for (int x = 0; x < 16; x++)
+                {
+                    var tile = decompBuffer[decompBufferOffset + y * 16 + x] + offset;
+                    DrawGfxTile(wOffset+x, y, tile, vram);
+                }
             }
         }
 
     }
 
-    private void RenderObjectLayer(ref SuperMarioWorldRomHelpers smwRom, SMWLevelHeader smwLevelHeader, uint layerAddress)
+    private void RenderObjectLayer(ref SuperMarioWorldRomHelpers smwRom, SMWLevelHeader smwLevelHeader, SuperMarioVRam vram,  uint layerAddress)
     {
         var screenOffsetNumber = 0;
         bool layerDone = false;
@@ -884,8 +902,6 @@ public class SuperMarioWorldTestImage : IImage, IUserWindow
             var p0 = (t2 & 0xF0) >> 4;
             var p1 = t2 & 0x0F;
 
-            var smwVram = new SuperMarioVRam(_rom, smwLevelHeader);
-
             var screenNumber = t0 & 0x1F;
 
             if (extended)
@@ -923,26 +939,26 @@ public class SuperMarioWorldTestImage : IImage, IUserWindow
                         _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(ExtendedObject)objectNumber} @{xPos:X2},{yPos:X2}");
                         break;
                     case ExtendedObject.QBlockYoshi:
-                        DrawGfxTile(xPos, yPos, 0x126, smwVram);
+                        DrawGfxTile(xPos, yPos, 0x126, vram);
                         _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(ExtendedObject)objectNumber} @{xPos:X2},{yPos:X2}");
                         break;
                     case ExtendedObject.BigBush1:
                         // See table referenced by code at DA106 - For now, I've just done things by hand, but perhaps we should automate this
-                        DrawGfxTilesFixedPattern(xPos, yPos, 9, 45, smwVram, SMWAddresses.LargeBush);
+                        DrawGfxTilesFixedPattern(xPos, yPos, 9, 45, vram, SMWAddresses.LargeBush);
                         _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(ExtendedObject)objectNumber} @{xPos:X2},{yPos:X2}");
                         break;
                     case ExtendedObject.BigBush2:
-                        DrawGfxTilesFixedPattern(xPos, yPos, 6, 24, smwVram, SMWAddresses.MediumBush);
+                        DrawGfxTilesFixedPattern(xPos, yPos, 6, 24, vram, SMWAddresses.MediumBush);
                         _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(ExtendedObject)objectNumber} @{xPos:X2},{yPos:X2}");
                         break;
                     case ExtendedObject.YoshiCoin:
-                        DrawGfxTiles(xPos, yPos, 0, 1, smwVram, 0x2D, 0x2E);
+                        DrawGfxTiles(xPos, yPos, 0, 1, vram, 0x2D, 0x2E);
                         _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(ExtendedObject)objectNumber} @{xPos:X2},{yPos:X2}");
                         break;
                     case ExtendedObject.RedBerry:
                     case ExtendedObject.PinkBerry:
                     case ExtendedObject.GreenBerry:
-                        DrawGfxTile(xPos, yPos, (objectNumber - (int)ExtendedObject.RedBerry) + 0x45, smwVram);
+                        DrawGfxTile(xPos, yPos, (objectNumber - (int)ExtendedObject.RedBerry) + 0x45, vram);
                         _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(ExtendedObject)objectNumber} @{xPos:X2},{yPos:X2}");
                         break;
                     default:
@@ -957,7 +973,7 @@ public class SuperMarioWorldTestImage : IImage, IUserWindow
                 switch ((StandardObject)objectNumber)
                 {
                     case StandardObject.GroundLedge:
-                        DrawGfxTiles(xPos, yPos, p1, p0, smwVram, 0x100, 0x3F);
+                        DrawGfxTiles(xPos, yPos, p1, p0, vram, 0x100, 0x3F);
                         _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(StandardObject)objectNumber} @{xPos:X2},{yPos:X2} - Height {p0:X2} - Width {p1:X2}");
                         break;
                     case StandardObject.WaterBlue:
@@ -983,7 +999,7 @@ public class SuperMarioWorldTestImage : IImage, IUserWindow
                         _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(StandardObject)objectNumber} @{xPos:X2},{yPos:X2} - Height {p0:X2} - Width {p1:X2}");
                         break;
                     case StandardObject.Coins:
-                        DrawGfxTiles(xPos, yPos, p1, p0, smwVram, 0x2B, 0x2B);
+                        DrawGfxTiles(xPos, yPos, p1, p0, vram, 0x2B, 0x2B);
                         _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(StandardObject)objectNumber} @{xPos:X2},{yPos:X2} - Height {p0:X2} - Width {p1:X2}");
                         break;
                     case StandardObject.VerticalPipes:
@@ -997,15 +1013,15 @@ public class SuperMarioWorldTestImage : IImage, IUserWindow
                         if (p1 == 5)
                         {
                             // NOTE PADS next hieght with 3Fs on the left
-                            DrawGfxTile(xPos, yPos, 0x182, smwVram);
-                            DrawGfxTile(xPos + 1, yPos, 0x187, smwVram);
-                            DrawGfxTile(xPos + 2, yPos, 0x18C, smwVram);
-                            DrawGfxTile(xPos + 3, yPos, 0x191, smwVram);
+                            DrawGfxTile(xPos, yPos, 0x182, vram);
+                            DrawGfxTile(xPos + 1, yPos, 0x187, vram);
+                            DrawGfxTile(xPos + 2, yPos, 0x18C, vram);
+                            DrawGfxTile(xPos + 3, yPos, 0x191, vram);
                             yPos += 1;
-                            DrawGfxTile(xPos, yPos, 0x1E6, smwVram);
-                            DrawGfxTile(xPos + 1, yPos, 0x1E6, smwVram);
-                            DrawGfxTile(xPos + 2, yPos, 0x1DB, smwVram);
-                            DrawGfxTile(xPos + 3, yPos, 0x1DC, smwVram);
+                            DrawGfxTile(xPos, yPos, 0x1E6, vram);
+                            DrawGfxTile(xPos + 1, yPos, 0x1E6, vram);
+                            DrawGfxTile(xPos + 2, yPos, 0x1DB, vram);
+                            DrawGfxTile(xPos + 3, yPos, 0x1DC, vram);
                         }
                         else
                             DrawTiles(xPos, yPos, 1, p0, new Pixel(255, 0, 255, 255));
@@ -1023,7 +1039,7 @@ public class SuperMarioWorldTestImage : IImage, IUserWindow
                         _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(StandardObject)objectNumber} @{xPos:X2},{yPos:X2} - Height {p0:X2}");
                         break;
                     case StandardObject.LongGroundLedge:      // Long ground ledge
-                        DrawGfxTiles(xPos, yPos, t2, 1, smwVram, 0x100, 0x3F);
+                        DrawGfxTiles(xPos, yPos, t2, 1, vram, 0x100, 0x3F);
                         _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(StandardObject)objectNumber} @{xPos:X2},{yPos:X2} - Length {t2:X2}");
                         break;
                     case StandardObject.DonutBridge:
@@ -1052,64 +1068,64 @@ public class SuperMarioWorldTestImage : IImage, IUserWindow
                     case StandardObject.TilesetSpecificStart13:
                         // Left facing diagonal ledge (see right, just different codes basically)
                         {
-                            DrawGfxTile(xPos, yPos, 0x1AA, smwVram);
-                            DrawGfxTile(xPos + 1, yPos, 0x0A1, smwVram);
+                            DrawGfxTile(xPos, yPos, 0x1AA, vram);
+                            DrawGfxTile(xPos + 1, yPos, 0x0A1, vram);
                             yPos += 1;
                             xPos -= 1;
-                            DrawGfxTile(xPos, yPos, 0x1AA, smwVram);
-                            DrawGfxTile(xPos + 1, yPos, 0x1E2, smwVram);
-                            DrawGfxTile(xPos + 2, yPos, 0x03F, smwVram);
-                            DrawGfxTile(xPos + 3, yPos, 0x0A6, smwVram);
+                            DrawGfxTile(xPos, yPos, 0x1AA, vram);
+                            DrawGfxTile(xPos + 1, yPos, 0x1E2, vram);
+                            DrawGfxTile(xPos + 2, yPos, 0x03F, vram);
+                            DrawGfxTile(xPos + 3, yPos, 0x0A6, vram);
                             yPos += 1;
                             xPos -= 1;
-                            DrawGfxTile(xPos, yPos, 0x1AA, smwVram);
-                            DrawGfxTile(xPos + 1, yPos, 0x1E2, smwVram);
-                            DrawGfxTile(xPos + 2, yPos, 0x03F, smwVram);
-                            DrawGfxTile(xPos + 3, yPos, 0x03F, smwVram);
-                            DrawGfxTile(xPos + 4, yPos, 0x03F, smwVram);
-                            DrawGfxTile(xPos + 5, yPos, 0x0A6, smwVram);
+                            DrawGfxTile(xPos, yPos, 0x1AA, vram);
+                            DrawGfxTile(xPos + 1, yPos, 0x1E2, vram);
+                            DrawGfxTile(xPos + 2, yPos, 0x03F, vram);
+                            DrawGfxTile(xPos + 3, yPos, 0x03F, vram);
+                            DrawGfxTile(xPos + 4, yPos, 0x03F, vram);
+                            DrawGfxTile(xPos + 5, yPos, 0x0A6, vram);
                             yPos += 1;
                             xPos -= 1;
-                            DrawGfxTile(xPos, yPos, 0x1AA, smwVram);
-                            DrawGfxTile(xPos + 1, yPos, 0x1E2, smwVram);
-                            DrawGfxTile(xPos + 2, yPos, 0x03F, smwVram);
-                            DrawGfxTile(xPos + 3, yPos, 0x03F, smwVram);
-                            DrawGfxTile(xPos + 4, yPos, 0x03F, smwVram);
-                            DrawGfxTile(xPos + 5, yPos, 0x03F, smwVram);
-                            DrawGfxTile(xPos + 6, yPos, 0x03F, smwVram);
-                            DrawGfxTile(xPos + 7, yPos, 0x0A6, smwVram);
+                            DrawGfxTile(xPos, yPos, 0x1AA, vram);
+                            DrawGfxTile(xPos + 1, yPos, 0x1E2, vram);
+                            DrawGfxTile(xPos + 2, yPos, 0x03F, vram);
+                            DrawGfxTile(xPos + 3, yPos, 0x03F, vram);
+                            DrawGfxTile(xPos + 4, yPos, 0x03F, vram);
+                            DrawGfxTile(xPos + 5, yPos, 0x03F, vram);
+                            DrawGfxTile(xPos + 6, yPos, 0x03F, vram);
+                            DrawGfxTile(xPos + 7, yPos, 0x0A6, vram);
                             yPos += 1;
-                            DrawGfxTile(xPos, yPos, 0x1F7, smwVram);
-                            DrawGfxTile(xPos + 1, yPos, 0x03F, smwVram);
-                            DrawGfxTile(xPos + 2, yPos, 0x03F, smwVram);
-                            DrawGfxTile(xPos + 3, yPos, 0x03F, smwVram);
-                            DrawGfxTile(xPos + 4, yPos, 0x03F, smwVram);
-                            DrawGfxTile(xPos + 5, yPos, 0x03F, smwVram);
-                            DrawGfxTile(xPos + 6, yPos, 0x03F, smwVram);
-                            DrawGfxTile(xPos + 7, yPos, 0x03F, smwVram);
-                            DrawGfxTile(xPos + 8, yPos, 0x0A6, smwVram);
+                            DrawGfxTile(xPos, yPos, 0x1F7, vram);
+                            DrawGfxTile(xPos + 1, yPos, 0x03F, vram);
+                            DrawGfxTile(xPos + 2, yPos, 0x03F, vram);
+                            DrawGfxTile(xPos + 3, yPos, 0x03F, vram);
+                            DrawGfxTile(xPos + 4, yPos, 0x03F, vram);
+                            DrawGfxTile(xPos + 5, yPos, 0x03F, vram);
+                            DrawGfxTile(xPos + 6, yPos, 0x03F, vram);
+                            DrawGfxTile(xPos + 7, yPos, 0x03F, vram);
+                            DrawGfxTile(xPos + 8, yPos, 0x0A6, vram);
                             yPos += 1;
                             xPos += 1;
-                            DrawGfxTile(xPos, yPos, 0x0A3, smwVram);
-                            DrawGfxTile(xPos + 1, yPos, 0x03F, smwVram);
-                            DrawGfxTile(xPos + 2, yPos, 0x03F, smwVram);
-                            DrawGfxTile(xPos + 3, yPos, 0x03F, smwVram);
-                            DrawGfxTile(xPos + 4, yPos, 0x03F, smwVram);
-                            DrawGfxTile(xPos + 5, yPos, 0x03F, smwVram);
-                            DrawGfxTile(xPos + 6, yPos, 0x03F, smwVram);
-                            DrawGfxTile(xPos + 7, yPos, 0x03F, smwVram);
-                            DrawGfxTile(xPos + 8, yPos, 0x0A6, smwVram);
+                            DrawGfxTile(xPos, yPos, 0x0A3, vram);
+                            DrawGfxTile(xPos + 1, yPos, 0x03F, vram);
+                            DrawGfxTile(xPos + 2, yPos, 0x03F, vram);
+                            DrawGfxTile(xPos + 3, yPos, 0x03F, vram);
+                            DrawGfxTile(xPos + 4, yPos, 0x03F, vram);
+                            DrawGfxTile(xPos + 5, yPos, 0x03F, vram);
+                            DrawGfxTile(xPos + 6, yPos, 0x03F, vram);
+                            DrawGfxTile(xPos + 7, yPos, 0x03F, vram);
+                            DrawGfxTile(xPos + 8, yPos, 0x0A6, vram);
                             yPos += 1;
                             xPos += 1;
-                            DrawGfxTile(xPos, yPos, 0x0A3, smwVram);
-                            DrawGfxTile(xPos + 1, yPos, 0x03F, smwVram);
-                            DrawGfxTile(xPos + 2, yPos, 0x03F, smwVram);
-                            DrawGfxTile(xPos + 3, yPos, 0x03F, smwVram);
-                            DrawGfxTile(xPos + 4, yPos, 0x03F, smwVram);
-                            DrawGfxTile(xPos + 5, yPos, 0x03F, smwVram);
-                            DrawGfxTile(xPos + 6, yPos, 0x03F, smwVram);
-                            DrawGfxTile(xPos + 7, yPos, 0x03F, smwVram);
-                            DrawGfxTile(xPos + 8, yPos, 0x0A6, smwVram);
+                            DrawGfxTile(xPos, yPos, 0x0A3, vram);
+                            DrawGfxTile(xPos + 1, yPos, 0x03F, vram);
+                            DrawGfxTile(xPos + 2, yPos, 0x03F, vram);
+                            DrawGfxTile(xPos + 3, yPos, 0x03F, vram);
+                            DrawGfxTile(xPos + 4, yPos, 0x03F, vram);
+                            DrawGfxTile(xPos + 5, yPos, 0x03F, vram);
+                            DrawGfxTile(xPos + 6, yPos, 0x03F, vram);
+                            DrawGfxTile(xPos + 7, yPos, 0x03F, vram);
+                            DrawGfxTile(xPos + 8, yPos, 0x0A6, vram);
 
 
                         }
@@ -1127,31 +1143,31 @@ public class SuperMarioWorldTestImage : IImage, IUserWindow
                         // e.g. 0 0 would produce row A then a row 0x0A9 0x3F 0x1AF
                         /// 02
                         {
-                            DrawGfxTile(xPos, yPos, 0x0AF, smwVram);
-                            DrawGfxTile(xPos + 1, yPos, 0x1AF, smwVram);
+                            DrawGfxTile(xPos, yPos, 0x0AF, vram);
+                            DrawGfxTile(xPos + 1, yPos, 0x1AF, vram);
                             yPos += 1;
                             xPos -= 1;
-                            DrawGfxTile(xPos, yPos, 0x0A9, smwVram);
-                            DrawGfxTile(xPos + 1, yPos, 0x03F, smwVram);
-                            DrawGfxTile(xPos + 2, yPos, 0x1E4, smwVram);
-                            DrawGfxTile(xPos + 3, yPos, 0x1AF, smwVram);
+                            DrawGfxTile(xPos, yPos, 0x0A9, vram);
+                            DrawGfxTile(xPos + 1, yPos, 0x03F, vram);
+                            DrawGfxTile(xPos + 2, yPos, 0x1E4, vram);
+                            DrawGfxTile(xPos + 3, yPos, 0x1AF, vram);
                             yPos += 1;
                             xPos -= 1;
-                            DrawGfxTile(xPos, yPos, 0x0A9, smwVram);
-                            DrawGfxTile(xPos + 1, yPos, 0x03F, smwVram);
-                            DrawGfxTile(xPos + 2, yPos, 0x03F, smwVram);
-                            DrawGfxTile(xPos + 3, yPos, 0x03F, smwVram);
-                            DrawGfxTile(xPos + 4, yPos, 0x1E4, smwVram);
-                            DrawGfxTile(xPos + 5, yPos, 0x1AF, smwVram);
+                            DrawGfxTile(xPos, yPos, 0x0A9, vram);
+                            DrawGfxTile(xPos + 1, yPos, 0x03F, vram);
+                            DrawGfxTile(xPos + 2, yPos, 0x03F, vram);
+                            DrawGfxTile(xPos + 3, yPos, 0x03F, vram);
+                            DrawGfxTile(xPos + 4, yPos, 0x1E4, vram);
+                            DrawGfxTile(xPos + 5, yPos, 0x1AF, vram);
                             yPos += 1;
                             xPos -= 1;
-                            DrawGfxTile(xPos, yPos, 0x0A9, smwVram);
-                            DrawGfxTile(xPos + 1, yPos, 0x03F, smwVram);
-                            DrawGfxTile(xPos + 2, yPos, 0x03F, smwVram);
-                            DrawGfxTile(xPos + 3, yPos, 0x03F, smwVram);
-                            DrawGfxTile(xPos + 4, yPos, 0x03F, smwVram);
-                            DrawGfxTile(xPos + 5, yPos, 0x03F, smwVram);
-                            DrawGfxTile(xPos + 6, yPos, 0x1F9, smwVram);
+                            DrawGfxTile(xPos, yPos, 0x0A9, vram);
+                            DrawGfxTile(xPos + 1, yPos, 0x03F, vram);
+                            DrawGfxTile(xPos + 2, yPos, 0x03F, vram);
+                            DrawGfxTile(xPos + 3, yPos, 0x03F, vram);
+                            DrawGfxTile(xPos + 4, yPos, 0x03F, vram);
+                            DrawGfxTile(xPos + 5, yPos, 0x03F, vram);
+                            DrawGfxTile(xPos + 6, yPos, 0x1F9, vram);
                         }
 
                         _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(StandardObject)objectNumber} @{xPos:X2},{yPos:X2} - Special {t2:X2}");
@@ -1162,13 +1178,13 @@ public class SuperMarioWorldTestImage : IImage, IUserWindow
                         {
                             default:
                             case 0:
-                                DrawGfxTiles(xPos, yPos, p1, 0, smwVram, 0x73, 0x74, 0x79);
+                                DrawGfxTiles(xPos, yPos, p1, 0, vram, 0x73, 0x74, 0x79);
                                 break;
                             case 1:
-                                DrawGfxTiles(xPos, yPos, p1, 0, smwVram, 0x7A, 0x7B, 0x80);
+                                DrawGfxTiles(xPos, yPos, p1, 0, vram, 0x7A, 0x7B, 0x80);
                                 break;
                             case 2:
-                                DrawGfxTiles(xPos, yPos, p1, 0, smwVram, 0x85, 0x86, 0x87);
+                                DrawGfxTiles(xPos, yPos, p1, 0, vram, 0x85, 0x86, 0x87);
                                 break;
                         }
                         _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(StandardObject)objectNumber} @{xPos:X2},{yPos:X2} - Special {t2:X2}");
@@ -1182,7 +1198,7 @@ public class SuperMarioWorldTestImage : IImage, IUserWindow
         }
     }
 
-    private void RenderSpriteLayer(ref SuperMarioWorldRomHelpers smwRom, SMWLevelHeader smwLevelHeader)
+    private void RenderSpriteLayer(ref SuperMarioWorldRomHelpers smwRom, SMWLevelHeader smwLevelHeader, SuperMarioVRam vram)
     {
         var spriteData = smwRom.SpriteData;
         bool layerDone = false;
@@ -1884,6 +1900,7 @@ public class SuperMarioWorldMap16Image : IImage, IUserWindow
     private IMemoryAccess _rom;
     private AddressTranslation _addressTranslation;
     private IWidgetRanged temp_levelSelect;
+    private IWidgetCheckable temp_ShowBGMap;
     private bool runOnce = false;
 
     public SuperMarioWorldMap16Image(IEditor editorInterface, IMemoryAccess rom)
@@ -1896,7 +1913,9 @@ public class SuperMarioWorldMap16Image : IImage, IUserWindow
     {
         widget.AddImageView(this);
         temp_levelSelect = widget.AddSlider("Level", 0xC7, 0, 511, () => { runOnce = false; });
+        temp_ShowBGMap = widget.AddCheckbox("Show BG Map", false, () => { runOnce = false; });
     }
+
     private const uint NumberOfTiles = 0x200;
 
     void Draw8x8(int tx, int ty, int xo,int yo, SubTile tile, SuperMarioVRam vram, SuperMarioPalette palette)
@@ -1941,15 +1960,18 @@ public class SuperMarioWorldMap16Image : IImage, IUserWindow
             var palette = new SuperMarioPalette(_rom, smwLevelHeader);
             pixels = new Pixel[Width * Height];
 
+            int tilesOffset = temp_ShowBGMap.Checked ? 0x200 : 0;
             for (int tiles = 0; tiles < NumberOfTiles; tiles++)
             {
                 var tx = tiles % 16;
                 var ty = tiles / 16;
 
+                var offset = tiles + tilesOffset;
+
                 // Fetch map16 tile and render
-                if (map16.Has(tiles))
+                if (map16.Has(offset))
                 {
-                    var map16Tile = map16[tiles];
+                    var map16Tile = map16[offset];
 
                     Draw8x8(tx, ty, 0, 0, map16Tile.TL, smwVRam, palette);
                     Draw8x8(tx, ty, 1, 0, map16Tile.TR, smwVRam, palette);
