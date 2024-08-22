@@ -147,8 +147,8 @@ public static class SMWAddresses    // Super Mario World Japan 1.0 (headerless)
     public const uint TileSet3Base_073 = 0x0DD400;
     public const uint TileSet4Base_073 = 0x0DE300;
     public const uint TileSet0Base_100 = 0x0D8398;
-    public const uint TileSet1Base_100 = 0x0DC068;
-    public const uint TileSet2Base_100 = 0x0DCC68;
+    public const uint TileSet1Base_100 = 0x0D8398;    // To align floor top tiles in 510
+    public const uint TileSet2Base_100 = 0x0DCC30;    // To align mushroom floor in 511
     public const uint TileSet3Base_100 = 0x0DD868;
     public const uint TileSet4Base_100 = 0x0DE768;
     public const uint TileData_107_110 = 0x0DC068;
@@ -187,7 +187,7 @@ public static class SMWAddresses    // Super Mario World Japan 1.0 (headerless)
 
 public static class SomeConstants
 {
-    public const int DefaultLevel = 511;
+    public const int DefaultLevel = 510;
 }
 
 ref struct SuperMarioWorldRomHelpers
@@ -369,6 +369,43 @@ public struct SMWLevelHeader
         VerticalScrollSetting = (byte)((data[4] & 0x30) >> 4);
         FGBGGFXSetting = (byte)(data[4] & 0x0F);
     }
+
+    public enum Tileset
+    {
+        NormalCloudForest = 0x00,
+        Castle1 = 0x01,
+        Rope = 0x02,
+        UndergroundPalace2Castle2 = 0x03,
+        GhostHouseSwitchPalace1 = 0x04,
+    }
+
+    public Tileset GetTileset()
+    {
+        switch (FGBGGFXSetting)
+        {
+            default:
+            case 0x00:                      // Normal 1
+            case 0x07:                      // Normal 2
+            case 0x0C:                      // Cloud/Forest
+                return Tileset.NormalCloudForest;
+            case 0x01:                      // Castle 1
+                return Tileset.Castle1;
+            case 0x02:                      // Rope 1
+            case 0x06:                      // Rope 2
+            case 0x08:                      // Rope 3
+                return Tileset.Rope;
+            case 0x03:                      // Underground 1
+            case 0x09:                      // Underground 2
+            case 0x0E:                      // Underground 3
+            case 0x0A:                      // Switch Palace 2
+            case 0x0B:                      // Castle 2
+                return Tileset.UndergroundPalace2Castle2;
+            case 0x04:                      // Switch Palace 1
+            case 0x05:                      // Ghost House 1
+            case 0x0D:                      // Ghost House 2
+                return Tileset.GhostHouseSwitchPalace1;
+        }
+    }
 }
 
 public struct SMWSpriteHeader
@@ -439,37 +476,26 @@ class SMWMap16
         var baseAddressTileSpecific073 = SMWAddresses.TileSet0Base_073;
         var baseAddressTileSpecific100 = SMWAddresses.TileSet0Base_100;
         var baseAddressTileSpecific153 = SMWAddresses.TileSet0Base_153;
-        switch (header.FGBGGFXSetting)
+        switch (header.GetTileset())
         {
-            default:
-            case 0x00:                      // Normal 1
-            case 0x07:                      // Normal 2
-            case 0x0C:                      // Cloud/Forest
+            case SMWLevelHeader.Tileset.NormalCloudForest:
                 break;
-            case 0x01:                      // Castle 1
+            case SMWLevelHeader.Tileset.Castle1:
                 baseAddressTileSpecific073 = SMWAddresses.TileSet1Base_073;
                 baseAddressTileSpecific100 = SMWAddresses.TileSet1Base_100;
                 baseAddressTileSpecific153 = SMWAddresses.TileSet1Base_153;
                 break;
-            case 0x02:                      // Rope 1
-            case 0x06:                      // Rope 2
-            case 0x08:                      // Rope 3
+            case SMWLevelHeader.Tileset.Rope:
                 baseAddressTileSpecific073 = SMWAddresses.TileSet2Base_073;
                 baseAddressTileSpecific100 = SMWAddresses.TileSet2Base_100;
                 baseAddressTileSpecific153 = SMWAddresses.TileSet2Base_153;
                 break;
-            case 0x03:                      // Underground 1
-            case 0x09:                      // Underground 2
-            case 0x0E:                      // Underground 3
-            case 0x0A:                      // Switch Palace 2
-            case 0x0B:                      // Castle 2
+            case SMWLevelHeader.Tileset.UndergroundPalace2Castle2:
                 baseAddressTileSpecific073 = SMWAddresses.TileSet3Base_073;
                 baseAddressTileSpecific100 = SMWAddresses.TileSet3Base_100;
                 baseAddressTileSpecific153 = SMWAddresses.TileSet3Base_153;
                 break;
-            case 0x04:                      // Switch Palace 1
-            case 0x05:                      // Ghost House 1
-            case 0x0D:                      // Ghost House 2
+            case SMWLevelHeader.Tileset.GhostHouseSwitchPalace1:
                 baseAddressTileSpecific073 = SMWAddresses.TileSet4Base_073;
                 baseAddressTileSpecific100 = SMWAddresses.TileSet4Base_100;
                 baseAddressTileSpecific153 = SMWAddresses.TileSet4Base_153;
@@ -478,8 +504,7 @@ class SMWMap16
 
         SetUpTiles(0x000,0x072,SMWAddresses.TileData_000_072,rom,addressTranslation);
         SetUpTiles(0x073,0x0FF,baseAddressTileSpecific073,rom,addressTranslation);
-        SetUpTiles(0x100,0x106,baseAddressTileSpecific100,rom,addressTranslation);
-        SetUpTiles(0x107,0x110,SMWAddresses.TileData_107_110,rom,addressTranslation);
+        SetUpTiles(0x100,0x110,baseAddressTileSpecific100,rom,addressTranslation);
         SetUpTiles(0x111,0x152,SMWAddresses.TileData_111_152,rom,addressTranslation);
         SetUpTiles(0x153,0x16D,baseAddressTileSpecific153,rom,addressTranslation);
         SetUpTiles(0x16E,0x1C3,SMWAddresses.TileData_16E_1C3,rom,addressTranslation);
@@ -705,36 +730,50 @@ public class SuperMarioWorldTestImage : IImage, IUserWindow
 
     void DrawGfxTilesYTopOther(int tx,int ty,int tw,int th, SuperMarioVRam vram, int topTile, int otherRows)
     {
-        tw++;
-        th++;
-        for (int y = 0; y < th; y++)
-        {
-            for (int x = 0; x < tw; x++)
-            {
-                DrawGfxTile(tx + x, ty + y, topTile, vram);
-            }
-            topTile = otherRows;
-        }
+        DrawGfx9Tile(tx, ty, tw, th, vram, new int[] { topTile, topTile, topTile, otherRows, otherRows, otherRows, otherRows, otherRows, otherRows });
     }
-    
-    void DrawGfxTiles(int tx,int ty,int tw,int th, SuperMarioVRam vram, int leftTile, int middleTile, int rightTile)
+
+    void DrawGfx9Tile(int tx,int ty,int tw,int th, SuperMarioVRam vram, int[] tiles)
     {
+        int t0,t1,t2;
         tw++;
         th++;
         for (int y = 0; y < th; y++)
         {
+            if (y==0)
+            {
+                t0=tiles[0];
+                t1=tiles[1];
+                t2=tiles[2];
+            }
+            else if (y==th-1)
+            {
+                t0=tiles[6];
+                t1=tiles[7];
+                t2=tiles[8];
+            }
+            else
+            {
+                t0=tiles[3];
+                t1=tiles[4];
+                t2=tiles[5];
+            }
             for (int x = 0; x < tw; x++)
             {
                 if (x==0)
-                    DrawGfxTile(tx + x, ty + y, leftTile, vram);
+                    DrawGfxTile(tx + x, ty + y, t0, vram);
                 else if (x==tw-1)
-                    DrawGfxTile(tx + x, ty + y, rightTile, vram);
+                    DrawGfxTile(tx + x, ty + y, t2, vram);
                 else
-                    DrawGfxTile(tx + x, ty + y, middleTile, vram);
+                    DrawGfxTile(tx + x, ty + y, t1, vram);
             }
         }
     }
 
+    void DrawGfxTiles(int tx,int ty,int tw,int th, SuperMarioVRam vram, int leftTile, int middleTile, int rightTile)
+    {
+        DrawGfx9Tile(tx, ty, tw, th, vram, new int[] { leftTile, middleTile, rightTile, leftTile, middleTile, rightTile, leftTile, middleTile, rightTile });
+    }
 
     void DrawGfxTilesFixedPattern(int tx, int ty, int tw, uint totalCount, SuperMarioVRam vram, uint snesAddress)
     {
@@ -771,7 +810,7 @@ public class SuperMarioWorldTestImage : IImage, IUserWindow
             _map16ToTile = new SMWMap16(_rom, _addressTranslation, smwLevelHeader);
             var vram = new SuperMarioVRam(_rom, smwLevelHeader);
 
-            widgetLabel.Name = $"Layer 1 : {smwRom.Layer1SnesAddress:X6} Layer 2 : {smwRom.Layer2SnesAddress:X6} Sprite : {smwRom.SpriteSnesAddress:X6}";
+            widgetLabel.Name = $"Layer 1 : {smwRom.Layer1SnesAddress:X6} Layer 2 : {smwRom.Layer2SnesAddress:X6} Sprite : {smwRom.SpriteSnesAddress:X6} - {smwLevelHeader.GetTileset()}";
 
             for (int i = 0; i < pixels.Length; i++)
             {
@@ -983,7 +1022,6 @@ public class SuperMarioWorldTestImage : IImage, IUserWindow
                     case StandardObject.InvisibleCoinBlocks:
                     case StandardObject.InvisibleNoteBlocks:
                     case StandardObject.InvisiblePowCoins:
-                    case StandardObject.WalkThroughDirt:
                     case StandardObject.WaterOtherColor:
                     case StandardObject.NoteBlocks:
                     case StandardObject.TurnBlocks:
@@ -1001,15 +1039,48 @@ public class SuperMarioWorldTestImage : IImage, IUserWindow
                         DrawTiles(xPos, yPos, p1, p0, new Pixel(0, 255, 255, 255));
                         _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(StandardObject)objectNumber} @{xPos:X2},{yPos:X2} - Height {p0:X2} - Width {p1:X2}");
                         break;
+                    case StandardObject.WalkThroughDirt:
+                        DrawGfxTiles(xPos, yPos, p1, p0, vram, 0x3F, 0x3F, 0x3F);
+                        _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(StandardObject)objectNumber} @{xPos:X2},{yPos:X2} - Height {p0:X2} - Width {p1:X2}");
+                        break;
                     case StandardObject.Coins:
                         DrawGfxTilesYTopOther(xPos, yPos, p1, p0, vram, 0x2B, 0x2B);
                         _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(StandardObject)objectNumber} @{xPos:X2},{yPos:X2} - Height {p0:X2} - Width {p1:X2}");
                         break;
                     case StandardObject.VerticalPipes:
-                    case StandardObject.LedgeEdges:
-                    case StandardObject.MidwayGoalPoint:
                     case StandardObject.NetVerticalEdge:
                         DrawTiles(xPos, yPos, 1, p0, new Pixel(255, 0, 255, 255));
+                        _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(StandardObject)objectNumber} @{xPos:X2},{yPos:X2} - Height {p0:X2} - Type {p1:X2}");
+                        break;
+                    case StandardObject.LedgeEdges:
+                        switch(p1)
+                        {
+                            case 0xB:
+                                DrawGfx9Tile(xPos,yPos,0,p0+1,vram, new int[] { 0x145, 0x145, 0x145, 0x14B, 0x14B, 0x14B, 0x1E2, 0x1E2, 0x1E2 });
+                                break;
+                            case 0xD:
+                                DrawGfx9Tile(xPos,yPos,0,p0+1,vram, new int[] { 0x148, 0x148, 0x148, 0x14C, 0x14C, 0x14C, 0x1E4, 0x1E4, 0x1E4 });
+                                break;
+                            default:
+                                DrawTiles(xPos, yPos, 1, p0, new Pixel(255, 0, 255, 255));
+                                break;
+                        }
+                        _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(StandardObject)objectNumber} @{xPos:X2},{yPos:X2} - Height {p0:X2} - Type {p1:X2}");
+                        break;
+                    case StandardObject.MidwayGoalPoint:
+                        if (p1 == 1)
+                        {
+                            DrawGfxTiles(xPos, yPos+0, 2, 0, vram, 0x39, 0x25, 0x3C);
+                            for (int a=1;a<p0;a++)
+                            {
+                                DrawGfxTiles(xPos, yPos+a, 2, 0, vram, 0x3A, 0x25, 0x3D);
+                            }
+                            DrawGfxTiles(xPos, yPos+p0, 2, 0, vram, 0x3B, 0x25, 0x3E);
+                        }
+                        else
+                        {
+                            DrawTiles(xPos, yPos, 1, p0, new Pixel(255, 0, 255, 255));
+                        }
                         _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(StandardObject)objectNumber} @{xPos:X2},{yPos:X2} - Height {p0:X2} - Type {p1:X2}");
                         break;
                     case StandardObject.Slopes:
@@ -1087,132 +1158,28 @@ public class SuperMarioWorldTestImage : IImage, IUserWindow
                     case StandardObject.TilesetSpecificStart10:
                     case StandardObject.TilesetSpecificStart11:
                     case StandardObject.TilesetSpecificStart12:
+                    case StandardObject.TilesetSpecificStart13:
+                    case StandardObject.TilesetSpecificStart14:
                     case StandardObject.TilesetSpecificStart15:
                     case StandardObject.TilesetSpecificStart16:
                     case StandardObject.TilesetSpecificStart17:
-                        Draw16x16Tile(xPos, yPos, new Pixel(128, 0, 0, 255));
-                        _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(StandardObject)objectNumber} @{xPos:X2},{yPos:X2} - Special {t2:X2}");
-                        break;
-                    case StandardObject.TilesetSpecificStart13:
-                        // Left facing diagonal ledge (see right, just different codes basically)
-                        {
-                            DrawGfxTile(xPos, yPos, 0x1AA, vram);
-                            DrawGfxTile(xPos + 1, yPos, 0x0A1, vram);
-                            yPos += 1;
-                            xPos -= 1;
-                            DrawGfxTile(xPos, yPos, 0x1AA, vram);
-                            DrawGfxTile(xPos + 1, yPos, 0x1E2, vram);
-                            DrawGfxTile(xPos + 2, yPos, 0x03F, vram);
-                            DrawGfxTile(xPos + 3, yPos, 0x0A6, vram);
-                            yPos += 1;
-                            xPos -= 1;
-                            DrawGfxTile(xPos, yPos, 0x1AA, vram);
-                            DrawGfxTile(xPos + 1, yPos, 0x1E2, vram);
-                            DrawGfxTile(xPos + 2, yPos, 0x03F, vram);
-                            DrawGfxTile(xPos + 3, yPos, 0x03F, vram);
-                            DrawGfxTile(xPos + 4, yPos, 0x03F, vram);
-                            DrawGfxTile(xPos + 5, yPos, 0x0A6, vram);
-                            yPos += 1;
-                            xPos -= 1;
-                            DrawGfxTile(xPos, yPos, 0x1AA, vram);
-                            DrawGfxTile(xPos + 1, yPos, 0x1E2, vram);
-                            DrawGfxTile(xPos + 2, yPos, 0x03F, vram);
-                            DrawGfxTile(xPos + 3, yPos, 0x03F, vram);
-                            DrawGfxTile(xPos + 4, yPos, 0x03F, vram);
-                            DrawGfxTile(xPos + 5, yPos, 0x03F, vram);
-                            DrawGfxTile(xPos + 6, yPos, 0x03F, vram);
-                            DrawGfxTile(xPos + 7, yPos, 0x0A6, vram);
-                            yPos += 1;
-                            DrawGfxTile(xPos, yPos, 0x1F7, vram);
-                            DrawGfxTile(xPos + 1, yPos, 0x03F, vram);
-                            DrawGfxTile(xPos + 2, yPos, 0x03F, vram);
-                            DrawGfxTile(xPos + 3, yPos, 0x03F, vram);
-                            DrawGfxTile(xPos + 4, yPos, 0x03F, vram);
-                            DrawGfxTile(xPos + 5, yPos, 0x03F, vram);
-                            DrawGfxTile(xPos + 6, yPos, 0x03F, vram);
-                            DrawGfxTile(xPos + 7, yPos, 0x03F, vram);
-                            DrawGfxTile(xPos + 8, yPos, 0x0A6, vram);
-                            yPos += 1;
-                            xPos += 1;
-                            DrawGfxTile(xPos, yPos, 0x0A3, vram);
-                            DrawGfxTile(xPos + 1, yPos, 0x03F, vram);
-                            DrawGfxTile(xPos + 2, yPos, 0x03F, vram);
-                            DrawGfxTile(xPos + 3, yPos, 0x03F, vram);
-                            DrawGfxTile(xPos + 4, yPos, 0x03F, vram);
-                            DrawGfxTile(xPos + 5, yPos, 0x03F, vram);
-                            DrawGfxTile(xPos + 6, yPos, 0x03F, vram);
-                            DrawGfxTile(xPos + 7, yPos, 0x03F, vram);
-                            DrawGfxTile(xPos + 8, yPos, 0x0A6, vram);
-                            yPos += 1;
-                            xPos += 1;
-                            DrawGfxTile(xPos, yPos, 0x0A3, vram);
-                            DrawGfxTile(xPos + 1, yPos, 0x03F, vram);
-                            DrawGfxTile(xPos + 2, yPos, 0x03F, vram);
-                            DrawGfxTile(xPos + 3, yPos, 0x03F, vram);
-                            DrawGfxTile(xPos + 4, yPos, 0x03F, vram);
-                            DrawGfxTile(xPos + 5, yPos, 0x03F, vram);
-                            DrawGfxTile(xPos + 6, yPos, 0x03F, vram);
-                            DrawGfxTile(xPos + 7, yPos, 0x03F, vram);
-                            DrawGfxTile(xPos + 8, yPos, 0x0A6, vram);
-
-
-                        }
-                        break;
-                    case StandardObject.TilesetSpecificStart14:
-                        // Right facing diagonal ledge (
-                        //
-                        // A                         0x0AF 0x1AF
-                        // B                   0x0A9 0x03F 0x1E4 0x1AF
-                        // C             0x0A9 0x03F 0x03F 0x03F 0x1E4 0x1AF
-                        // D       0x0A9 0x03F 0x03F 0x03F 0x03F 0x03F 0x1F9
-                        // E 0x0A9 0x03F 0x03F 0x03F 0x03F 0x03F 0x0AC            <- when P0>0 append rows like this
-                        //
-                        // p1 is done first, then p0 using longest length computed in p1
-                        // e.g. 0 0 would produce row A then a row 0x0A9 0x3F 0x1AF
-                        /// 02
-                        {
-                            DrawGfxTile(xPos, yPos, 0x0AF, vram);
-                            DrawGfxTile(xPos + 1, yPos, 0x1AF, vram);
-                            yPos += 1;
-                            xPos -= 1;
-                            DrawGfxTile(xPos, yPos, 0x0A9, vram);
-                            DrawGfxTile(xPos + 1, yPos, 0x03F, vram);
-                            DrawGfxTile(xPos + 2, yPos, 0x1E4, vram);
-                            DrawGfxTile(xPos + 3, yPos, 0x1AF, vram);
-                            yPos += 1;
-                            xPos -= 1;
-                            DrawGfxTile(xPos, yPos, 0x0A9, vram);
-                            DrawGfxTile(xPos + 1, yPos, 0x03F, vram);
-                            DrawGfxTile(xPos + 2, yPos, 0x03F, vram);
-                            DrawGfxTile(xPos + 3, yPos, 0x03F, vram);
-                            DrawGfxTile(xPos + 4, yPos, 0x1E4, vram);
-                            DrawGfxTile(xPos + 5, yPos, 0x1AF, vram);
-                            yPos += 1;
-                            xPos -= 1;
-                            DrawGfxTile(xPos, yPos, 0x0A9, vram);
-                            DrawGfxTile(xPos + 1, yPos, 0x03F, vram);
-                            DrawGfxTile(xPos + 2, yPos, 0x03F, vram);
-                            DrawGfxTile(xPos + 3, yPos, 0x03F, vram);
-                            DrawGfxTile(xPos + 4, yPos, 0x03F, vram);
-                            DrawGfxTile(xPos + 5, yPos, 0x03F, vram);
-                            DrawGfxTile(xPos + 6, yPos, 0x1F9, vram);
-                        }
-
-                        _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(StandardObject)objectNumber} @{xPos:X2},{yPos:X2} - Special {t2:X2}");
-                        break;
                     case StandardObject.TilesetSpecificStart18:
-                        // grass  - p1 width, p0 style (0,1,2)
-                        switch (p0)
+                        switch (smwLevelHeader.GetTileset())
                         {
-                            default:
-                            case 0:
-                                DrawGfxTiles(xPos, yPos, p1, 0, vram, 0x73, 0x74, 0x79);
+                            case SMWLevelHeader.Tileset.NormalCloudForest:
+                                RenderTilesetSpecificSetNormalCloudForest((StandardObject)objectNumber, xPos, yPos, p0, p1, t2, vram);
                                 break;
-                            case 1:
-                                DrawGfxTiles(xPos, yPos, p1, 0, vram, 0x7A, 0x7B, 0x80);
+                            case SMWLevelHeader.Tileset.Castle1:
+                                RenderTilesetSpecificSetCastle1((StandardObject)objectNumber, xPos, yPos, p0, p1, t2, vram);
                                 break;
-                            case 2:
-                                DrawGfxTiles(xPos, yPos, p1, 0, vram, 0x85, 0x86, 0x87);
+                            case SMWLevelHeader.Tileset.Rope:
+                                RenderTilesetSpecificSetRope((StandardObject)objectNumber, xPos, yPos, p0, p1, t2, vram);
+                                break;
+                            case SMWLevelHeader.Tileset.UndergroundPalace2Castle2:
+                                RenderTilesetSpecificSetUndergroundPalace2Castle2((StandardObject)objectNumber, xPos, yPos, p0, p1, t2, vram);
+                                break;
+                            case SMWLevelHeader.Tileset.GhostHouseSwitchPalace1:
+                                RenderTilesetSpecificSetGhostHouseSwitchPalace1((StandardObject)objectNumber, xPos, yPos, p0, p1, t2, vram);
                                 break;
                         }
                         _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(StandardObject)objectNumber} @{xPos:X2},{yPos:X2} - Special {t2:X2}");
@@ -1223,6 +1190,266 @@ public class SuperMarioWorldTestImage : IImage, IUserWindow
                         break;
                 }
             }
+        }
+    }
+
+    private void RenderTilesetSpecificSetNormalCloudForest(StandardObject objectNumber, int xPos, int yPos, int p0, int p1, byte t2, SuperMarioVRam vram)
+    {
+        switch (objectNumber)
+        {
+            case StandardObject.TilesetSpecificStart01:
+            case StandardObject.TilesetSpecificStart02:
+            case StandardObject.TilesetSpecificStart03:
+            case StandardObject.TilesetSpecificStart04:
+            case StandardObject.TilesetSpecificStart05:
+            case StandardObject.TilesetSpecificStart06:
+            case StandardObject.TilesetSpecificStart07:
+            case StandardObject.TilesetSpecificStart08:
+            case StandardObject.TilesetSpecificStart09:
+            case StandardObject.TilesetSpecificStart10:
+            case StandardObject.TilesetSpecificStart11:
+            case StandardObject.TilesetSpecificStart12:
+            case StandardObject.TilesetSpecificStart15:
+            case StandardObject.TilesetSpecificStart16:
+            case StandardObject.TilesetSpecificStart17:
+                Draw16x16Tile(xPos, yPos, new Pixel(128, 0, 0, 255));
+                break;
+            case StandardObject.TilesetSpecificStart13:
+                // Left facing diagonal ledge (see right, just different codes basically)
+                {
+                    DrawGfxTile(xPos, yPos, 0x1AA, vram);
+                    DrawGfxTile(xPos + 1, yPos, 0x0A1, vram);
+                    yPos += 1;
+                    xPos -= 1;
+                    DrawGfxTile(xPos, yPos, 0x1AA, vram);
+                    DrawGfxTile(xPos + 1, yPos, 0x1E2, vram);
+                    DrawGfxTile(xPos + 2, yPos, 0x03F, vram);
+                    DrawGfxTile(xPos + 3, yPos, 0x0A6, vram);
+                    yPos += 1;
+                    xPos -= 1;
+                    DrawGfxTile(xPos, yPos, 0x1AA, vram);
+                    DrawGfxTile(xPos + 1, yPos, 0x1E2, vram);
+                    DrawGfxTile(xPos + 2, yPos, 0x03F, vram);
+                    DrawGfxTile(xPos + 3, yPos, 0x03F, vram);
+                    DrawGfxTile(xPos + 4, yPos, 0x03F, vram);
+                    DrawGfxTile(xPos + 5, yPos, 0x0A6, vram);
+                    yPos += 1;
+                    xPos -= 1;
+                    DrawGfxTile(xPos, yPos, 0x1AA, vram);
+                    DrawGfxTile(xPos + 1, yPos, 0x1E2, vram);
+                    DrawGfxTile(xPos + 2, yPos, 0x03F, vram);
+                    DrawGfxTile(xPos + 3, yPos, 0x03F, vram);
+                    DrawGfxTile(xPos + 4, yPos, 0x03F, vram);
+                    DrawGfxTile(xPos + 5, yPos, 0x03F, vram);
+                    DrawGfxTile(xPos + 6, yPos, 0x03F, vram);
+                    DrawGfxTile(xPos + 7, yPos, 0x0A6, vram);
+                    yPos += 1;
+                    DrawGfxTile(xPos, yPos, 0x1F7, vram);
+                    DrawGfxTile(xPos + 1, yPos, 0x03F, vram);
+                    DrawGfxTile(xPos + 2, yPos, 0x03F, vram);
+                    DrawGfxTile(xPos + 3, yPos, 0x03F, vram);
+                    DrawGfxTile(xPos + 4, yPos, 0x03F, vram);
+                    DrawGfxTile(xPos + 5, yPos, 0x03F, vram);
+                    DrawGfxTile(xPos + 6, yPos, 0x03F, vram);
+                    DrawGfxTile(xPos + 7, yPos, 0x03F, vram);
+                    DrawGfxTile(xPos + 8, yPos, 0x0A6, vram);
+                    yPos += 1;
+                    xPos += 1;
+                    DrawGfxTile(xPos, yPos, 0x0A3, vram);
+                    DrawGfxTile(xPos + 1, yPos, 0x03F, vram);
+                    DrawGfxTile(xPos + 2, yPos, 0x03F, vram);
+                    DrawGfxTile(xPos + 3, yPos, 0x03F, vram);
+                    DrawGfxTile(xPos + 4, yPos, 0x03F, vram);
+                    DrawGfxTile(xPos + 5, yPos, 0x03F, vram);
+                    DrawGfxTile(xPos + 6, yPos, 0x03F, vram);
+                    DrawGfxTile(xPos + 7, yPos, 0x03F, vram);
+                    DrawGfxTile(xPos + 8, yPos, 0x0A6, vram);
+                    yPos += 1;
+                    xPos += 1;
+                    DrawGfxTile(xPos, yPos, 0x0A3, vram);
+                    DrawGfxTile(xPos + 1, yPos, 0x03F, vram);
+                    DrawGfxTile(xPos + 2, yPos, 0x03F, vram);
+                    DrawGfxTile(xPos + 3, yPos, 0x03F, vram);
+                    DrawGfxTile(xPos + 4, yPos, 0x03F, vram);
+                    DrawGfxTile(xPos + 5, yPos, 0x03F, vram);
+                    DrawGfxTile(xPos + 6, yPos, 0x03F, vram);
+                    DrawGfxTile(xPos + 7, yPos, 0x03F, vram);
+                    DrawGfxTile(xPos + 8, yPos, 0x0A6, vram);
+                }
+                break;
+            case StandardObject.TilesetSpecificStart14:
+                // Right facing diagonal ledge (
+                //
+                // A                         0x0AF 0x1AF
+                // B                   0x0A9 0x03F 0x1E4 0x1AF
+                // C             0x0A9 0x03F 0x03F 0x03F 0x1E4 0x1AF
+                // D       0x0A9 0x03F 0x03F 0x03F 0x03F 0x03F 0x1F9
+                // E 0x0A9 0x03F 0x03F 0x03F 0x03F 0x03F 0x0AC            <- when P0>0 append rows like this
+                //
+                // p1 is done first, then p0 using longest length computed in p1
+                // e.g. 0 0 would produce row A then a row 0x0A9 0x3F 0x1AF
+                /// 02
+                {
+                    DrawGfxTile(xPos, yPos, 0x0AF, vram);
+                    DrawGfxTile(xPos + 1, yPos, 0x1AF, vram);
+                    yPos += 1;
+                    xPos -= 1;
+                    DrawGfxTile(xPos, yPos, 0x0A9, vram);
+                    DrawGfxTile(xPos + 1, yPos, 0x03F, vram);
+                    DrawGfxTile(xPos + 2, yPos, 0x1E4, vram);
+                    DrawGfxTile(xPos + 3, yPos, 0x1AF, vram);
+                    yPos += 1;
+                    xPos -= 1;
+                    DrawGfxTile(xPos, yPos, 0x0A9, vram);
+                    DrawGfxTile(xPos + 1, yPos, 0x03F, vram);
+                    DrawGfxTile(xPos + 2, yPos, 0x03F, vram);
+                    DrawGfxTile(xPos + 3, yPos, 0x03F, vram);
+                    DrawGfxTile(xPos + 4, yPos, 0x1E4, vram);
+                    DrawGfxTile(xPos + 5, yPos, 0x1AF, vram);
+                    yPos += 1;
+                    xPos -= 1;
+                    DrawGfxTile(xPos, yPos, 0x0A9, vram);
+                    DrawGfxTile(xPos + 1, yPos, 0x03F, vram);
+                    DrawGfxTile(xPos + 2, yPos, 0x03F, vram);
+                    DrawGfxTile(xPos + 3, yPos, 0x03F, vram);
+                    DrawGfxTile(xPos + 4, yPos, 0x03F, vram);
+                    DrawGfxTile(xPos + 5, yPos, 0x03F, vram);
+                    DrawGfxTile(xPos + 6, yPos, 0x1F9, vram);
+                }
+                break;
+            case StandardObject.TilesetSpecificStart18:
+                // grass  - p1 width, p0 style (0,1,2)
+                switch (p0)
+                {
+                    default:
+                    case 0:
+                        DrawGfxTiles(xPos, yPos, p1, 0, vram, 0x73, 0x74, 0x79);
+                        break;
+                    case 1:
+                        DrawGfxTiles(xPos, yPos, p1, 0, vram, 0x7A, 0x7B, 0x80);
+                        break;
+                    case 2:
+                        DrawGfxTiles(xPos, yPos, p1, 0, vram, 0x85, 0x86, 0x87);
+                        break;
+                }
+                break;
+        }
+
+    }
+
+    private void RenderTilesetSpecificSetCastle1(StandardObject objectNumber, int xPos, int yPos, int p0, int p1, byte t2, SuperMarioVRam vram)
+    {
+        switch (objectNumber)
+        {
+            case StandardObject.TilesetSpecificStart01:
+            case StandardObject.TilesetSpecificStart02:
+            case StandardObject.TilesetSpecificStart03:
+            case StandardObject.TilesetSpecificStart04:
+            case StandardObject.TilesetSpecificStart05:
+            case StandardObject.TilesetSpecificStart06:
+            case StandardObject.TilesetSpecificStart07:
+            case StandardObject.TilesetSpecificStart08:
+            case StandardObject.TilesetSpecificStart09:
+            case StandardObject.TilesetSpecificStart10:
+            case StandardObject.TilesetSpecificStart11:
+            case StandardObject.TilesetSpecificStart12:
+            case StandardObject.TilesetSpecificStart13:
+            case StandardObject.TilesetSpecificStart14:
+            case StandardObject.TilesetSpecificStart16:
+            case StandardObject.TilesetSpecificStart17:
+            case StandardObject.TilesetSpecificStart18:
+                Draw16x16Tile(xPos, yPos, new Pixel(128, 0, 0, 255));
+                break;
+            case StandardObject.TilesetSpecificStart15:
+                DrawGfx9Tile(xPos, yPos, p1, p0, vram, new int[] { 0x15D, 0x15E, 0x15F, 0x160, 0x161, 0x162, 0x163, 0x164, 0x165 });
+                break;
+        }
+    }
+
+    private void RenderTilesetSpecificSetRope(StandardObject objectNumber, int xPos, int yPos, int p0, int p1, byte t2, SuperMarioVRam vram)
+    {
+        switch (objectNumber)
+        {
+            case StandardObject.TilesetSpecificStart01:
+            case StandardObject.TilesetSpecificStart02:
+            case StandardObject.TilesetSpecificStart03:
+            case StandardObject.TilesetSpecificStart04:
+            case StandardObject.TilesetSpecificStart05:
+            case StandardObject.TilesetSpecificStart06:
+            case StandardObject.TilesetSpecificStart07:
+            case StandardObject.TilesetSpecificStart08:
+            case StandardObject.TilesetSpecificStart09:
+            case StandardObject.TilesetSpecificStart10:
+            case StandardObject.TilesetSpecificStart11:
+            case StandardObject.TilesetSpecificStart12:
+            case StandardObject.TilesetSpecificStart13:
+            case StandardObject.TilesetSpecificStart14:
+            case StandardObject.TilesetSpecificStart17:
+            case StandardObject.TilesetSpecificStart18:
+                Draw16x16Tile(xPos, yPos, new Pixel(128, 0, 0, 255));
+                break;
+            case StandardObject.TilesetSpecificStart15:
+                // mushroom platform top (p1 width)
+                DrawGfxTiles(xPos, yPos, p1, 0, vram, 0x107, 0x108, 0x109);
+                break;
+            case StandardObject.TilesetSpecificStart16:
+                // mushroom platform bottom (p1 width, p0 height)
+                DrawGfxTiles(xPos, yPos, p1, p0, vram, 0x73, 0x074, 0x75);
+                break;
+        }
+    }
+
+    private void RenderTilesetSpecificSetUndergroundPalace2Castle2(StandardObject objectNumber, int xPos, int yPos, int p0, int p1, byte t2, SuperMarioVRam vram)
+    {
+        switch (objectNumber)
+        {
+            case StandardObject.TilesetSpecificStart01:
+            case StandardObject.TilesetSpecificStart02:
+            case StandardObject.TilesetSpecificStart03:
+            case StandardObject.TilesetSpecificStart04:
+            case StandardObject.TilesetSpecificStart05:
+            case StandardObject.TilesetSpecificStart06:
+            case StandardObject.TilesetSpecificStart07:
+            case StandardObject.TilesetSpecificStart08:
+            case StandardObject.TilesetSpecificStart09:
+            case StandardObject.TilesetSpecificStart10:
+            case StandardObject.TilesetSpecificStart11:
+            case StandardObject.TilesetSpecificStart12:
+            case StandardObject.TilesetSpecificStart13:
+            case StandardObject.TilesetSpecificStart14:
+            case StandardObject.TilesetSpecificStart15:
+            case StandardObject.TilesetSpecificStart16:
+            case StandardObject.TilesetSpecificStart17:
+            case StandardObject.TilesetSpecificStart18:
+                Draw16x16Tile(xPos, yPos, new Pixel(128, 0, 0, 255));
+                break;
+        }
+    }
+
+    private void RenderTilesetSpecificSetGhostHouseSwitchPalace1(StandardObject objectNumber, int xPos, int yPos, int p0, int p1, byte t2, SuperMarioVRam vram)
+    {
+        switch (objectNumber)
+        {
+            case StandardObject.TilesetSpecificStart01:
+            case StandardObject.TilesetSpecificStart02:
+            case StandardObject.TilesetSpecificStart03:
+            case StandardObject.TilesetSpecificStart04:
+            case StandardObject.TilesetSpecificStart05:
+            case StandardObject.TilesetSpecificStart06:
+            case StandardObject.TilesetSpecificStart07:
+            case StandardObject.TilesetSpecificStart08:
+            case StandardObject.TilesetSpecificStart09:
+            case StandardObject.TilesetSpecificStart10:
+            case StandardObject.TilesetSpecificStart11:
+            case StandardObject.TilesetSpecificStart12:
+            case StandardObject.TilesetSpecificStart13:
+            case StandardObject.TilesetSpecificStart14:
+            case StandardObject.TilesetSpecificStart15:
+            case StandardObject.TilesetSpecificStart16:
+            case StandardObject.TilesetSpecificStart17:
+            case StandardObject.TilesetSpecificStart18:
+                Draw16x16Tile(xPos, yPos, new Pixel(128, 0, 0, 255));
+                break;
         }
     }
 
