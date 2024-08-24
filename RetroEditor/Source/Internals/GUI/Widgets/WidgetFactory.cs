@@ -79,6 +79,13 @@ internal class WidgetFactory : IWidget
         return t;
     }
 
+    public IWidgetItem AddObjectMapWidget(IObjectMap objectMap)
+    {
+        var t = new ObjectMapWidget(objectMap);
+        widgets.Add(t);
+        return t;
+    }
+
     private List<IWidgetUpdateDraw> widgets;
 
     public IEnumerable<IWidgetUpdateDraw> Widgets => widgets;

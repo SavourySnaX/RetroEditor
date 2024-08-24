@@ -77,5 +77,12 @@ namespace RetroEditor.Plugins
         /// <param name="tileMap">Object implementing the ITileMap interface</param>
         /// <returns>Widget</returns>
         IWidgetItem AddTileMapWidget(ITileMap tileMap);
+
+        /// <summary>
+        /// Adds an object map editor to the window
+        /// </summary>
+        /// <param name="objectMap">Object implemented IObjectMap interface</param>
+        /// <returns>Widget</returns>
+        IWidgetItem AddObjectMapWidget(IObjectMap objectMap);
     }
 }
