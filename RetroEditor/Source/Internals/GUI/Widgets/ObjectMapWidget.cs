@@ -25,11 +25,11 @@ internal class ObjectMapWidget : IWidgetItem, IWidgetUpdateDraw
         var hx = -1;
         var hy = -1;
 
+        var palette = _objectMap.FetchPalette();
+        var bitmaps = palette.Bitmaps;
+        var tiles = palette.TilePalette.FetchTiles();
         foreach (var obj in _objectMap.FetchObjects)
         {
-            var palette = _objectMap.FetchPalette();
-            var bitmaps = palette.Bitmaps;
-
             var mapData = obj.GetMapData();
 
 /*
@@ -73,7 +73,6 @@ internal class ObjectMapWidget : IWidgetItem, IWidgetUpdateDraw
                 for (uint x = 0; x < obj.Width; x++)
                 {
                     var tilenum = mapData[(int)(y * obj.Width + x)];
-                    var tiles = palette.TilePalette.FetchTiles();
                     var tileData = tiles[(int)tilenum];
 
                     drawList.AddImage((nint)bitmaps[(int)tilenum].Id, new Vector2(pos.X + offX, pos.Y + offY), new Vector2(pos.X + offX + tileData.Width * _objectMap.ScaleX, pos.Y + offY + tileData.Height * _objectMap.ScaleY));
