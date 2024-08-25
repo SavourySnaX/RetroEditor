@@ -6,6 +6,8 @@ internal class ObjectMapWidget : IWidgetItem, IWidgetUpdateDraw
 {
 
     IObjectMap _objectMap;
+    int selectedObject = -1;
+
     public ObjectMapWidget(IObjectMap objectMap)
     {
         _objectMap = objectMap;
@@ -25,47 +27,57 @@ internal class ObjectMapWidget : IWidgetItem, IWidgetUpdateDraw
         var hx = -1;
         var hy = -1;
 
+        // Object picker
+        var mousePos = ImGui.GetMousePos();
+        var localPos = mousePos - pos;
+
         var palette = _objectMap.FetchPalette();
         var bitmaps = palette.Bitmaps;
         var tiles = palette.TilePalette.FetchTiles();
+        int currentObject = 0;
+
+        if (localPos.X >= 0 && localPos.Y >= 0 && localPos.X < size.X && localPos.Y < size.Y)
+        {
+            var x = (uint)(localPos.X / _objectMap.ScaleX);
+            var y = (uint)(localPos.Y / _objectMap.ScaleY);
+
+            if (x >= 0 && x < _objectMap.Width && y >= 0 && y < _objectMap.Height)
+            {
+                hx = (int)x;
+                hy = (int)y;
+
+                int nSelectedObject = -1;
+                currentObject = 0;
+                if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+                {
+                    foreach (var obj in _objectMap.FetchObjects)
+                    {
+                        if (hx >= obj.X && hx < obj.X + obj.Width * palette.LargestWidth && hy >= obj.Y && hy < obj.Y + obj.Height * palette.LargestHeight)
+                        {
+                            if (currentObject == selectedObject)
+                            {
+                                selectedObject = -1;
+                            }
+                            else
+                            {
+                                nSelectedObject = currentObject;
+                            }
+                            break;
+                        }
+                        currentObject++;
+                    }
+                }
+                if (nSelectedObject != -1)
+                {
+                    selectedObject = nSelectedObject;
+                }
+            }
+        }
+
         foreach (var obj in _objectMap.FetchObjects)
         {
             var mapData = obj.GetMapData();
 
-/*
-            TODO Object picker, TODO object tools mode thing
-
-
-            var mousePos = ImGui.GetMousePos();
-            var localPos = mousePos - pos;
-
-            if (localPos.X >= 0 && localPos.Y >= 0 && localPos.X < size.X && localPos.Y < size.Y)
-            {
-                var x = (uint)(localPos.X / (palette.LargestWidth * _objectMap.ScaleX));
-                var y = (uint)(localPos.Y / (palette.LargestHeight * _objectMap.ScaleY));
-
-                if (x >= 0 && x < _objectMap.Width && y >= 0 && y < _objectMap.Height)
-                {
-                    hx= (int)x;
-                    hy = (int)y;
-                    if (palette.TilePalette.SelectedTile >= 0 && ImGui.IsMouseDown(ImGuiMouseButton.Left))
-                    {
-                        try
-                        {
-                            // TODO layer.SetTile(x, y, (uint)palette.TilePalette.SelectedTile);
-                        }
-                        catch (Exception e)
-                        {
-                            logger.Log(LogType.Error, $"Failed to set tile at {x},{y} - {e.Message}");
-                        }
-                    }
-                    else if (palette.TilePalette.SelectedTile >= 0 && ImGui.IsMouseDown(ImGuiMouseButton.Right))
-                    {
-//                        var tilenum = mapData[(int)(y * layer.Width + x)];
-//                        palette.TilePalette.SelectedTile = (int)tilenum;
-                    }
-                }
-            }*/
             var offY = obj.Y;
             for (uint y = 0; y < obj.Height; y++)
             {
@@ -76,10 +88,15 @@ internal class ObjectMapWidget : IWidgetItem, IWidgetUpdateDraw
                     var tileData = tiles[(int)tilenum];
 
                     drawList.AddImage((nint)bitmaps[(int)tilenum].Id, new Vector2(pos.X + offX, pos.Y + offY), new Vector2(pos.X + offX + tileData.Width * _objectMap.ScaleX, pos.Y + offY + tileData.Height * _objectMap.ScaleY));
+                    if (currentObject == selectedObject)
+                    {
+                        drawList.AddRectFilled(new Vector2(pos.X + offX, pos.Y + offY), new Vector2(pos.X + offX + tileData.Width * _objectMap.ScaleX, pos.Y + offY + tileData.Height * _objectMap.ScaleY), 0x80808080);
+                    }
                     offX += (uint)(palette.LargestWidth * _objectMap.ScaleX);
                 }
                 offY += (uint)(palette.LargestHeight * _objectMap.ScaleY);
             }
+            currentObject++;
         }
         ImGui.EndChild();
     }
