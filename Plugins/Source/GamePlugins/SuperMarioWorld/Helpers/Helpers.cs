@@ -222,7 +222,6 @@ namespace RetroEditorPlugin_SuperMarioWorld
             _layer2ImagePage01 = (_layer2SnesAddress & 0xFFFF) >= 0xE8FE;
             if (_layer2Image)
             {
-                // Unclear if header present for this... 
                 _layer2Address = addressTranslation.ToImage(_layer2SnesAddress);
             }
             else
