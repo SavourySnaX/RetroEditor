@@ -8,13 +8,15 @@ namespace RetroEditorPlugin_SuperMarioWorld
     {
         public float UpdateInterval => 1/60.0f;
 
+        private IEditor _editorInterface;
         public SuperMarioWorldLevelEditor(IEditor editorInterface, IMemoryAccess rom)
         {
+            _editorInterface = editorInterface;
         }
 
         public void ConfigureWidgets(IMemoryAccess rom, IWidget widget, IPlayerControls playerControls)
         {
-            widget.AddObjectMapWidget(new SuperMarioWorldObjectMap(rom));
+            widget.AddObjectMapWidget(new SuperMarioWorldObjectMap(rom, _editorInterface));
         }
 
         public void OnClose()
@@ -75,6 +77,17 @@ namespace RetroEditorPlugin_SuperMarioWorld
             return _mapData;
         }
 
+        public void Move(uint x, uint y)
+        {
+            var tx = x;
+            var ty = y;
+            // Clamp to tile 16x16 grid
+            tx = (tx / 16) * 16;
+            ty = (ty / 16) * 16;
+            _x = Math.Min(Math.Max(tx, 0u), 16u*16u*32u);
+            _y = Math.Min(Math.Max(ty, 0u), 416u);
+        }
+
         private uint _x, _y, _width, _height;
         private string _name;
         private uint[] _mapData;
@@ -98,8 +111,10 @@ namespace RetroEditorPlugin_SuperMarioWorld
 
         public uint TilesPerRow => throw new NotImplementedException();
 
-        public SuperMarioWorldObjectMap(IMemoryAccess rom)
+        private IEditor _editorInterface;
+        public SuperMarioWorldObjectMap(IMemoryAccess rom, IEditor editorInterface)
         {
+            _editorInterface = editorInterface;
             _tiles = new SMWTile[512];
 
             var levelSelect = 199u;
@@ -134,6 +149,16 @@ namespace RetroEditorPlugin_SuperMarioWorld
         public ReadOnlySpan<ITile> FetchTiles()
         {
             return _tiles;
+        }
+
+        public void ObjectMove(IObject obj, uint x, uint y)
+        {
+            var standardObject = obj as StandardObject;
+            if (standardObject != null)
+            {
+                standardObject.Move(x, y);
+            }
+            
         }
 
         private List<IObject> _objects = new List<IObject>();

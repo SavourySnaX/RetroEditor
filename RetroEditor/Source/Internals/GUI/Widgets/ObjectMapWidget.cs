@@ -17,51 +17,61 @@ internal class ObjectMapWidget : IWidgetItem, IWidgetUpdateDraw
     {
         _objectMap.FetchPalette().Update(seconds);
     }
-    
-    public void Draw(IWidgetLog logger)
-    {
-        var drawList = ImGui.GetWindowDrawList();
-        var size = new Vector2(_objectMap.Width * _objectMap.ScaleX, _objectMap.Height * _objectMap.ScaleY);
-        ImGui.BeginChild($"map", size, 0, 0);
-        var pos = ImGui.GetCursorScreenPos();
-        var hx = -1;
-        var hy = -1;
 
+    bool dragging = false;
+
+    public void Interaction(IWidgetLog logger, Vector2 size, Vector2 pos)
+    {
         // Object picker
         var mousePos = ImGui.GetMousePos();
         var localPos = mousePos - pos;
 
         var palette = _objectMap.FetchPalette();
-        var bitmaps = palette.Bitmaps;
-        var tiles = palette.TilePalette.FetchTiles();
         int currentObject = 0;
 
+        ImGui.SetMouseCursor(ImGuiMouseCursor.Arrow);
         if (localPos.X >= 0 && localPos.Y >= 0 && localPos.X < size.X && localPos.Y < size.Y)
         {
             var x = (uint)(localPos.X / _objectMap.ScaleX);
             var y = (uint)(localPos.Y / _objectMap.ScaleY);
 
+            if (selectedObject!=-1 && ImGui.IsMouseDown(ImGuiMouseButton.Left))
+            {
+                if (!dragging)
+                {
+                    dragging = true;
+                }
+                else
+                {
+                    _objectMap.ObjectMove(_objectMap.FetchObjects.ElementAt(selectedObject), x, y);
+                }
+            }
+            else
+            {
+                dragging = false;
+            }
+
             if (x >= 0 && x < _objectMap.Width && y >= 0 && y < _objectMap.Height)
             {
-                hx = (int)x;
-                hy = (int)y;
-
                 int nSelectedObject = -1;
                 currentObject = 0;
-                if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+
+                foreach (var obj in _objectMap.FetchObjects)
                 {
-                    foreach (var obj in _objectMap.FetchObjects)
+                    if (x >= obj.X && x < obj.X + obj.Width * palette.LargestWidth && y >= obj.Y && y < obj.Y + obj.Height * palette.LargestHeight)
                     {
-                        if (hx >= obj.X && hx < obj.X + obj.Width * palette.LargestWidth && hy >= obj.Y && hy < obj.Y + obj.Height * palette.LargestHeight)
+                        ImGui.SetMouseCursor(ImGuiMouseCursor.ResizeAll);
+
+                        if (currentObject==selectedObject)
                         {
-                            if (currentObject == selectedObject)
+                            if (ImGui.IsMouseClicked(ImGuiMouseButton.Right))
                             {
                                 selectedObject = -1;
                             }
-                            else
-                            {
-                                nSelectedObject = currentObject;
-                            }
+                        }
+                        else if (ImGui.IsMouseClicked(ImGuiMouseButton.Right))
+                        {
+                            nSelectedObject = currentObject;
                             break;
                         }
                         currentObject++;
@@ -73,7 +83,20 @@ internal class ObjectMapWidget : IWidgetItem, IWidgetUpdateDraw
                 }
             }
         }
+    }
 
+    public void Draw(IWidgetLog logger)
+    {
+        var drawList = ImGui.GetWindowDrawList();
+        var size = new Vector2(_objectMap.Width * _objectMap.ScaleX, _objectMap.Height * _objectMap.ScaleY);
+        ImGui.BeginChild($"map", size, 0, 0);
+
+        var pos = ImGui.GetCursorScreenPos();
+        Interaction(logger, size, pos);
+        var palette = _objectMap.FetchPalette();
+        var bitmaps = palette.Bitmaps;
+        var tiles = palette.TilePalette.FetchTiles();
+        var currentObject = 0;
         foreach (var obj in _objectMap.FetchObjects)
         {
             var mapData = obj.GetMapData();

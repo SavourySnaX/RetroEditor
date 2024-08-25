@@ -36,5 +36,6 @@ namespace RetroEditor.Plugins
         /// </summary>
         /// <returns>Flat array of tile indices</returns>
         ReadOnlySpan<uint> GetMapData();
+        
     }
 }
