@@ -33,5 +33,13 @@ namespace RetroEditor.Plugins
         /// Fetch the objects for the map (they will be rendered in the order they are returned)
         /// </summary>
         IEnumerable<IObject> FetchObjects { get; }
+
+        /// <summary>
+        /// Called when an object is moved, allows the map to adjust the object position
+        /// </summary>
+        /// <param name="obj">Object being moved</param>
+        /// <param name="x">X position</param>
+        /// <param name="y">Y position</param>
+        void ObjectMove(IObject obj, uint x, uint y);
     }
 }
