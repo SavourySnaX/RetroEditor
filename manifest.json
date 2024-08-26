@@ -1,0 +1,488 @@
+{
+  "source_base_path": "/home/runner/work/RetroEditor/RetroEditor/docfx",
+  "xrefmap": "xrefmap.yml",
+  "files": [
+    {
+      "type": "Resource",
+      "output": {
+        "resource": {
+          "relative_path": "index.json"
+        }
+      }
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/RetroEditor.Plugins.ChangedEventHandler.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/RetroEditor.Plugins.ChangedEventHandler.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/RetroEditor.Plugins.IBitmapImage.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/RetroEditor.Plugins.IBitmapImage.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/RetroEditor.Plugins.IBitmapPalette.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/RetroEditor.Plugins.IBitmapPalette.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/RetroEditor.Plugins.IEditor.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/RetroEditor.Plugins.IEditor.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/RetroEditor.Plugins.IImage.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/RetroEditor.Plugins.IImage.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/RetroEditor.Plugins.ILayer.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/RetroEditor.Plugins.ILayer.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/RetroEditor.Plugins.IMemoryAccess.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/RetroEditor.Plugins.IMemoryAccess.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/RetroEditor.Plugins.IMenu.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/RetroEditor.Plugins.IMenu.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/RetroEditor.Plugins.IMenuItem.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/RetroEditor.Plugins.IMenuItem.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/RetroEditor.Plugins.IMenuProvider.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/RetroEditor.Plugins.IMenuProvider.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/RetroEditor.Plugins.IPlayerControls.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/RetroEditor.Plugins.IPlayerControls.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/RetroEditor.Plugins.IPlayerWindowExtension.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/RetroEditor.Plugins.IPlayerWindowExtension.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/RetroEditor.Plugins.IRetroPlugin.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/RetroEditor.Plugins.IRetroPlugin.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/RetroEditor.Plugins.ISave.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/RetroEditor.Plugins.ISave.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/RetroEditor.Plugins.ISystemPlugin.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/RetroEditor.Plugins.ISystemPlugin.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/RetroEditor.Plugins.ITile.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/RetroEditor.Plugins.ITile.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/RetroEditor.Plugins.ITileMap.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/RetroEditor.Plugins.ITileMap.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/RetroEditor.Plugins.ITilePalette.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/RetroEditor.Plugins.ITilePalette.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/RetroEditor.Plugins.IUserWindow.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/RetroEditor.Plugins.IUserWindow.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/RetroEditor.Plugins.IWidget.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/RetroEditor.Plugins.IWidget.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/RetroEditor.Plugins.IWidgetCheckable.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/RetroEditor.Plugins.IWidgetCheckable.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/RetroEditor.Plugins.IWidgetEnableable.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/RetroEditor.Plugins.IWidgetEnableable.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/RetroEditor.Plugins.IWidgetHandleable.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/RetroEditor.Plugins.IWidgetHandleable.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/RetroEditor.Plugins.IWidgetItem.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/RetroEditor.Plugins.IWidgetItem.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/RetroEditor.Plugins.IWidgetLabel.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/RetroEditor.Plugins.IWidgetLabel.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/RetroEditor.Plugins.IWidgetRanged.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/RetroEditor.Plugins.IWidgetRanged.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/RetroEditor.Plugins.LogType.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/RetroEditor.Plugins.LogType.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/RetroEditor.Plugins.MemoryEndian.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/RetroEditor.Plugins.MemoryEndian.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/RetroEditor.Plugins.MenuEventHandler.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/RetroEditor.Plugins.MenuEventHandler.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/RetroEditor.Plugins.Pixel.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/RetroEditor.Plugins.Pixel.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/RetroEditor.Plugins.ReadKind.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/RetroEditor.Plugins.ReadKind.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/RetroEditor.Plugins.WriteKind.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/RetroEditor.Plugins.WriteKind.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/RetroEditor.Plugins.ZXSpectrum48ImageHelper.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/RetroEditor.Plugins.ZXSpectrum48ImageHelper.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/RetroEditor.Plugins.ZXSpectrumTape.DataBlock.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/RetroEditor.Plugins.ZXSpectrumTape.DataBlock.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/RetroEditor.Plugins.ZXSpectrumTape.HeaderBlock.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/RetroEditor.Plugins.ZXSpectrumTape.HeaderBlock.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/RetroEditor.Plugins.ZXSpectrumTape.HeaderKind.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/RetroEditor.Plugins.ZXSpectrumTape.HeaderKind.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/RetroEditor.Plugins.ZXSpectrumTape.Tape.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/RetroEditor.Plugins.ZXSpectrumTape.Tape.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/RetroEditor.Plugins.ZXSpectrumTape.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/RetroEditor.Plugins.ZXSpectrumTape.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/RetroEditor.Plugins.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/RetroEditor.Plugins.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Toc",
+      "source_relative_path": "api/toc.yml",
+      "output": {
+        ".json": {
+          "relative_path": "api/toc.json"
+        },
+        ".html": {
+          "relative_path": "api/toc.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Conceptual",
+      "source_relative_path": "docs/developer-guide.md",
+      "output": {
+        ".html": {
+          "relative_path": "docs/developer-guide.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Toc",
+      "source_relative_path": "docs/toc.yml",
+      "output": {
+        ".json": {
+          "relative_path": "docs/toc.json"
+        },
+        ".html": {
+          "relative_path": "docs/toc.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Conceptual",
+      "source_relative_path": "docs/user-guide.md",
+      "output": {
+        ".html": {
+          "relative_path": "docs/user-guide.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Resource",
+      "source_relative_path": "images/screenshot.png",
+      "output": {
+        "resource": {
+          "relative_path": "images/screenshot.png"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Conceptual",
+      "source_relative_path": "index.md",
+      "output": {
+        ".html": {
+          "relative_path": "index.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Toc",
+      "source_relative_path": "toc.yml",
+      "output": {
+        ".json": {
+          "relative_path": "toc.json"
+        },
+        ".html": {
+          "relative_path": "toc.html"
+        }
+      },
+      "version": ""
+    }
+  ],
+  "groups": [
+    {
+      "xrefmap": "xrefmap.yml"
+    }
+  ]
+}
