@@ -867,7 +867,7 @@ internal class Editor : IEditor, IEditorInternal
         platform = "";
         extension = "";
         extra = "";
-        switch (RuntimeInformation.OSArchitecture)
+        switch (RuntimeInformation.ProcessArchitecture)
         {
             case Architecture.X64:
                 architecture = "x86_64";
@@ -877,6 +877,7 @@ internal class Editor : IEditor, IEditorInternal
             case Architecture.Arm64:
                 architecture = "arm64";
                 supportsMacos = true;
+                supportsWindows = true;
                 break;
             default:
                 return OSSupportedResult.ArchitectureNotSupported;
@@ -913,10 +914,10 @@ internal class Editor : IEditor, IEditorInternal
             case OSSupportedResult.Ok:
                 break;
             case OSSupportedResult.ArchitectureNotSupported:
-                Log(LogType.Error, "Editor", $"Unsupported Architecture: {RuntimeInformation.OSArchitecture} - Cannot load lib retro plugin");
+                Log(LogType.Error, "Editor", $"Unsupported Architecture: {RuntimeInformation.ProcessArchitecture} - Cannot load lib retro plugin");
                 return null;
             case OSSupportedResult.OSArchitectureNotSupported:
-                Log(LogType.Error, "Editor", $"Unsupported OS + {RuntimeInformation.OSArchitecture}: {OS} - Cannot load lib retro plugin");
+                Log(LogType.Error, "Editor", $"Unsupported OS + {RuntimeInformation.ProcessArchitecture}: {OS} - Cannot load lib retro plugin");
                 return null;
         }
 
@@ -969,10 +970,10 @@ internal class Editor : IEditor, IEditorInternal
             case OSSupportedResult.Ok:
                 break;
             case OSSupportedResult.ArchitectureNotSupported:
-                Log(LogType.Error, "Editor", $"Unsupported Architecture: {RuntimeInformation.OSArchitecture} - Cannot load lib mame debugger plugin");
+                Log(LogType.Error, "Editor", $"Unsupported Architecture: {RuntimeInformation.ProcessArchitecture} - Cannot load lib mame debugger plugin");
                 return null;
             case OSSupportedResult.OSArchitectureNotSupported:
-                Log(LogType.Error, "Editor", $"Unsupported OS + {RuntimeInformation.OSArchitecture}: {OS} - Cannot load lib mame debugger plugin");
+                Log(LogType.Error, "Editor", $"Unsupported OS + {RuntimeInformation.ProcessArchitecture}: {OS} - Cannot load lib mame debugger plugin");
                 return null;
         }
 
@@ -1009,6 +1010,7 @@ internal class Editor : IEditor, IEditorInternal
         var url = $"https://github.com/SavourySnaX/lib_mame_retro_custom_fork/releases/download/{api_revision}/build_{platform}{extra}.zip";
         var destination = Path.Combine(settings.RetroCoreFolder, "developer", platform, architecture, $"mame_libretro{extension}");
         var itemToGrab = $"mame_libretro{extension}";
+        Log(LogType.Info, $"Downloading {url} as local copy not present");
         return await Download(url, destination, itemToGrab);
     }
 
@@ -1022,6 +1024,7 @@ internal class Editor : IEditor, IEditorInternal
         var url = $"http://buildbot.libretro.com/nightly/{extra}{platform}/{architecture}/latest/{pluginName}{extension}.zip";
         var destination = Path.Combine(settings.RetroCoreFolder, platform, architecture, $"{pluginName}{extension}");
         var itemToGrab = $"{pluginName}{extension}";
+        Log(LogType.Info, $"Downloading {url} as local copy not present");
         return await Download(url, destination, itemToGrab);
     }
 
