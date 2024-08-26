@@ -50,49 +50,6 @@ namespace RetroEditorPlugin_SuperMarioWorld
         private Pixel[] _imageData;
     }
 
-    public class StandardObject : IObject
-    {
-        public uint Width => _width;
-
-        public uint Height => _height;
-
-        public uint X => _x;
-
-        public uint Y => _y;
-
-        public string Name => _name;
-
-        public StandardObject(uint x,uint y, uint width, uint height, string name, uint[] mapData)
-        {
-            _x = x;
-            _y = y;
-            _width = width;
-            _height = height;
-            _name = name;
-            _mapData = mapData;
-        }
-
-        public ReadOnlySpan<uint> GetMapData()
-        {
-            return _mapData;
-        }
-
-        public void Move(uint x, uint y)
-        {
-            var tx = x;
-            var ty = y;
-            // Clamp to tile 16x16 grid
-            tx = (tx / 16) * 16;
-            ty = (ty / 16) * 16;
-            _x = Math.Min(Math.Max(tx, 0u), 16u*16u*32u);
-            _y = Math.Min(Math.Max(ty, 0u), 416u);
-        }
-
-        private uint _x, _y, _width, _height;
-        private string _name;
-        private uint[] _mapData;
-    }
-
     public class SuperMarioWorldObjectMap : IObjectMap, ITilePalette
     {
         public uint Width => 16*16*32;
@@ -133,8 +90,9 @@ namespace RetroEditorPlugin_SuperMarioWorld
 
             _palette = new TilePaletteStore(this);
 
+            var levelHelpers = new LevelHelpers(rom,editorInterface);
+            _objects = levelHelpers.FetchObjectLayer(ref smwRom, smwLevelHeader, vram, smwRom.Layer1Data);
             // Test - add a Yoshi Coin to test
-            _objects.Add(new StandardObject(8, 8, 1, 2, "Yoshi Coin", new uint[] { 0x2D, 0x2E }));
         }
 
         public TilePaletteStore FetchPalette()

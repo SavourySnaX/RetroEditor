@@ -39,7 +39,14 @@ internal class ObjectMapWidget : IWidgetItem, IWidgetUpdateDraw
             {
                 if (!dragging)
                 {
-                    dragging = true;
+                    if (x >= 0 && x < _objectMap.Width && y >= 0 && y < _objectMap.Height)
+                    {
+                        var obj = _objectMap.FetchObjects.ElementAt(selectedObject);
+                        if (x >= obj.X && x < obj.X + obj.Width * palette.LargestWidth && y >= obj.Y && y < obj.Y + obj.Height * palette.LargestHeight)
+                        {
+                            dragging = true;
+                        }
+                    }
                 }
                 else
                 {
@@ -62,14 +69,7 @@ internal class ObjectMapWidget : IWidgetItem, IWidgetUpdateDraw
                     {
                         ImGui.SetMouseCursor(ImGuiMouseCursor.ResizeAll);
 
-                        if (currentObject==selectedObject)
-                        {
-                            if (ImGui.IsMouseClicked(ImGuiMouseButton.Right))
-                            {
-                                selectedObject = -1;
-                            }
-                        }
-                        else if (ImGui.IsMouseClicked(ImGuiMouseButton.Right))
+                        if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
                         {
                             nSelectedObject = currentObject;
                             break;
@@ -80,6 +80,13 @@ internal class ObjectMapWidget : IWidgetItem, IWidgetUpdateDraw
                 if (nSelectedObject != -1)
                 {
                     selectedObject = nSelectedObject;
+                }
+                else
+                {
+                    if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+                    {
+                        selectedObject = -1;
+                    }
                 }
             }
         }

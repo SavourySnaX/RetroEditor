@@ -41,94 +41,6 @@ public class SuperMarioWorldLevelViewImage : IImage, IUserWindow
 
     private bool runOnce = false;
 
-    enum StandardObject
-    {
-        WaterBlue = 0x01,
-        InvisibleCoinBlocks = 0x02,
-        InvisibleNoteBlocks = 0x03,
-        InvisiblePowCoins = 0x04,
-        Coins = 0x05,
-        WalkThroughDirt = 0x06,
-        WaterOtherColor = 0x07,
-        NoteBlocks = 0x08,
-        TurnBlocks = 0x09,
-        CoinQuestionBlocks = 0x0A,
-        ThrowBlocks = 0x0B,
-        BlackPiranhaPlants = 0x0C,
-        CementBlocks = 0x0D,
-        BrownBlocks = 0x0E,
-        VerticalPipes = 0x0F,
-        HorizontalPipes = 0x10,
-        BulletShooter = 0x11,
-        Slopes = 0x12,
-        LedgeEdges = 0x13,
-        GroundLedge = 0x14,
-        MidwayGoalPoint = 0x15,
-        BlueCoins = 0x16,
-        RopeOrClouds = 0x17,
-        WaterSurceAnimated = 0x18,
-        WaterSurfaceStatic = 0x19,
-        LavaSurfaceAnimated = 0x1A,
-        NetTopEdge = 0x1B,
-        DonutBridge = 0x1C,
-        NetBottomEdge = 0x1D,
-        NetVerticalEdge = 0x1E,
-        VerticalPipeOrBoneOrLog = 0x1F,
-        HorizontalPipeOrBoneOrLog = 0x20,
-        LongGroundLedge = 0x21,
-        TilesetSpecificStart01 = 0x2E,
-        TilesetSpecificStart02 = 0x2F,
-        TilesetSpecificStart03 = 0x30,
-        TilesetSpecificStart04 = 0x31,
-        TilesetSpecificStart05 = 0x32,
-        TilesetSpecificStart06 = 0x33,
-        TilesetSpecificStart07 = 0x34,
-        TilesetSpecificStart08 = 0x35,
-        TilesetSpecificStart09 = 0x36,
-        TilesetSpecificStart10 = 0x37,
-        TilesetSpecificStart11 = 0x38,
-        TilesetSpecificStart12 = 0x39,
-        TilesetSpecificStart13 = 0x3A,
-        TilesetSpecificStart14 = 0x3B,
-        TilesetSpecificStart15 = 0x3C,
-        TilesetSpecificStart16 = 0x3D,
-        TilesetSpecificStart17 = 0x3E,
-        TilesetSpecificStart18 = 0x3F,
-    }
-
-    enum ExtendedObject
-    {
-        ScreenExit = 0,
-        ScreenJump = 1,
-        Moon3Up = 0x18,
-        Invisible1Up1 = 0x19,
-        Invisible1Up2 = 0x1A,
-        Invisible1Up3 = 0x1B,
-        Invisible1Up4 = 0x1C,
-        RedBerry = 0x1D,
-        PinkBerry = 0x1E,
-        GreenBerry = 0x1F,
-        QBlockFlower = 0x30,
-        QBlockFeather = 0x31,
-        QBlockStar = 0x32,
-        QBlockStar2 = 0x33,
-        QBlockMultipleCoins = 0x34,
-        QBlockKeyWingsBalloonShell = 0x35,
-        QBlockYoshi = 0x36,
-        QBlockShell1 = 0x37,
-        QBlockShell2 = 0x38,
-        TranslucentBlock = 0x40,
-        YoshiCoin = 0x41,
-        TopLeftSlope = 0x42,
-        TopRightSlope = 0x43,
-        PurpleTriangleLeft = 0x44,
-        PurpleTriangleRight = 0x45,
-        MidwayPointRope = 0x46,
-        BigBush1 = 0x82,
-        BigBush2 = 0x83,
-        ArrowSign = 0x86,
-    }
-
     enum SpriteObject
     {
 
@@ -378,7 +290,7 @@ public class SuperMarioWorldLevelViewImage : IImage, IUserWindow
 
     }
 
-    private void RenderObjectLayer(ref SuperMarioWorldRomHelpers smwRom, SMWLevelHeader smwLevelHeader, SuperMarioVRam vram,  uint layerAddress)
+    private void RenderObjectLayer(ref SuperMarioWorldRomHelpers smwRom, SMWLevelHeader smwLevelHeader, SuperMarioVRam vram, uint layerAddress)
     {
         var screenOffsetNumber = 0;
         bool layerDone = false;
@@ -433,60 +345,60 @@ public class SuperMarioWorldLevelViewImage : IImage, IUserWindow
 
             if (extended)
             {
-                switch ((ExtendedObject)objectNumber)
+                switch ((EExtendedObject)objectNumber)
                 {
-                    case ExtendedObject.ScreenExit:
-                        _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(ExtendedObject)objectNumber} @{xPos:X2},{yPos:X2} - {t3:X2}");
+                    case EExtendedObject.ScreenExit:
+                        _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(EExtendedObject)objectNumber} @{xPos:X2},{yPos:X2} - {t3:X2}");
                         break;
-                    case ExtendedObject.ScreenJump:
+                    case EExtendedObject.ScreenJump:
                         screenOffsetNumber = screenNumber;
-                        _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(ExtendedObject)objectNumber} @{xPos:X2},{yPos:X2} - Screen {screenNumber:X2}");
+                        _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(EExtendedObject)objectNumber} @{xPos:X2},{yPos:X2} - Screen {screenNumber:X2}");
                         break;
-                    case ExtendedObject.Moon3Up:
-                    case ExtendedObject.Invisible1Up1:
-                    case ExtendedObject.Invisible1Up2:
-                    case ExtendedObject.Invisible1Up3:
-                    case ExtendedObject.Invisible1Up4:
-                    case ExtendedObject.QBlockFlower:
-                    case ExtendedObject.QBlockFeather:
-                    case ExtendedObject.QBlockStar:
-                    case ExtendedObject.QBlockStar2:
-                    case ExtendedObject.QBlockMultipleCoins:
-                    case ExtendedObject.QBlockKeyWingsBalloonShell:
-                    case ExtendedObject.QBlockShell1:
-                    case ExtendedObject.QBlockShell2:
-                    case ExtendedObject.TranslucentBlock:
-                    case ExtendedObject.TopLeftSlope:
-                    case ExtendedObject.TopRightSlope:
-                    case ExtendedObject.PurpleTriangleLeft:
-                    case ExtendedObject.PurpleTriangleRight:
-                    case ExtendedObject.MidwayPointRope:
-                    case ExtendedObject.ArrowSign:
+                    case EExtendedObject.Moon3Up:
+                    case EExtendedObject.Invisible1Up1:
+                    case EExtendedObject.Invisible1Up2:
+                    case EExtendedObject.Invisible1Up3:
+                    case EExtendedObject.Invisible1Up4:
+                    case EExtendedObject.QBlockFlower:
+                    case EExtendedObject.QBlockFeather:
+                    case EExtendedObject.QBlockStar:
+                    case EExtendedObject.QBlockStar2:
+                    case EExtendedObject.QBlockMultipleCoins:
+                    case EExtendedObject.QBlockKeyWingsBalloonShell:
+                    case EExtendedObject.QBlockShell1:
+                    case EExtendedObject.QBlockShell2:
+                    case EExtendedObject.TranslucentBlock:
+                    case EExtendedObject.TopLeftSlope:
+                    case EExtendedObject.TopRightSlope:
+                    case EExtendedObject.PurpleTriangleLeft:
+                    case EExtendedObject.PurpleTriangleRight:
+                    case EExtendedObject.MidwayPointRope:
+                    case EExtendedObject.ArrowSign:
                         Draw16x16Tile(xPos, yPos, new Pixel(128, 128, 128, 255));
-                        _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(ExtendedObject)objectNumber} @{xPos:X2},{yPos:X2}");
+                        _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(EExtendedObject)objectNumber} @{xPos:X2},{yPos:X2}");
                         break;
-                    case ExtendedObject.QBlockYoshi:
+                    case EExtendedObject.QBlockYoshi:
                         DrawGfxTile(xPos, yPos, 0x126, vram);
-                        _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(ExtendedObject)objectNumber} @{xPos:X2},{yPos:X2}");
+                        _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(EExtendedObject)objectNumber} @{xPos:X2},{yPos:X2}");
                         break;
-                    case ExtendedObject.BigBush1:
+                    case EExtendedObject.BigBush1:
                         // See table referenced by code at DA106 - For now, I've just done things by hand, but perhaps we should automate this
                         DrawGfxTilesFixedPattern(xPos, yPos, 9, 45, vram, SMWAddresses.LargeBush);
-                        _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(ExtendedObject)objectNumber} @{xPos:X2},{yPos:X2}");
+                        _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(EExtendedObject)objectNumber} @{xPos:X2},{yPos:X2}");
                         break;
-                    case ExtendedObject.BigBush2:
+                    case EExtendedObject.BigBush2:
                         DrawGfxTilesFixedPattern(xPos, yPos, 6, 24, vram, SMWAddresses.MediumBush);
-                        _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(ExtendedObject)objectNumber} @{xPos:X2},{yPos:X2}");
+                        _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(EExtendedObject)objectNumber} @{xPos:X2},{yPos:X2}");
                         break;
-                    case ExtendedObject.YoshiCoin:
+                    case EExtendedObject.YoshiCoin:
                         DrawGfxTilesYTopOther(xPos, yPos, 0, 1, vram, 0x2D, 0x2E);
-                        _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(ExtendedObject)objectNumber} @{xPos:X2},{yPos:X2}");
+                        _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(EExtendedObject)objectNumber} @{xPos:X2},{yPos:X2}");
                         break;
-                    case ExtendedObject.RedBerry:
-                    case ExtendedObject.PinkBerry:
-                    case ExtendedObject.GreenBerry:
-                        DrawGfxTile(xPos, yPos, (objectNumber - (int)ExtendedObject.RedBerry) + 0x45, vram);
-                        _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(ExtendedObject)objectNumber} @{xPos:X2},{yPos:X2}");
+                    case EExtendedObject.RedBerry:
+                    case EExtendedObject.PinkBerry:
+                    case EExtendedObject.GreenBerry:
+                        DrawGfxTile(xPos, yPos, (objectNumber - (int)EExtendedObject.RedBerry) + 0x45, vram);
+                        _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(EExtendedObject)objectNumber} @{xPos:X2},{yPos:X2}");
                         break;
                     default:
                         Draw16x16Tile(xPos, yPos, new Pixel(32, 32, 32, 255));
@@ -497,78 +409,78 @@ public class SuperMarioWorldLevelViewImage : IImage, IUserWindow
             }
             else
             {
-                switch ((StandardObject)objectNumber)
+                switch ((EStandardObject)objectNumber)
                 {
-                    case StandardObject.GroundLedge:
+                    case EStandardObject.GroundLedge:
                         DrawGfxTilesYTopOther(xPos, yPos, p1, p0, vram, 0x100, 0x3F);
-                        _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(StandardObject)objectNumber} @{xPos:X2},{yPos:X2} - Height {p0:X2} - Width {p1:X2}");
+                        _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(EStandardObject)objectNumber} @{xPos:X2},{yPos:X2} - Height {p0:X2} - Width {p1:X2}");
                         break;
-                    case StandardObject.WaterBlue:
-                    case StandardObject.InvisibleCoinBlocks:
-                    case StandardObject.InvisibleNoteBlocks:
-                    case StandardObject.InvisiblePowCoins:
-                    case StandardObject.WaterOtherColor:
-                    case StandardObject.NoteBlocks:
-                    case StandardObject.TurnBlocks:
-                    case StandardObject.CoinQuestionBlocks:
-                    case StandardObject.ThrowBlocks:
-                    case StandardObject.BlackPiranhaPlants:
-                    case StandardObject.CementBlocks:
-                    case StandardObject.BrownBlocks:
-                    case StandardObject.BlueCoins:
-                    case StandardObject.WaterSurceAnimated:
-                    case StandardObject.WaterSurfaceStatic:
-                    case StandardObject.LavaSurfaceAnimated:
-                    case StandardObject.NetTopEdge:
-                    case StandardObject.NetBottomEdge:
+                    case EStandardObject.WaterBlue:
+                    case EStandardObject.InvisibleCoinBlocks:
+                    case EStandardObject.InvisibleNoteBlocks:
+                    case EStandardObject.InvisiblePowCoins:
+                    case EStandardObject.WaterOtherColor:
+                    case EStandardObject.NoteBlocks:
+                    case EStandardObject.TurnBlocks:
+                    case EStandardObject.CoinQuestionBlocks:
+                    case EStandardObject.ThrowBlocks:
+                    case EStandardObject.BlackPiranhaPlants:
+                    case EStandardObject.CementBlocks:
+                    case EStandardObject.BrownBlocks:
+                    case EStandardObject.BlueCoins:
+                    case EStandardObject.WaterSurceAnimated:
+                    case EStandardObject.WaterSurfaceStatic:
+                    case EStandardObject.LavaSurfaceAnimated:
+                    case EStandardObject.NetTopEdge:
+                    case EStandardObject.NetBottomEdge:
                         DrawTiles(xPos, yPos, p1, p0, new Pixel(0, 255, 255, 255));
-                        _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(StandardObject)objectNumber} @{xPos:X2},{yPos:X2} - Height {p0:X2} - Width {p1:X2}");
+                        _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(EStandardObject)objectNumber} @{xPos:X2},{yPos:X2} - Height {p0:X2} - Width {p1:X2}");
                         break;
-                    case StandardObject.WalkThroughDirt:
+                    case EStandardObject.WalkThroughDirt:
                         DrawGfxTiles(xPos, yPos, p1, p0, vram, 0x3F, 0x3F, 0x3F);
-                        _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(StandardObject)objectNumber} @{xPos:X2},{yPos:X2} - Height {p0:X2} - Width {p1:X2}");
+                        _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(EStandardObject)objectNumber} @{xPos:X2},{yPos:X2} - Height {p0:X2} - Width {p1:X2}");
                         break;
-                    case StandardObject.Coins:
+                    case EStandardObject.Coins:
                         DrawGfxTilesYTopOther(xPos, yPos, p1, p0, vram, 0x2B, 0x2B);
-                        _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(StandardObject)objectNumber} @{xPos:X2},{yPos:X2} - Height {p0:X2} - Width {p1:X2}");
+                        _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(EStandardObject)objectNumber} @{xPos:X2},{yPos:X2} - Height {p0:X2} - Width {p1:X2}");
                         break;
-                    case StandardObject.VerticalPipes:
-                    case StandardObject.NetVerticalEdge:
+                    case EStandardObject.VerticalPipes:
+                    case EStandardObject.NetVerticalEdge:
                         DrawTiles(xPos, yPos, 1, p0, new Pixel(255, 0, 255, 255));
-                        _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(StandardObject)objectNumber} @{xPos:X2},{yPos:X2} - Height {p0:X2} - Type {p1:X2}");
+                        _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(EStandardObject)objectNumber} @{xPos:X2},{yPos:X2} - Height {p0:X2} - Type {p1:X2}");
                         break;
-                    case StandardObject.LedgeEdges:
-                        switch(p1)
+                    case EStandardObject.LedgeEdges:
+                        switch (p1)
                         {
                             case 0xB:
-                                DrawGfx9Tile(xPos,yPos,0,p0+1,vram, new int[] { 0x145, 0x145, 0x145, 0x14B, 0x14B, 0x14B, 0x1E2, 0x1E2, 0x1E2 });
+                                DrawGfx9Tile(xPos, yPos, 0, p0 + 1, vram, new int[] { 0x145, 0x145, 0x145, 0x14B, 0x14B, 0x14B, 0x1E2, 0x1E2, 0x1E2 });
                                 break;
                             case 0xD:
-                                DrawGfx9Tile(xPos,yPos,0,p0+1,vram, new int[] { 0x148, 0x148, 0x148, 0x14C, 0x14C, 0x14C, 0x1E4, 0x1E4, 0x1E4 });
+                                DrawGfx9Tile(xPos, yPos, 0, p0 + 1, vram, new int[] { 0x148, 0x148, 0x148, 0x14C, 0x14C, 0x14C, 0x1E4, 0x1E4, 0x1E4 });
                                 break;
                             default:
                                 DrawTiles(xPos, yPos, 1, p0, new Pixel(255, 0, 255, 255));
                                 break;
                         }
-                        _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(StandardObject)objectNumber} @{xPos:X2},{yPos:X2} - Height {p0:X2} - Type {p1:X2}");
+                        _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(EStandardObject)objectNumber} @{xPos:X2},{yPos:X2} - Height {p0:X2} - Type {p1:X2}");
                         break;
-                    case StandardObject.MidwayGoalPoint:
+                    case EStandardObject.MidwayGoalPoint:
                         if (p1 == 1)
                         {
-                            DrawGfxTiles(xPos, yPos+0, 2, 0, vram, 0x39, 0x25, 0x3C);
-                            for (int a=1;a<p0;a++)
+                            DrawGfxTiles(xPos, yPos + 0, 2, 0, vram, 0x39, 0x25, 0x3C);
+                            for (int a = 1; a < p0; a++)
                             {
-                                DrawGfxTiles(xPos, yPos+a, 2, 0, vram, 0x3A, 0x25, 0x3D);
+                                DrawGfxTiles(xPos, yPos + a, 2, 0, vram, 0x3A, 0x25, 0x3D);
                             }
-                            DrawGfxTiles(xPos, yPos+p0, 2, 0, vram, 0x3B, 0x25, 0x3E);
+                            DrawGfxTiles(xPos, yPos + p0, 2, 0, vram, 0x3B, 0x25, 0x3E);
                         }
                         else
                         {
                             DrawTiles(xPos, yPos, 1, p0, new Pixel(255, 0, 255, 255));
                         }
-                        _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(StandardObject)objectNumber} @{xPos:X2},{yPos:X2} - Height {p0:X2} - Type {p1:X2}");
+                        _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(EStandardObject)objectNumber} @{xPos:X2},{yPos:X2} - Height {p0:X2} - Type {p1:X2}");
                         break;
-                    case StandardObject.Slopes:
+                    case EStandardObject.Slopes:
                         if (p1 == 5)
                         {
                             // NOTE PADS next hieght with 3Fs on the left
@@ -584,90 +496,90 @@ public class SuperMarioWorldLevelViewImage : IImage, IUserWindow
                         }
                         else
                             DrawTiles(xPos, yPos, 1, p0, new Pixel(255, 0, 255, 255));
-                        _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(StandardObject)objectNumber} @{xPos:X2},{yPos:X2} - Height {p0:X2} - Type {p1:X2}");
+                        _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(EStandardObject)objectNumber} @{xPos:X2},{yPos:X2} - Height {p0:X2} - Type {p1:X2}");
                         break;
 
-                    case StandardObject.HorizontalPipes:
+                    case EStandardObject.HorizontalPipes:
                         switch (p0)
                         {
                             case 0: // Ends on left
                             case 1: // exit enabled
                                 DrawGfxTile(xPos, yPos, 0x13B, vram);
-                                DrawGfxTile(xPos, yPos+1, 0x13C, vram);
-                                for (int a=1;a<=p1;a++)
+                                DrawGfxTile(xPos, yPos + 1, 0x13C, vram);
+                                for (int a = 1; a <= p1; a++)
                                 {
-                                    DrawGfxTile(xPos+a, yPos, 0x13D, vram);
-                                    DrawGfxTile(xPos+a, yPos+1, 0x13E, vram);
+                                    DrawGfxTile(xPos + a, yPos, 0x13D, vram);
+                                    DrawGfxTile(xPos + a, yPos + 1, 0x13E, vram);
                                 }
                                 break;
                             case 2: // Ends on right
                             case 3: // exit enabled
-                                for (int a=0;a<p1;a++)
+                                for (int a = 0; a < p1; a++)
                                 {
-                                    DrawGfxTile(xPos+a, yPos, 0x13D, vram);
-                                    DrawGfxTile(xPos+a, yPos+1, 0x13E, vram);
+                                    DrawGfxTile(xPos + a, yPos, 0x13D, vram);
+                                    DrawGfxTile(xPos + a, yPos + 1, 0x13E, vram);
                                 }
-                                DrawGfxTile(xPos+p1, yPos, 0x13B, vram);
-                                DrawGfxTile(xPos+p1, yPos+1, 0x13C, vram);
+                                DrawGfxTile(xPos + p1, yPos, 0x13B, vram);
+                                DrawGfxTile(xPos + p1, yPos + 1, 0x13C, vram);
                                 break;
                         }
-                        _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(StandardObject)objectNumber} @{xPos:X2},{yPos:X2} - Type {p0:X2} - Width {p1:X2}");
+                        _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(EStandardObject)objectNumber} @{xPos:X2},{yPos:X2} - Type {p0:X2} - Width {p1:X2}");
                         break;
-                    case StandardObject.RopeOrClouds:
+                    case EStandardObject.RopeOrClouds:
                         DrawTiles(xPos, yPos, p1, 1, new Pixel(255, 255, 0, 255));
-                        _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(StandardObject)objectNumber} @{xPos:X2},{yPos:X2} - Type {p0:X2} - Width {p1:X2}");
+                        _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(EStandardObject)objectNumber} @{xPos:X2},{yPos:X2} - Type {p0:X2} - Width {p1:X2}");
                         break;
-                    case StandardObject.BulletShooter:
-                    case StandardObject.VerticalPipeOrBoneOrLog:
+                    case EStandardObject.BulletShooter:
+                    case EStandardObject.VerticalPipeOrBoneOrLog:
                         DrawTiles(xPos, yPos, 1, p0, new Pixel(0, 0, 255, 255));
-                        _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(StandardObject)objectNumber} @{xPos:X2},{yPos:X2} - Height {p0:X2}");
+                        _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(EStandardObject)objectNumber} @{xPos:X2},{yPos:X2} - Height {p0:X2}");
                         break;
-                    case StandardObject.LongGroundLedge:      // Long ground ledge
+                    case EStandardObject.LongGroundLedge:      // Long ground ledge
                         DrawGfxTilesYTopOther(xPos, yPos, t2, 1, vram, 0x100, 0x3F);
-                        _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(StandardObject)objectNumber} @{xPos:X2},{yPos:X2} - Length {t2:X2}");
+                        _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(EStandardObject)objectNumber} @{xPos:X2},{yPos:X2} - Length {t2:X2}");
                         break;
-                    case StandardObject.DonutBridge:
-                    case StandardObject.HorizontalPipeOrBoneOrLog:
+                    case EStandardObject.DonutBridge:
+                    case EStandardObject.HorizontalPipeOrBoneOrLog:
                         DrawTiles(xPos, yPos, p1, 1, new Pixel(255, 0, 0, 255));
-                        _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(StandardObject)objectNumber} @{xPos:X2},{yPos:X2} - Width {p1:X2}");
+                        _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(EStandardObject)objectNumber} @{xPos:X2},{yPos:X2} - Width {p1:X2}");
                         break;
-                    case StandardObject.TilesetSpecificStart01:
-                    case StandardObject.TilesetSpecificStart02:
-                    case StandardObject.TilesetSpecificStart03:
-                    case StandardObject.TilesetSpecificStart04:
-                    case StandardObject.TilesetSpecificStart05:
-                    case StandardObject.TilesetSpecificStart06:
-                    case StandardObject.TilesetSpecificStart07:
-                    case StandardObject.TilesetSpecificStart08:
-                    case StandardObject.TilesetSpecificStart09:
-                    case StandardObject.TilesetSpecificStart10:
-                    case StandardObject.TilesetSpecificStart11:
-                    case StandardObject.TilesetSpecificStart12:
-                    case StandardObject.TilesetSpecificStart13:
-                    case StandardObject.TilesetSpecificStart14:
-                    case StandardObject.TilesetSpecificStart15:
-                    case StandardObject.TilesetSpecificStart16:
-                    case StandardObject.TilesetSpecificStart17:
-                    case StandardObject.TilesetSpecificStart18:
+                    case EStandardObject.TilesetSpecificStart01:
+                    case EStandardObject.TilesetSpecificStart02:
+                    case EStandardObject.TilesetSpecificStart03:
+                    case EStandardObject.TilesetSpecificStart04:
+                    case EStandardObject.TilesetSpecificStart05:
+                    case EStandardObject.TilesetSpecificStart06:
+                    case EStandardObject.TilesetSpecificStart07:
+                    case EStandardObject.TilesetSpecificStart08:
+                    case EStandardObject.TilesetSpecificStart09:
+                    case EStandardObject.TilesetSpecificStart10:
+                    case EStandardObject.TilesetSpecificStart11:
+                    case EStandardObject.TilesetSpecificStart12:
+                    case EStandardObject.TilesetSpecificStart13:
+                    case EStandardObject.TilesetSpecificStart14:
+                    case EStandardObject.TilesetSpecificStart15:
+                    case EStandardObject.TilesetSpecificStart16:
+                    case EStandardObject.TilesetSpecificStart17:
+                    case EStandardObject.TilesetSpecificStart18:
                         switch (smwLevelHeader.GetTileset())
                         {
                             case SMWLevelHeader.Tileset.NormalCloudForest:
-                                RenderTilesetSpecificSetNormalCloudForest((StandardObject)objectNumber, xPos, yPos, p0, p1, t2, vram);
+                                RenderTilesetSpecificSetNormalCloudForest((EStandardObject)objectNumber, xPos, yPos, p0, p1, t2, vram);
                                 break;
                             case SMWLevelHeader.Tileset.Castle1:
-                                RenderTilesetSpecificSetCastle1((StandardObject)objectNumber, xPos, yPos, p0, p1, t2, vram);
+                                RenderTilesetSpecificSetCastle1((EStandardObject)objectNumber, xPos, yPos, p0, p1, t2, vram);
                                 break;
                             case SMWLevelHeader.Tileset.Rope:
-                                RenderTilesetSpecificSetRope((StandardObject)objectNumber, xPos, yPos, p0, p1, t2, vram);
+                                RenderTilesetSpecificSetRope((EStandardObject)objectNumber, xPos, yPos, p0, p1, t2, vram);
                                 break;
                             case SMWLevelHeader.Tileset.UndergroundPalace2Castle2:
-                                RenderTilesetSpecificSetUndergroundPalace2Castle2((StandardObject)objectNumber, xPos, yPos, p0, p1, t2, vram);
+                                RenderTilesetSpecificSetUndergroundPalace2Castle2((EStandardObject)objectNumber, xPos, yPos, p0, p1, t2, vram);
                                 break;
                             case SMWLevelHeader.Tileset.GhostHouseSwitchPalace1:
-                                RenderTilesetSpecificSetGhostHouseSwitchPalace1((StandardObject)objectNumber, xPos, yPos, p0, p1, t2, vram);
+                                RenderTilesetSpecificSetGhostHouseSwitchPalace1((EStandardObject)objectNumber, xPos, yPos, p0, p1, t2, vram);
                                 break;
                         }
-                        _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(StandardObject)objectNumber} @{xPos:X2},{yPos:X2} - Special {t2:X2}");
+                        _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(EStandardObject)objectNumber} @{xPos:X2},{yPos:X2} - Special {t2:X2}");
                         break;
                     default:
                         Draw16x16Tile(xPos, yPos, new Pixel(128, 128, 0, 255));
@@ -678,28 +590,28 @@ public class SuperMarioWorldLevelViewImage : IImage, IUserWindow
         }
     }
 
-    private void RenderTilesetSpecificSetNormalCloudForest(StandardObject objectNumber, int xPos, int yPos, int p0, int p1, byte t2, SuperMarioVRam vram)
+    private void RenderTilesetSpecificSetNormalCloudForest(EStandardObject objectNumber, int xPos, int yPos, int p0, int p1, byte t2, SuperMarioVRam vram)
     {
         switch (objectNumber)
         {
-            case StandardObject.TilesetSpecificStart01:
-            case StandardObject.TilesetSpecificStart02:
-            case StandardObject.TilesetSpecificStart03:
-            case StandardObject.TilesetSpecificStart04:
-            case StandardObject.TilesetSpecificStart05:
-            case StandardObject.TilesetSpecificStart06:
-            case StandardObject.TilesetSpecificStart07:
-            case StandardObject.TilesetSpecificStart08:
-            case StandardObject.TilesetSpecificStart09:
-            case StandardObject.TilesetSpecificStart10:
-            case StandardObject.TilesetSpecificStart11:
-            case StandardObject.TilesetSpecificStart12:
-            case StandardObject.TilesetSpecificStart15:
-            case StandardObject.TilesetSpecificStart16:
-            case StandardObject.TilesetSpecificStart17:
+            case EStandardObject.TilesetSpecificStart01:
+            case EStandardObject.TilesetSpecificStart02:
+            case EStandardObject.TilesetSpecificStart03:
+            case EStandardObject.TilesetSpecificStart04:
+            case EStandardObject.TilesetSpecificStart05:
+            case EStandardObject.TilesetSpecificStart06:
+            case EStandardObject.TilesetSpecificStart07:
+            case EStandardObject.TilesetSpecificStart08:
+            case EStandardObject.TilesetSpecificStart09:
+            case EStandardObject.TilesetSpecificStart10:
+            case EStandardObject.TilesetSpecificStart11:
+            case EStandardObject.TilesetSpecificStart12:
+            case EStandardObject.TilesetSpecificStart15:
+            case EStandardObject.TilesetSpecificStart16:
+            case EStandardObject.TilesetSpecificStart17:
                 Draw16x16Tile(xPos, yPos, new Pixel(128, 0, 0, 255));
                 break;
-            case StandardObject.TilesetSpecificStart13:
+            case EStandardObject.TilesetSpecificStart13:
                 // Left facing diagonal ledge (see right, just different codes basically)
                 {
                     DrawGfxTile(xPos, yPos, 0x1AA, vram);
@@ -762,7 +674,7 @@ public class SuperMarioWorldLevelViewImage : IImage, IUserWindow
                     DrawGfxTile(xPos + 8, yPos, 0x0A6, vram);
                 }
                 break;
-            case StandardObject.TilesetSpecificStart14:
+            case EStandardObject.TilesetSpecificStart14:
                 // Right facing diagonal ledge (
                 //
                 // A                         0x0AF 0x1AF
@@ -802,7 +714,7 @@ public class SuperMarioWorldLevelViewImage : IImage, IUserWindow
                     DrawGfxTile(xPos + 6, yPos, 0x1F9, vram);
                 }
                 break;
-            case StandardObject.TilesetSpecificStart18:
+            case EStandardObject.TilesetSpecificStart18:
                 // grass  - p1 width, p0 style (0,1,2)
                 switch (p0)
                 {
@@ -822,117 +734,117 @@ public class SuperMarioWorldLevelViewImage : IImage, IUserWindow
 
     }
 
-    private void RenderTilesetSpecificSetCastle1(StandardObject objectNumber, int xPos, int yPos, int p0, int p1, byte t2, SuperMarioVRam vram)
+    private void RenderTilesetSpecificSetCastle1(EStandardObject objectNumber, int xPos, int yPos, int p0, int p1, byte t2, SuperMarioVRam vram)
     {
         switch (objectNumber)
         {
-            case StandardObject.TilesetSpecificStart01:
-            case StandardObject.TilesetSpecificStart02:
-            case StandardObject.TilesetSpecificStart03:
-            case StandardObject.TilesetSpecificStart04:
-            case StandardObject.TilesetSpecificStart05:
-            case StandardObject.TilesetSpecificStart06:
-            case StandardObject.TilesetSpecificStart07:
-            case StandardObject.TilesetSpecificStart08:
-            case StandardObject.TilesetSpecificStart09:
-            case StandardObject.TilesetSpecificStart10:
-            case StandardObject.TilesetSpecificStart11:
-            case StandardObject.TilesetSpecificStart12:
-            case StandardObject.TilesetSpecificStart13:
-            case StandardObject.TilesetSpecificStart14:
-            case StandardObject.TilesetSpecificStart16:
-            case StandardObject.TilesetSpecificStart17:
-            case StandardObject.TilesetSpecificStart18:
+            case EStandardObject.TilesetSpecificStart01:
+            case EStandardObject.TilesetSpecificStart02:
+            case EStandardObject.TilesetSpecificStart03:
+            case EStandardObject.TilesetSpecificStart04:
+            case EStandardObject.TilesetSpecificStart05:
+            case EStandardObject.TilesetSpecificStart06:
+            case EStandardObject.TilesetSpecificStart07:
+            case EStandardObject.TilesetSpecificStart08:
+            case EStandardObject.TilesetSpecificStart09:
+            case EStandardObject.TilesetSpecificStart10:
+            case EStandardObject.TilesetSpecificStart11:
+            case EStandardObject.TilesetSpecificStart12:
+            case EStandardObject.TilesetSpecificStart13:
+            case EStandardObject.TilesetSpecificStart14:
+            case EStandardObject.TilesetSpecificStart16:
+            case EStandardObject.TilesetSpecificStart17:
+            case EStandardObject.TilesetSpecificStart18:
                 Draw16x16Tile(xPos, yPos, new Pixel(128, 0, 0, 255));
                 break;
-            case StandardObject.TilesetSpecificStart15:
+            case EStandardObject.TilesetSpecificStart15:
                 DrawGfx9Tile(xPos, yPos, p1, p0, vram, new int[] { 0x15D, 0x15E, 0x15F, 0x160, 0x161, 0x162, 0x163, 0x164, 0x165 });
                 break;
         }
     }
 
-    private void RenderTilesetSpecificSetRope(StandardObject objectNumber, int xPos, int yPos, int p0, int p1, byte t2, SuperMarioVRam vram)
+    private void RenderTilesetSpecificSetRope(EStandardObject objectNumber, int xPos, int yPos, int p0, int p1, byte t2, SuperMarioVRam vram)
     {
         switch (objectNumber)
         {
-            case StandardObject.TilesetSpecificStart01:
-            case StandardObject.TilesetSpecificStart02:
-            case StandardObject.TilesetSpecificStart03:
-            case StandardObject.TilesetSpecificStart04:
-            case StandardObject.TilesetSpecificStart05:
-            case StandardObject.TilesetSpecificStart06:
-            case StandardObject.TilesetSpecificStart07:
-            case StandardObject.TilesetSpecificStart08:
-            case StandardObject.TilesetSpecificStart09:
-            case StandardObject.TilesetSpecificStart10:
-            case StandardObject.TilesetSpecificStart11:
-            case StandardObject.TilesetSpecificStart12:
-            case StandardObject.TilesetSpecificStart13:
-            case StandardObject.TilesetSpecificStart14:
-            case StandardObject.TilesetSpecificStart17:
-            case StandardObject.TilesetSpecificStart18:
+            case EStandardObject.TilesetSpecificStart01:
+            case EStandardObject.TilesetSpecificStart02:
+            case EStandardObject.TilesetSpecificStart03:
+            case EStandardObject.TilesetSpecificStart04:
+            case EStandardObject.TilesetSpecificStart05:
+            case EStandardObject.TilesetSpecificStart06:
+            case EStandardObject.TilesetSpecificStart07:
+            case EStandardObject.TilesetSpecificStart08:
+            case EStandardObject.TilesetSpecificStart09:
+            case EStandardObject.TilesetSpecificStart10:
+            case EStandardObject.TilesetSpecificStart11:
+            case EStandardObject.TilesetSpecificStart12:
+            case EStandardObject.TilesetSpecificStart13:
+            case EStandardObject.TilesetSpecificStart14:
+            case EStandardObject.TilesetSpecificStart17:
+            case EStandardObject.TilesetSpecificStart18:
                 Draw16x16Tile(xPos, yPos, new Pixel(128, 0, 0, 255));
                 break;
-            case StandardObject.TilesetSpecificStart15:
+            case EStandardObject.TilesetSpecificStart15:
                 // mushroom platform top (p1 width)
                 DrawGfxTiles(xPos, yPos, p1, 0, vram, 0x107, 0x108, 0x109);
                 break;
-            case StandardObject.TilesetSpecificStart16:
+            case EStandardObject.TilesetSpecificStart16:
                 // mushroom platform bottom (p1 width, p0 height)
                 DrawGfxTiles(xPos, yPos, p1, p0, vram, 0x73, 0x074, 0x75);
                 break;
         }
     }
 
-    private void RenderTilesetSpecificSetUndergroundPalace2Castle2(StandardObject objectNumber, int xPos, int yPos, int p0, int p1, byte t2, SuperMarioVRam vram)
+    private void RenderTilesetSpecificSetUndergroundPalace2Castle2(EStandardObject objectNumber, int xPos, int yPos, int p0, int p1, byte t2, SuperMarioVRam vram)
     {
         switch (objectNumber)
         {
-            case StandardObject.TilesetSpecificStart01:
-            case StandardObject.TilesetSpecificStart02:
-            case StandardObject.TilesetSpecificStart03:
-            case StandardObject.TilesetSpecificStart04:
-            case StandardObject.TilesetSpecificStart05:
-            case StandardObject.TilesetSpecificStart06:
-            case StandardObject.TilesetSpecificStart07:
-            case StandardObject.TilesetSpecificStart08:
-            case StandardObject.TilesetSpecificStart09:
-            case StandardObject.TilesetSpecificStart10:
-            case StandardObject.TilesetSpecificStart11:
-            case StandardObject.TilesetSpecificStart12:
-            case StandardObject.TilesetSpecificStart13:
-            case StandardObject.TilesetSpecificStart14:
-            case StandardObject.TilesetSpecificStart15:
-            case StandardObject.TilesetSpecificStart16:
-            case StandardObject.TilesetSpecificStart17:
-            case StandardObject.TilesetSpecificStart18:
+            case EStandardObject.TilesetSpecificStart01:
+            case EStandardObject.TilesetSpecificStart02:
+            case EStandardObject.TilesetSpecificStart03:
+            case EStandardObject.TilesetSpecificStart04:
+            case EStandardObject.TilesetSpecificStart05:
+            case EStandardObject.TilesetSpecificStart06:
+            case EStandardObject.TilesetSpecificStart07:
+            case EStandardObject.TilesetSpecificStart08:
+            case EStandardObject.TilesetSpecificStart09:
+            case EStandardObject.TilesetSpecificStart10:
+            case EStandardObject.TilesetSpecificStart11:
+            case EStandardObject.TilesetSpecificStart12:
+            case EStandardObject.TilesetSpecificStart13:
+            case EStandardObject.TilesetSpecificStart14:
+            case EStandardObject.TilesetSpecificStart15:
+            case EStandardObject.TilesetSpecificStart16:
+            case EStandardObject.TilesetSpecificStart17:
+            case EStandardObject.TilesetSpecificStart18:
                 Draw16x16Tile(xPos, yPos, new Pixel(128, 0, 0, 255));
                 break;
         }
     }
 
-    private void RenderTilesetSpecificSetGhostHouseSwitchPalace1(StandardObject objectNumber, int xPos, int yPos, int p0, int p1, byte t2, SuperMarioVRam vram)
+    private void RenderTilesetSpecificSetGhostHouseSwitchPalace1(EStandardObject objectNumber, int xPos, int yPos, int p0, int p1, byte t2, SuperMarioVRam vram)
     {
         switch (objectNumber)
         {
-            case StandardObject.TilesetSpecificStart01:
-            case StandardObject.TilesetSpecificStart02:
-            case StandardObject.TilesetSpecificStart03:
-            case StandardObject.TilesetSpecificStart04:
-            case StandardObject.TilesetSpecificStart05:
-            case StandardObject.TilesetSpecificStart06:
-            case StandardObject.TilesetSpecificStart07:
-            case StandardObject.TilesetSpecificStart08:
-            case StandardObject.TilesetSpecificStart09:
-            case StandardObject.TilesetSpecificStart10:
-            case StandardObject.TilesetSpecificStart11:
-            case StandardObject.TilesetSpecificStart12:
-            case StandardObject.TilesetSpecificStart13:
-            case StandardObject.TilesetSpecificStart14:
-            case StandardObject.TilesetSpecificStart15:
-            case StandardObject.TilesetSpecificStart16:
-            case StandardObject.TilesetSpecificStart17:
-            case StandardObject.TilesetSpecificStart18:
+            case EStandardObject.TilesetSpecificStart01:
+            case EStandardObject.TilesetSpecificStart02:
+            case EStandardObject.TilesetSpecificStart03:
+            case EStandardObject.TilesetSpecificStart04:
+            case EStandardObject.TilesetSpecificStart05:
+            case EStandardObject.TilesetSpecificStart06:
+            case EStandardObject.TilesetSpecificStart07:
+            case EStandardObject.TilesetSpecificStart08:
+            case EStandardObject.TilesetSpecificStart09:
+            case EStandardObject.TilesetSpecificStart10:
+            case EStandardObject.TilesetSpecificStart11:
+            case EStandardObject.TilesetSpecificStart12:
+            case EStandardObject.TilesetSpecificStart13:
+            case EStandardObject.TilesetSpecificStart14:
+            case EStandardObject.TilesetSpecificStart15:
+            case EStandardObject.TilesetSpecificStart16:
+            case EStandardObject.TilesetSpecificStart17:
+            case EStandardObject.TilesetSpecificStart18:
                 Draw16x16Tile(xPos, yPos, new Pixel(128, 0, 0, 255));
                 break;
         }
