@@ -74,8 +74,8 @@ internal class ObjectMapWidget : IWidgetItem, IWidgetUpdateDraw
                             nSelectedObject = currentObject;
                             break;
                         }
-                        currentObject++;
                     }
+                    currentObject++;
                 }
                 if (nSelectedObject != -1)
                 {
@@ -120,7 +120,7 @@ internal class ObjectMapWidget : IWidgetItem, IWidgetUpdateDraw
                     drawList.AddImage((nint)bitmaps[(int)tilenum].Id, new Vector2(pos.X + offX, pos.Y + offY), new Vector2(pos.X + offX + tileData.Width * _objectMap.ScaleX, pos.Y + offY + tileData.Height * _objectMap.ScaleY));
                     if (currentObject == selectedObject)
                     {
-                        drawList.AddRectFilled(new Vector2(pos.X + offX, pos.Y + offY), new Vector2(pos.X + offX + tileData.Width * _objectMap.ScaleX, pos.Y + offY + tileData.Height * _objectMap.ScaleY), 0x80808080);
+                        drawList.AddRectFilled(new Vector2(pos.X + offX, pos.Y + offY), new Vector2(pos.X + offX + tileData.Width * _objectMap.ScaleX, pos.Y + offY + tileData.Height * _objectMap.ScaleY), 0x80000000);
                     }
                     offX += (uint)(palette.LargestWidth * _objectMap.ScaleX);
                 }
