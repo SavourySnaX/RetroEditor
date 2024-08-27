@@ -280,7 +280,7 @@ internal class Editor : IEditor, IEditorInternal
             Raylib.SetTraceLogCallback(LogWithInstance);
         }
 
-        Raylib.SetConfigFlags(ConfigFlags.ResizableWindow);
+        Raylib.SetConfigFlags(ConfigFlags.ResizableWindow);//|ConfigFlags.HighDpiWindow|ConfigFlags.Msaa4xHint);
         //Raylib.SetConfigFlags(ConfigFlags.FLAG_VSYNC_HINT);   // Don't wait for VSYNC, we do all synchronisation ourselves
         Raylib.InitWindow(800, 600, $"Retro Editor - レトロゲームの変更の具 - Version {EditorSettings.CurrentVersion}");
         if (Raylib.IsWindowFullscreen())
@@ -295,7 +295,7 @@ internal class Editor : IEditor, IEditorInternal
 
         Raylib.InitAudioDevice();
 
-        var args = Environment.GetCommandLineArgs();
+        var args = Environment.GetCommandLineArgs().Skip(1);
 
         foreach (var arg in args)
         {

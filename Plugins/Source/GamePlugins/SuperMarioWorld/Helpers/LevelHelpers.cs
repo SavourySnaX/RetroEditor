@@ -129,6 +129,15 @@ namespace RetroEditorPlugin_SuperMarioWorld
         public StandardObject(uint x, uint y, uint width, uint height, string name, uint[] mapData) : base(x, y, width, height, name, mapData)
         {
         }
+        public StandardObject(uint x, uint y, uint width, uint height, string name, ReadOnlySpan<byte> mapData) : base(x, y, width, height, name, null)
+        {
+            var n = new uint[mapData.Length];
+            for (int a=0;a<mapData.Length;a++)
+            {
+                n[a] = mapData[a];
+            }
+            _mapData = n;
+        }
 
         public void Move(uint x, uint y)
         {
@@ -142,31 +151,65 @@ namespace RetroEditorPlugin_SuperMarioWorld
         }
     }
 
-    public class SizeXYObject : SMWObject
+    public class SizeXYObject : StandardObject
     {
         public SizeXYObject(uint x, uint y, uint width, uint height, string name, uint[] mapData) : base(x, y, width, height, name, mapData)
         {
         }
+    }
 
-        public void Move(uint x, uint y)
+    public class Size9TileObject : StandardObject
+    {
+        public Size9TileObject(uint x, uint y, uint width, uint height, string name, uint[] mapData) : base(x, y, width, height, name, mapData)
         {
-            var tx = x;
-            var ty = y;
-            // Clamp to tile 16x16 grid
-            tx = (tx / 16) * 16;
-            ty = (ty / 16) * 16;
-            _x = Math.Min(Math.Max(tx, 0u), 16u*16u*32u);
-            _y = Math.Min(Math.Max(ty, 0u), 416u);
+            // Override mapdata resized based on 9tile
+            var actual = new uint [width*height];
+            var actualIdx = 0;
+            uint t0, t1, t2;
+            for (int yy = 0; yy < height; yy++)
+            {
+                if (yy == 0)
+                {
+                    t0 = mapData[0];
+                    t1 = mapData[1];
+                    t2 = mapData[2];
+                }
+                else if (yy == height - 1)
+                {
+                    t0 = mapData[6];
+                    t1 = mapData[7];
+                    t2 = mapData[8];
+                }
+                else
+                {
+                    t0 = mapData[3];
+                    t1 = mapData[4];
+                    t2 = mapData[5];
+                }
+                for (int xx = 0; xx < width; xx++)
+                {
+                    if (xx == 0)
+                        actual[actualIdx++] = t0;
+                    else if (xx == width - 1)
+                        actual[actualIdx++] = t2;
+                    else
+                        actual[actualIdx++] = t1;
+                }
+            }
+            _mapData = actual;
         }
+
     }
 
     class LevelHelpers
     {
         private IMemoryAccess _rom;
+        private AddressTranslation _addressTranslation;
         private IEditor _editorInterface;
         public LevelHelpers(IMemoryAccess rom, IEditor editorInterface)
         {
             _rom = rom;
+            _addressTranslation = new LoRom();
             _editorInterface = editorInterface;
         }
 
@@ -263,12 +306,11 @@ namespace RetroEditorPlugin_SuperMarioWorld
                             _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(EExtendedObject)objectNumber} @{xPos:X2},{yPos:X2}");
                             break;
                         case EExtendedObject.BigBush1:
-                            // See table referenced by code at DA106 - For now, I've just done things by hand, but perhaps we should automate this
-                            //DrawGfxTilesFixedPattern(xPos, yPos, 9, 45, vram, SMWAddresses.LargeBush);
+                            objectList.Add(new StandardObject(xPos, yPos, 9u, 5u, "BigBush1", _rom.ReadBytes(ReadKind.Rom, _addressTranslation.ToImage(SMWAddresses.LargeBush), 45)));
                             _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(EExtendedObject)objectNumber} @{xPos:X2},{yPos:X2}");
                             break;
                         case EExtendedObject.BigBush2:
-                            //DrawGfxTilesFixedPattern(xPos, yPos, 6, 24, vram, SMWAddresses.MediumBush);
+                            objectList.Add(new StandardObject(xPos, yPos, 6u, 4u, "BigBush2", _rom.ReadBytes(ReadKind.Rom, _addressTranslation.ToImage(SMWAddresses.MediumBush), 24)));
                             _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(EExtendedObject)objectNumber} @{xPos:X2},{yPos:X2}");
                             break;
                         case EExtendedObject.YoshiCoin:
@@ -299,7 +341,7 @@ namespace RetroEditorPlugin_SuperMarioWorld
                     switch ((EStandardObject)objectNumber)
                     {
                         case EStandardObject.GroundLedge:
-                            //DrawGfxTilesYTopOther(xPos, yPos, p1, p0, vram, 0x100, 0x3F);
+                            objectList.Add(new Size9TileObject(xPos, yPos, p1 + 1u, p0 + 1u, "GroundLedge", new uint[] { 0x100, 0x100, 0x100, 0x3F, 0x3F, 0x3F, 0x3F, 0x3F, 0x3F }));
                             _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(EStandardObject)objectNumber} @{xPos:X2},{yPos:X2} - Height {p0:X2} - Width {p1:X2}");
                             break;
                         case EStandardObject.WaterBlue:
@@ -324,7 +366,7 @@ namespace RetroEditorPlugin_SuperMarioWorld
                             _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(EStandardObject)objectNumber} @{xPos:X2},{yPos:X2} - Height {p0:X2} - Width {p1:X2}");
                             break;
                         case EStandardObject.WalkThroughDirt:
-                            //DrawGfxTiles(xPos, yPos, p1, p0, vram, 0x3F, 0x3F, 0x3F);
+                            objectList.Add(new Size9TileObject(xPos, yPos, p1 + 1u, p0 + 1u, "WalkThroughDirt", new uint[] { 0x3F, 0x3F, 0x3F, 0x3F, 0x3F, 0x3F, 0x3F, 0x3F, 0x3F }));
                             _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(EStandardObject)objectNumber} @{xPos:X2},{yPos:X2} - Height {p0:X2} - Width {p1:X2}");
                             break;
                         case EStandardObject.Coins:
@@ -340,10 +382,10 @@ namespace RetroEditorPlugin_SuperMarioWorld
                             switch (p1)
                             {
                                 case 0xB:
-                                    //DrawGfx9Tile(xPos, yPos, 0, p0 + 1, vram, new int[] { 0x145, 0x145, 0x145, 0x14B, 0x14B, 0x14B, 0x1E2, 0x1E2, 0x1E2 });
+                                    objectList.Add(new Size9TileObject(xPos, yPos, 1u, p0 + 1u, "LedgeEdgeB", new uint[] { 0x145, 0x145, 0x145, 0x14B, 0x14B, 0x14B, 0x1E2, 0x1E2, 0x1E2 }));
                                     break;
                                 case 0xD:
-                                    //DrawGfx9Tile(xPos, yPos, 0, p0 + 1, vram, new int[] { 0x148, 0x148, 0x148, 0x14C, 0x14C, 0x14C, 0x1E4, 0x1E4, 0x1E4 });
+                                    objectList.Add(new Size9TileObject(xPos, yPos, 1u, p0 + 1u, "LedgeEdgeD", new uint[] { 0x148, 0x148, 0x148, 0x14C, 0x14C, 0x14C, 0x1E4, 0x1E4, 0x1E4 }));
                                     break;
                                 default:
                                     //DrawTiles(xPos, yPos, 1, p0, new Pixel(255, 0, 255, 255));
@@ -424,7 +466,7 @@ namespace RetroEditorPlugin_SuperMarioWorld
                             _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(EStandardObject)objectNumber} @{xPos:X2},{yPos:X2} - Height {p0:X2}");
                             break;
                         case EStandardObject.LongGroundLedge:      // Long ground ledge
-                            //DrawGfxTilesYTopOther(xPos, yPos, t2, 1, vram, 0x100, 0x3F);
+                            objectList.Add(new Size9TileObject(xPos, yPos, t2 + 1u, 2u, "LongGroundLedge", new uint[] { 0x100, 0x100, 0x100, 0x3F, 0x3F, 0x3F, 0x3F, 0x3F, 0x3F }));
                             _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(EStandardObject)objectNumber} @{xPos:X2},{yPos:X2} - Length {t2:X2}");
                             break;
                         case EStandardObject.DonutBridge:
@@ -605,18 +647,17 @@ namespace RetroEditorPlugin_SuperMarioWorld
                     }
                     break;
                 case EStandardObject.TilesetSpecificStart18:
-                    // grass  - p1 width, p0 style (0,1,2)
                     switch (p0)
                     {
                         default:
                         case 0:
-                            //DrawGfxTiles(xPos, yPos, p1, 0, vram, 0x73, 0x74, 0x79);
+                            objectList.Add(new Size9TileObject(xPos, yPos, p1 + 1u, 1u, "grass", new uint[] { 0x73, 0x74, 0x79 }));
                             break;
                         case 1:
-                            //DrawGfxTiles(xPos, yPos, p1, 0, vram, 0x7A, 0x7B, 0x80);
+                            objectList.Add(new Size9TileObject(xPos, yPos, p1 + 1u, 1u, "grass", new uint[] { 0x7A, 0x7B, 0x80 }));
                             break;
                         case 2:
-                            //DrawGfxTiles(xPos, yPos, p1, 0, vram, 0x85, 0x86, 0x87);
+                            objectList.Add(new Size9TileObject(xPos, yPos, p1 + 1u, 1u, "grass", new uint[] { 0x85, 0x86, 0x87 }));
                             break;
                     }
                     break;
@@ -648,7 +689,7 @@ namespace RetroEditorPlugin_SuperMarioWorld
                     //Draw16x16Tile(xPos, yPos, new Pixel(128, 0, 0, 255));
                     break;
                 case EStandardObject.TilesetSpecificStart15:
-                    //DrawGfx9Tile(xPos, yPos, p1, p0, vram, new int[] { 0x15D, 0x15E, 0x15F, 0x160, 0x161, 0x162, 0x163, 0x164, 0x165 });
+                    objectList.Add(new Size9TileObject(xPos, yPos, p1 + 1u, p0 + 1u, "CastleBlock", new uint[] { 0x15D, 0x15E, 0x15F, 0x160, 0x161, 0x162, 0x163, 0x164, 0x165 }));
                     break;
             }
         }
