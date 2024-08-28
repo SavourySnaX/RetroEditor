@@ -99,6 +99,7 @@ internal class ObjectMapWidget : IWidgetItem, IWidgetUpdateDraw
         ImGui.BeginChild($"map", size, 0, 0);
 
         var pos = ImGui.GetCursorScreenPos();
+        drawList.PushClipRect(pos, pos + size, true);
         Interaction(logger, size, pos);
         var palette = _objectMap.FetchPalette();
         var bitmaps = palette.Bitmaps;
@@ -128,6 +129,7 @@ internal class ObjectMapWidget : IWidgetItem, IWidgetUpdateDraw
             }
             currentObject++;
         }
+        drawList.PopClipRect();
         ImGui.EndChild();
     }
 }
