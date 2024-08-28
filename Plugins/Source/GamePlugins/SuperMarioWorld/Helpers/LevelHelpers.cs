@@ -155,6 +155,13 @@ namespace RetroEditorPlugin_SuperMarioWorld
     {
         public SizeXYObject(uint x, uint y, uint width, uint height, string name, uint[] mapData) : base(x, y, width, height, name, mapData)
         {
+            // Override mapdata resized based on 9tile
+            var actual = new uint [width*height];
+            for (int a=0;a<width*height;a++)
+            {
+                actual[a] = mapData[0];
+            }
+            _mapData = actual;
         }
     }
 

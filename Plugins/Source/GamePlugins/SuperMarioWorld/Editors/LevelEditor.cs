@@ -92,7 +92,6 @@ namespace RetroEditorPlugin_SuperMarioWorld
 
             var levelHelpers = new LevelHelpers(rom,editorInterface);
             _objects = levelHelpers.FetchObjectLayer(ref smwRom, smwLevelHeader, vram, smwRom.Layer1Data);
-            // Test - add a Yoshi Coin to test
         }
 
         public TilePaletteStore FetchPalette()
