@@ -19,6 +19,8 @@ internal class ObjectMapWidget : IWidgetItem, IWidgetUpdateDraw
     }
 
     bool dragging = false;
+    int dragOffsetX = 0;
+    int dragOffsetY = 0;
 
     public void Interaction(IWidgetLog logger, Vector2 size, Vector2 pos)
     {
@@ -45,12 +47,16 @@ internal class ObjectMapWidget : IWidgetItem, IWidgetUpdateDraw
                         if (x >= obj.X && x < obj.X + obj.Width * palette.LargestWidth && y >= obj.Y && y < obj.Y + obj.Height * palette.LargestHeight)
                         {
                             dragging = true;
+                            dragOffsetX = (int)x - (int)obj.X;
+                            dragOffsetY = (int)y - (int)obj.Y;
                         }
                     }
                 }
                 else
                 {
-                    _objectMap.ObjectMove(_objectMap.FetchObjects.ElementAt(selectedObject), x, y);
+                    var adjustedX = x - (uint)dragOffsetX;
+                    var adjustedY = y - (uint)dragOffsetY;
+                    _objectMap.ObjectMove(_objectMap.FetchObjects.ElementAt(selectedObject), adjustedX, adjustedY);
                 }
             }
             else
