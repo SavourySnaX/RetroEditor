@@ -388,11 +388,23 @@ namespace RetroEditorPlugin_SuperMarioWorld
                         case EStandardObject.LedgeEdges:
                             switch (p1)
                             {
+                                case 0x3:
+                                    objectList.Add(new Size9TileObject(xPos, yPos, 1u, p0 + 2u, "LedgeEdge3", new uint[] { 0x145, 0x145, 0x145, 0x14B, 0x14B, 0x14B, 0x14B, 0x14B, 0x14B }));
+                                    break;
+                                case 0x5:
+                                    objectList.Add(new Size9TileObject(xPos, yPos, 1u, p0 + 2u, "LedgeEdge5", new uint[] { 0x148, 0x148, 0x148, 0x14C, 0x14C, 0x14C, 0x14C, 0x14C, 0x14C }));
+                                    break;
+                                case 0x7:
+                                    objectList.Add(new Size9TileObject(xPos, yPos, 1u, p0 + 1u, "LedgeEdge7", new uint[] { 0x101, 0x101, 0x101, 0x040, 0x040, 0x040, 0x040, 0x040, 0x040 }));
+                                    break;
+                                case 0x8:
+                                    objectList.Add(new Size9TileObject(xPos, yPos, 1u, p0 + 1u, "LedgeEdge8", new uint[] { 0x103, 0x103, 0x103, 0x041, 0x041, 0x041, 0x041, 0x041, 0x041 }));
+                                    break;
                                 case 0xB:
-                                    objectList.Add(new Size9TileObject(xPos, yPos, 1u, p0 + 1u, "LedgeEdgeB", new uint[] { 0x145, 0x145, 0x145, 0x14B, 0x14B, 0x14B, 0x1E2, 0x1E2, 0x1E2 }));
+                                    objectList.Add(new Size9TileObject(xPos, yPos, 1u, p0 + 2u, "LedgeEdgeB", new uint[] { 0x145, 0x145, 0x145, 0x14B, 0x14B, 0x14B, 0x1E2, 0x1E2, 0x1E2 }));
                                     break;
                                 case 0xD:
-                                    objectList.Add(new Size9TileObject(xPos, yPos, 1u, p0 + 1u, "LedgeEdgeD", new uint[] { 0x148, 0x148, 0x148, 0x14C, 0x14C, 0x14C, 0x1E4, 0x1E4, 0x1E4 }));
+                                    objectList.Add(new Size9TileObject(xPos, yPos, 1u, p0 + 2u, "LedgeEdgeD", new uint[] { 0x148, 0x148, 0x148, 0x14C, 0x14C, 0x14C, 0x1E4, 0x1E4, 0x1E4 }));
                                     break;
                                 default:
                                     //DrawTiles(xPos, yPos, 1, p0, new Pixel(255, 0, 255, 255));
@@ -403,12 +415,7 @@ namespace RetroEditorPlugin_SuperMarioWorld
                         case EStandardObject.MidwayGoalPoint:
                             if (p1 == 1)
                             {
-                                //DrawGfxTiles(xPos, yPos + 0, 2, 0, vram, 0x39, 0x25, 0x3C);
-                                for (int a = 1; a < p0; a++)
-                                {
-                                    //DrawGfxTiles(xPos, yPos + a, 2, 0, vram, 0x3A, 0x25, 0x3D);
-                                }
-                                //DrawGfxTiles(xPos, yPos + p0, 2, 0, vram, 0x3B, 0x25, 0x3E);
+                                objectList.Add(new Size9TileObject(xPos, yPos, 3u, p0+1u, "MidwayGoalB", new uint[] { 0x39, 0x25, 0x3C, 0x3A, 0x25, 0x3D, 0x3B, 0x25, 0x3E }));
                             }
                             else
                             {
