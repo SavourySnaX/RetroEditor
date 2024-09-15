@@ -16,11 +16,11 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="RetroEditorApplication" />
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.10.0-2.final" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.11.0" />
     <PackageReference Include="NativeFileDialogSharp" Version="0.6.0-alpha" />
     <PackageReference Include="raylib" Version="5.0.0" />
-    <PackageReference Include="Raylib-cs" Version="6.0.0" />
-    <PackageReference Include="ImGui.NET" Version="1.90.1.1" />
+    <PackageReference Include="Raylib-cs" Version="6.1.1" />
+    <PackageReference Include="ImGui.NET" Version="1.91.0.1" />
     <PackageReference Include="SavourySnaX.InstanceTrampoline" Version="8.0.4" />
     <Folder Include="Source\" />
     <Folder Include="rlImGui\" />
