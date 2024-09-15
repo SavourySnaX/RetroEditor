@@ -732,11 +732,11 @@ namespace RetroEditorPlugin_SuperMarioWorld
                     break;
                 case EStandardObject.TilesetSpecificStart15:
                     // mushroom platform top (p1 width)
-                    //DrawGfxTiles(xPos, yPos, p1, 0, vram, 0x107, 0x108, 0x109);
+                    objectList.Add(new Size9TileObject(xPos, yPos, p1 + 1u, 1, "MushroomPlatformTop", new uint[] { 0x107, 0x108, 0x109 }));
                     break;
                 case EStandardObject.TilesetSpecificStart16:
                     // mushroom platform bottom (p1 width, p0 height)
-                    //DrawGfxTiles(xPos, yPos, p1, p0, vram, 0x73, 0x074, 0x75);
+                    objectList.Add(new Size9TileObject(xPos, yPos, p1 + 1u, p0 + 1u, "MushroomPlatformBottom", new uint[] { 0x73, 0x74, 0x75, 0x73, 0x74, 0x75, 0x73, 0x74, 0x75 }));
                     break;
             }
         }
