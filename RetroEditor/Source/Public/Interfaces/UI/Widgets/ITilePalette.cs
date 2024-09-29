@@ -40,5 +40,11 @@ namespace RetroEditor.Plugins
         /// Number of tiles per row in the palette
         /// </summary>
         uint TilesPerRow { get; }
+
+        /// <summary>
+        /// Dirty flag to indicate that the palette has changed
+        /// </summary>
+        /// <returns>True if the palette has changed</returns>
+        bool IsDirty => true;
     }
 }
