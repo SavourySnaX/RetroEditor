@@ -92,7 +92,11 @@ namespace RetroEditorPlugin_SuperMarioWorld
 
             var levelHelpers = new LevelHelpers(rom,editorInterface);
             _objects = levelHelpers.FetchObjectLayer(ref smwRom, smwLevelHeader, vram, smwRom.Layer1Data);
+            _dirty = true;
         }
+
+        private bool _dirty;
+        public bool IsDirty => _dirty;
 
         public TilePaletteStore FetchPalette()
         {
@@ -105,6 +109,7 @@ namespace RetroEditorPlugin_SuperMarioWorld
 
         public ReadOnlySpan<ITile> FetchTiles()
         {
+            _dirty = false;
             return _tiles;
         }
 
@@ -115,7 +120,6 @@ namespace RetroEditorPlugin_SuperMarioWorld
             {
                 standardObject.Move(x, y);
             }
-            
         }
 
         private List<IObject> _objects = new List<IObject>();

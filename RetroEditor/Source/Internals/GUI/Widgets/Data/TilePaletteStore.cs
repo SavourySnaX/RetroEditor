@@ -45,12 +45,15 @@ public sealed class TilePaletteStore
         _iTilePalette.Update(seconds);
         
         // Grab latest version of tile data?
-        var tiles = _iTilePalette.FetchTiles();
-        for (int a=0;a<tiles.Length;a++)
+        if (_iTilePalette.IsDirty)
         {
-            var pixels = tiles[a].GetImageData();
+            var tiles = _iTilePalette.FetchTiles();
+            for (int a = 0; a < tiles.Length; a++)
+            {
+                var pixels = tiles[a].GetImageData();
 
-            Raylib.UpdateTexture(_bitmaps[a], pixels.ToArray());
+                Raylib.UpdateTexture(_bitmaps[a], pixels.ToArray());
+            }
         }
     }
 
