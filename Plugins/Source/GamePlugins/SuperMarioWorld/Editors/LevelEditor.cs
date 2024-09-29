@@ -122,6 +122,11 @@ namespace RetroEditorPlugin_SuperMarioWorld
             }
         }
 
+        public void ObjectDelete(IObject obj)
+        {
+            _objects.Remove(obj);
+        }
+
         private List<IObject> _objects = new List<IObject>();
         private TilePaletteStore _palette;
         private SMWTile[] _tiles;

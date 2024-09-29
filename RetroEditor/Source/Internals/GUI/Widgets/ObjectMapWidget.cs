@@ -37,26 +37,34 @@ internal class ObjectMapWidget : IWidgetItem, IWidgetUpdateDraw
             var x = (uint)(localPos.X / _objectMap.ScaleX);
             var y = (uint)(localPos.Y / _objectMap.ScaleY);
 
-            if (selectedObject!=-1 && ImGui.IsMouseDown(ImGuiMouseButton.Left))
+            if (selectedObject!=-1)
             {
-                if (!dragging)
+                if (ImGui.IsMouseDown(ImGuiMouseButton.Left))
                 {
-                    if (x >= 0 && x < _objectMap.Width && y >= 0 && y < _objectMap.Height)
+                    if (!dragging)
                     {
-                        var obj = _objectMap.FetchObjects.ElementAt(selectedObject);
-                        if (x >= obj.X && x < obj.X + obj.Width * palette.LargestWidth && y >= obj.Y && y < obj.Y + obj.Height * palette.LargestHeight)
+                        if (x >= 0 && x < _objectMap.Width && y >= 0 && y < _objectMap.Height)
                         {
-                            dragging = true;
-                            dragOffsetX = (int)x - (int)obj.X;
-                            dragOffsetY = (int)y - (int)obj.Y;
+                            var obj = _objectMap.FetchObjects.ElementAt(selectedObject);
+                            if (x >= obj.X && x < obj.X + obj.Width * palette.LargestWidth && y >= obj.Y && y < obj.Y + obj.Height * palette.LargestHeight)
+                            {
+                                dragging = true;
+                                dragOffsetX = (int)x - (int)obj.X;
+                                dragOffsetY = (int)y - (int)obj.Y;
+                            }
                         }
                     }
+                    else
+                    {
+                        var adjustedX = x - (uint)dragOffsetX;
+                        var adjustedY = y - (uint)dragOffsetY;
+                        _objectMap.ObjectMove(_objectMap.FetchObjects.ElementAt(selectedObject), adjustedX, adjustedY);
+                    }
                 }
-                else
+                if (ImGui.IsKeyPressed(ImGuiKey.Delete))
                 {
-                    var adjustedX = x - (uint)dragOffsetX;
-                    var adjustedY = y - (uint)dragOffsetY;
-                    _objectMap.ObjectMove(_objectMap.FetchObjects.ElementAt(selectedObject), adjustedX, adjustedY);
+                    _objectMap.ObjectDelete(_objectMap.FetchObjects.ElementAt(selectedObject));
+                    selectedObject = -1;
                 }
             }
             else

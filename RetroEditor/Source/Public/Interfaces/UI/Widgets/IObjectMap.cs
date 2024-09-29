@@ -41,5 +41,11 @@ namespace RetroEditor.Plugins
         /// <param name="x">X position</param>
         /// <param name="y">Y position</param>
         void ObjectMove(IObject obj, uint x, uint y);
+
+        /// <summary>
+        /// Called when an object is deleted, allows the map to remove the object
+        /// </summary>
+        /// <param name="obj">Object being deleted</param>
+        void ObjectDelete(IObject obj);
     }
 }
