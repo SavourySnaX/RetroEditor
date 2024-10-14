@@ -7,7 +7,7 @@ using System;
 
 using RetroEditorPlugin_SuperMarioWorld;
 
-public class SuperMarioWorld : IRetroPlugin , IMenuProvider
+public class SuperMarioWorld : IRetroPlugin , IMenuProvider, ISave
 {
 	public static string Name => "Super Mario World";
 	public string RomPluginName => "SNES";
@@ -34,9 +34,74 @@ public class SuperMarioWorld : IRetroPlugin , IMenuProvider
 
     }
 
-	public ISave Export(IMemoryAccess memoryAccess)
+    ExportMemoryAccess _exportedData;
+    private struct ExportMemoryAccess : IMemoryAccess
     {
-        throw new System.NotImplementedException("Export not implemented");
+        private byte[] _exportedData;
+        public ExportMemoryAccess(int size)
+        {
+            _exportedData = new byte[size];
+            Array.Fill<byte>(_exportedData, 0xFF);
+        }
+
+        public int RomSize => _exportedData.Length;
+
+        public MemoryEndian Endian => MemoryEndian.Little;
+
+        public ReadOnlySpan<byte> ReadBytes(ReadKind kind, uint address, uint length)
+        {
+            return new ReadOnlySpan<byte>(_exportedData).Slice((int)address, (int)length);
+        }
+
+        public void WriteBytes(WriteKind kind, uint address, ReadOnlySpan<byte> bytes)
+        {
+            Array.Copy(bytes.ToArray(), 0, _exportedData, (int)address, bytes.Length);
+        }
+    }
+
+    public ISave Export(IMemoryAccess memoryAccess)
+    {
+        // Lets attempt a test export
+        //
+        // Compute checksum of ROM
+        UInt16 checksum=0;
+        _exportedData = new ExportMemoryAccess(memoryAccess.RomSize * 2);
+        var allBytes = memoryAccess.ReadBytes(ReadKind.Rom, 0, (uint)memoryAccess.RomSize);
+        _exportedData.WriteBytes(WriteKind.SerialisedRom, 0, allBytes);
+        // Modify header rom size
+        var oldHeaderSize =  _exportedData.ReadBytes(ReadKind.Rom, 0x7FD7, 1)[0];
+        oldHeaderSize++;
+        _exportedData.WriteBytes(WriteKind.SerialisedRom, 0x7FD7, new byte[] { oldHeaderSize });
+
+        // Save level modifications
+
+        var levelSelect = 199u;
+        var addressTranslation = new LoRom();
+        var smwRom = new SuperMarioWorldRomHelpers(memoryAccess, addressTranslation, levelSelect);
+
+
+        // Compute checksum and re-record
+
+        for (uint a=0;a<_exportedData.RomSize;a++)
+        {
+            checksum += _exportedData.ReadBytes(ReadKind.Rom, a, 1)[0];
+        }
+        // Write complement and actual checksum values to rom
+        var complement = new byte[2];
+        var check = new byte[2];
+        memoryAccess.WriteMachineOrder16(0, complement, (UInt16)~checksum);
+        memoryAccess.WriteMachineOrder16(0, check, checksum);
+
+        _exportedData.WriteBytes(WriteKind.SerialisedRom, 0x7FDC, complement);
+        _exportedData.WriteBytes(WriteKind.SerialisedRam, 0x7FDE, check);
+
+        return this;
+    }
+
+    public void Save(string path)
+    {
+        File.WriteAllBytes(path, _exportedData.ReadBytes(ReadKind.Rom, 0, (uint)_exportedData.RomSize).ToArray());
+        _exportedData = new ExportMemoryAccess(0);
     }
 
     public void ConfigureMenu(IMemoryAccess rom, IMenu menu)
@@ -96,4 +161,5 @@ public class SuperMarioWorld : IRetroPlugin , IMenuProvider
     {
         return new SuperMarioWorldLevelEditor(editorInterface, rom);
     }
+
 }
