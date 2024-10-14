@@ -3,6 +3,7 @@ obj/**
 RetroEditor/bin/**
 RetroEditor/obj/**
 .vscode/**
+.vs/**
 *.swp
 *.sln
 *.ini
@@ -10,6 +11,7 @@ Data/**
 Temp/**
 Logs/**
 Projects/**
+Properties/**
 Plugins/.vscode/**
 Plugins/bin/**
 Plugins/obj/**
