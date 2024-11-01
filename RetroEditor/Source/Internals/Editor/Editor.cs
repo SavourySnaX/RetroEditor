@@ -134,6 +134,8 @@ internal class Editor : IEditor, IEditorInternal
         public List<string> RecentProjects { get; set;}
         public string Version { get; set; }
         public bool DeveloperMode { get; set; }
+        public bool EnableMSAA { get; set; }
+        public bool EnableHighDPI { get; set; }
 
         public static string CurrentVersion => $"{MajorVersion}.{MinorVersion}.{PatchVersion}";
 
@@ -146,6 +148,8 @@ internal class Editor : IEditor, IEditorInternal
             LastImportedLocation = "";
             RecentProjects = new List<string>();
             DeveloperMode = false;
+            EnableHighDPI = false;
+            EnableMSAA = false;
         }
     }
 
@@ -280,7 +284,17 @@ internal class Editor : IEditor, IEditorInternal
             Raylib.SetTraceLogCallback(LogWithInstance);
         }
 
-        Raylib.SetConfigFlags(ConfigFlags.ResizableWindow);//|ConfigFlags.HighDpiWindow|ConfigFlags.Msaa4xHint);
+        var config = ConfigFlags.ResizableWindow;
+        if (settings.EnableHighDPI)
+        {
+            config|=ConfigFlags.HighDpiWindow;
+        }
+        if (settings.EnableMSAA)
+        {
+            config|=ConfigFlags.Msaa4xHint;
+        }
+
+        Raylib.SetConfigFlags(config);
         //Raylib.SetConfigFlags(ConfigFlags.FLAG_VSYNC_HINT);   // Don't wait for VSYNC, we do all synchronisation ourselves
         Raylib.InitWindow(800, 600, $"Retro Editor - レトロゲームの変更の具 - Version {EditorSettings.CurrentVersion}");
         if (Raylib.IsWindowFullscreen())
