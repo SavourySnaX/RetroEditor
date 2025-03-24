@@ -1015,7 +1015,7 @@ internal class Editor : IEditor, IEditorInternal
 
     async Task<bool> DownloadDeveloperMame(string platform, string architecture, string extension)
     {
-        var api_revision = "v1.261.0"; // TODO - link this to the extension api
+        var api_revision = "v1.261.1"; // TODO - link this to the extension api
         var extra = "";
         if (architecture != "x86_64")   // To avoid needed to rename initial release
         {

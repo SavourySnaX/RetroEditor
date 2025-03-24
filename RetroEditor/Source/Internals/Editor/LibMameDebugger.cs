@@ -38,6 +38,7 @@ internal class LibMameDebugger
     private int disasmCounter;
     private int memoryCounter;
 
+    public bool IsStopped { get; private set; }
     public LibMameDebugger(LibRetroPlugin plugin)
     {
         this.stateViewCounter=0;
@@ -228,6 +229,17 @@ internal class LibMameDebugger
                 return 1;
             case 1:
                 remoteCommandCallback = Marshal.PtrToStructure<LibRetroPlugin.RemoteCommand>(data);
+                return 1;
+            case 2:
+                var notified = Marshal.PtrToStructure<LibRetroPlugin.RemoteNotification>(data);
+                if (notified.stopped!=0)
+                {
+                    IsStopped = true;
+                }
+                else
+                {
+                    IsStopped = false;
+                }
                 return 1;
             default:
                 return 0;

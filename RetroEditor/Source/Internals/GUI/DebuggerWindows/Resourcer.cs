@@ -400,36 +400,24 @@ internal class Resourcer : IWindow
     {
         DrawMemoryMap();
 
-        if (ImGui.Button("Capture Frame"))
+        var traceDisable = traceInProgress;
+        if (traceDisable)
         {
-            if (!traceInProgress)
-            {
-                traceInProgress = true;
-                // Set up trace logging
-                debugger.SendCommand($"trace {traceFile},,noloop");
-                // Wait for vblank
-                debugger.SendCommand("gtime #1000");
-                Thread.Sleep(2000);
-                // Flush trace to file
-                debugger.SendCommand("traceflush");
-                debugger.SendCommand("trace off");
-                
-                // Read and parse trace file
-                if (File.Exists(traceFile))
-                {
-                    traceLog.Clear();
-                    traceLog.AddRange(File.ReadAllLines(traceFile));
-                    
-                    // Parse disassembly
-                    disassembly.Clear();
-                    foreach (var line in traceLog)
-                    {
-                        ParseDisassembly(line);
-                    }
-                }
-                traceInProgress = false;
-            }
+            ImGui.BeginDisabled();
         }
+        if (ImGui.Button("Start Capture"))
+        {
+            traceInProgress = true;
+            // Set up trace logging
+            debugger.SendCommand($"trace {traceFile},,noloop");
+            // Wait for vblank
+            debugger.SendCommand("gvblank");
+        }
+        if (traceDisable)
+        {
+            ImGui.EndDisabled();
+        }
+
 
         // Display trace log
         if (ImGui.BeginChild("TraceLog", new System.Numerics.Vector2(0, 0), ImGuiChildFlags.None, ImGuiWindowFlags.HorizontalScrollbar))
@@ -522,5 +510,27 @@ internal class Resourcer : IWindow
     public void Update(float seconds)
     {
         // TODO
+        if (traceInProgress)
+        {
+            if (debugger.IsStopped)
+            {
+                debugger.SendCommand("trace off");
+
+                // Read and parse trace file
+                if (File.Exists(traceFile))
+                {
+                    traceLog.Clear();
+                    traceLog.AddRange(File.ReadAllLines(traceFile));
+
+                    // Parse disassembly
+                    disassembly.Clear();
+                    foreach (var line in traceLog)
+                    {
+                        ParseDisassembly(line);
+                    }
+                }
+                traceInProgress = false;
+            }
+        }
     }
 }

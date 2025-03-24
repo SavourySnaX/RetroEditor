@@ -1503,5 +1503,9 @@ internal class LibRetroPlugin : IDisposable
         public IntPtr data;
     }
 
+    public struct RemoteNotification
+    {
+        public Int32 stopped;
+    }
 
 }
