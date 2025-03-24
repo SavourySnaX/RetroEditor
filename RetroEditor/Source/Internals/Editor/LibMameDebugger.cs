@@ -1,4 +1,3 @@
-
 using System.Runtime.InteropServices;
 using ImGuiNET;
 using RetroEditor.Plugins;
@@ -76,6 +75,10 @@ internal class LibMameDebugger
         if (ImGui.MenuItem("Console"))
         {
             editor.OpenWindow(new DebuggerCommand(this), "Console");
+        }
+        if (ImGui.MenuItem("Resourcer"))
+        {
+            editor.OpenWindow(new Resourcer(this), "Resourcer");
         }
     }
 
