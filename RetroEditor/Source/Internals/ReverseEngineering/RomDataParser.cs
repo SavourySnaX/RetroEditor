@@ -7,15 +7,30 @@ internal enum Regions
     Data
 }
 
-internal struct RegionInfo
+internal struct RegionInfo : IRange
 {
     public Regions Region;
 
-    public RegionInfo(Regions region)
+    public RegionInfo(UInt64 start, UInt64 end, Regions region)
     {
+        Start = start;
+        End = end;
         Region = region;
     }
     public UInt64 LineCount => 1;//End - Start + 1;
+
+    public ulong Start { get; private set; }
+    public ulong End { get; private set; }
+
+    public IRange CreateRange(ulong start, ulong end)
+    {
+        return new RegionInfo(start,end,this.Region);
+    }
+
+    public bool IsSame(IRange other)
+    {
+        return Region == ((RegionInfo)other).Region;
+    }
 }
 
 internal class RomDataParser 
@@ -53,12 +68,12 @@ internal class RomDataParser
 
     public void AddCodeRange(UInt64 start, UInt64 end)
     {
-        romRanges.AddRange(start, end, new RegionInfo(Regions.Code));
+        romRanges.AddRange(new RegionInfo(start,end,Regions.Code));
     }
 
     public void AddDataRange(UInt64 start, UInt64 end)
     {
-        romRanges.AddRange(start, end, new RegionInfo(Regions.Data));
+        romRanges.AddRange(new RegionInfo(start,end,Regions.Data));
     }
 
     public RangeCollection<RegionInfo> GetRomRanges => romRanges;
@@ -84,7 +99,7 @@ internal class RomDataParser
 
             minAddress = 0;
             maxAddress = romSize - 1;
-            romRanges.AddRange(minAddress, maxAddress, new RegionInfo(Regions.Unknown));
+            romRanges.AddRange(new RegionInfo(minAddress, maxAddress, Regions.Unknown));
 
             // Now we know the size of the rom, so, set the address of the view to the start of the rom
             UInt64 offset = 0;

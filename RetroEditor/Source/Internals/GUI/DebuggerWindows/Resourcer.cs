@@ -507,11 +507,6 @@ internal class Resourcer : IWindow
             var regions = romData.GetRomRanges;
             var romDataSize = rom.Length;
 
-            foreach (var region in regions)
-            {
-                Console.WriteLine($"Region: {region.Start:X8} - {region.End:X8} : {region.Value.LineCount}");
-            }
-
             var address = 0 + scroll/lineHeight;
             if (ImGui.BeginTable("RomDataVirt", 3, tableFlags, new Vector2(0, tableHeight)))
             {
@@ -794,7 +789,6 @@ internal class Resourcer : IWindow
                     {
                         //ParseDisassembly(line);
                         ParseLocation(line);
-                        break;
                     }
                 }
                 traceInProgress = false;

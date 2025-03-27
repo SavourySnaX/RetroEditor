@@ -1,20 +1,28 @@
 using System.Collections;
 
-internal class Range<T> where T : struct
+internal interface IRange
 {
-    public UInt64 Start { get; set; }
-    public UInt64 End { get; set; }
+    UInt64 Start { get; }
+    UInt64 End { get; }
+
+    IRange CreateRange(UInt64 start, UInt64 end);
+
+    bool IsSame(IRange other);
+}
+
+internal class Range<T> where T : struct, IRange
+{
+    public UInt64 Start => Value.Start;
+    public UInt64 End => Value.End;
     public T Value { get; set; }
 
-    public Range(UInt64 start, UInt64 end, T value)
+    public Range(T value)
     {
-        Start = start;
-        End = end;
         Value = value;
     }
 }
 
-internal class AVLNode<T> where T : struct
+internal class AVLNode<T> where T : struct, IRange
 {
     public Range<T> Range { get; set; }
     public AVLNode<T>? Left { get; set; }
@@ -28,16 +36,16 @@ internal class AVLNode<T> where T : struct
     }
 }
 
-internal class AVLTree<T> : IEnumerable<Range<T>> where T : struct
+internal class AVLTree<T> : IEnumerable<Range<T>> where T : struct, IRange
 {
     private AVLNode<T>? root;
 
-    public void AddRange(UInt64 start, UInt64 end, T value)
+    public void AddRange(T value)
     {
-        if (end < start)
+        if (value.End < value.Start)
             throw new ArgumentException("End should be greater than or equal to start.");
 
-        var newRange = new Range<T>(start, end, value);
+        var newRange = new Range<T>(value);
         root = Insert(root, newRange);
         MergeAdjacentRanges();
     }
@@ -55,21 +63,21 @@ internal class AVLTree<T> : IEnumerable<Range<T>> where T : struct
         if (node == null)
             return new AVLNode<T>(newRange);
 
-        if (newRange.End < node.Range.Start)
+        if (newRange.Value.End < node.Range.Value.Start)
             node.Left = Insert(node.Left, newRange);
-        else if (newRange.Start > node.Range.End)
+        else if (newRange.Value.Start > node.Range.Value.End)
             node.Right = Insert(node.Right, newRange);
         else
         {
-            if (newRange.Start > node.Range.Start)
+            if (newRange.Value.Start > node.Range.Value.Start)
             {
-                var leftRange = new Range<T>(node.Range.Start, newRange.Start - 1, node.Range.Value);
+                var leftRange = CreateRange(node.Range.Value.Start, newRange.Value.Start - 1, node.Range.Value);
                 node.Left = Insert(node.Left, leftRange);
             }
 
-            if (newRange.End < node.Range.End)
+            if (newRange.Value.End < node.Range.Value.End)
             {
-                var rightRange = new Range<T>(newRange.End + 1, node.Range.End, node.Range.Value);
+                var rightRange = CreateRange(newRange.Value.End + 1, node.Range.Value.End, node.Range.Value);
                 node.Right = Insert(node.Right, rightRange);
             }
 
@@ -86,35 +94,35 @@ internal class AVLTree<T> : IEnumerable<Range<T>> where T : struct
         if (node == null)
             return null;
 
-        if (end < node.Range.Start)
+        if (end < node.Range.Value.Start)
         {
             node.Left = Remove(node.Left, start, end);
         }
-        else if (start > node.Range.End)
+        else if (start > node.Range.Value.End)
         {
             node.Right = Remove(node.Right, start, end);
         }
         else
         {
-            if (start > node.Range.Start)
+            if (start > node.Range.Value.Start)
             {
-                var leftRange = new Range<T>(node.Range.Start, start - 1, node.Range.Value);
+                var leftRange = CreateRange(node.Range.Value.Start, start - 1, node.Range.Value);
                 node.Left = Insert(node.Left, leftRange);
             }
 
-            if (end < node.Range.End)
+            if (end < node.Range.Value.End)
             {
-                var rightRange = new Range<T>(end + 1, node.Range.End, node.Range.Value);
+                var rightRange = CreateRange(end + 1, node.Range.Value.End, node.Range.Value);
                 node.Right = Insert(node.Right, rightRange);
             }
             node = MergeNodes(node.Left, node.Right);
 
-            if (node !=null)
+            if (node != null)
             {
-                start = Math.Max(start, node.Range.Start);
-                end = Math.Min(end, node.Range.End);
+                start = Math.Max(start, node.Range.Value.Start);
+                end = Math.Min(end, node.Range.Value.End);
 
-                if (start<end)
+                if (start < end)
                 {
                     node = Remove(node, start, end);
                 }
@@ -128,6 +136,12 @@ internal class AVLTree<T> : IEnumerable<Range<T>> where T : struct
         }
 
         return node;
+    }
+
+    private Range<T> CreateRange(UInt64 start, UInt64 end, T template)
+    {
+        var irange = template.CreateRange(start, end);
+        return new Range<T>((T)irange);
     }
 
     private AVLNode<T>? MergeNodes(AVLNode<T>? left, AVLNode<T>? right)
@@ -220,15 +234,18 @@ internal class AVLTree<T> : IEnumerable<Range<T>> where T : struct
         for (int i = 0; i < ranges.Count; i++)
         {
             var current = ranges[i];
-            while (i + 1 < ranges.Count && ranges[i + 1].Start == current.End + 1 && EqualityComparer<T>.Default.Equals(ranges[i + 1].Value, current.Value))
+            var end = current.End;
+            while (i + 1 < ranges.Count && ranges[i + 1].Start == current.End + 1 && ranges[i+1].Value.IsSame(current.Value))
             {
-                current.End = ranges[i + 1].End;
+                end = ranges[i + 1].End;
                 i++;
             }
 
-            root = Insert(root, current);
+            var newRange = CreateRange(current.Start, end, current.Value);
+            root = Insert(root, newRange);
         }
     }
+
 
     private void InOrderTraversal(AVLNode<T>? node, List<Range<T>> ranges)
     {
@@ -250,10 +267,10 @@ internal class AVLTree<T> : IEnumerable<Range<T>> where T : struct
         if (node == null)
             return null;
 
-        if (point >= node.Range.Start && point <= node.Range.End)
+        if (point >= node.Range.Value.Start && point <= node.Range.Value.End)
             return node.Range;
 
-        if (node.Left != null && node.Left.Range.End >= point)
+        if (point < node.Range.Value.Start)
             return GetRangeContainingPoint(node.Left, point);
 
         return GetRangeContainingPoint(node.Right, point);
@@ -282,13 +299,13 @@ internal class AVLTree<T> : IEnumerable<Range<T>> where T : struct
     }
 }
 
-internal class RangeCollection<T> : IEnumerable<Range<T>> where T : struct
+internal class RangeCollection<T> : IEnumerable<Range<T>> where T : struct, IRange
 {
     private readonly AVLTree<T> avlTree = new AVLTree<T>();
 
-    public void AddRange(UInt64 start, UInt64 end, T value)
+    public void AddRange(T value)
     {
-        avlTree.AddRange(start, end, value);
+        avlTree.AddRange(value);
     }
 
     public void RemoveRange(UInt64 start, UInt64 end)
