@@ -4,6 +4,7 @@ internal interface IRange
 {
     UInt64 Start { get; }
     UInt64 End { get; }
+    UInt64 LineCount { get; }
 
     IRange CreateRange(UInt64 start, UInt64 end);
 
