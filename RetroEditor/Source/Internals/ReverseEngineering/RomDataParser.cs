@@ -1,5 +1,4 @@
 using System.Numerics;
-using System.Runtime.CompilerServices;
 using System.Text;
 using ImGuiNET;
 
@@ -96,6 +95,8 @@ internal abstract class IRegionInfo : IRange
     public abstract void Combining(IRegionInfo other);
     public abstract UInt64 GetLineCount();
     public abstract LineInfo GetLineInfo(UInt64 index);
+    public abstract UInt64 LineOffsetForAddress(UInt64 address);
+    public abstract UInt64 AddressForLine(UInt64 line);
 
 }
 
@@ -114,6 +115,16 @@ internal class UnknownRegion : IRegionInfo
     {
         var db = Parent.GetByte(AddressStart + index);
         return new LineInfo($"{AddressStart + index:X8}", db.ToString("X2"), $"{(Char.IsControl((char)db) ? '.' : (char)db)}", "");
+    }
+
+    public override ulong LineOffsetForAddress(UInt64 address)
+    {
+        return address - AddressStart;
+    }
+
+    public override ulong AddressForLine(UInt64 line)
+    {
+        return AddressStart + line;
     }
 }
 
@@ -149,6 +160,16 @@ internal class StringRegion : IRegionInfo
         var I = AddressStart+(index * 16);
         return new LineInfo(index == 0 ? $"{I:X8}" : "", BytesForLine(I,Math.Min(AddressEnd,I+16)), s.ToString(), "");
     }
+
+    public override ulong LineOffsetForAddress(UInt64 address)
+    {
+        return (address - AddressStart) / 16;
+    }
+
+    public override ulong AddressForLine(UInt64 line)
+    {
+        return AddressStart + (line * 16);
+    }
 }
 
 
@@ -167,10 +188,10 @@ internal class RomDataParser
 
     public RomDataParser()
     {
-        UnknownColor = ImGui.GetColorU32(new Vector4(0, 0, 0, 1));
-        CodeColor = ImGui.GetColorU32(new Vector4(0, 0, 1, 1));
-        DataColor = ImGui.GetColorU32(new Vector4(0, 1, 0, 1));
-        StringColor = ImGui.GetColorU32(new Vector4(1, 0, 0, 1));
+        UnknownColor = ImGui.GetColorU32(new Vector4(0, 0, 0, .5f));
+        CodeColor = ImGui.GetColorU32(new Vector4(0, 0, 1, .5f));
+        DataColor = ImGui.GetColorU32(new Vector4(0, 1, 0, .5f));
+        StringColor = ImGui.GetColorU32(new Vector4(1, 0, 0, .5f));
     }
 
     private LibMameDebugger.DView OpenDView(LibMameDebugger debugger)
@@ -212,6 +233,12 @@ internal class RomDataParser
     {
         romRanges.AddRange(new StringRegion(start, end, this));
     }
+    
+    public void AddUnknownRange(UInt64 start, UInt64 end)
+    {
+        romRanges.AddRange(new UnknownRegion(start, end, this));
+    }
+
 
     public RangeCollection<IRegionInfo> GetRomRanges => romRanges;
 

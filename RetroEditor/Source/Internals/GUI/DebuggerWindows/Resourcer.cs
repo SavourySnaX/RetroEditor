@@ -1,7 +1,5 @@
 using ImGuiNET;
-using System.Diagnostics;
 using System.Numerics;
-using System.Runtime.InteropServices;
 using System.Text;
 
 /*
@@ -38,7 +36,10 @@ internal class Resourcer : IWindow
     bool traceInProgress = false;
     bool romLoaded = false;
 
-    unsafe byte* tableId = null;
+    // Selection state
+    private HashSet<UInt64> selectedRows = new HashSet<UInt64>();
+    private UInt64? cursorPosition = null;
+    private UInt64? selectionStart = null;
 
     // Memory map data
     private const int MEMORY_MAP_HEIGHT = 50;
@@ -355,30 +356,10 @@ internal class Resourcer : IWindow
         traceLog = new List<string>();
 
         var parser = new RomDataParser();
-        unsafe
-        {
-            tableId = (byte*)NativeMemory.Alloc(sizeof(byte) * 16);
-            tableId[0]=(byte)'R';
-            tableId[1]=(byte)'o';
-            tableId[2]=(byte)'m';
-            tableId[3]=(byte)'D';
-            tableId[4]=(byte)'a';
-            tableId[5]=(byte)'t';
-            tableId[6]=(byte)'a';
-            tableId[7]=0;
-        }
     }
 
     public void Close()
     {
-        unsafe
-        {
-            if (tableId != null)
-            {
-                NativeMemory.Free(tableId);
-                tableId = null;
-            }
-        }
     }
 
     private void DrawMemoryMap()
@@ -483,38 +464,28 @@ internal class Resourcer : IWindow
         private ImGuiListClipper* _clipper;
     }
 
-
-    unsafe bool BeginSyncedTable(int columnCount, ImGuiTableFlags flags, Vector2 outerSize)
+    bool InputU64ScalarWrapped(string label, ref UInt64 value)
     {
-        // Create a new table with the specified ID and column count
-        return 0!=ImGuiNative.igBeginTable(tableId, columnCount, flags, outerSize, 0f);
+        unsafe
+        {
+            fixed (UInt64* pValue = &value)
+            {
+                ImGui.InputScalar(label, ImGuiDataType.U64, (nint)pValue, 0, 0, "%X", ImGuiInputTextFlags.CharsHexadecimal);
+                return ImGui.IsItemDeactivated();
+            }
+        }
     }
 
+    private UInt64 jumpToAddress = 0;
     private void ScrollableTableView()
     {
-        ImGui.ShowDemoWindow();
+        bool jump=false;
+        if (InputU64ScalarWrapped("Jump to Address", ref jumpToAddress))
+        {
+            jump=true;
+        }
 
         // Start Table and render header
-        float availableHeight = ImGui.GetContentRegionAvail().Y;
-        float tableHeight = availableHeight;
-        var lineHeight = ImGui.GetTextLineHeight() + ImGui.GetStyle().ItemSpacing.Y;
-
-/*        ImGuiTableFlags tableFlags = ImGuiTableFlags.Resizable | 
-                                    ImGuiTableFlags.NoSavedSettings;
-        if (BeginSyncedTable(4, tableFlags, new Vector2(0, lineHeight)))
-        {
-            // Set up columns
-            ImGui.TableSetupColumn("Address");
-            ImGui.TableSetupColumn("Bytes");
-            ImGui.TableSetupColumn("Details");
-            ImGui.TableSetupColumn("Comments");
-
-            // Header row
-            ImGui.TableHeadersRow();
-
-            ImGui.EndTable();
-        }
-*/
         float [] widths = new float[4];
 
         ImGui.Columns(4, "MOO", true);
@@ -534,12 +505,16 @@ internal class Resourcer : IWindow
         ImGui.Columns(1);
         ImGui.Separator();
 
-        ImGuiTableFlags tableFlags = ImGuiTableFlags.None|ImGuiTableFlags.BordersV;
+        ImGuiTableFlags tableFlags = ImGuiTableFlags.None|ImGuiTableFlags.BordersV|ImGuiTableFlags.RowBg;
 
+        var rowHeight = ImGui.GetTextLineHeight() + ImGui.GetStyle().ItemSpacing.Y;
         var contentSize = ImGui.GetContentRegionAvail();
         if (ImGui.BeginChild("Virtual Table", contentSize, ImGuiChildFlags.None, ImGuiWindowFlags.AlwaysVerticalScrollbar))
         {
             var scroll = ImGui.GetScrollY();
+
+            bool moved = false;
+
 
             var rom = romData.GetRomData;
             var romStartOffset = romData.GetMinAddress;
@@ -548,21 +523,121 @@ internal class Resourcer : IWindow
             var regions = romData.GetRomRanges;
             var romDataSize = regions.LineCount;
 
-            UInt64 currentLine = (UInt64)(0 + scroll/lineHeight);
-            if (BeginSyncedTable(4, tableFlags, new Vector2(0, tableHeight)))
+            UInt64 currentLine = (UInt64)(0 + scroll/rowHeight);
+            UInt64 firstLine = currentLine;
+            float availableHeight = ImGui.GetContentRegionAvail().Y;
+            float tableHeight = availableHeight;
+            var visibleLines = (int)(tableHeight / rowHeight);
+
+            // Handle keyboard input for navigation
+            if (ImGui.IsWindowFocused())
+            {
+
+                if (ImGui.IsKeyPressed(ImGuiKey.UpArrow))
+                {
+                    if (cursorPosition.HasValue && cursorPosition.Value > 0)
+                    {
+                        cursorPosition--;
+                        selectedRows.Clear();
+                        selectedRows.Add(cursorPosition.Value);
+                        moved=true;
+                    }
+                }
+                if (ImGui.IsKeyPressed(ImGuiKey.DownArrow))
+                {
+                    if (cursorPosition.HasValue && cursorPosition.Value < romData.GetRomRanges.LineCount - 1)
+                    {
+                        cursorPosition++;
+                        selectedRows.Clear();
+                        selectedRows.Add(cursorPosition.Value);
+                        moved=true;
+                    }
+                }
+                if (ImGui.IsKeyPressed(ImGuiKey.PageUp))
+                {
+                    if (cursorPosition.HasValue)
+                    {
+                        var newPosition = cursorPosition.Value >= (UInt64)visibleLines ?
+                            cursorPosition.Value - (UInt64)visibleLines : 0;
+                        cursorPosition = newPosition;
+                        selectedRows.Clear();
+                        selectedRows.Add(cursorPosition.Value);
+                        moved=true;
+                    }
+                }
+                if (ImGui.IsKeyPressed(ImGuiKey.PageDown))
+                {
+                    if (cursorPosition.HasValue)
+                    {
+                        var newPosition = (UInt64)Math.Min(romData.GetRomRanges.LineCount - 1, cursorPosition.Value + (UInt64)visibleLines);
+                        cursorPosition = newPosition;
+                        selectedRows.Clear();
+                        selectedRows.Add(cursorPosition.Value);
+                        moved=true;
+                    }
+                }
+                if (ImGui.IsKeyPressed(ImGuiKey.Home))
+                {
+                    cursorPosition = 0;
+                    selectedRows.Clear();
+                    selectedRows.Add(0);
+                    moved=true;
+                }
+                if (ImGui.IsKeyPressed(ImGuiKey.End))
+                {
+                    cursorPosition = romData.GetRomRanges.LineCount - 1;
+                    selectedRows.Clear();
+                    selectedRows.Add(cursorPosition.Value);
+                    moved=true;
+                }
+                if (selectedRows.Count > 0)
+                {
+                    UInt64 minAddress = UInt64.MaxValue;
+                    UInt64 maxAddress = UInt64.MinValue;
+                    foreach (var srow in selectedRows)
+                    {
+                        var address = regions.FetchAddressForLine(srow);
+                        if (address < minAddress)
+                            minAddress = address;
+                        if (address > maxAddress)
+                            maxAddress = address;
+                    }
+                    bool clearSelection = false;
+                    if (ImGui.IsKeyPressed(ImGuiKey.S))
+                    {
+                        romData.AddStringRange(minAddress, maxAddress);
+                        clearSelection = true;
+                    }
+                    if (ImGui.IsKeyPressed(ImGuiKey.U))
+                    {
+                        romData.AddUnknownRange(minAddress, maxAddress);
+                        clearSelection = true;
+                    }
+
+                    if (clearSelection)
+                    {
+                        selectedRows.Clear();
+                    }
+                }
+            }
+
+            if (ImGui.BeginTable("RomDataView", 4, tableFlags))
             {
                 ImGui.TableSetupColumn("Address", ImGuiTableColumnFlags.WidthFixed, widths[0] - ImGui.GetStyle().ItemSpacing.X*2);
                 ImGui.TableSetupColumn("Bytes", ImGuiTableColumnFlags.WidthFixed, widths[1] - ImGui.GetStyle().ItemSpacing.X);
                 ImGui.TableSetupColumn("Details", ImGuiTableColumnFlags.WidthFixed, widths[2] - ImGui.GetStyle().ItemSpacing.X);
                 ImGui.TableSetupColumn("Comments", ImGuiTableColumnFlags.WidthFixed, widths[3] - ImGui.GetStyle().ItemSpacing.X);
 
-                using var clipper = new ImGuiClipper((int)romDataSize, lineHeight);
+                using var clipper = new ImGuiClipper((int)romDataSize, rowHeight);
                 clipper.Begin();
                 while (clipper.Step())
                 {
-                    UInt64 curAddress = (UInt64)currentLine;
-
+                    var actualLine = currentLine;
                     var fetched = regions.GetRangeContainingLine(currentLine, out var line);
+                    if (fetched==null)
+                    {
+                        break;
+                    }
 
                     var lineCount = fetched.Value.LineCount;
 
@@ -572,27 +647,112 @@ internal class Resourcer : IWindow
                         {
                             currentLine = fetched.LineEnd + 1;
                             fetched = regions.GetRangeContainingLine(currentLine, out line);
+                            if (fetched==null)
+                            {
+                                break;
+                            }
                             lineCount = fetched.Value.LineCount;
                         }
+                        
+                        ImGui.PushID((int)(actualLine-firstLine));
                         ImGui.TableNextRow();
-                        ImGui.TableSetBgColor(ImGuiTableBgTarget.RowBg0, fetched.Value.Colour);
-
+                        // Make the row interactive
+                        ImGui.TableSetColumnIndex(0);
+                        
                         var lData = fetched.Value.GetLineInfo(line);
 
-                        ImGui.TableNextColumn();
-                        ImGui.Text($"{lData.Address:X8}");
-                        ImGui.TableNextColumn();
+                        // Handle row selection
+                        bool isSelected = selectedRows.Contains(actualLine);
+                        bool isCursor = cursorPosition == actualLine;
+                        
+                        bool clicked = ImGui.Selectable($"{lData.Address:X8}", isSelected, ImGuiSelectableFlags.SpanAllColumns);//, new Vector2(0, rowHeight));
+
+                        // Set row background color based on selection state
+                        if (isSelected)
+                        {
+                            ImGui.TableSetBgColor(ImGuiTableBgTarget.RowBg1, ImGui.GetColorU32(ImGuiCol.Header));
+                        }
+                        else if (isCursor)
+                        {
+                            ImGui.TableSetBgColor(ImGuiTableBgTarget.RowBg1, ImGui.GetColorU32(ImGuiCol.HeaderActive));
+                        }
+                        else if (ImGui.IsItemHovered())
+                        {
+                            ImGui.TableSetBgColor(ImGuiTableBgTarget.RowBg1, ImGui.GetColorU32(ImGuiCol.HeaderHovered));
+                        }
+                        else
+                        {
+                            ImGui.TableSetBgColor(ImGuiTableBgTarget.RowBg1, fetched.Value.Colour);
+                        }
+
+                        if (clicked)
+                        {
+                            if (ImGui.IsKeyDown(ImGuiKey.ModShift))
+                            {
+                                // Range selection
+                                if (!selectionStart.HasValue)
+                                {
+                                    selectionStart = cursorPosition ?? actualLine;
+                                }
+                                var start = Math.Min(selectionStart.Value, actualLine);
+                                var end = Math.Max(selectionStart.Value, actualLine);
+                                selectedRows.Clear();
+                                for (var j = start; j <= end; j++)
+                                {
+                                    selectedRows.Add(j);
+                                }
+                            }
+                            else
+                            {
+                                selectedRows.Clear();
+                                // Toggle selection
+                                if (isSelected)
+                                {
+                                    selectedRows.Remove(actualLine);
+                                }
+                                else
+                                {
+                                    selectedRows.Add(actualLine);
+                                }
+                                cursorPosition = actualLine;
+                                selectionStart = null;
+                            }
+                        }
+
+                        ImGui.TableSetColumnIndex(1);
                         ImGui.Text(lData.Bytes);
-                        ImGui.TableNextColumn();
+                        ImGui.TableSetColumnIndex(2);
                         ImGui.Text(lData.Details);
-                        ImGui.TableNextColumn();
+                        ImGui.TableSetColumnIndex(3);
                         ImGui.Text(lData.Comment);
+                        ImGui.PopID();
                         line++;
+                        actualLine++;
                     }
                 }
                 clipper.End();
                 ImGui.EndTable();
             }
+
+            if (jump)
+            {
+                var jumpLine = romData.GetRomRanges.FetchLineForAddress(jumpToAddress);
+                ImGui.SetScrollY(jumpLine * rowHeight);
+            }
+
+            if (moved)
+            {
+                // Set Scroll position to keep the currsor in 
+                if (scroll > cursorPosition.Value * rowHeight)
+                {
+                    ImGui.SetScrollY(cursorPosition.Value * rowHeight);
+                }
+                else if (scroll+(visibleLines-1)*rowHeight < cursorPosition.Value * rowHeight)
+                {
+                    ImGui.SetScrollY(cursorPosition.Value * rowHeight - (visibleLines-1)*rowHeight);
+                }
+            }
+
             ImGui.EndChild();
         }
     }
@@ -787,7 +947,7 @@ internal class Resourcer : IWindow
 
             romData.Parse(debugger);
 
-            romData.AddStringRange(0x7FC0, 0x7FD4); // LoRom ASCII Title in header
+//            romData.AddStringRange(0x7FC0, 0x7FD4); // LoRom ASCII Title in header
             
             romLoaded = true;
         }
