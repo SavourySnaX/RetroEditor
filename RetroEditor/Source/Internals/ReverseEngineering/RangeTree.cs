@@ -15,6 +15,11 @@ internal interface IRange
 
     // Returns true if the current range is the same as the given range.
     bool IsSame(IRange other);
+
+    // Return the line offset for the given address
+    UInt64 LineOffsetForAddress(UInt64 address);
+    // Return the address for the given line (or closest address if pre/post )
+    UInt64 AddressForLine(UInt64 line);
 }
 
 internal class Range<T> where T : class, IRange
@@ -259,6 +264,26 @@ internal class RangeCollection<T> : IEnumerable<Range<T>> where T : class, IRang
     public Range<T>? GetRangeContainingAddress(UInt64 point)
     {
         return avlTree.GetRangeContainingAddress(point);
+    }
+
+    public UInt64 FetchLineForAddress(UInt64 point)
+    {
+        var range = avlTree.GetRangeContainingAddress(point);
+        if (range != null)
+        {
+            return range.LineStart + range.Value.LineOffsetForAddress(point);
+        }
+        return 0;
+    }
+
+    public UInt64 FetchAddressForLine(UInt64 point)
+    {
+        var range = GetRangeContainingLine(point, out var lineOff);
+        if (range != null)
+        {
+            return range.Value.AddressForLine(lineOff);
+        }
+        return 0;
     }
 
     public Range<T>? GetRangeContainingLine(UInt64 line, out UInt64 lineOff)
