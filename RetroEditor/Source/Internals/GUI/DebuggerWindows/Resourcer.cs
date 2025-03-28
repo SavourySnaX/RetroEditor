@@ -1,6 +1,7 @@
 using ImGuiNET;
 using System.Diagnostics;
 using System.Numerics;
+using System.Runtime.InteropServices;
 using System.Text;
 
 /*
@@ -37,11 +38,10 @@ internal class Resourcer : IWindow
     bool traceInProgress = false;
     bool romLoaded = false;
 
+    unsafe byte* tableId = null;
+
     // Memory map data
     private const int MEMORY_MAP_HEIGHT = 50;
-    private Vector4 unknownColor = new Vector4(0, 0, 0, 1); // Black
-    private Vector4 codeColor = new Vector4(0, 0, 1, 1);    // Blue
-    private Vector4 dataColor = new Vector4(1, 0, 0, 1);    // Red
 
     // Disassembly data structures
     private class DisassemblyInstruction
@@ -355,10 +355,30 @@ internal class Resourcer : IWindow
         traceLog = new List<string>();
 
         var parser = new RomDataParser();
+        unsafe
+        {
+            tableId = (byte*)NativeMemory.Alloc(sizeof(byte) * 16);
+            tableId[0]=(byte)'R';
+            tableId[1]=(byte)'o';
+            tableId[2]=(byte)'m';
+            tableId[3]=(byte)'D';
+            tableId[4]=(byte)'a';
+            tableId[5]=(byte)'t';
+            tableId[6]=(byte)'a';
+            tableId[7]=0;
+        }
     }
 
     public void Close()
     {
+        unsafe
+        {
+            if (tableId != null)
+            {
+                NativeMemory.Free(tableId);
+                tableId = null;
+            }
+        }
     }
 
     private void DrawMemoryMap()
@@ -376,24 +396,14 @@ internal class Resourcer : IWindow
         var scale = size.X / range;
 
         // Draw background (unknown regions)
-        drawList.AddRectFilled(pos, new Vector2(pos.X + size.X, pos.Y + size.Y), ImGui.GetColorU32(unknownColor));
+//        drawList.AddRectFilled(pos, new Vector2(pos.X + size.X, pos.Y + size.Y), ImGui.GetColorU32(unknownColor));
 
         foreach (var region in romData.GetRomRanges)
         {
-            var color = unknownColor;
-            switch (region.Value.Region)
-            {
-                case Regions.Code:
-                    color = codeColor;
-                    break;
-                case Regions.Data:
-                    color = dataColor;
-                    break;
-            }
             drawList.AddRectFilled(
-                new Vector2(pos.X + region.Start * scale, pos.Y),
-                new Vector2(pos.X + region.End * scale, pos.Y + size.Y),
-                ImGui.GetColorU32(color)
+                new Vector2(pos.X + region.Value.AddressStart * scale, pos.Y),
+                new Vector2(pos.X + region.Value.AddressEnd * scale, pos.Y + size.Y),
+                region.Value.Colour
             );
         }
 
@@ -473,27 +483,58 @@ internal class Resourcer : IWindow
         private ImGuiListClipper* _clipper;
     }
 
+
+    unsafe bool BeginSyncedTable(int columnCount, ImGuiTableFlags flags, Vector2 outerSize)
+    {
+        // Create a new table with the specified ID and column count
+        return 0!=ImGuiNative.igBeginTable(tableId, columnCount, flags, outerSize, 0f);
+    }
+
     private void ScrollableTableView()
     {
+        ImGui.ShowDemoWindow();
+
         // Start Table and render header
         float availableHeight = ImGui.GetContentRegionAvail().Y;
         float tableHeight = availableHeight;
         var lineHeight = ImGui.GetTextLineHeight() + ImGui.GetStyle().ItemSpacing.Y;
 
-        ImGuiTableFlags tableFlags = ImGuiTableFlags.Borders |
-                                    ImGuiTableFlags.Resizable;
-        if (ImGui.BeginTable("RomDataHeader", 3, tableFlags, new Vector2(0, lineHeight)))
+/*        ImGuiTableFlags tableFlags = ImGuiTableFlags.Resizable | 
+                                    ImGuiTableFlags.NoSavedSettings;
+        if (BeginSyncedTable(4, tableFlags, new Vector2(0, lineHeight)))
         {
             // Set up columns
-            ImGui.TableSetupColumn("Address", ImGuiTableColumnFlags.WidthFixed, 100);
-            ImGui.TableSetupColumn($"Bytes", ImGuiTableColumnFlags.WidthFixed, 30 * 16);
-            ImGui.TableSetupColumn("ASCII", ImGuiTableColumnFlags.WidthStretch);
+            ImGui.TableSetupColumn("Address");
+            ImGui.TableSetupColumn("Bytes");
+            ImGui.TableSetupColumn("Details");
+            ImGui.TableSetupColumn("Comments");
 
             // Header row
             ImGui.TableHeadersRow();
 
             ImGui.EndTable();
         }
+*/
+        float [] widths = new float[4];
+
+        ImGui.Columns(4, "MOO", true);
+        ImGui.Text("Address");
+        ImGui.NextColumn();
+        ImGui.Text("Bytes");
+        ImGui.NextColumn();
+        ImGui.Text("Details");
+        ImGui.NextColumn();
+        ImGui.Text("Comments");
+
+        for (int i = 0; i < 4; i++)
+        {
+            widths[i] = ImGui.GetColumnWidth(i);
+        }
+
+        ImGui.Columns(1);
+        ImGui.Separator();
+
+        ImGuiTableFlags tableFlags = ImGuiTableFlags.None|ImGuiTableFlags.BordersV;
 
         var contentSize = ImGui.GetContentRegionAvail();
         if (ImGui.BeginChild("Virtual Table", contentSize, ImGuiChildFlags.None, ImGuiWindowFlags.AlwaysVerticalScrollbar))
@@ -505,69 +546,48 @@ internal class Resourcer : IWindow
             var romEndOffset = romData.GetMaxAddress;
 
             var regions = romData.GetRomRanges;
-            var romDataSize = rom.Length;
+            var romDataSize = regions.LineCount;
 
-            var address = 0 + scroll/lineHeight;
-            if (ImGui.BeginTable("RomDataVirt", 3, tableFlags, new Vector2(0, tableHeight)))
+            UInt64 currentLine = (UInt64)(0 + scroll/lineHeight);
+            if (BeginSyncedTable(4, tableFlags, new Vector2(0, tableHeight)))
             {
-                ImGui.TableSetupColumn("Address", ImGuiTableColumnFlags.WidthFixed, 100);
-                ImGui.TableSetupColumn($"Bytes", ImGuiTableColumnFlags.WidthFixed, 30 * 16);
-                ImGui.TableSetupColumn("ASCII", ImGuiTableColumnFlags.WidthStretch);
+                ImGui.TableSetupColumn("Address", ImGuiTableColumnFlags.WidthFixed, widths[0] - ImGui.GetStyle().ItemSpacing.X*2);
+                ImGui.TableSetupColumn("Bytes", ImGuiTableColumnFlags.WidthFixed, widths[1] - ImGui.GetStyle().ItemSpacing.X);
+                ImGui.TableSetupColumn("Details", ImGuiTableColumnFlags.WidthFixed, widths[2] - ImGui.GetStyle().ItemSpacing.X);
+                ImGui.TableSetupColumn("Comments", ImGuiTableColumnFlags.WidthFixed, widths[3] - ImGui.GetStyle().ItemSpacing.X);
 
                 using var clipper = new ImGuiClipper((int)romDataSize, lineHeight);
                 clipper.Begin();
                 while (clipper.Step())
                 {
-                    UInt64 curAddress = (UInt64)address;
+                    UInt64 curAddress = (UInt64)currentLine;
+
+                    var fetched = regions.GetRangeContainingLine(currentLine, out var line);
+
+                    var lineCount = fetched.Value.LineCount;
+
                     for (int i = clipper.DisplayStart; i < clipper.DisplayEnd; i++)
                     {
+                        if (lineCount == line)
+                        {
+                            currentLine = fetched.LineEnd + 1;
+                            fetched = regions.GetRangeContainingLine(currentLine, out line);
+                            lineCount = fetched.Value.LineCount;
+                        }
                         ImGui.TableNextRow();
-                        var fetched = regions.GetRangeContainingPoint(curAddress);
+                        ImGui.TableSetBgColor(ImGuiTableBgTarget.RowBg0, fetched.Value.Colour);
 
-                        if (fetched==null)
-                        {
-                            Console.WriteLine($"WTF");
-                            break;
-                        }
-                        if (fetched.Value.Region == Regions.Code)
-                        {
-                            ImGui.TableSetBgColor(ImGuiTableBgTarget.RowBg0, ImGui.GetColorU32(codeColor));
-                        }
-                        else if (fetched.Value.Region == Regions.Data)
-                        {
-                            ImGui.TableSetBgColor(ImGuiTableBgTarget.RowBg0, ImGui.GetColorU32(dataColor));
-                        }
-                        else
-                        {
-                            ImGui.TableSetBgColor(ImGuiTableBgTarget.RowBg0, ImGui.GetColorU32(unknownColor));
-                        }
+                        var lData = fetched.Value.GetLineInfo(line);
+
                         ImGui.TableNextColumn();
-                        ImGui.Text($"{curAddress:X8}");
+                        ImGui.Text($"{lData.Address:X8}");
                         ImGui.TableNextColumn();
-                        var s = new StringBuilder();
-                        if (fetched != null)
-                        {
-                            byte value = romData.GetByte(curAddress);
-                            s.Append($"{value:X2} ");
-                        }
-                        else
-                        {
-                            s.Append("   ");
-                        }
-                        ImGui.Text(s.ToString());
+                        ImGui.Text(lData.Bytes);
                         ImGui.TableNextColumn();
-                        s.Clear();
-                        if (fetched != null)
-                        {
-                            byte value = romData.GetByte(curAddress);
-                            s.Append(char.IsControl((char)value) ? '.' : (char)value);
-                        }
-                        else
-                        {
-                            s.Append(' ');
-                        }
-                        curAddress++;
-                        ImGui.TextUnformatted(s.ToString());
+                        ImGui.Text(lData.Details);
+                        ImGui.TableNextColumn();
+                        ImGui.Text(lData.Comment);
+                        line++;
                     }
                 }
                 clipper.End();
@@ -766,6 +786,8 @@ internal class Resourcer : IWindow
             romData = new RomDataParser();
 
             romData.Parse(debugger);
+
+            romData.AddStringRange(0x7FC0, 0x7FD4); // LoRom ASCII Title in header
             
             romLoaded = true;
         }
