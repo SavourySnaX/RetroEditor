@@ -14,6 +14,7 @@
   <ItemGroup>
     <Compile Remove="Plugins\**" />
     <Compile Remove="RetroEditor\**" />
+    <Compile Remove="Tests\**" />
     <Content Include="Plugins\Source\GamePlugins\**" CopyToPublishDirectory="PreserveNewest" />
     <Content Include="Plugins\Source\RomPlugins\**" CopyToPublishDirectory="PreserveNewest" />
     <Content Include="Plugins\Plugins.csproj" CopyToPublishDirectory="PreserveNewest" />

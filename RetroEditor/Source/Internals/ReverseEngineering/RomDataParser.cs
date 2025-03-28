@@ -1,4 +1,7 @@
+using System.Numerics;
+using System.Runtime.CompilerServices;
 using System.Text;
+using ImGuiNET;
 
 internal enum Regions
 {
@@ -7,39 +10,168 @@ internal enum Regions
     Data
 }
 
-internal struct RegionInfo : IRange
+internal struct LineInfo
 {
-    public Regions Region;
+    public string Address;
+    public string Bytes;
+    public string Details;
+    public string Comment;
 
-    public RegionInfo(UInt64 start, UInt64 end, Regions region)
+    public LineInfo(string address, string bytes, string details, string comment)
     {
-        Start = start;
-        End = end;
-        Region = region;
+        Address = address;
+        Bytes = bytes;
+        Details = details;
+        Comment = comment;
     }
-    public UInt64 LineCount => 1;//End - Start + 1;
+}
 
-    public ulong Start { get; private set; }
-    public ulong End { get; private set; }
-
-    public IRange CreateRange(ulong start, ulong end)
+internal abstract class IRegionInfo : IRange
+{
+    public IRegionInfo(UInt64 start,UInt64 end,RomDataParser parent,uint color)
     {
-        return new RegionInfo(start,end,this.Region);
+        AddressStart = start;
+        AddressEnd = end;
+        Parent = parent;
+        Colour = color;
     }
+
+    public UInt64 AddressStart { get; protected set; }
+    public UInt64 AddressEnd { get; protected set; }
+
+    public UInt64 LineCount => GetLineCount();
+    protected RomDataParser Parent;
 
     public bool IsSame(IRange other)
     {
-        return Region == ((RegionInfo)other).Region;
+        return GetType() == other.GetType();
+    }
+
+    public void CombineAdjacent(IRange other)
+    {
+        if (!IsSame(other))
+            throw new ArgumentException("Cannot combine different regions");
+        if (other.AddressStart != AddressEnd + 1)
+            throw new ArgumentException("Cannot combine non-adjacent ranges");
+        AddressEnd = other.AddressEnd;
+        Combining((IRegionInfo)other);
+    }
+
+    public IRange SplitAfter(ulong position)
+    {
+        if (position < AddressStart || position >= AddressEnd)
+            throw new ArgumentOutOfRangeException("Position is out of range");
+        if (position == AddressEnd)
+            throw new ArgumentOutOfRangeException("Position is out of range");
+        var oldEnd = AddressEnd;
+        AddressEnd = position;
+        return Split(position+1, oldEnd);
+    }
+
+    public IRange SplitBefore(ulong position)
+    {
+        if (position <= AddressStart || position > AddressEnd)
+            throw new ArgumentOutOfRangeException("Position is out of range");
+        if (position == AddressStart)
+            throw new ArgumentOutOfRangeException("Position is out of range");
+        var oldStart = AddressStart;
+        AddressStart = position;
+        return Split(oldStart, position - 1);
+    }
+
+    public string BytesForLine(UInt64 start,UInt64 end)
+    {
+        StringBuilder sb = new StringBuilder();
+        for (UInt64 j = start; j <= end; j++)
+        {
+            var db = Parent.GetByte(j);
+            sb.Append($"{db:X2} ");
+        }
+        return sb.ToString();
+    }
+
+    public uint Colour { get; private set; }
+
+    public abstract IRegionInfo Split(UInt64 start, UInt64 end);
+    public abstract void Combining(IRegionInfo other);
+    public abstract UInt64 GetLineCount();
+    public abstract LineInfo GetLineInfo(UInt64 index);
+
+}
+
+internal class UnknownRegion : IRegionInfo
+{
+    public UnknownRegion(UInt64 start, UInt64 end, RomDataParser parent) : base(start, end, parent, parent.UnknownColor)
+    {
+    }
+    
+    public override ulong GetLineCount() => AddressEnd - AddressStart + 1;
+
+    public override void Combining(IRegionInfo other) { }
+    public override IRegionInfo Split(ulong start, ulong end) => new UnknownRegion(start, end, Parent);
+
+    public override LineInfo GetLineInfo(ulong index)
+    {
+        var db = Parent.GetByte(AddressStart + index);
+        return new LineInfo($"{AddressStart + index:X8}", db.ToString("X2"), $"{(Char.IsControl((char)db) ? '.' : (char)db)}", "");
     }
 }
+
+internal class StringRegion : IRegionInfo
+{
+    public StringRegion(UInt64 start, UInt64 end, RomDataParser parent) : base(start, end, parent, parent.StringColor)
+    {
+    }
+    
+    public override ulong GetLineCount() => (AddressEnd - AddressStart + 16)/16;
+
+    public override void Combining(IRegionInfo other) { }
+    public override IRegionInfo Split(ulong start, ulong end) => new UnknownRegion(start, end, Parent);
+
+    public override LineInfo GetLineInfo(ulong index)
+    {
+        StringBuilder s = new StringBuilder();
+        if (index==0)
+        {
+            s.Append($"db \"");
+            for (UInt64 j = AddressStart; j <= AddressEnd; j++)
+            {
+                var db = Parent.GetByte(j);
+                if (Char.IsControl((char)db))
+                {
+                    s.Append("\",${db:X2},\"");
+                }
+                else
+                    s.Append((char)db);
+            }
+            s.Append('"');
+        }
+        var I = AddressStart+(index * 16);
+        return new LineInfo(index == 0 ? $"{I:X8}" : "", BytesForLine(I,Math.Min(AddressEnd,I+16)), s.ToString(), "");
+    }
+}
+
 
 internal class RomDataParser 
 {
     private const int BYTES_PER_LINE = 16;
-    RangeCollection<RegionInfo> romRanges = new RangeCollection<RegionInfo>();
+    RangeCollection<IRegionInfo> romRanges = new RangeCollection<IRegionInfo>();
     private byte[] romData = new byte[0];
     private int romIndex = 0;
     private UInt64 minAddress, maxAddress;
+
+    public uint UnknownColor;
+    public uint CodeColor;
+    public uint DataColor;
+    public uint StringColor;
+
+    public RomDataParser()
+    {
+        UnknownColor = ImGui.GetColorU32(new Vector4(0, 0, 0, 1));
+        CodeColor = ImGui.GetColorU32(new Vector4(0, 0, 1, 1));
+        DataColor = ImGui.GetColorU32(new Vector4(0, 1, 0, 1));
+        StringColor = ImGui.GetColorU32(new Vector4(1, 0, 0, 1));
+    }
 
     private LibMameDebugger.DView OpenDView(LibMameDebugger debugger)
     {
@@ -68,15 +200,20 @@ internal class RomDataParser
 
     public void AddCodeRange(UInt64 start, UInt64 end)
     {
-        romRanges.AddRange(new RegionInfo(start,end,Regions.Code));
+       // romRanges.AddRange(new RegionInfo(start,end,Regions.Code, this));
     }
 
     public void AddDataRange(UInt64 start, UInt64 end)
     {
-        romRanges.AddRange(new RegionInfo(start,end,Regions.Data));
+       // romRanges.AddRange(new RegionInfo(start,end,Regions.Data, this));
     }
 
-    public RangeCollection<RegionInfo> GetRomRanges => romRanges;
+    public void AddStringRange(UInt64 start, UInt64 end)
+    {
+        romRanges.AddRange(new StringRegion(start, end, this));
+    }
+
+    public RangeCollection<IRegionInfo> GetRomRanges => romRanges;
 
     public UInt64 GetMinAddress => minAddress;
     public UInt64 GetMaxAddress => maxAddress;
@@ -99,7 +236,7 @@ internal class RomDataParser
 
             minAddress = 0;
             maxAddress = romSize - 1;
-            romRanges.AddRange(new RegionInfo(minAddress, maxAddress, Regions.Unknown));
+            romRanges.AddRange(new UnknownRegion(minAddress, maxAddress, this));
 
             // Now we know the size of the rom, so, set the address of the view to the start of the rom
             UInt64 offset = 0;
