@@ -8,29 +8,6 @@ namespace RetroEditor.Tests
     [TestClass]
     public class DisassemblerTests
     {
-        private class TestMemoryAccess : IMemoryAccess
-        {
-            private readonly byte[] _memory;
-
-            public TestMemoryAccess(byte[] memory)
-            {
-                _memory = memory;
-            }
-
-            public ReadOnlySpan<byte> ReadBytes(ReadKind kind, uint address, uint length)
-            {
-                return new ReadOnlySpan<byte>(_memory, (int)address, (int)length);
-            }
-
-            public void WriteBytes(WriteKind kind, uint address, ReadOnlySpan<byte> bytes)
-            {
-                bytes.CopyTo(new Span<byte>(_memory, (int)address, bytes.Length));
-            }
-
-            public int RomSize => _memory.Length;
-            public MemoryEndian Endian => MemoryEndian.Little;
-        }
-
         [TestMethod]
         public void TestOperandCreation()
         {
@@ -89,8 +66,7 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816StateManagement()
         {
-            var memoryAccess = new TestMemoryAccess(new byte[1024]);
-            var disassembler = new SNES65816Disassembler(memoryAccess);
+            var disassembler = new SNES65816Disassembler();
             var state = (SNES65816State)disassembler.State;
 
             // Test initial state
@@ -124,10 +100,26 @@ namespace RetroEditor.Tests
         }
 
         [TestMethod]
+        public void Test65816_SEI()
+        {
+            var disassembler = new SNES65816Disassembler();
+
+            // Test SEI
+            var bytes = new byte[] { 0x78 };
+            var result = disassembler.DecodeNext(bytes, 0x8000);
+            Assert.IsTrue(result.Success);
+            Assert.AreEqual("SEI", result.Instruction.Mnemonic);
+            Assert.AreEqual(1, result.BytesConsumed);
+            Assert.AreEqual(0, result.Instruction.Operands.Count);
+            Assert.IsFalse(result.Instruction.IsBranch);
+            Assert.IsFalse(result.Instruction.IsBasicBlockTerminator);
+            Assert.AreEqual(1, result.Instruction.NextAddresses.Count);
+        }
+
+        [TestMethod]
         public void Test65816BasicInstructions()
         {
-            var memoryAccess = new TestMemoryAccess(new byte[1024]);
-            var disassembler = new SNES65816Disassembler(memoryAccess);
+            var disassembler = new SNES65816Disassembler();
 
             // Test NOP
             var bytes = new byte[] { 0xEA };
@@ -135,6 +127,11 @@ namespace RetroEditor.Tests
             Assert.IsTrue(result.Success);
             Assert.AreEqual("NOP", result.Instruction.Mnemonic);
             Assert.AreEqual(1, result.BytesConsumed);
+            Assert.AreEqual(true, result.Instruction.NextAddresses.Contains(0x8001));
+            Assert.AreEqual(0, result.Instruction.Operands.Count);
+            Assert.AreEqual(false, result.Instruction.IsBranch);
+            Assert.AreEqual(false, result.Instruction.IsBasicBlockTerminator);
+            Assert.AreEqual(1, result.Instruction.NextAddresses.Count);
 
             // Test LDA immediate
             bytes = new byte[] { 0xA9, 0x42 };
@@ -144,6 +141,11 @@ namespace RetroEditor.Tests
             Assert.AreEqual(2, result.BytesConsumed);
             Assert.AreEqual(1, result.Instruction.Operands.Count);
             Assert.AreEqual("#$42", result.Instruction.Operands[0].Text);
+            Assert.AreEqual(true, result.Instruction.NextAddresses.Contains(0x8003));
+            Assert.AreEqual(false, result.Instruction.IsBranch);
+            Assert.AreEqual(false, result.Instruction.IsBasicBlockTerminator);
+            Assert.AreEqual(1, result.Instruction.NextAddresses.Count);
+
 
             // Test JSR
             bytes = new byte[] { 0x20, 0x34, 0x12 };
@@ -156,13 +158,14 @@ namespace RetroEditor.Tests
             Assert.IsTrue(result.Instruction.IsBranch);
             Assert.IsTrue(result.Instruction.IsBasicBlockTerminator);
             Assert.AreEqual(2, result.Instruction.NextAddresses.Count);
+            Assert.AreEqual(true, result.Instruction.NextAddresses.Contains(0x8006));
+            Assert.AreEqual(true, result.Instruction.NextAddresses.Contains(0x1234));
         }
 
         [TestMethod]
         public void Test65816BranchInstructions()
         {
-            var memoryAccess = new TestMemoryAccess(new byte[1024]);
-            var disassembler = new SNES65816Disassembler(memoryAccess);
+            var disassembler = new SNES65816Disassembler();
 
             // Test BRA
             var bytes = new byte[] { 0x80, 0xFE }; // BRA -2
@@ -174,24 +177,27 @@ namespace RetroEditor.Tests
             Assert.AreEqual("$8000", result.Instruction.Operands[0].Text);
             Assert.IsTrue(result.Instruction.IsBranch);
             Assert.IsTrue(result.Instruction.IsBasicBlockTerminator);
+            Assert.IsTrue(result.Instruction.NextAddresses.Contains(0x8000));
+            Assert.IsTrue(result.Instruction.NextAddresses.Contains(0x8002));
 
             // Test BNE
-            bytes = new byte[] { 0xD0, 0xFE }; // BNE -2
+            bytes = new byte[] { 0xD0, 0x04 }; // BNE 4
             result = disassembler.DecodeNext(bytes, 0x8002);
             Assert.IsTrue(result.Success);
             Assert.AreEqual("BNE", result.Instruction.Mnemonic);
             Assert.AreEqual(2, result.BytesConsumed);
             Assert.AreEqual(1, result.Instruction.Operands.Count);
-            Assert.AreEqual("$8002", result.Instruction.Operands[0].Text);
+            Assert.AreEqual("$8008", result.Instruction.Operands[0].Text);
             Assert.IsTrue(result.Instruction.IsBranch);
             Assert.IsTrue(result.Instruction.IsBasicBlockTerminator);
+            Assert.IsTrue(result.Instruction.NextAddresses.Contains(0x8008));
+            Assert.IsTrue(result.Instruction.NextAddresses.Contains(0x8004));
         }
 
         [TestMethod]
         public void Test65816NeedMoreBytes()
         {
-            var memoryAccess = new TestMemoryAccess(new byte[1024]);
-            var disassembler = new SNES65816Disassembler(memoryAccess);
+            var disassembler = new SNES65816Disassembler();
 
             // Test partial JSR
             var bytes = new byte[] { 0x20, 0x34 };

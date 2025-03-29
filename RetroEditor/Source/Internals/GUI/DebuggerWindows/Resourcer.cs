@@ -549,6 +549,81 @@ internal class Resourcer : IWindow
         return true;
     }
 
+    public enum SNESLoRomRegion
+    {
+        ROM,
+        IO,
+        SRAM,
+        RAM,
+    }
+
+    public UInt64 MapSnesCpuToLorom(UInt64 address, out SNESLoRomRegion region)
+    {
+        region = SNESLoRomRegion.ROM;
+        var bank = address >> 16;
+        var offset = address & 0xFFFF;
+
+        if (bank==0x7E || bank==0x7F)
+        {
+            region = SNESLoRomRegion.RAM;
+            return ((bank - 0x7E) << 16) | offset;
+        }
+        else if (bank==0xFE || bank==0xFF)
+        {
+            if (offset<0x8000)
+            {
+                // SRAM
+                region = SNESLoRomRegion.SRAM;
+                return ((bank - 0xF0) << 15) | offset;
+            }
+            else
+            {
+                // ROM
+                return 0x3F0000 | ((bank-0xFE)<<15) | (offset&0x7FFF);           
+            }
+        }
+        bank&=0x7F;
+        if (bank<0x40)
+        {
+            if (offset<0x2000)
+            {
+                // Low RAM
+                region = SNESLoRomRegion.RAM;
+                return offset;
+            }
+            else if (offset<0x8000)
+            {
+                // IO
+                region = SNESLoRomRegion.IO;
+                return offset-0x2000;
+            }
+            else
+            {
+                // ROM
+                return (bank << 15) | (offset & 0x7FFF);
+            }
+        }
+        else if (bank<0x70)
+        {
+            // ROM
+            return (bank << 15) | (offset & 0x7FFF);
+        }
+        else
+        {
+            // 70-7D
+            if (offset<0x8000)
+            {
+                region = SNESLoRomRegion.SRAM;
+                return ((bank - 0x70) << 15) | offset;
+            }
+            else
+            {
+                //ROM
+                return (bank<<15) | (offset&0x7FFF);
+            }
+        }
+    }
+
     public void Update(float seconds)
     {
         if (!romLoaded)
@@ -559,6 +634,10 @@ internal class Resourcer : IWindow
             romData.Parse(debugger);
 
 //            romData.AddStringRange(0x7FC0, 0x7FD4); // LoRom ASCII Title in header
+            var disassembler = new SNES65816Disassembler();
+            UInt64 PC = 0x8000;
+            var disassemble = new[] { romData.GetByte(MapSnesCpuToLorom(PC, out var _)) };
+            disassembler.DecodeNext(disassemble,0x8000);
             
             romLoaded = true;
         }

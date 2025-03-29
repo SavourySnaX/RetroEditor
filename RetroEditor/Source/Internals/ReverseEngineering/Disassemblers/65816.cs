@@ -85,7 +85,7 @@ internal class SNES65816Disassembler : DisassemblerBase
         2, 2, 2, 2, 2, 2, 2, 2, 1, 2, 1, 1, 3, 3, 3, 3   // 0xF0-0xFF
     };
 
-    internal SNES65816Disassembler(IMemoryAccess memoryAccess) : base(memoryAccess)
+    internal SNES65816Disassembler()
     {
     }
 
@@ -133,7 +133,7 @@ internal class SNES65816Disassembler : DisassemblerBase
                     newState.Index8Bit = (flags & 0x10) == 0;      // X=0 means 16-bit index
                 }
                 State = newState;
-                operands.Add(new Operand($"#${flags:X2}"));
+                operands.Add(new Operand($"#${flags:X2}", value: flags));
                 break;
 
             case 0xE2: // SEP
@@ -146,7 +146,7 @@ internal class SNES65816Disassembler : DisassemblerBase
                     newState.Index8Bit = (flags & 0x10) != 0;      // X=1 means 8-bit index
                 }
                 State = newState;
-                operands.Add(new Operand($"#${flags:X2}"));
+                operands.Add(new Operand($"#${flags:X2}", value: flags));
                 break;
 
             case 0xFB: // XCE
@@ -160,26 +160,26 @@ internal class SNES65816Disassembler : DisassemblerBase
         {
             case 0x00: // BRK
                 if (baseLength != 2) return DecodeResult.CreateError("Invalid BRK instruction length");
-                operands.Add(new Operand($"#${bytes[1]:X2}"));
+                operands.Add(new Operand($"#${bytes[1]:X2}", value: bytes[1]));
                 break;
 
             case 0xA9: // LDA immediate
                 if (baseLength != 2) return DecodeResult.CreateError("Invalid LDA immediate instruction length");
-                operands.Add(new Operand($"#${bytes[1]:X2}"));
+                operands.Add(new Operand($"#${bytes[1]:X2}", value: bytes[1]));
                 break;
 
             case 0x20: // JSR
                 if (bytes.Length < 3) return DecodeResult.NeedMoreBytes(3 - bytes.Length);
                 if (baseLength != 3) return DecodeResult.CreateError("Invalid JSR instruction length");
                 var target = (ulong)bytes[1] + ((ulong)bytes[2] << 8);
-                operands.Add(new Operand($"${target:X4}"));
+                operands.Add(new Operand($"${target:X4}", value: target));
                 break;
 
             case 0x22: // JSL
                 if (bytes.Length < 4) return DecodeResult.NeedMoreBytes(4 - bytes.Length);
                 if (baseLength != 4) return DecodeResult.CreateError("Invalid JSL instruction length");
                 target = (ulong)bytes[1] + ((ulong)bytes[2] << 8) + ((ulong)bytes[3] << 16);
-                operands.Add(new Operand($"${target:X6}"));
+                operands.Add(new Operand($"${target:X6}", value: target));
                 break;
 
             case 0x4C: // JMP
@@ -189,7 +189,7 @@ internal class SNES65816Disassembler : DisassemblerBase
                 target = opcode == 0x4C ?
                     (ulong)bytes[1] + ((ulong)bytes[2] << 8) :
                     (ulong)bytes[1] + ((ulong)bytes[2] << 8) + ((ulong)bytes[3] << 16);
-                operands.Add(new Operand($"${target:X4}"));
+                operands.Add(new Operand($"${target:X4}", value: target));
                 break;
 
             case 0x80: // BRA
@@ -199,13 +199,13 @@ internal class SNES65816Disassembler : DisassemblerBase
                 target = opcode == 0x80 ?
                     address + 2 + (ulong)(sbyte)bytes[1] :
                     address + 3 + (ulong)(sbyte)bytes[1] + ((ulong)bytes[2] << 8);
-                operands.Add(new Operand($"${target:X4}"));
+                operands.Add(new Operand($"${target:X4}", value: target));
                 break;
 
             case 0xD0: // BNE
                 if (baseLength != 2) return DecodeResult.CreateError("Invalid BNE instruction length");
                 target = address + 2 + (ulong)(sbyte)bytes[1];
-                operands.Add(new Operand($"${target:X4}"));
+                operands.Add(new Operand($"${target:X4}", value: target));
                 break;
 
                 // Add more addressing mode handling here...
@@ -242,10 +242,8 @@ internal class SNES65816Disassembler : DisassemblerBase
             instruction.NextAddresses.Add(address + (ulong)baseLength); // Next instruction
             if (opcode == 0x20 || opcode == 0x22) // JSR/JSL
             {
-                var branchTarget = opcode == 0x20 ?
-                    address + 3 + (ulong)(sbyte)bytes[1] + ((ulong)bytes[2] << 8) :
-                    address + 4 + (ulong)bytes[1] + ((ulong)bytes[2] << 8) + ((ulong)bytes[3] << 16);
-                instruction.NextAddresses.Add(branchTarget);
+                if (operands[0].Value == null) return DecodeResult.CreateError("Invalid target address for JSR/JSL");  
+                instruction.NextAddresses.Add(operands[0].Value.Value); // Target address
             }
             else if (opcode == 0x4C || opcode == 0x5C) // JMP/JML
             {
