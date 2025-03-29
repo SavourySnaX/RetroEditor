@@ -311,6 +311,31 @@ internal class Editor : IEditor, IEditorInternal
 
         var args = Environment.GetCommandLineArgs().Skip(1);
 
+        // SPEED STUFF UP FOR NOW
+
+        var retro = GetDeveloperMame();
+        if (retro != null)
+        {
+            mameInstance = new LibMameDebugger(retro);
+
+            var pluginWindow = new LibRetroDebuggerWindow(retro);
+            pluginWindow.Initialise();
+            retro.LoadGame("C:\\work\\editor\\snes\\op_timing_test_v2.sfc");
+            pluginWindow.InitWindow();
+            windowManager.AddWindow(pluginWindow, "MAME RETRO", null);
+            while (!mameInstance.DebuggerViewReady)
+            {
+                Thread.Sleep(100);
+            }
+            OpenWindow(new Resourcer(mameInstance), "Resourcer");
+            OpenWindow(new DebuggerView(mameInstance, LibRetroPlugin.debug_view_type.State, 20, 25, ""), $"CPU State 0");
+            OpenWindow(new DebuggerView(mameInstance, LibRetroPlugin.debug_view_type.Disassembly, 100, 25, "curpc"), $"Disassembly 0");
+            OpenWindow(new DebuggerView(mameInstance, LibRetroPlugin.debug_view_type.Memory, 80, 25, "0"), $"Memory 0");
+        }
+
+        //
+
+
         foreach (var arg in args)
         {
             OpenProject(arg);
