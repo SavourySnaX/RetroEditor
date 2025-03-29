@@ -1,39 +1,18 @@
 using ImGuiNET;
+using Microsoft.CodeAnalysis.Emit;
 using System.Numerics;
-using System.Text;
-
-/*
-
- Rough plan here - 
-
- Run MAME debugger via console with 
-
- trace somefile.txt,,,{tracelog "A=%04X ",a} -- replace "",a with system specific needs
- gvblank
- traceflush
-
- Then pull in the file generated, parse it, use it to hint at the internal resource version of the file
-
- The resourcer will need storage representing the ROM, the disassembled information (we can initial seed this from the entry point 
- although that would imply we know the rom format .. hmm, perhaps need to think about this some more). 
-
-  Step one - 
-
-   set the console commands
-   run a single frame trace
-   pull in the log
-
-*/
 
 internal class Resourcer : IWindow
 {
-    public float UpdateInterval => 1.0f;
+    public float UpdateInterval => 1/60.0f;
     
     LibMameDebugger debugger;
     RomDataParser romData;
     string traceFile = "trace.txt";
     List<string> traceLog;
     bool traceInProgress = false;
+    bool newTraceInProgress = false;
+    int newTraceCnt=0;
     bool romLoaded = false;
 
     // Selection state
@@ -70,9 +49,6 @@ internal class Resourcer : IWindow
         var range = maxAddress - minAddress;
         var scale = size.X / range;
 
-        // Draw background (unknown regions)
-//        drawList.AddRectFilled(pos, new Vector2(pos.X + size.X, pos.Y + size.Y), ImGui.GetColorU32(unknownColor));
-
         foreach (var region in romData.GetRomRanges)
         {
             drawList.AddRectFilled(
@@ -102,6 +78,7 @@ internal class Resourcer : IWindow
             // Wait for vblank
             debugger.SendCommand("gvblank");
         }
+        ImGui.SameLine();
         if (ImGui.Button("Capture 100 Milliseconds"))
         {
             traceInProgress = true;
@@ -109,6 +86,34 @@ internal class Resourcer : IWindow
             debugger.SendCommand($"trace {traceFile},,noloop");
             // Wait for vblank
             debugger.SendCommand("gtime 100");
+        }
+        ImGui.SameLine();
+        if (ImGui.Button("New Trace"))
+        {
+            var pc = romData.GetCPUState(debugger, "PC");
+            var db = romData.GetCPUState(debugger, "DB");
+            var e = romData.GetCPUState(debugger, "E");
+
+            SNES65816Disassembler disassembler = new SNES65816Disassembler();
+            bool done = false;
+            UInt64 length=0;
+            UInt64 address = MapSnesCpuToLorom(pc, out var region);
+            while (!done)
+            {
+                var result = disassembler.DecodeNext(romData.FetchBytes(address,length), pc);
+                if (result.AdditionalBytesNeeded==0)
+                {
+                    Console.WriteLine(result.Instruction);
+                    done = true;
+                }
+                else
+                {
+                    length += (UInt64)result.AdditionalBytesNeeded;
+                }
+            }
+            debugger.SendCommand($"step");
+            newTraceCnt=1;
+            newTraceInProgress=true;
         }
         if (traceDisable)
         {
@@ -451,99 +456,6 @@ internal class Resourcer : IWindow
         }
     }
 
-    private void DisplayRomData()
-    {
-        var rom = romData.GetRomData;
-        var romDataSize = rom.Length;
-        var romStartOffset = romData.GetMinAddress;
-        var romEndOffset = romData.GetMaxAddress;
-
-        var regions = romData.GetRomRanges;
-
-        // Calculate total bytes and lines needed
-        var totalBytes = romEndOffset - romStartOffset;
-        var bytesPerLine = 16;
-        var totalLines = (totalBytes + (UInt64)bytesPerLine - 1) / (UInt64)bytesPerLine;
-
-        // Calculate visible lines based on window height
-        var lineHeight = ImGui.GetTextLineHeight() + ImGui.GetStyle().ItemSpacing.Y;
-        var visibleLines = (int)(ImGui.GetContentRegionAvail().Y / lineHeight);
-        var scrollMax = Math.Max(0, (int)totalLines - visibleLines);
-
-        // Add vertical scrollbar
-        ImGui.BeginChild("RomDataTable", new Vector2(0, 0), ImGuiChildFlags.None, ImGuiWindowFlags.HorizontalScrollbar);
-        
-        // Table flags for resizable columns and borders
-        ImGuiTableFlags tableFlags = ImGuiTableFlags.Borders | 
-                                   ImGuiTableFlags.Resizable |
-                                   ImGuiTableFlags.ScrollY;
-
-
-        float totalHeight = (float)totalLines * lineHeight;
-        float availableHeight = ImGui.GetContentRegionAvail().Y;
-        float tableHeight = Math.Min(totalHeight, availableHeight);
-
-        if (ImGui.BeginTable("RomData", 17, tableFlags, new Vector2(0, tableHeight)))
-        {
-            // Set up columns
-            ImGui.TableSetupColumn("Address", ImGuiTableColumnFlags.WidthFixed, 100);
-            for (int i = 0; i < 16; i++)
-            {
-                ImGui.TableSetupColumn($"B{i:X1}", ImGuiTableColumnFlags.WidthFixed, 30);
-            }
-            ImGui.TableSetupColumn("ASCII", ImGuiTableColumnFlags.WidthStretch);
-
-            // Header row
-            ImGui.TableHeadersRow();
-
-            // Display ROM data
-            for (UInt64 line = 0; line < totalLines; line++)
-            {
-                ImGui.TableNextRow();
-                UInt64 lineU64 = (UInt64)line;
-                UInt64 bytesPerLineU64 = (UInt64)bytesPerLine;
-                UInt64 product = lineU64 * bytesPerLineU64;
-                UInt64 lineAddress = romStartOffset + product;
-
-                // Address column
-                ImGui.TableNextColumn();
-                ImGui.Text($"{lineAddress:X8}");
-
-                // Bytes columns
-                StringBuilder asciiBuilder = new StringBuilder();
-                for (int i = 0; i < 16; i++)
-                {
-                    ImGui.TableNextColumn();
-                    UInt64 currentAddress = lineAddress + (UInt64)i;
-                    if (currentAddress <= romEndOffset)
-                    {
-                        byte value = romData.GetByte(currentAddress);
-                        ImGui.Text($"{value:X2}");
-                        asciiBuilder.Append(char.IsControl((char)value) ? '.' : (char)value);
-                    }
-                    else
-                    {
-                        ImGui.Text("  ");
-                        asciiBuilder.Append(' ');
-                    }
-                }
-
-                // ASCII column
-                ImGui.TableNextColumn();
-                ImGui.Text(asciiBuilder.ToString());
-
-                if (ImGui.GetContentRegionAvail().Y < 0)
-                {
-                    break;
-                }
-            }
-
-            ImGui.EndTable();
-        }
-
-        ImGui.EndChild();
-    }
-
     public bool Initialise()
     {
         return true;
@@ -640,6 +552,25 @@ internal class Resourcer : IWindow
             disassembler.DecodeNext(disassemble,0x8000);
             
             romLoaded = true;
+        }
+
+        if (newTraceInProgress)
+        {
+            if (debugger.IsStopped)
+            {
+                var pc = romData.GetCPUState(debugger, "PC");
+                var db = romData.GetCPUState(debugger, "DB");
+                var e = romData.GetCPUState(debugger, "E");
+                newTraceCnt--;
+                if (newTraceCnt==0)
+                {
+                    newTraceInProgress = false;
+                }
+                else
+                {
+                    debugger.SendCommand("step");
+                }
+            }
         }
 
         // Handle trace in progress

@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using System.Numerics;
 using System.Text;
 using ImGuiNET;
@@ -148,9 +149,9 @@ internal class StringRegion : IRegionInfo
             for (UInt64 j = AddressStart; j <= AddressEnd; j++)
             {
                 var db = Parent.GetByte(j);
-                if (Char.IsControl((char)db))
+                if (Char.IsControl((char)db) || db > 0x7F)
                 {
-                    s.Append("\",${db:X2},\"");
+                    s.Append($"\",${db:X2},\"");
                 }
                 else
                     s.Append((char)db);
@@ -194,7 +195,7 @@ internal class RomDataParser
         StringColor = ImGui.GetColorU32(new Vector4(1, 0, 0, .5f));
     }
 
-    private LibMameDebugger.DView OpenDView(LibMameDebugger debugger)
+    private LibMameDebugger.DView OpenMemView(LibMameDebugger debugger)
     {
         var view = new LibMameDebugger.DView(debugger.AllocView(LibRetroPlugin.debug_view_type.Memory), 0, 0, 256, 256, "");
         
@@ -214,7 +215,28 @@ internal class RomDataParser
         return view;
     }
 
-    private void CloseDView(LibMameDebugger debugger, LibMameDebugger.DView view)
+    private LibMameDebugger.DView OpenCPUView(LibMameDebugger debugger, string cpuName)
+    {
+        var view = new LibMameDebugger.DView(debugger.AllocView(LibRetroPlugin.debug_view_type.State), 0, 0, 32, 32, "");
+        
+        // Find ROM source index
+        int sourceCount = debugger.GetSourcesCount(ref view);
+        var sources = debugger.GetSourcesList(ref view);
+        
+        for (int i = 0; i < sourceCount; i++)
+        {
+            if (sources[i].Contains(cpuName))
+            {
+                debugger.SetSource(ref view, i);
+                break;
+            }
+        }
+
+        return view;
+    }
+
+
+    private void CloseView(LibMameDebugger debugger, LibMameDebugger.DView view)
     {
         debugger.FreeView(view.view);
     }
@@ -248,7 +270,7 @@ internal class RomDataParser
     public void Parse(LibMameDebugger debugger)
     {
         // Initialize ROM view
-        var view = OpenDView(debugger);
+        var view = OpenMemView(debugger);
 
         try
         {
@@ -282,9 +304,71 @@ internal class RomDataParser
         }
         finally
         {
-            CloseDView(debugger, view);
+            CloseView(debugger, view);
         }
     }
+
+    public UInt64 GetCPUState(LibMameDebugger debugger, string register)
+    {
+        var view = OpenCPUView(debugger, "main");
+        try
+        {
+            // Update the view to get the data
+            debugger.UpdateDView(ref view);
+
+            return ParseState(view, register);
+        }
+        finally
+        {
+            CloseView(debugger, view);
+        }
+        
+    }
+    
+    private UInt64 ParseState(LibMameDebugger.DView view, string register)
+    {
+        int bytesPerLine = view.view.W * 2; // Each character is 2 bytes (char + attribute)
+
+        for (int y = 0; y < view.view.H; y++)
+        {
+            int lineStart = y * bytesPerLine;
+            int x = 0;
+            
+            // Skip initial spaces
+            while (x < view.view.W && (char)view.state[lineStart + x * 2] == ' ')
+                x++;
+
+            // Verify register name matches
+            StringBuilder registerStr = new StringBuilder();
+            while (x < view.view.W && (char)view.state[lineStart + x * 2] != ' ')
+            {
+                registerStr.Append((char)view.state[lineStart + x * 2]);
+                x++;
+            }
+            if (registerStr.ToString() != register)
+            {
+                continue;
+            }
+            // Skip spaces between name and value
+            while (x < view.view.W && (char)view.state[lineStart + x * 2] == ' ')
+                x++;
+
+            // Fetch Value
+            registerStr.Clear();
+            while (x < view.view.W && (char)view.state[lineStart + x * 2] != ' ')
+            {
+                registerStr.Append((char)view.state[lineStart + x * 2]);
+                x++;
+            }
+            if (registerStr.Length > 0)
+            {
+                return UInt64.Parse(registerStr.ToString(), System.Globalization.NumberStyles.HexNumber);
+            }
+        }
+
+        return 0;
+    }
+
 
     private UInt64 ParseChunk(LibMameDebugger.DView view, UInt64 firstOffset)
     {
@@ -422,5 +506,13 @@ internal class RomDataParser
         if (address >= (UInt64)romData.Length)
             return 0;
         return romData[address];
+    }
+
+    public ReadOnlySpan<byte> FetchBytes(UInt64 address, UInt64 length)
+    {
+        if (address >= (UInt64)romData.Length)
+            return new byte[0];
+        length = Math.Min(length, (UInt64)romData.Length - address);
+        return new ReadOnlySpan<byte>(romData, (int)address, (int)length);
     }
 } 
