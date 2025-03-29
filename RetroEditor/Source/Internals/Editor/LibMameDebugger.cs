@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using ImGuiNET;
 using RetroEditor.Plugins;
@@ -220,15 +221,19 @@ internal class LibMameDebugger
         return "";
     }
 
+    public bool DebuggerViewReady {get; private set;} = false;
+    public bool RemoteCommandReady {get; private set;} = false;
     private int DebuggerCallback(int kind,IntPtr data)
     {
         switch (kind)
         {
             case 0:
                 debuggerViewCallbacks = Marshal.PtrToStructure<LibRetroPlugin.DebuggerView>(data);
+                DebuggerViewReady = true;
                 return 1;
             case 1:
                 remoteCommandCallback = Marshal.PtrToStructure<LibRetroPlugin.RemoteCommand>(data);
+                RemoteCommandReady = true;
                 return 1;
             case 2:
                 var notified = Marshal.PtrToStructure<LibRetroPlugin.RemoteNotification>(data);
