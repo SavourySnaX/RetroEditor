@@ -82,6 +82,12 @@ internal class Instruction
         Bytes = bytes;
         NextAddresses = new List<ulong>();
     }
+
+    public override string ToString()
+    {
+        string operandsText = string.Join(", ", Operands.Select(o => o.Text));
+        return $"{Address:X8}: {Mnemonic} {operandsText}";
+    }
 }
 
 /// <summary>
