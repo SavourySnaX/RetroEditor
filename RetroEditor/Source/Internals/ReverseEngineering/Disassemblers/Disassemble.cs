@@ -196,12 +196,10 @@ internal interface IDisassembler
 /// </summary>
 internal abstract class DisassemblerBase : IDisassembler
 {
-    protected readonly IMemoryAccess MemoryAccess;
     private CpuState _state;
 
-    protected DisassemblerBase(IMemoryAccess memoryAccess)
+    protected DisassemblerBase()
     {
-        MemoryAccess = memoryAccess;
         _state = CreateInitialState();
     }
 
