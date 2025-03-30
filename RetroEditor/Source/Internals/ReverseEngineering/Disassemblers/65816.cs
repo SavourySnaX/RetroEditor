@@ -26,7 +26,7 @@ internal enum AddressingMode
     DirectPageIndirectLongIndexedY,// Direct page indirect long indexed by Y (e.g., LDA [$42],Y)
     StackRelative,     // Stack relative (e.g., STA $42,S)
     StackRelativeIndirectY, // Stack relative indirect indexed by Y (e.g., STA ($42,S),Y)
-    BlockMove,         // Block move (e.g., MVP $1234->$5678)
+    BlockMove,         // Block move (e.g., MVP $12->$56)
     ProgramCounterRelative, // Relative branch (e.g., BRA $42)
     ProgramCounterRelativeLong // Long relative branch (e.g., BRL $1234)
 }
@@ -103,7 +103,7 @@ internal class SNES65816Disassembler : DisassemblerBase
         3, 2, 4, 2, 2, 2, 2, 2, 1, 2, 1, 1, 3, 3, 3, 4,  // 0x20-0x2F
         2, 2, 2, 2, 2, 2, 2, 2, 1, 3, 1, 1, 3, 3, 3, 4,  // 0x30-0x3F
         1, 2, 2, 2, 3, 2, 2, 2, 1, 2, 1, 1, 3, 3, 3, 4,  // 0x40-0x4F
-        2, 2, 2, 2, 2, 2, 2, 2, 1, 3, 1, 1, 4, 3, 3, 4,  // 0x50-0x5F
+        2, 2, 2, 2, 3, 2, 2, 2, 1, 3, 1, 1, 4, 3, 3, 4,  // 0x50-0x5F
         1, 2, 3, 2, 2, 2, 2, 2, 1, 2, 1, 1, 3, 3, 3, 4,  // 0x60-0x6F
         2, 2, 2, 2, 2, 2, 2, 2, 1, 3, 1, 1, 3, 3, 3, 4,  // 0x70-0x7F
         2, 2, 3, 2, 2, 2, 2, 2, 1, 2, 1, 1, 3, 3, 3, 4,  // 0x80-0x8F
@@ -594,7 +594,8 @@ internal class SNES65816Disassembler : DisassemblerBase
                 if (baseLength != 3) return DecodeResult.CreateError($"Invalid {mnemonic} block move instruction length");
                 var source = (ulong)bytes[1];
                 var dest = (ulong)bytes[2];
-                operands.Add(new Operand($"${source:X2}->${dest:X2}", value: source));
+                operands.Add(new Operand($"${source:X2}", value: source, isSource: true));
+                operands.Add(new Operand($"${dest:X2}", value: source, isDestination: true));
                 break;
 
             case AddressingMode.ProgramCounterRelative:

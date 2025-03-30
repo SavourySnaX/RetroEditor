@@ -83,6 +83,11 @@ namespace RetroEditor.Tests
             Assert.AreEqual(isBranch, instruction.IsBranch);
             Assert.AreEqual(isTerminator, instruction.IsBasicBlockTerminator);
 
+            if (nextAddresses==null && !(instruction.IsBranch||instruction.IsBasicBlockTerminator))
+            {
+                nextAddresses = [(ulong)(0x8000 + result.BytesConsumed)];
+            }
+
             if (nextAddresses != null)
             {
                 var addresses = instruction.NextAddresses;
@@ -1138,8 +1143,7 @@ namespace RetroEditor.Tests
                     bytesConsumed: 2,
                     operandCount: 1,
                     operandText: new[] { "#$42" },
-                    isTerminator: true,
-                    nextAddresses: new List<ulong> { }
+                    isTerminator: true
                 ),
                 new byte[] { 0x00, 0x42 }
             );
@@ -1155,8 +1159,7 @@ namespace RetroEditor.Tests
                     bytesConsumed: 2,
                     operandCount: 1,
                     operandText: new[] { "#$42" },
-                    isTerminator: true,
-                    nextAddresses: new List<ulong> { }
+                    isTerminator: true
                 ),
                 new byte[] { 0x02, 0x42 }
             );
@@ -2592,9 +2595,7 @@ namespace RetroEditor.Tests
                     mnemonic: "MVN",
                     bytesConsumed: 3,
                     operandCount: 2,
-                    operandText: new[] { "$12", "$34" },
-                    isTerminator: true,
-                    nextAddresses: new List<ulong> { }
+                    operandText: new[] { "$12", "$34" }
                 ),
                 new byte[] { 0x54, 0x12, 0x34 }
             );
@@ -2609,9 +2610,7 @@ namespace RetroEditor.Tests
                     mnemonic: "MVP",
                     bytesConsumed: 3,
                     operandCount: 2,
-                    operandText: new[] { "$12", "$34" },
-                    isTerminator: true,
-                    nextAddresses: new List<ulong> { }
+                    operandText: new[] { "$12", "$34" }
                 ),
                 new byte[] { 0x44, 0x12, 0x34 }
             );
