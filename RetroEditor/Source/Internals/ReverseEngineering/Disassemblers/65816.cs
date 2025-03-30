@@ -255,7 +255,7 @@ internal class SNES65816Disassembler : DisassemblerBase
         AddressingMode.AbsoluteLongIndexedX,            // ADC
 
         AddressingMode.ProgramCounterRelative,          // BRA  0x80
-        AddressingMode.DirectPageIndexedX,              // STA
+        AddressingMode.DirectPageIndirectX,             // STA
         AddressingMode.ProgramCounterRelativeLong,      // BRL
         AddressingMode.StackRelative,                   // STA
         AddressingMode.DirectPage,                      // STY
@@ -650,13 +650,22 @@ internal class SNES65816Disassembler : DisassemblerBase
                                             opcode == 0x22 || // JSR
                                             opcode == 0xFC || // JSL
                                             opcode == 0x02 || // COP
+                                            opcode == 0xDB || // STP
                                             opcode == 0x00;   // BRK
 
         // Add next addresses
         bool nextInstruction=!instruction.IsBasicBlockTerminator;
         if (instruction.IsBranch)
         {
-            instruction.NextAddresses.Add(operands[0].Value.Value);
+            var value = operands[0].Value.GetValueOrDefault();
+            if (operands.Count > 0 && operands[0].Value != null)
+            {
+                instruction.NextAddresses.Add(value);
+            }
+            else
+            {
+                return DecodeResult.CreateError($"Branch instruction {mnemonic} has no target address");
+            }
         }
         if (nextInstruction)
         {

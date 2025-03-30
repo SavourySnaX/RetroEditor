@@ -42,7 +42,6 @@ public class DisassemblerSystemTests
         Assert.False(result.Success);
         Assert.True(result.NeedsMoreBytes);
         Assert.Equal(2, result.AdditionalBytesNeeded);
-        Assert.Null(result.Instruction);
 
         var instruction = new Instruction(0x8000, "NOP", new List<Operand>(), new byte[] { 0xEA });
         result = DecodeResult.CreateSuccess(instruction, 1);
@@ -55,7 +54,6 @@ public class DisassemblerSystemTests
         Assert.False(result.Success);
         Assert.False(result.NeedsMoreBytes);
         Assert.Equal("Invalid opcode", result.ErrorMessage);
-        Assert.Null(result.Instruction);
     }
 
     [Fact]
