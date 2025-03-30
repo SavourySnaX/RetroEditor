@@ -28,7 +28,7 @@ internal class Resourcer : IWindow
         this.debugger = debugger;
         traceLog = new List<string>();
 
-        var parser = new RomDataParser();
+        romData = new RomDataParser();
     }
 
     public void Close()
@@ -439,7 +439,7 @@ internal class Resourcer : IWindow
                 ImGui.SetScrollY(jumpLine * rowHeight);
             }
 
-            if (moved)
+            if (moved && cursorPosition.HasValue)
             {
                 // Set Scroll position to keep the currsor in 
                 if (scroll > cursorPosition.Value * rowHeight)
@@ -541,8 +541,6 @@ internal class Resourcer : IWindow
         if (!romLoaded)
         {
             // Read ROM data in chunks
-            romData = new RomDataParser();
-
             romData.Parse(debugger);
 
 //            romData.AddStringRange(0x7FC0, 0x7FD4); // LoRom ASCII Title in header

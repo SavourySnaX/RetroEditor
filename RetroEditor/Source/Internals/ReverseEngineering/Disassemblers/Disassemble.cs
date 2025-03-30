@@ -74,6 +74,14 @@ internal class Instruction
     /// </summary>
     public List<ulong> NextAddresses { get; set; }
 
+    public Instruction()
+    {
+        Operands = new List<Operand>();
+        NextAddresses = new List<ulong>();
+        Mnemonic = string.Empty;
+        Bytes = Array.Empty<byte>();
+    }
+
     public Instruction(ulong address, string mnemonic, List<Operand> operands, byte[] bytes)
     {
         Address = address;
@@ -109,7 +117,7 @@ internal class DecodeResult
     /// <summary>
     /// The decoded instruction, if successful
     /// </summary>
-    public Instruction Instruction { get; set; }
+    public required Instruction Instruction { get; set; }
 
     /// <summary>
     /// The number of bytes consumed by the instruction
@@ -134,13 +142,14 @@ internal class DecodeResult
     /// <summary>
     /// Any error message if decoding failed
     /// </summary>
-    public string ErrorMessage { get; set; }
+    public string ErrorMessage { get; set; } = "";
 
     public static DecodeResult NeedMoreBytes(int additionalBytes)
     {
         return new DecodeResult
         {
             Success = false,
+            Instruction = new(),
             NeedsMoreBytes = true,
             AdditionalBytesNeeded = additionalBytes
         };
@@ -162,6 +171,7 @@ internal class DecodeResult
         return new DecodeResult
         {
             Success = false,
+            Instruction = new(),
             ErrorMessage = message,
             NeedsMoreBytes = false
         };

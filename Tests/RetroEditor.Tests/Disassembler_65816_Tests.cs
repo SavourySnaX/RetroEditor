@@ -104,15 +104,6 @@ namespace RetroEditor.Tests
     public class DisassemblerTests : DisassemblerTestBase
     {
         [TestMethod]
-        public void Test65816_SEI()
-        {
-            TestInAllStates(result => 
-                AssertInstruction(result, "SEI", 1),
-                new byte[] { 0x78 }
-            );
-        }
-
-        [TestMethod]
         public void Test65816_ADC_Immediate()
         {
             var testCases = new[]
@@ -3307,6 +3298,968 @@ namespace RetroEditor.Tests
                     isTerminator: true
                 ),
                 new byte[] { 0x6B }
+            );
+        }
+
+        [TestMethod]
+        public void Test65816_SBC_Immediate()
+        {
+            var testCases = new[]
+            {
+                // emulation mode (8-bit A)
+                new { Emulation = true, A16Bit = false, X16Bit = false, Bytes = new byte[] { 0xE9, 0x42 }, ExpectedLength = 2, ExpectedOperand = "#$42" },
+                
+                // native mode, 8-bit A
+                new { Emulation = false, A16Bit = false, X16Bit = false, Bytes = new byte[] { 0xE9, 0x42 }, ExpectedLength = 2, ExpectedOperand = "#$42" },
+                
+                // native mode, 16-bit A
+                new { Emulation = false, A16Bit = true, X16Bit = false, Bytes = new byte[] { 0xE9, 0x42, 0x12 }, ExpectedLength = 3, ExpectedOperand = "#$1242" },
+                
+                // native mode, 8-bit A, 16-bit X
+                new { Emulation = false, A16Bit = false, X16Bit = true, Bytes = new byte[] { 0xE9, 0x42 }, ExpectedLength = 2, ExpectedOperand = "#$42" },
+                
+                // native mode, 16-bit A and X
+                new { Emulation = false, A16Bit = true, X16Bit = true, Bytes = new byte[] { 0xE9, 0x42, 0x12 }, ExpectedLength = 3, ExpectedOperand = "#$1242" }
+            };
+
+            foreach (var testCase in testCases)
+            {
+                SetState(testCase.Emulation, testCase.A16Bit, testCase.X16Bit);
+                var result = DecodeNext(testCase.Bytes);
+                AssertInstruction(
+                    result,
+                    mnemonic: "SBC",
+                    bytesConsumed: testCase.ExpectedLength,
+                    operandCount: 1,
+                    operandText: new[] { testCase.ExpectedOperand }
+                );
+            }
+        }
+
+        [TestMethod]
+        public void Test65816_SBC_Absolute()
+        {
+            TestInAllStates(result => 
+                AssertInstruction(
+                    result,
+                    mnemonic: "SBC",
+                    bytesConsumed: 3,
+                    operandCount: 1,
+                    operandText: new[] { "$1234" }
+                ),
+                new byte[] { 0xED, 0x34, 0x12 }
+            );
+        }
+
+        [TestMethod]
+        public void Test65816_SBC_AbsoluteLong()
+        {
+            TestInAllStates(result => 
+                AssertInstruction(
+                    result,
+                    mnemonic: "SBC",
+                    bytesConsumed: 4,
+                    operandCount: 1,
+                    operandText: new[] { "$123456" }
+                ),
+                new byte[] { 0xEF, 0x56, 0x34, 0x12 }
+            );
+        }
+
+        [TestMethod]
+        public void Test65816_SBC_DirectPage()
+        {
+            TestInAllStates(result => 
+                AssertInstruction(
+                    result,
+                    mnemonic: "SBC",
+                    bytesConsumed: 2,
+                    operandCount: 1,
+                    operandText: new[] { "$42" }
+                ),
+                new byte[] { 0xE5, 0x42 }
+            );
+        }
+
+        [TestMethod]
+        public void Test65816_SBC_DirectPageIndirect()
+        {
+            TestInAllStates(result => 
+                AssertInstruction(
+                    result,
+                    mnemonic: "SBC",
+                    bytesConsumed: 2,
+                    operandCount: 1,
+                    operandText: new[] { "($42)" }
+                ),
+                new byte[] { 0xF2, 0x42 }
+            );
+        }
+
+        [TestMethod]
+        public void Test65816_SBC_DirectPageIndirectLong()
+        {
+            TestInAllStates(result => 
+                AssertInstruction(
+                    result,
+                    mnemonic: "SBC",
+                    bytesConsumed: 2,
+                    operandCount: 1,
+                    operandText: new[] { "[$42]" }
+                ),
+                new byte[] { 0xE7, 0x42 }
+            );
+        }
+
+        [TestMethod]
+        public void Test65816_SBC_AbsoluteIndexedX()
+        {
+            TestInAllStates(result => 
+                AssertInstruction(
+                    result,
+                    mnemonic: "SBC",
+                    bytesConsumed: 3,
+                    operandCount: 1,
+                    operandText: new[] { "$1234,X" }
+                ),
+                new byte[] { 0xFD, 0x34, 0x12 }
+            );
+        }
+
+        [TestMethod]
+        public void Test65816_SBC_AbsoluteLongIndexedX()
+        {
+            TestInAllStates(result => 
+                AssertInstruction(
+                    result,
+                    mnemonic: "SBC",
+                    bytesConsumed: 4,
+                    operandCount: 1,
+                    operandText: new[] { "$123456,X" }
+                ),
+                new byte[] { 0xFF, 0x56, 0x34, 0x12 }
+            );
+        }
+
+        [TestMethod]
+        public void Test65816_SBC_AbsoluteIndexedY()
+        {
+            TestInAllStates(result => 
+                AssertInstruction(
+                    result,
+                    mnemonic: "SBC",
+                    bytesConsumed: 3,
+                    operandCount: 1,
+                    operandText: new[] { "$1234,Y" }
+                ),
+                new byte[] { 0xF9, 0x34, 0x12 }
+            );
+        }
+
+        [TestMethod]
+        public void Test65816_SBC_DirectPageIndexedX()
+        {
+            TestInAllStates(result => 
+                AssertInstruction(
+                    result,
+                    mnemonic: "SBC",
+                    bytesConsumed: 2,
+                    operandCount: 1,
+                    operandText: new[] { "$42,X" }
+                ),
+                new byte[] { 0xF5, 0x42 }
+            );
+        }
+
+        [TestMethod]
+        public void Test65816_SBC_DirectPageIndirectX()
+        {
+            TestInAllStates(result => 
+                AssertInstruction(
+                    result,
+                    mnemonic: "SBC",
+                    bytesConsumed: 2,
+                    operandCount: 1,
+                    operandText: new[] { "($42,X)" }
+                ),
+                new byte[] { 0xE1, 0x42 }
+            );
+        }
+
+        [TestMethod]
+        public void Test65816_SBC_DirectPageIndirectIndexedY()
+        {
+            TestInAllStates(result => 
+                AssertInstruction(
+                    result,
+                    mnemonic: "SBC",
+                    bytesConsumed: 2,
+                    operandCount: 1,
+                    operandText: new[] { "($42),Y" }
+                ),
+                new byte[] { 0xF1, 0x42 }
+            );
+        }
+
+        [TestMethod]
+        public void Test65816_SBC_DirectPageIndirectLongIndexedY()
+        {
+            TestInAllStates(result => 
+                AssertInstruction(
+                    result,
+                    mnemonic: "SBC",
+                    bytesConsumed: 2,
+                    operandCount: 1,
+                    operandText: new[] { "[$42],Y" }
+                ),
+                new byte[] { 0xF7, 0x42 }
+            );
+        }
+
+        [TestMethod]
+        public void Test65816_SBC_StackRelative()
+        {
+            TestInAllStates(result => 
+                AssertInstruction(
+                    result,
+                    mnemonic: "SBC",
+                    bytesConsumed: 2,
+                    operandCount: 1,
+                    operandText: new[] { "$42,S" }
+                ),
+                new byte[] { 0xE3, 0x42 }
+            );
+        }
+
+        [TestMethod]
+        public void Test65816_SBC_StackRelativeIndexedY()
+        {
+            TestInAllStates(result => 
+                AssertInstruction(
+                    result,
+                    mnemonic: "SBC",
+                    bytesConsumed: 2,
+                    operandCount: 1,
+                    operandText: new[] { "($42,S),Y" }
+                ),
+                new byte[] { 0xF3, 0x42 }
+            );
+        }
+
+        [TestMethod]
+        public void Test65816_SEC()
+        {
+            TestInAllStates(result => 
+                AssertInstruction(
+                    result,
+                    mnemonic: "SEC",
+                    bytesConsumed: 1,
+                    operandCount: 0
+                ),
+                new byte[] { 0x38 }
+            );
+        }
+
+        [TestMethod]
+        public void Test65816_SED()
+        {
+            TestInAllStates(result => 
+                AssertInstruction(
+                    result,
+                    mnemonic: "SED",
+                    bytesConsumed: 1,
+                    operandCount: 0
+                ),
+                new byte[] { 0xF8 }
+            );
+        }
+
+        [TestMethod]
+        public void Test65816_SEI()
+        {
+            TestInAllStates(result => 
+                AssertInstruction(
+                    result,
+                    mnemonic: "SEI",
+                    bytesConsumed: 1,
+                    operandCount: 0
+                ),
+                new byte[] { 0x78 }
+            );
+        }
+
+        [TestMethod]
+        public void Test65816_SEP()
+        {
+            TestInAllStates(result => 
+                AssertInstruction(
+                    result,
+                    mnemonic: "SEP",
+                    bytesConsumed: 2,
+                    operandCount: 1,
+                    operandText: new[] { "#$42" }
+                ),
+                new byte[] { 0xE2, 0x42 }
+            );
+        }
+
+        [TestMethod]
+        public void Test65816_STA_Absolute()
+        {
+            TestInAllStates(result => 
+                AssertInstruction(
+                    result,
+                    mnemonic: "STA",
+                    bytesConsumed: 3,
+                    operandCount: 1,
+                    operandText: new[] { "$1234" }
+                ),
+                new byte[] { 0x8D, 0x34, 0x12 }
+            );
+        }
+
+        [TestMethod]
+        public void Test65816_STA_AbsoluteLong()
+        {
+            TestInAllStates(result => 
+                AssertInstruction(
+                    result,
+                    mnemonic: "STA",
+                    bytesConsumed: 4,
+                    operandCount: 1,
+                    operandText: new[] { "$123456" }
+                ),
+                new byte[] { 0x8F, 0x56, 0x34, 0x12 }
+            );
+        }
+
+        [TestMethod]
+        public void Test65816_STA_DirectPage()
+        {
+            TestInAllStates(result => 
+                AssertInstruction(
+                    result,
+                    mnemonic: "STA",
+                    bytesConsumed: 2,
+                    operandCount: 1,
+                    operandText: new[] { "$42" }
+                ),
+                new byte[] { 0x85, 0x42 }
+            );
+        }
+
+        [TestMethod]
+        public void Test65816_STA_DirectPageIndirect()
+        {
+            TestInAllStates(result => 
+                AssertInstruction(
+                    result,
+                    mnemonic: "STA",
+                    bytesConsumed: 2,
+                    operandCount: 1,
+                    operandText: new[] { "($42)" }
+                ),
+                new byte[] { 0x92, 0x42 }
+            );
+        }
+
+        [TestMethod]
+        public void Test65816_STA_DirectPageIndirectLong()
+        {
+            TestInAllStates(result => 
+                AssertInstruction(
+                    result,
+                    mnemonic: "STA",
+                    bytesConsumed: 2,
+                    operandCount: 1,
+                    operandText: new[] { "[$42]" }
+                ),
+                new byte[] { 0x87, 0x42 }
+            );
+        }
+
+        [TestMethod]
+        public void Test65816_STA_AbsoluteIndexedX()
+        {
+            TestInAllStates(result => 
+                AssertInstruction(
+                    result,
+                    mnemonic: "STA",
+                    bytesConsumed: 3,
+                    operandCount: 1,
+                    operandText: new[] { "$1234,X" }
+                ),
+                new byte[] { 0x9D, 0x34, 0x12 }
+            );
+        }
+
+        [TestMethod]
+        public void Test65816_STA_AbsoluteLongIndexedX()
+        {
+            TestInAllStates(result => 
+                AssertInstruction(
+                    result,
+                    mnemonic: "STA",
+                    bytesConsumed: 4,
+                    operandCount: 1,
+                    operandText: new[] { "$123456,X" }
+                ),
+                new byte[] { 0x9F, 0x56, 0x34, 0x12 }
+            );
+        }
+
+        [TestMethod]
+        public void Test65816_STA_AbsoluteIndexedY()
+        {
+            TestInAllStates(result => 
+                AssertInstruction(
+                    result,
+                    mnemonic: "STA",
+                    bytesConsumed: 3,
+                    operandCount: 1,
+                    operandText: new[] { "$1234,Y" }
+                ),
+                new byte[] { 0x99, 0x34, 0x12 }
+            );
+        }
+
+        [TestMethod]
+        public void Test65816_STA_DirectPageIndexedX()
+        {
+            TestInAllStates(result => 
+                AssertInstruction(
+                    result,
+                    mnemonic: "STA",
+                    bytesConsumed: 2,
+                    operandCount: 1,
+                    operandText: new[] { "$42,X" }
+                ),
+                new byte[] { 0x95, 0x42 }
+            );
+        }
+
+        [TestMethod]
+        public void Test65816_STA_DirectPageIndirectX()
+        {
+            TestInAllStates(result => 
+                AssertInstruction(
+                    result,
+                    mnemonic: "STA",
+                    bytesConsumed: 2,
+                    operandCount: 1,
+                    operandText: new[] { "($42,X)" }
+                ),
+                new byte[] { 0x81, 0x42 }
+            );
+        }
+
+        [TestMethod]
+        public void Test65816_STA_DirectPageIndirectIndexedY()
+        {
+            TestInAllStates(result => 
+                AssertInstruction(
+                    result,
+                    mnemonic: "STA",
+                    bytesConsumed: 2,
+                    operandCount: 1,
+                    operandText: new[] { "($42),Y" }
+                ),
+                new byte[] { 0x91, 0x42 }
+            );
+        }
+
+        [TestMethod]
+        public void Test65816_STA_DirectPageIndirectLongIndexedY()
+        {
+            TestInAllStates(result => 
+                AssertInstruction(
+                    result,
+                    mnemonic: "STA",
+                    bytesConsumed: 2,
+                    operandCount: 1,
+                    operandText: new[] { "[$42],Y" }
+                ),
+                new byte[] { 0x97, 0x42 }
+            );
+        }
+
+        [TestMethod]
+        public void Test65816_STA_StackRelative()
+        {
+            TestInAllStates(result => 
+                AssertInstruction(
+                    result,
+                    mnemonic: "STA",
+                    bytesConsumed: 2,
+                    operandCount: 1,
+                    operandText: new[] { "$42,S" }
+                ),
+                new byte[] { 0x83, 0x42 }
+            );
+        }
+
+        [TestMethod]
+        public void Test65816_STA_StackRelativeIndexedY()
+        {
+            TestInAllStates(result => 
+                AssertInstruction(
+                    result,
+                    mnemonic: "STA",
+                    bytesConsumed: 2,
+                    operandCount: 1,
+                    operandText: new[] { "($42,S),Y" }
+                ),
+                new byte[] { 0x93, 0x42 }
+            );
+        }
+
+        [TestMethod]
+        public void Test65816_STP()
+        {
+            TestInAllStates(result => 
+                AssertInstruction(
+                    result,
+                    mnemonic: "STP",
+                    bytesConsumed: 1,
+                    operandCount: 0,
+                    isTerminator: true
+                ),
+                new byte[] { 0xDB }
+            );
+        }
+
+        [TestMethod]
+        public void Test65816_STX_Absolute()
+        {
+            TestInAllStates(result => 
+                AssertInstruction(
+                    result,
+                    mnemonic: "STX",
+                    bytesConsumed: 3,
+                    operandCount: 1,
+                    operandText: new[] { "$1234" }
+                ),
+                new byte[] { 0x8E, 0x34, 0x12 }
+            );
+        }
+
+        [TestMethod]
+        public void Test65816_STX_DirectPage()
+        {
+            TestInAllStates(result => 
+                AssertInstruction(
+                    result,
+                    mnemonic: "STX",
+                    bytesConsumed: 2,
+                    operandCount: 1,
+                    operandText: new[] { "$42" }
+                ),
+                new byte[] { 0x86, 0x42 }
+            );
+        }
+
+        [TestMethod]
+        public void Test65816_STX_DirectPageIndexedY()
+        {
+            TestInAllStates(result => 
+                AssertInstruction(
+                    result,
+                    mnemonic: "STX",
+                    bytesConsumed: 2,
+                    operandCount: 1,
+                    operandText: new[] { "$42,Y" }
+                ),
+                new byte[] { 0x96, 0x42 }
+            );
+        }
+
+        [TestMethod]
+        public void Test65816_STY_Absolute()
+        {
+            TestInAllStates(result => 
+                AssertInstruction(
+                    result,
+                    mnemonic: "STY",
+                    bytesConsumed: 3,
+                    operandCount: 1,
+                    operandText: new[] { "$1234" }
+                ),
+                new byte[] { 0x8C, 0x34, 0x12 }
+            );
+        }
+
+        [TestMethod]
+        public void Test65816_STY_DirectPage()
+        {
+            TestInAllStates(result => 
+                AssertInstruction(
+                    result,
+                    mnemonic: "STY",
+                    bytesConsumed: 2,
+                    operandCount: 1,
+                    operandText: new[] { "$42" }
+                ),
+                new byte[] { 0x84, 0x42 }
+            );
+        }
+
+        [TestMethod]
+        public void Test65816_STY_DirectPageIndexedX()
+        {
+            TestInAllStates(result => 
+                AssertInstruction(
+                    result,
+                    mnemonic: "STY",
+                    bytesConsumed: 2,
+                    operandCount: 1,
+                    operandText: new[] { "$42,X" }
+                ),
+                new byte[] { 0x94, 0x42 }
+            );
+        }
+
+        [TestMethod]
+        public void Test65816_STZ_Absolute()
+        {
+            TestInAllStates(result => 
+                AssertInstruction(
+                    result,
+                    mnemonic: "STZ",
+                    bytesConsumed: 3,
+                    operandCount: 1,
+                    operandText: new[] { "$1234" }
+                ),
+                new byte[] { 0x9C, 0x34, 0x12 }
+            );
+        }
+
+        [TestMethod]
+        public void Test65816_STZ_DirectPage()
+        {
+            TestInAllStates(result => 
+                AssertInstruction(
+                    result,
+                    mnemonic: "STZ",
+                    bytesConsumed: 2,
+                    operandCount: 1,
+                    operandText: new[] { "$42" }
+                ),
+                new byte[] { 0x64, 0x42 }
+            );
+        }
+
+        [TestMethod]
+        public void Test65816_STZ_AbsoluteIndexedX()
+        {
+            TestInAllStates(result => 
+                AssertInstruction(
+                    result,
+                    mnemonic: "STZ",
+                    bytesConsumed: 3,
+                    operandCount: 1,
+                    operandText: new[] { "$1234,X" }
+                ),
+                new byte[] { 0x9E, 0x34, 0x12 }
+            );
+        }
+
+        [TestMethod]
+        public void Test65816_STZ_DirectPageIndexedX()
+        {
+            TestInAllStates(result => 
+                AssertInstruction(
+                    result,
+                    mnemonic: "STZ",
+                    bytesConsumed: 2,
+                    operandCount: 1,
+                    operandText: new[] { "$42,X" }
+                ),
+                new byte[] { 0x74, 0x42 }
+            );
+        }
+
+        [TestMethod]
+        public void Test65816_TAX()
+        {
+            TestInAllStates(result => 
+                AssertInstruction(
+                    result,
+                    mnemonic: "TAX",
+                    bytesConsumed: 1,
+                    operandCount: 0
+                ),
+                new byte[] { 0xAA }
+            );
+        }
+
+        [TestMethod]
+        public void Test65816_TAY()
+        {
+            TestInAllStates(result => 
+                AssertInstruction(
+                    result,
+                    mnemonic: "TAY",
+                    bytesConsumed: 1,
+                    operandCount: 0
+                ),
+                new byte[] { 0xA8 }
+            );
+        }
+
+        [TestMethod]
+        public void Test65816_TCD()
+        {
+            TestInAllStates(result => 
+                AssertInstruction(
+                    result,
+                    mnemonic: "TCD",
+                    bytesConsumed: 1,
+                    operandCount: 0
+                ),
+                new byte[] { 0x5B }
+            );
+        }
+
+        [TestMethod]
+        public void Test65816_TCS()
+        {
+            TestInAllStates(result => 
+                AssertInstruction(
+                    result,
+                    mnemonic: "TCS",
+                    bytesConsumed: 1,
+                    operandCount: 0
+                ),
+                new byte[] { 0x1B }
+            );
+        }
+
+        [TestMethod]
+        public void Test65816_TDC()
+        {
+            TestInAllStates(result => 
+                AssertInstruction(
+                    result,
+                    mnemonic: "TDC",
+                    bytesConsumed: 1,
+                    operandCount: 0
+                ),
+                new byte[] { 0x7B }
+            );
+        }
+
+        [TestMethod]
+        public void Test65816_TSC()
+        {
+            TestInAllStates(result => 
+                AssertInstruction(
+                    result,
+                    mnemonic: "TSC",
+                    bytesConsumed: 1,
+                    operandCount: 0
+                ),
+                new byte[] { 0x3B }
+            );
+        }
+
+        [TestMethod]
+        public void Test65816_TSX()
+        {
+            TestInAllStates(result => 
+                AssertInstruction(
+                    result,
+                    mnemonic: "TSX",
+                    bytesConsumed: 1,
+                    operandCount: 0
+                ),
+                new byte[] { 0xBA }
+            );
+        }
+
+        [TestMethod]
+        public void Test65816_TXA()
+        {
+            TestInAllStates(result => 
+                AssertInstruction(
+                    result,
+                    mnemonic: "TXA",
+                    bytesConsumed: 1,
+                    operandCount: 0
+                ),
+                new byte[] { 0x8A }
+            );
+        }
+
+        [TestMethod]
+        public void Test65816_TXS()
+        {
+            TestInAllStates(result => 
+                AssertInstruction(
+                    result,
+                    mnemonic: "TXS",
+                    bytesConsumed: 1,
+                    operandCount: 0
+                ),
+                new byte[] { 0x9A }
+            );
+        }
+
+        [TestMethod]
+        public void Test65816_TXY()
+        {
+            TestInAllStates(result => 
+                AssertInstruction(
+                    result,
+                    mnemonic: "TXY",
+                    bytesConsumed: 1,
+                    operandCount: 0
+                ),
+                new byte[] { 0x9B }
+            );
+        }
+
+        [TestMethod]
+        public void Test65816_TYA()
+        {
+            TestInAllStates(result => 
+                AssertInstruction(
+                    result,
+                    mnemonic: "TYA",
+                    bytesConsumed: 1,
+                    operandCount: 0
+                ),
+                new byte[] { 0x98 }
+            );
+        }
+
+        [TestMethod]
+        public void Test65816_TYX()
+        {
+            TestInAllStates(result => 
+                AssertInstruction(
+                    result,
+                    mnemonic: "TYX",
+                    bytesConsumed: 1,
+                    operandCount: 0
+                ),
+                new byte[] { 0xBB }
+            );
+        }
+
+        [TestMethod]
+        public void Test65816_TRB_Absolute()
+        {
+            TestInAllStates(result => 
+                AssertInstruction(
+                    result,
+                    mnemonic: "TRB",
+                    bytesConsumed: 3,
+                    operandCount: 1,
+                    operandText: new[] { "$1234" }
+                ),
+                new byte[] { 0x1C, 0x34, 0x12 }
+            );
+        }
+
+        [TestMethod]
+        public void Test65816_TRB_DirectPage()
+        {
+            TestInAllStates(result => 
+                AssertInstruction(
+                    result,
+                    mnemonic: "TRB",
+                    bytesConsumed: 2,
+                    operandCount: 1,
+                    operandText: new[] { "$42" }
+                ),
+                new byte[] { 0x14, 0x42 }
+            );
+        }
+
+        [TestMethod]
+        public void Test65816_TSB_Absolute()
+        {
+            TestInAllStates(result => 
+                AssertInstruction(
+                    result,
+                    mnemonic: "TSB",
+                    bytesConsumed: 3,
+                    operandCount: 1,
+                    operandText: new[] { "$1234" }
+                ),
+                new byte[] { 0x0C, 0x34, 0x12 }
+            );
+        }
+
+        [TestMethod]
+        public void Test65816_TSB_DirectPage()
+        {
+            TestInAllStates(result => 
+                AssertInstruction(
+                    result,
+                    mnemonic: "TSB",
+                    bytesConsumed: 2,
+                    operandCount: 1,
+                    operandText: new[] { "$42" }
+                ),
+                new byte[] { 0x04, 0x42 }
+            );
+        }
+
+        [TestMethod]
+        public void Test65816_WAI()
+        {
+            TestInAllStates(result => 
+                AssertInstruction(
+                    result,
+                    mnemonic: "WAI",
+                    bytesConsumed: 1,
+                    operandCount: 0
+                ),
+                new byte[] { 0xCB }
+            );
+        }
+
+        [TestMethod]
+        public void Test65816_WDM()
+        {
+            TestInAllStates(result => 
+                AssertInstruction(
+                    result,
+                    mnemonic: "WDM",
+                    bytesConsumed: 2,
+                    operandCount: 1,
+                    operandText: new[] { "#$42" }
+                ),
+                new byte[] { 0x42, 0x42 }
+            );
+        }
+
+        [TestMethod]
+        public void Test65816_XBA()
+        {
+            TestInAllStates(result => 
+                AssertInstruction(
+                    result,
+                    mnemonic: "XBA",
+                    bytesConsumed: 1,
+                    operandCount: 0
+                ),
+                new byte[] { 0xEB }
+            );
+        }
+
+        [TestMethod]
+        public void Test65816_XCE()
+        {
+            TestInAllStates(result => 
+                AssertInstruction(
+                    result,
+                    mnemonic: "XCE",
+                    bytesConsumed: 1,
+                    operandCount: 0
+                ),
+                new byte[] { 0xFB }
             );
         }
     }
