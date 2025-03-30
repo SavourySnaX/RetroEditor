@@ -674,9 +674,29 @@ internal class SNES65816Disassembler : DisassemblerBase
         if (instruction.IsBranch)
         {
             var value = operands[0].Value.GetValueOrDefault();
+            bool isFollowable=false;
+            if (addressingMode==AddressingMode.Absolute)
+            {
+                value&=0xFFFF;
+                value|=address&0xFF0000;
+                isFollowable=true;
+            }
+            else if (addressingMode==AddressingMode.AbsoluteLong)
+            {
+                value&=0xFFFFFF;
+                isFollowable=true;
+            }
+            else if (addressingMode==AddressingMode.ProgramCounterRelative || addressingMode==AddressingMode.ProgramCounterRelativeLong)
+            {
+                value&=0xFFFF;
+                isFollowable=true;
+            }
             if (operands.Count > 0 && operands[0].Value != null)
             {
-                instruction.NextAddresses.Add(value);
+                if (isFollowable)
+                {
+                    instruction.NextAddresses.Add(value);
+                }
             }
             else
             {
