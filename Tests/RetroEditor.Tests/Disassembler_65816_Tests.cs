@@ -273,7 +273,7 @@ namespace RetroEditor.Tests
                     operandCount: 1,
                     operandText: new[] { "[$42]" }
                 ),
-                new byte[] { 0x72, 0x42 }
+                new byte[] { 0x67, 0x42 }
             );
         }
 
@@ -308,7 +308,7 @@ namespace RetroEditor.Tests
         }
 
         [TestMethod]
-        public void Test65816_ADC_AbsoluteIndexedy()
+        public void Test65816_ADC_AbsoluteIndexedY()
         {
             TestInAllStates(result => 
                 AssertInstruction(
@@ -346,7 +346,7 @@ namespace RetroEditor.Tests
                     mnemonic: "ADC",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "($1234,X)" }
+                    operandText: new[] { "($42,X)" }
                 ),
                 new byte[] { 0x61, 0x42 }
             );
