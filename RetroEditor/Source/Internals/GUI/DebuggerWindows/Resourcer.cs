@@ -132,6 +132,11 @@ internal class Resourcer : IWindow
         {
             ImGui.EndDisabled();
         }
+        ImGui.SameLine();
+        ImGui.BeginDisabled();
+        ImGui.Checkbox("Automated", ref automated);
+        ImGui.EndDisabled();
+
 //        DisplayRomData();       
         ScrollableTableView(jump);
 
@@ -353,6 +358,39 @@ internal class Resourcer : IWindow
                         automated=true;
                     }
 
+                    if (cursorPosition.HasValue && ImGui.IsKeyPressed(ImGuiKey.Period) && ImGui.IsKeyDown(ImGuiKey.LeftShift))
+                    {
+                        // Jump to next region
+                        var currentRegion = regions.GetRangeContainingLine(cursorPosition.Value, out var line);
+                        if (currentRegion != null)
+                        {
+                            var nextRegion = regions.GetRangeContainingLine(currentRegion.LineEnd + 1, out line);
+                            if (nextRegion != null)
+                            {
+                                cursorPosition = nextRegion.LineStart;
+                                selectedRows.Clear();
+                                selectedRows.Add(cursorPosition.Value);
+                                moved=true;
+                            }
+                        }
+                    }
+                    if (cursorPosition.HasValue && ImGui.IsKeyPressed(ImGuiKey.Comma) && ImGui.IsKeyDown(ImGuiKey.LeftShift))
+                    {
+                        // Jump to prior region
+                        var currentRegion = regions.GetRangeContainingLine(cursorPosition.Value, out var line);
+                        if (currentRegion != null)
+                        {
+                            var nextRegion = regions.GetRangeContainingLine(currentRegion.LineStart - 1, out line);
+                            if (nextRegion != null)
+                            {
+                                cursorPosition = nextRegion.LineEnd;
+                                selectedRows.Clear();
+                                selectedRows.Add(cursorPosition.Value);
+                                moved=true;
+                            }
+                        }
+                    }
+
                     if (clearSelection)
                     {
                         selectedRows.Clear();
@@ -477,6 +515,7 @@ internal class Resourcer : IWindow
             {
                 var jumpLine = romData.GetRomRanges.FetchLineForAddress(jumpToAddress);
                 ImGui.SetScrollY(jumpLine * rowHeight);
+                jump=false;
             }
 
             if (moved && cursorPosition.HasValue)
@@ -490,6 +529,7 @@ internal class Resourcer : IWindow
                 {
                     ImGui.SetScrollY(cursorPosition.Value * rowHeight - (visibleLines-1)*rowHeight);
                 }
+                moved = false;
             }
 
             ImGui.EndChild();
@@ -532,9 +572,7 @@ internal class Resourcer : IWindow
                     {
                         if (instruction.Mnemonic=="XCE")
                         {
-                            // For now stop at this point, and let user manually fix
-                            //in future could check last instruction is CLC/SEC...
-                            automated = false;
+                            return;   
                         }
                         else
                         {
@@ -542,6 +580,15 @@ internal class Resourcer : IWindow
                             {
                                 autoStack.Push(next);
                                 autoState.Push(autoDisassembler.State);
+                            }
+                            if (instruction.IsBasicBlockTerminator && instruction.IsBranch)
+                            {
+                                if (instruction.Mnemonic=="JSR" || instruction.Mnemonic=="JSL")
+                                {
+                                    // Allow branches to be followed both ways
+                                    autoStack.Push(instruction.Address+(UInt64)instruction.Bytes.Length);
+                                    autoState.Push(autoDisassembler.State);
+                                }
                             }
                         }
                     }
