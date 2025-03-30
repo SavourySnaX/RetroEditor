@@ -7,7 +7,8 @@ internal enum AddressingMode
 {
     Implicit,                       // No operand (e.g., RTS)
     ImmediateShort,                 // Immediate Short (always 1 byte immediate) (e.g., BRK,SEP)
-    Immediate,                      // Operand is next byte(s) (e.g., LDA #$42)
+    ImmediateA,                     // Operand is next byte(s) (e.g., LDA #$42) (M flag effects width)
+    ImmediateX,                     // Operand is next byte(s) (e.g., LDA #$42) (X flag effects width)
     Absolute,                       // 16-bit address (e.g., LDA $1234)
     AbsoluteIndexedX,               // Absolute indexed by X (e.g., LDA $1234,X)
     AbsoluteIndexedY,               // Absolute indexed by Y (e.g., LDA $1234,Y)
@@ -34,7 +35,7 @@ internal enum AddressingMode
 /// <summary>
 /// Represents the CPU state for the 65816
 /// </summary>
-internal class SNES65816State : CpuState
+internal struct SNES65816State : ICpuState
 {
     /// <summary>
     /// Whether the CPU is in emulation mode (E=1) or native mode (E=0)
@@ -51,7 +52,7 @@ internal class SNES65816State : CpuState
     /// </summary>
     internal bool Index8Bit { get; set; }
 
-    public override CpuState Clone()
+    public ICpuState Clone()
     {
         return new SNES65816State
         {
@@ -68,6 +69,11 @@ internal class SNES65816State : CpuState
         EmulationMode = emulationMode;
         Accumulator8Bit = true; // Set to 8-bit mode in emulation
         Index8Bit = true;      // Set to 8-bit mode in emulation
+    }
+
+    public override string ToString()
+    {
+        return $"|{(EmulationMode?"E":" ")}{(Accumulator8Bit?"M":" ")}{(Index8Bit?"X":" ")}|";
     }
 }
 
@@ -127,7 +133,7 @@ internal class SNES65816Disassembler : DisassemblerBase
         AddressingMode.DirectPage,                      // ASL   0x06
         AddressingMode.DirectPageIndirectLong,          // ORA   0x07
         AddressingMode.Implicit,                        // PHP   0x08
-        AddressingMode.Immediate,                       // ORA   0x09
+        AddressingMode.ImmediateA,                      // ORA   0x09
         AddressingMode.Implicit,                        // ASL   0x0A
         AddressingMode.Implicit,                        // PHD   0x0B
         AddressingMode.Absolute,                        // TSB   0x0C
@@ -161,7 +167,7 @@ internal class SNES65816Disassembler : DisassemblerBase
         AddressingMode.DirectPage,                      // ROL
         AddressingMode.DirectPageIndirectLong,          // AND
         AddressingMode.Implicit,                        // PLP
-        AddressingMode.Immediate,                       // AND
+        AddressingMode.ImmediateA,                      // AND
         AddressingMode.Implicit,                        // ROL
         AddressingMode.Implicit,                        // PLD
         AddressingMode.Absolute,                        // BIT
@@ -195,7 +201,7 @@ internal class SNES65816Disassembler : DisassemblerBase
         AddressingMode.DirectPage,                      // LSR
         AddressingMode.DirectPageIndirectLong,          // EOR
         AddressingMode.Implicit,                        // PHA
-        AddressingMode.Immediate,                       // EOR
+        AddressingMode.ImmediateA,                      // EOR
         AddressingMode.Implicit,                        // LSR
         AddressingMode.Implicit,                        // PHK
         AddressingMode.Absolute,                        // JMP
@@ -229,7 +235,7 @@ internal class SNES65816Disassembler : DisassemblerBase
         AddressingMode.DirectPage,                      // ROR
         AddressingMode.DirectPageIndirectLong,          // ADC
         AddressingMode.Implicit,                        // PLA
-        AddressingMode.Immediate,                       // ADC
+        AddressingMode.ImmediateA,                      // ADC
         AddressingMode.Implicit,                        // ROR
         AddressingMode.Implicit,                        // RTL
         AddressingMode.AbsoluteIndirect,                // JMP
@@ -263,7 +269,7 @@ internal class SNES65816Disassembler : DisassemblerBase
         AddressingMode.DirectPage,                      // STX
         AddressingMode.DirectPageIndirectLong,          // STA
         AddressingMode.Implicit,                        // DEY
-        AddressingMode.Immediate,                       // BIT
+        AddressingMode.ImmediateA,                      // BIT
         AddressingMode.Implicit,                        // TXA
         AddressingMode.Implicit,                        // PHB
         AddressingMode.Absolute,                        // STY
@@ -288,16 +294,16 @@ internal class SNES65816Disassembler : DisassemblerBase
         AddressingMode.AbsoluteIndexedX,                // STZ
         AddressingMode.AbsoluteLongIndexedX,            // STA
 
-        AddressingMode.Immediate,                       // LDY  0xA0
+        AddressingMode.ImmediateX,                      // LDY  0xA0
         AddressingMode.DirectPageIndirectX,             // LDA
-        AddressingMode.Immediate,                       // LDX
+        AddressingMode.ImmediateX,                      // LDX
         AddressingMode.StackRelative,                   // LDA
         AddressingMode.DirectPage,                      // LDY
         AddressingMode.DirectPage,                      // LDA
         AddressingMode.DirectPage,                      // LDX
         AddressingMode.DirectPageIndirectLong,          // LDA
         AddressingMode.Implicit,                        // TAY
-        AddressingMode.Immediate,                       // LDA
+        AddressingMode.ImmediateA,                      // LDA
         AddressingMode.Implicit,                        // TAX
         AddressingMode.Implicit,                        // PLB
         AddressingMode.Absolute,                        // LDY
@@ -322,7 +328,7 @@ internal class SNES65816Disassembler : DisassemblerBase
         AddressingMode.AbsoluteIndexedY,                // LDX
         AddressingMode.AbsoluteLongIndexedX,            // LDA
 
-        AddressingMode.Immediate,                       // CPY  0xC0
+        AddressingMode.ImmediateX,                      // CPY  0xC0
         AddressingMode.DirectPageIndirectX,             // CMP
         AddressingMode.ImmediateShort,                  // REP
         AddressingMode.StackRelative,                   // CMP
@@ -331,7 +337,7 @@ internal class SNES65816Disassembler : DisassemblerBase
         AddressingMode.DirectPage,                      // DEC
         AddressingMode.DirectPageIndirectLong,          // CMP
         AddressingMode.Implicit,                        // INY
-        AddressingMode.Immediate,                       // CMP
+        AddressingMode.ImmediateA,                      // CMP
         AddressingMode.Implicit,                        // DEX
         AddressingMode.Implicit,                        // WAI
         AddressingMode.Absolute,                        // CPY
@@ -356,7 +362,7 @@ internal class SNES65816Disassembler : DisassemblerBase
         AddressingMode.AbsoluteIndexedX,                // DEC
         AddressingMode.AbsoluteLongIndexedX,            // CMP
 
-        AddressingMode.Immediate,                       // CPX  0xE0
+        AddressingMode.ImmediateX,                      // CPX  0xE0
         AddressingMode.DirectPageIndirectX,             // SBC
         AddressingMode.ImmediateShort,                  // SEP
         AddressingMode.StackRelative,                   // SBC
@@ -365,7 +371,7 @@ internal class SNES65816Disassembler : DisassemblerBase
         AddressingMode.DirectPage,                      // INC
         AddressingMode.DirectPageIndirectLong,          // SBC
         AddressingMode.Implicit,                        // INX
-        AddressingMode.Immediate,                       // SBC
+        AddressingMode.ImmediateA,                      // SBC
         AddressingMode.Implicit,                        // NOP
         AddressingMode.Implicit,                        // XBA
         AddressingMode.Absolute,                        // CPX
@@ -398,7 +404,7 @@ internal class SNES65816Disassembler : DisassemblerBase
     public override string ArchitectureName => "65816";
     public override MemoryEndian Endianness => MemoryEndian.Little;
 
-    protected override CpuState CreateInitialState()
+    protected override ICpuState CreateInitialState()
     {
         return new SNES65816State
         {
@@ -418,9 +424,14 @@ internal class SNES65816Disassembler : DisassemblerBase
         var mnemonic = Mnemonics[opcode];
         var baseLength = InstructionLengths[opcode];
         var addressingMode = AddressingModes[opcode];
-        if (addressingMode == AddressingMode.Immediate)
+        if (addressingMode == AddressingMode.ImmediateA)
         {
             if (!(state.EmulationMode || state.Accumulator8Bit))
+                baseLength++;
+        }
+        if (addressingMode == AddressingMode.ImmediateX)
+        {
+            if (!(state.EmulationMode || state.Index8Bit))
                 baseLength++;
         }
         var immediateLength = baseLength;
@@ -442,8 +453,10 @@ internal class SNES65816Disassembler : DisassemblerBase
                 var newState = (SNES65816State)state.Clone();
                 if (!newState.EmulationMode)  // Only modify flags in native mode
                 {
-                    newState.Accumulator8Bit = (flags & 0x20) == 0; // M=0 means 16-bit accumulator
-                    newState.Index8Bit = (flags & 0x10) == 0;      // X=0 means 16-bit index
+                    if ((flags&0x20)==0x20)
+                        newState.Accumulator8Bit = false; // M=1 means 8-bit accumulator
+                    if ((flags&0x10)==0x10)
+                        newState.Index8Bit = false;      // X=1 means 8-bit index
                 }
                 State = newState;
                 break;
@@ -454,8 +467,10 @@ internal class SNES65816Disassembler : DisassemblerBase
                 newState = (SNES65816State)state.Clone();
                 if (!newState.EmulationMode)  // Only modify flags in native mode
                 {
-                    newState.Accumulator8Bit = (flags & 0x20) != 0; // M=1 means 8-bit accumulator
-                    newState.Index8Bit = (flags & 0x10) != 0;      // X=1 means 8-bit index
+                    if ((flags&0x20)==0x20)
+                        newState.Accumulator8Bit = true; // M=1 means 8-bit accumulator
+                    if ((flags&0x10)==0x10)
+                        newState.Index8Bit = true;      // X=1 means 8-bit index
                 }
                 State = newState;
                 break;
@@ -477,7 +492,8 @@ internal class SNES65816Disassembler : DisassemblerBase
                 operands.Add(new Operand($"#${bytes[1]:X2}", value: bytes[1]));
                 break;
 
-            case AddressingMode.Immediate:
+            case AddressingMode.ImmediateA:
+            case AddressingMode.ImmediateX:
                 if (baseLength != immediateLength) return DecodeResult.CreateError($"Invalid {mnemonic} immediate instruction length");
                 if (immediateLength == 2)
                 {
@@ -613,7 +629,7 @@ internal class SNES65816Disassembler : DisassemblerBase
                 break;
         }
 
-        var instruction = new Instruction(address, mnemonic, operands, instructionBytes);
+        var instruction = new Instruction(address, mnemonic, operands, instructionBytes, this.State);
 
         // Set branch flags
         instruction.IsBranch = 

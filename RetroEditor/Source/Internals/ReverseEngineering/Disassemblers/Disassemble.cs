@@ -73,6 +73,7 @@ internal class Instruction
     /// The possible next instruction addresses after this instruction
     /// </summary>
     public List<ulong> NextAddresses { get; set; }
+    public ICpuState cpuState { get; set; }
 
     public Instruction()
     {
@@ -80,15 +81,17 @@ internal class Instruction
         NextAddresses = new List<ulong>();
         Mnemonic = string.Empty;
         Bytes = Array.Empty<byte>();
+        cpuState = new EmptyState();
     }
 
-    public Instruction(ulong address, string mnemonic, List<Operand> operands, byte[] bytes)
+    public Instruction(ulong address, string mnemonic, List<Operand> operands, byte[] bytes, ICpuState state)
     {
         Address = address;
         Mnemonic = mnemonic;
         Operands = operands;
         Bytes = bytes;
         NextAddresses = new List<ulong>();
+        cpuState = state;
     }
 
     public override string ToString()
@@ -96,17 +99,31 @@ internal class Instruction
         string operandsText = string.Join(", ", Operands.Select(o => o.Text));
         return $"{Address:X8}: {Mnemonic} {operandsText}";
     }
+
+    public string InstructionText()
+    {
+        string operandsText = string.Join(", ", Operands.Select(o => o.Text));
+        return $"{Mnemonic} {operandsText}";
+    }
 }
 
 /// <summary>
 /// Represents the current state of a CPU that affects instruction decoding
 /// </summary>
-internal abstract class CpuState
+internal interface ICpuState
 {
     /// <summary>
     /// Creates a deep copy of the CPU state
     /// </summary>
-    public abstract CpuState Clone();
+    public ICpuState Clone();
+}
+
+internal struct EmptyState : ICpuState
+{
+    public ICpuState Clone()
+    {
+        return new EmptyState();
+    }
 }
 
 /// <summary>
@@ -196,7 +213,7 @@ internal interface IDisassembler
     /// <summary>
     /// Gets or sets the current CPU state
     /// </summary>
-    CpuState State { get; set; }
+    ICpuState State { get; set; }
 
     /// <summary>
     /// Attempts to decode the next instruction from the given bytes
@@ -212,7 +229,7 @@ internal interface IDisassembler
 /// </summary>
 internal abstract class DisassemblerBase : IDisassembler
 {
-    private CpuState _state;
+    private ICpuState _state;
 
     protected DisassemblerBase()
     {
@@ -222,7 +239,7 @@ internal abstract class DisassemblerBase : IDisassembler
     public abstract string ArchitectureName { get; }
     public abstract MemoryEndian Endianness { get; }
 
-    public CpuState State
+    public ICpuState State
     {
         get => _state;
         set => _state = value ?? CreateInitialState();
@@ -231,7 +248,7 @@ internal abstract class DisassemblerBase : IDisassembler
     /// <summary>
     /// Creates the initial CPU state for this architecture
     /// </summary>
-    protected abstract CpuState CreateInitialState();
+    protected abstract ICpuState CreateInitialState();
 
     /// <summary>
     /// Attempts to decode the next instruction from the given bytes

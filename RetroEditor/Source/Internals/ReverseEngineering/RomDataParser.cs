@@ -1,4 +1,3 @@
-using System.Linq.Expressions;
 using System.Numerics;
 using System.Text;
 using ImGuiNET;
@@ -79,15 +78,20 @@ internal abstract class IRegionInfo : IRange
         return Split(oldStart, position - 1);
     }
 
-    public string BytesForLine(UInt64 start,UInt64 end)
+    public string BytesForSpan(ReadOnlySpan<byte> bytes)
     {
         StringBuilder sb = new StringBuilder();
-        for (UInt64 j = start; j <= end; j++)
+
+        foreach(var db in bytes)
         {
-            var db = Parent.GetByte(j);
             sb.Append($"{db:X2} ");
         }
         return sb.ToString();
+    }
+
+    public string BytesForLine(UInt64 start,UInt64 end)
+    {
+        return BytesForSpan(Parent.FetchBytes(start,end-start+1));
     }
 
     public uint Colour { get; private set; }
@@ -173,6 +177,75 @@ internal class StringRegion : IRegionInfo
     }
 }
 
+internal class CodeRegion : IRegionInfo
+{
+    protected SortedDictionary<ulong, Instruction> instructions = new ();
+    public CodeRegion(UInt64 start, UInt64 end, Instruction instruction, RomDataParser parent) : base(start, end, parent, parent.CodeColor)
+    {
+        instructions.Add(start, instruction);
+    }
+    
+    public override ulong GetLineCount() => (UInt64)instructions.Count;
+
+    public override void Combining(IRegionInfo other) 
+    { 
+        if (other is CodeRegion cregion)
+        {
+            foreach (var i in cregion.instructions)
+            {
+                if (!instructions.ContainsKey(i.Key))
+                    instructions.Add(i.Key, i.Value);
+            }
+        }
+        else
+        {
+            throw new ArgumentException("Cannot combine different regions");
+        }
+    }
+    public override IRegionInfo Split(ulong start, ulong end)
+    {
+        // remove instructions in the range start-end and add them to the new region
+        var newRegion = new CodeRegion(start, end, instructions[start], Parent);
+        instructions.Remove(start);
+        List<ulong> keysToRemove = new List<ulong>();
+        foreach (var i in instructions)
+        {
+            if (i.Key >= start && i.Key <= end)
+            {
+                newRegion.instructions.Add(i.Key, i.Value);
+                keysToRemove.Add(i.Key);
+            }
+        }
+        foreach (var key in keysToRemove)
+        {
+            instructions.Remove(key);
+        }
+        return newRegion;
+    }
+
+    public override LineInfo GetLineInfo(ulong index)
+    {
+        var I = instructions.ElementAt((int)index);
+        return new LineInfo($"{I.Key:X8}", BytesForSpan(I.Value.Bytes), I.Value.InstructionText(), $"; {I.Value.cpuState}");
+    }
+
+    public override ulong LineOffsetForAddress(UInt64 address)
+    {
+        UInt64 offset=0;
+        foreach (var i in instructions)
+        {
+            if (i.Key >= address)
+                return offset;
+            offset++;
+        }
+        return (UInt64)(instructions.Count-1);
+    }
+
+    public override ulong AddressForLine(UInt64 line)
+    {
+        return instructions.ElementAt((int)line).Key;
+    }
+}
 
 internal class RomDataParser 
 {
@@ -241,9 +314,161 @@ internal class RomDataParser
         debugger.FreeView(view.view);
     }
 
-    public void AddCodeRange(UInt64 start, UInt64 end)
+    public enum SNESLoRomRegion
     {
-       // romRanges.AddRange(new RegionInfo(start,end,Regions.Code, this));
+        ROM,
+        IO,
+        SRAM,
+        RAM,
+    }
+
+    public UInt64 MapRomToCpu(UInt64 linearAddress)
+    {
+        UInt64 bank = (linearAddress >> 15) & 0x7F;
+        UInt64 offset = linearAddress & 0x7FFF;
+
+        if (bank < 0x40)
+        {
+            return (bank << 16) | 0x8000 | offset;
+        }
+        else if (bank < 0x70)
+        {
+            return (bank << 15) | offset;
+        }
+        else
+        {
+            return ((bank - 0x70) << 15) | offset;
+        }
+    }
+
+    public UInt64 MapSnesCpuToLorom(UInt64 address, out SNESLoRomRegion region)
+    {
+        region = SNESLoRomRegion.ROM;
+        var bank = address >> 16;
+        var offset = address & 0xFFFF;
+
+        if (bank==0x7E || bank==0x7F)
+        {
+            region = SNESLoRomRegion.RAM;
+            return ((bank - 0x7E) << 16) | offset;
+        }
+        else if (bank==0xFE || bank==0xFF)
+        {
+            if (offset<0x8000)
+            {
+                // SRAM
+                region = SNESLoRomRegion.SRAM;
+                return ((bank - 0xF0) << 15) | offset;
+            }
+            else
+            {
+                // ROM
+                return 0x3F0000 | ((bank-0xFE)<<15) | (offset&0x7FFF);           
+            }
+        }
+        bank&=0x7F;
+        if (bank<0x40)
+        {
+            if (offset<0x2000)
+            {
+                // Low RAM
+                region = SNESLoRomRegion.RAM;
+                return offset;
+            }
+            else if (offset<0x8000)
+            {
+                // IO
+                region = SNESLoRomRegion.IO;
+                return offset-0x2000;
+            }
+            else
+            {
+                // ROM
+                return (bank << 15) | (offset & 0x7FFF);
+            }
+        }
+        else if (bank<0x70)
+        {
+            // ROM
+            return (bank << 15) | (offset & 0x7FFF);
+        }
+        else
+        {
+            // 70-7D
+            if (offset<0x8000)
+            {
+                region = SNESLoRomRegion.SRAM;
+                return ((bank - 0x70) << 15) | offset;
+            }
+            else
+            {
+                //ROM
+                return (bank<<15) | (offset&0x7FFF);
+            }
+        }
+    }
+
+    public void AddCodeRange(DisassemblerBase disassembler, UInt64 minAddress, UInt64 maxAddress)
+    {
+        while (minAddress<=maxAddress)
+        {
+            // minAddress is linear, need to compute approx PC
+            var pc = MapRomToCpu(minAddress);
+            if (AddCodeRange(disassembler, pc, out var i))
+            {
+                pc+= (UInt64)i.Bytes.Length;
+                if (i.IsBasicBlockTerminator)
+                {
+                    return;
+                }
+                if (i.NextAddresses.Contains(pc))
+                {
+                    minAddress+= (UInt64)i.Bytes.Length;
+                }
+            }
+            else
+            {
+                return;
+            }
+        }
+    }
+
+    public bool AddCodeRange(DisassemblerBase disassembler, UInt64 pc, out Instruction instruction)
+    {
+        bool done = false;
+        UInt64 length = 0;
+        UInt64 address = MapSnesCpuToLorom(pc, out var region);
+        if (region!=RomDataParser.SNESLoRomRegion.ROM)
+        {
+            // Not a valid LoROM address
+            Console.WriteLine($"Invalid LoROM address: {address:X8} in region {region} {pc:X6}");
+            instruction = new();
+            return false;
+        }
+
+        while (!done)
+        {
+            var result = disassembler.DecodeNext(FetchBytes(address, length), pc);
+            if (!result.Success)
+            {
+                if (result.NeedsMoreBytes)
+                {
+                    length += (UInt64)result.AdditionalBytesNeeded;
+                    continue;
+                }
+                else
+                {
+                    Console.WriteLine($"Error: {result.ErrorMessage}");
+                    instruction = new();
+                    return false;
+                }
+            }
+            romRanges.AddRange(new CodeRegion(address, address + (UInt64)result.BytesConsumed - 1, result.Instruction, this));
+            instruction = result.Instruction;
+            return true;
+        }
+        instruction = new();
+        return false;
     }
 
     public void AddDataRange(UInt64 start, UInt64 end)
