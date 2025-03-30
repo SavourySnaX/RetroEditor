@@ -2874,5 +2874,440 @@ namespace RetroEditor.Tests
                 new byte[] { 0x13, 0x42 }
             );
         }
+
+        [TestMethod]
+        public void Test65816_PEA()
+        {
+            TestInAllStates(result => 
+                AssertInstruction(
+                    result,
+                    mnemonic: "PEA",
+                    bytesConsumed: 3,
+                    operandCount: 1,
+                    operandText: new[] { "$1234" }
+                ),
+                new byte[] { 0xF4, 0x34, 0x12 }
+            );
+        }
+
+        [TestMethod]
+        public void Test65816_PEI()
+        {
+            TestInAllStates(result => 
+                AssertInstruction(
+                    result,
+                    mnemonic: "PEI",
+                    bytesConsumed: 2,
+                    operandCount: 1,
+                    operandText: new[] { "($42)" }
+                ),
+                new byte[] { 0xD4, 0x42 }
+            );
+        }
+
+        [TestMethod]
+        public void Test65816_PER()
+        {
+            TestInAllStates(result => 
+                AssertInstruction(
+                    result,
+                    mnemonic: "PER",
+                    bytesConsumed: 3,
+                    operandCount: 1,
+                    operandText: new[] { "$9203" }
+                ),
+                new byte[] { 0x62, 0x00, 0x12 }
+            );
+        }
+
+        [TestMethod]
+        public void Test65816_PHA()
+        {
+            TestInAllStates(result => 
+                AssertInstruction(
+                    result,
+                    mnemonic: "PHA",
+                    bytesConsumed: 1,
+                    operandCount: 0
+                ),
+                new byte[] { 0x48 }
+            );
+        }
+
+        [TestMethod]
+        public void Test65816_PHB()
+        {
+            TestInAllStates(result => 
+                AssertInstruction(
+                    result,
+                    mnemonic: "PHB",
+                    bytesConsumed: 1,
+                    operandCount: 0
+                ),
+                new byte[] { 0x8B }
+            );
+        }
+
+        [TestMethod]
+        public void Test65816_PHD()
+        {
+            TestInAllStates(result => 
+                AssertInstruction(
+                    result,
+                    mnemonic: "PHD",
+                    bytesConsumed: 1,
+                    operandCount: 0
+                ),
+                new byte[] { 0x0B }
+            );
+        }
+
+        [TestMethod]
+        public void Test65816_PHK()
+        {
+            TestInAllStates(result => 
+                AssertInstruction(
+                    result,
+                    mnemonic: "PHK",
+                    bytesConsumed: 1,
+                    operandCount: 0
+                ),
+                new byte[] { 0x4B }
+            );
+        }
+
+        [TestMethod]
+        public void Test65816_PHP()
+        {
+            TestInAllStates(result => 
+                AssertInstruction(
+                    result,
+                    mnemonic: "PHP",
+                    bytesConsumed: 1,
+                    operandCount: 0
+                ),
+                new byte[] { 0x08 }
+            );
+        }
+
+        [TestMethod]
+        public void Test65816_PHX()
+        {
+            TestInAllStates(result => 
+                AssertInstruction(
+                    result,
+                    mnemonic: "PHX",
+                    bytesConsumed: 1,
+                    operandCount: 0
+                ),
+                new byte[] { 0xDA }
+            );
+        }
+
+        [TestMethod]
+        public void Test65816_PHY()
+        {
+            TestInAllStates(result => 
+                AssertInstruction(
+                    result,
+                    mnemonic: "PHY",
+                    bytesConsumed: 1,
+                    operandCount: 0
+                ),
+                new byte[] { 0x5A }
+            );
+        }
+
+        [TestMethod]
+        public void Test65816_PLA()
+        {
+            TestInAllStates(result => 
+                AssertInstruction(
+                    result,
+                    mnemonic: "PLA",
+                    bytesConsumed: 1,
+                    operandCount: 0
+                ),
+                new byte[] { 0x68 }
+            );
+        }
+
+        [TestMethod]
+        public void Test65816_PLB()
+        {
+            TestInAllStates(result => 
+                AssertInstruction(
+                    result,
+                    mnemonic: "PLB",
+                    bytesConsumed: 1,
+                    operandCount: 0
+                ),
+                new byte[] { 0xAB }
+            );
+        }
+
+        [TestMethod]
+        public void Test65816_PLD()
+        {
+            TestInAllStates(result => 
+                AssertInstruction(
+                    result,
+                    mnemonic: "PLD",
+                    bytesConsumed: 1,
+                    operandCount: 0
+                ),
+                new byte[] { 0x2B }
+            );
+        }
+
+        [TestMethod]
+        public void Test65816_PLP()
+        {
+            TestInAllStates(result => 
+                AssertInstruction(
+                    result,
+                    mnemonic: "PLP",
+                    bytesConsumed: 1,
+                    operandCount: 0
+                ),
+                new byte[] { 0x28 }
+            );
+        }
+
+        [TestMethod]
+        public void Test65816_PLX()
+        {
+            TestInAllStates(result => 
+                AssertInstruction(
+                    result,
+                    mnemonic: "PLX",
+                    bytesConsumed: 1,
+                    operandCount: 0
+                ),
+                new byte[] { 0xFA }
+            );
+        }
+
+        [TestMethod]
+        public void Test65816_PLY()
+        {
+            TestInAllStates(result => 
+                AssertInstruction(
+                    result,
+                    mnemonic: "PLY",
+                    bytesConsumed: 1,
+                    operandCount: 0
+                ),
+                new byte[] { 0x7A }
+            );
+        }
+
+        [TestMethod]
+        public void Test65816_REP()
+        {
+            TestInAllStates(result => 
+                AssertInstruction(
+                    result,
+                    mnemonic: "REP",
+                    bytesConsumed: 2,
+                    operandCount: 1,
+                    operandText: new[] { "#$42" }
+                ),
+                new byte[] { 0xC2, 0x42 }
+            );
+        }
+
+        [TestMethod]
+        public void Test65816_ROL_Accumulator()
+        {
+            TestInAllStates(result => 
+                AssertInstruction(
+                    result,
+                    mnemonic: "ROL",
+                    bytesConsumed: 1,
+                    operandCount: 0
+                ),
+                new byte[] { 0x2A }
+            );
+        }
+
+        [TestMethod]
+        public void Test65816_ROL_Absolute()
+        {
+            TestInAllStates(result => 
+                AssertInstruction(
+                    result,
+                    mnemonic: "ROL",
+                    bytesConsumed: 3,
+                    operandCount: 1,
+                    operandText: new[] { "$1234" }
+                ),
+                new byte[] { 0x2E, 0x34, 0x12 }
+            );
+        }
+
+        [TestMethod]
+        public void Test65816_ROL_DirectPage()
+        {
+            TestInAllStates(result => 
+                AssertInstruction(
+                    result,
+                    mnemonic: "ROL",
+                    bytesConsumed: 2,
+                    operandCount: 1,
+                    operandText: new[] { "$42" }
+                ),
+                new byte[] { 0x26, 0x42 }
+            );
+        }
+
+        [TestMethod]
+        public void Test65816_ROL_AbsoluteIndexedX()
+        {
+            TestInAllStates(result => 
+                AssertInstruction(
+                    result,
+                    mnemonic: "ROL",
+                    bytesConsumed: 3,
+                    operandCount: 1,
+                    operandText: new[] { "$1234,X" }
+                ),
+                new byte[] { 0x3E, 0x34, 0x12 }
+            );
+        }
+
+        [TestMethod]
+        public void Test65816_ROL_DirectPageIndexedX()
+        {
+            TestInAllStates(result => 
+                AssertInstruction(
+                    result,
+                    mnemonic: "ROL",
+                    bytesConsumed: 2,
+                    operandCount: 1,
+                    operandText: new[] { "$42,X" }
+                ),
+                new byte[] { 0x36, 0x42 }
+            );
+        }
+
+        [TestMethod]
+        public void Test65816_ROR_Accumulator()
+        {
+            TestInAllStates(result => 
+                AssertInstruction(
+                    result,
+                    mnemonic: "ROR",
+                    bytesConsumed: 1,
+                    operandCount: 0
+                ),
+                new byte[] { 0x6A }
+            );
+        }
+
+        [TestMethod]
+        public void Test65816_ROR_Absolute()
+        {
+            TestInAllStates(result => 
+                AssertInstruction(
+                    result,
+                    mnemonic: "ROR",
+                    bytesConsumed: 3,
+                    operandCount: 1,
+                    operandText: new[] { "$1234" }
+                ),
+                new byte[] { 0x6E, 0x34, 0x12 }
+            );
+        }
+
+        [TestMethod]
+        public void Test65816_ROR_DirectPage()
+        {
+            TestInAllStates(result => 
+                AssertInstruction(
+                    result,
+                    mnemonic: "ROR",
+                    bytesConsumed: 2,
+                    operandCount: 1,
+                    operandText: new[] { "$42" }
+                ),
+                new byte[] { 0x66, 0x42 }
+            );
+        }
+
+        [TestMethod]
+        public void Test65816_ROR_AbsoluteIndexedX()
+        {
+            TestInAllStates(result => 
+                AssertInstruction(
+                    result,
+                    mnemonic: "ROR",
+                    bytesConsumed: 3,
+                    operandCount: 1,
+                    operandText: new[] { "$1234,X" }
+                ),
+                new byte[] { 0x7E, 0x34, 0x12 }
+            );
+        }
+
+        [TestMethod]
+        public void Test65816_ROR_DirectPageIndexedX()
+        {
+            TestInAllStates(result => 
+                AssertInstruction(
+                    result,
+                    mnemonic: "ROR",
+                    bytesConsumed: 2,
+                    operandCount: 1,
+                    operandText: new[] { "$42,X" }
+                ),
+                new byte[] { 0x76, 0x42 }
+            );
+        }
+
+        [TestMethod]
+        public void Test65816_RTI()
+        {
+            TestInAllStates(result => 
+                AssertInstruction(
+                    result,
+                    mnemonic: "RTI",
+                    bytesConsumed: 1,
+                    operandCount: 0,
+                    isTerminator: true
+                ),
+                new byte[] { 0x40 }
+            );
+        }
+
+        [TestMethod]
+        public void Test65816_RTS()
+        {
+            TestInAllStates(result => 
+                AssertInstruction(
+                    result,
+                    mnemonic: "RTS",
+                    bytesConsumed: 1,
+                    operandCount: 0,
+                    isTerminator: true
+                ),
+                new byte[] { 0x60 }
+            );
+        }
+
+        [TestMethod]
+        public void Test65816_RTL()
+        {
+            TestInAllStates(result => 
+                AssertInstruction(
+                    result,
+                    mnemonic: "RTL",
+                    bytesConsumed: 1,
+                    operandCount: 0,
+                    isTerminator: true
+                ),
+                new byte[] { 0x6B }
+            );
+        }
     }
 } 

@@ -175,7 +175,7 @@ internal class SNES65816Disassembler : DisassemblerBase
         AddressingMode.StackRelativeIndirectY,          // AND
         AddressingMode.DirectPageIndexedX,              // BIT
         AddressingMode.DirectPageIndexedX,              // AND
-        AddressingMode.DirectPageIndirect,              // ROL
+        AddressingMode.DirectPageIndexedX,              // ROL
         AddressingMode.DirectPageIndirectLongIndexedY,  // AND
         AddressingMode.Implicit,                        // SEC
         AddressingMode.AbsoluteIndexedY,                // AND
