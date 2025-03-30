@@ -105,35 +105,35 @@ internal class SNES65816Disassembler : DisassemblerBase
         1, 2, 2, 2, 3, 2, 2, 2, 1, 2, 1, 1, 3, 3, 3, 4,  // 0x40-0x4F
         2, 2, 2, 2, 2, 2, 2, 2, 1, 3, 1, 1, 4, 3, 3, 4,  // 0x50-0x5F
         1, 2, 3, 2, 2, 2, 2, 2, 1, 2, 1, 1, 3, 3, 3, 4,  // 0x60-0x6F
-        2, 2, 2, 2, 2, 2, 2, 2, 1, 3, 1, 1, 4, 3, 3, 4,  // 0x70-0x7F
+        2, 2, 2, 2, 2, 2, 2, 2, 1, 3, 1, 1, 3, 3, 3, 4,  // 0x70-0x7F
         2, 2, 3, 2, 2, 2, 2, 2, 1, 2, 1, 1, 3, 3, 3, 4,  // 0x80-0x8F
         2, 2, 2, 2, 2, 2, 2, 2, 1, 3, 1, 1, 3, 3, 3, 4,  // 0x90-0x9F
         2, 2, 2, 2, 2, 2, 2, 2, 1, 2, 1, 1, 3, 3, 3, 4,  // 0xA0-0xAF
         2, 2, 2, 2, 2, 2, 2, 2, 1, 3, 1, 1, 3, 3, 3, 4,  // 0xB0-0xBF
         2, 2, 2, 2, 2, 2, 2, 2, 1, 2, 1, 1, 3, 3, 3, 4,  // 0xC0-0xCF
-        2, 2, 2, 2, 2, 2, 2, 2, 1, 3, 1, 1, 3, 3, 3, 4,  // 0xD0-0xDF
+        2, 2, 2, 2, 2, 2, 2, 2, 1, 3, 1, 1, 4, 3, 3, 4,  // 0xD0-0xDF
         2, 2, 2, 2, 2, 2, 2, 2, 1, 2, 1, 1, 3, 3, 3, 4,  // 0xE0-0xEF
         2, 2, 2, 2, 3, 2, 2, 2, 1, 3, 1, 1, 3, 3, 3, 4   // 0xF0-0xFF
     };
 
     private static readonly AddressingMode[] AddressingModes = new AddressingMode[256]
     {
-        AddressingMode.ImmediateShort,       // BRK   0x00
-        AddressingMode.DirectPageIndexedX,      // ORA   0x01
-        AddressingMode.ImmediateShort,       // COP   0x02
-        AddressingMode.StackRelative,           // ORA   0x03
-        AddressingMode.DirectPage,              // TSB   0x04
-        AddressingMode.DirectPage,              // ORA   0x05
-        AddressingMode.DirectPage,              // ASL   0x06
-        AddressingMode.DirectPageIndirectLong,  // ORA   0x07
-        AddressingMode.Implicit,                // PHP   0x08
-        AddressingMode.Immediate,               // ORA   0x09
-        AddressingMode.Implicit,                // ASL   0x0A
-        AddressingMode.Implicit,                // PHD   0x0B
-        AddressingMode.Absolute,                // TSB   0x0C
-        AddressingMode.Absolute,                // ORA   0x0D
-        AddressingMode.Absolute,                // ASL   0x0E
-        AddressingMode.AbsoluteLong,            // ORA   0x0F
+        AddressingMode.ImmediateShort,                  // BRK   0x00
+        AddressingMode.DirectPageIndirectX,             // ORA   0x01
+        AddressingMode.ImmediateShort,                  // COP   0x02
+        AddressingMode.StackRelative,                   // ORA   0x03
+        AddressingMode.DirectPage,                      // TSB   0x04
+        AddressingMode.DirectPage,                      // ORA   0x05
+        AddressingMode.DirectPage,                      // ASL   0x06
+        AddressingMode.DirectPageIndirectLong,          // ORA   0x07
+        AddressingMode.Implicit,                        // PHP   0x08
+        AddressingMode.Immediate,                       // ORA   0x09
+        AddressingMode.Implicit,                        // ASL   0x0A
+        AddressingMode.Implicit,                        // PHD   0x0B
+        AddressingMode.Absolute,                        // TSB   0x0C
+        AddressingMode.Absolute,                        // ORA   0x0D
+        AddressingMode.Absolute,                        // ASL   0x0E
+        AddressingMode.AbsoluteLong,                    // ORA   0x0F
 
         AddressingMode.ProgramCounterRelative,          // BPL  0x10
         AddressingMode.DirectPageIndirectIndexedY,      // ORA
@@ -187,13 +187,13 @@ internal class SNES65816Disassembler : DisassemblerBase
         AddressingMode.AbsoluteLongIndexedX,            // AND
 
         AddressingMode.Implicit,                        // RTI   0x40
-        AddressingMode.DirectPageIndexedX,              // EOR
-        AddressingMode.ImmediateShort,               // WDM
+        AddressingMode.DirectPageIndirectX,             // EOR
+        AddressingMode.ImmediateShort,                  // WDM
         AddressingMode.StackRelative,                   // EOR
         AddressingMode.BlockMove,                       // MVP
         AddressingMode.DirectPage,                      // EOR
         AddressingMode.DirectPage,                      // LSR
-        AddressingMode.DirectPageIndirectLongIndexedY,  // EOR
+        AddressingMode.DirectPageIndirectLong,          // EOR
         AddressingMode.Implicit,                        // PHA
         AddressingMode.Immediate,                       // EOR
         AddressingMode.Implicit,                        // LSR
@@ -249,7 +249,7 @@ internal class SNES65816Disassembler : DisassemblerBase
         AddressingMode.AbsoluteIndexedY,                // ADC
         AddressingMode.Implicit,                        // PLY
         AddressingMode.Implicit,                        // TDC
-        AddressingMode.AbsoluteLongIndirect,            // JMP
+        AddressingMode.AbsoluteIndirectIndexedX,        // JMP
         AddressingMode.AbsoluteIndexedX,                // ADC
         AddressingMode.AbsoluteIndexedX,                // ROR
         AddressingMode.AbsoluteLongIndexedX,            // ADC
@@ -289,7 +289,7 @@ internal class SNES65816Disassembler : DisassemblerBase
         AddressingMode.AbsoluteLongIndexedX,            // STA
 
         AddressingMode.Immediate,                       // LDY  0xA0
-        AddressingMode.DirectPageIndexedX,              // LDA
+        AddressingMode.DirectPageIndirectX,             // LDA
         AddressingMode.Immediate,                       // LDX
         AddressingMode.StackRelative,                   // LDA
         AddressingMode.DirectPage,                      // LDY
@@ -351,7 +351,7 @@ internal class SNES65816Disassembler : DisassemblerBase
         AddressingMode.AbsoluteIndexedY,                // CMP
         AddressingMode.Implicit,                        // PHX
         AddressingMode.Implicit,                        // STP
-        AddressingMode.AbsoluteIndirectIndexedX,        // JML
+        AddressingMode.AbsoluteLongIndirect,            // JML
         AddressingMode.AbsoluteIndexedX,                // CMP
         AddressingMode.AbsoluteIndexedX,                // DEC
         AddressingMode.AbsoluteLongIndexedX,            // CMP
@@ -474,7 +474,7 @@ internal class SNES65816Disassembler : DisassemblerBase
                 break;
             case AddressingMode.ImmediateShort:
                 if (baseLength != 2) return DecodeResult.CreateError($"Invalid {mnemonic} instruction length");
-                operands.Add(new Operand("#${bytes[1]:X2}", value: bytes[1]));
+                operands.Add(new Operand($"#${bytes[1]:X2}", value: bytes[1]));
                 break;
 
             case AddressingMode.Immediate:
@@ -535,7 +535,7 @@ internal class SNES65816Disassembler : DisassemblerBase
             case AddressingMode.AbsoluteLongIndirect:
                 if (baseLength != 4) return DecodeResult.CreateError($"Invalid {mnemonic} absolute long indirect instruction length");
                 target = (ulong)bytes[1] + ((ulong)bytes[2] << 8) + ((ulong)bytes[3] << 16);
-                operands.Add(new Operand($"(${target:X6})", value: target));
+                operands.Add(new Operand($"[${target:X6}]", value: target));
                 break;
 
             case AddressingMode.DirectPage:
@@ -600,12 +600,14 @@ internal class SNES65816Disassembler : DisassemblerBase
             case AddressingMode.ProgramCounterRelative:
                 if (baseLength != 2) return DecodeResult.CreateError($"Invalid {mnemonic} program counter relative instruction length");
                 target = address + 2 + (ulong)(sbyte)bytes[1];
+                target&=0xFFFF;
                 operands.Add(new Operand($"${target:X4}", value: target));
                 break;
 
             case AddressingMode.ProgramCounterRelativeLong:
                 if (baseLength != 3) return DecodeResult.CreateError($"Invalid {mnemonic} program counter relative long instruction length");
-                target = address + 3 + (ulong)(sbyte)bytes[1] + ((ulong)bytes[2] << 8);
+                target = address + 3 + (ulong)(short)((ushort)bytes[1] + (ushort)(bytes[2] << 8));
+                target&=0xFFFF;
                 operands.Add(new Operand($"${target:X4}", value: target));
                 break;
         }
@@ -613,11 +615,15 @@ internal class SNES65816Disassembler : DisassemblerBase
         var instruction = new Instruction(address, mnemonic, operands, instructionBytes);
 
         // Set branch flags
-        instruction.IsBranch = opcode == 0x00 || // BRK
+        instruction.IsBranch = 
                              opcode == 0x20 || // JSR
-                             opcode == 0x22 || // JSL
+                             opcode == 0x22 || // JSR
+                             opcode == 0xFC || // JSL
                              opcode == 0x4C || // JMP
                              opcode == 0x5C || // JML
+                             opcode == 0x6C || // JMP
+                             opcode == 0x7C || // JMP
+                             opcode == 0xDC || // JML
                              opcode == 0x80 || // BRA
                              opcode == 0x82 || // BRL
                              opcode == 0x10 || // BPL
@@ -629,43 +635,29 @@ internal class SNES65816Disassembler : DisassemblerBase
                              opcode == 0xD0 || // BNE
                              opcode == 0xF0;   // BEQ
 
-        instruction.IsBasicBlockTerminator = instruction.IsBranch ||
+        instruction.IsBasicBlockTerminator = opcode == 0x82 || // BRL
+                                            opcode == 0x80 || // BRA
+                                            opcode == 0x4C || // JMP
+                                            opcode == 0x5C || // JML
+                                            opcode == 0x6C || // JMP
+                                            opcode == 0x7C || // JMP
+                                            opcode == 0xDC || // JML
                                             opcode == 0x40 || // RTI
                                             opcode == 0x60 || // RTS
                                             opcode == 0x6B || // RTL
+                                            opcode == 0x20 || // JSR
+                                            opcode == 0x22 || // JSR
+                                            opcode == 0xFC || // JSL
+                                            opcode == 0x02 || // COP
                                             opcode == 0x00;   // BRK
 
         // Add next addresses
+        bool nextInstruction=!instruction.IsBasicBlockTerminator;
         if (instruction.IsBranch)
         {
-            instruction.NextAddresses.Add(address + (ulong)baseLength); // Next instruction
-            if (opcode == 0x20 || opcode == 0x22) // JSR/JSL
-            {
-                if (operands[0].Value == null) return DecodeResult.CreateError("Invalid target address for JSR/JSL");  
-                instruction.NextAddresses.Add(operands[0].Value.Value); // Target address
-            }
-            else if (opcode == 0x4C || opcode == 0x5C) // JMP/JML
-            {
-                var branchTarget = opcode == 0x4C ?
-                    (ulong)bytes[1] + ((ulong)bytes[2] << 8) :
-                    (ulong)bytes[1] + ((ulong)bytes[2] << 8) + ((ulong)bytes[3] << 16);
-                instruction.NextAddresses.Add(branchTarget);
-            }
-            else if (opcode == 0x80 || opcode == 0x82) // BRA/BRL
-            {
-                var branchTarget = opcode == 0x80 ?
-                    address + 2 + (ulong)(sbyte)bytes[1] :
-                    address + 3 + (ulong)(sbyte)bytes[1] + ((ulong)bytes[2] << 8);
-                instruction.NextAddresses.Add(branchTarget);
-            }
-            else // Conditional branches
-            {
-                if (bytes.Length < 2) return DecodeResult.CreateError($"Invalid {mnemonic} branch instruction length");
-                var offset = (sbyte)bytes[1];
-                instruction.NextAddresses.Add(address + 2 + (ulong)offset);
-            }
+            instruction.NextAddresses.Add(operands[0].Value.Value);
         }
-        else if (!instruction.IsBasicBlockTerminator)
+        if (nextInstruction)
         {
             instruction.NextAddresses.Add(address + (ulong)baseLength);
         }
