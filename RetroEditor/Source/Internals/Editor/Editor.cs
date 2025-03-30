@@ -320,7 +320,7 @@ internal class Editor : IEditor, IEditorInternal
 
             var pluginWindow = new LibRetroDebuggerWindow(retro);
             pluginWindow.Initialise();
-            retro.LoadGame("C:\\work\\editor\\snes\\op_timing_test_v2.sfc");
+            retro.LoadGame("C:\\work\\editor\\snes\\mariow.bin");
             pluginWindow.InitWindow();
             windowManager.AddWindow(pluginWindow, "MAME RETRO", null);
             while (!mameInstance.DebuggerViewReady)

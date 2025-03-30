@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Xunit;
 
 public class DisassemblerSystemTests
@@ -24,7 +25,7 @@ public class DisassemblerSystemTests
     {
         var operands = new List<Operand> { new Operand("$1234") };
         var bytes = new byte[] { 0xA9, 0x34, 0x12 };
-        var instruction = new Instruction(0x8000, "LDA", operands, bytes);
+        var instruction = new Instruction(0x8000, "LDA", operands, bytes, new EmptyState());
 
         Assert.Equal(0x8000ul, instruction.Address);
         Assert.Equal("LDA", instruction.Mnemonic);
@@ -43,7 +44,7 @@ public class DisassemblerSystemTests
         Assert.True(result.NeedsMoreBytes);
         Assert.Equal(2, result.AdditionalBytesNeeded);
 
-        var instruction = new Instruction(0x8000, "NOP", new List<Operand>(), new byte[] { 0xEA });
+        var instruction = new Instruction(0x8000, "NOP", new List<Operand>(), new byte[] { 0xEA }, new EmptyState());
         result = DecodeResult.CreateSuccess(instruction, 1);
         Assert.True(result.Success);
         Assert.False(result.NeedsMoreBytes);
@@ -69,6 +70,7 @@ public class DisassemblerSystemTests
 
         // Disable emulation
         state.SetEmulationMode(false);
+        disassembler.State=state;
 
         // Test REP instruction
         var bytes = new byte[] { 0xC2, 0x30 }; // REP #$30 (16-bit A, 16-bit X/Y)

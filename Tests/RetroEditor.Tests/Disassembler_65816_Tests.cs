@@ -25,6 +25,7 @@ namespace RetroEditor.Tests
             state.Accumulator8Bit = !a16bit;
             state.Index8Bit = !x16bit;
             state.SetEmulationMode(emulation);
+            _disassembler.State=state;
         }
 
         internal void TestInAllStates(Action<DecodeResult> testAction, byte[] bytes, ulong address = 0x8000)
@@ -1385,10 +1386,10 @@ namespace RetroEditor.Tests
                 new { Emulation = false, A16Bit = false, X16Bit = false, Bytes = new byte[] { 0xE0, 0x42 }, ExpectedLength = 2, ExpectedOperand = "#$42" },
                 
                 // native mode, 16-bit X
-                new { Emulation = false, A16Bit = false, X16Bit = true, Bytes = new byte[] { 0xE0, 0x42 }, ExpectedLength = 2, ExpectedOperand = "#$42" },
+                new { Emulation = false, A16Bit = false, X16Bit = true, Bytes = new byte[] { 0xE0, 0x42, 0x12 }, ExpectedLength = 3, ExpectedOperand = "#$1242" },
                 
                 // native mode, 8-bit X, 16-bit A
-                new { Emulation = false, A16Bit = true, X16Bit = false, Bytes = new byte[] { 0xE0, 0x42, 0x12 }, ExpectedLength = 3, ExpectedOperand = "#$1242" },
+                new { Emulation = false, A16Bit = true, X16Bit = false, Bytes = new byte[] { 0xE0, 0x42 }, ExpectedLength = 2, ExpectedOperand = "#$42" },
                 
                 // native mode, 16-bit A and X
                 new { Emulation = false, A16Bit = true, X16Bit = true, Bytes = new byte[] { 0xE0, 0x42, 0x12 }, ExpectedLength = 3, ExpectedOperand = "#$1242" }
@@ -1450,10 +1451,10 @@ namespace RetroEditor.Tests
                 new { Emulation = false, A16Bit = false, X16Bit = false, Bytes = new byte[] { 0xC0, 0x42 }, ExpectedLength = 2, ExpectedOperand = "#$42" },
                 
                 // native mode, 16-bit Y
-                new { Emulation = false, A16Bit = false, X16Bit = true, Bytes = new byte[] { 0xC0, 0x42 }, ExpectedLength = 2, ExpectedOperand = "#$42" },
+                new { Emulation = false, A16Bit = false, X16Bit = true, Bytes = new byte[] { 0xC0, 0x42, 0x12 }, ExpectedLength = 3, ExpectedOperand = "#$1242" },
                 
                 // native mode, 8-bit Y, 16-bit A
-                new { Emulation = false, A16Bit = true, X16Bit = false, Bytes = new byte[] { 0xC0, 0x42, 0x12 }, ExpectedLength = 3, ExpectedOperand = "#$1242" },
+                new { Emulation = false, A16Bit = true, X16Bit = false, Bytes = new byte[] { 0xC0, 0x42 }, ExpectedLength = 2, ExpectedOperand = "#$42" },
                 
                 // native mode, 16-bit A and Y
                 new { Emulation = false, A16Bit = true, X16Bit = true, Bytes = new byte[] { 0xC0, 0x42, 0x12 }, ExpectedLength = 3, ExpectedOperand = "#$1242" }
@@ -2325,10 +2326,10 @@ namespace RetroEditor.Tests
                 new { Emulation = false, A16Bit = false, X16Bit = false, Bytes = new byte[] { 0xA2, 0x42 }, ExpectedLength = 2, ExpectedOperand = "#$42" },
                 
                 // native mode, 16-bit X
-                new { Emulation = false, A16Bit = false, X16Bit = true, Bytes = new byte[] { 0xA2, 0x42 }, ExpectedLength = 2, ExpectedOperand = "#$42" },
+                new { Emulation = false, A16Bit = false, X16Bit = true, Bytes = new byte[] { 0xA2, 0x42, 0x12 }, ExpectedLength = 3, ExpectedOperand = "#$1242" },
                 
                 // native mode, 8-bit X, 16-bit A
-                new { Emulation = false, A16Bit = true, X16Bit = false, Bytes = new byte[] { 0xA2, 0x42, 0x12 }, ExpectedLength = 3, ExpectedOperand = "#$1242" },
+                new { Emulation = false, A16Bit = true, X16Bit = false, Bytes = new byte[] { 0xA2, 0x42 }, ExpectedLength = 2, ExpectedOperand = "#$42" },
                 
                 // native mode, 16-bit A and X
                 new { Emulation = false, A16Bit = true, X16Bit = true, Bytes = new byte[] { 0xA2, 0x42, 0x12 }, ExpectedLength = 3, ExpectedOperand = "#$1242" }
@@ -2420,10 +2421,10 @@ namespace RetroEditor.Tests
                 new { Emulation = false, A16Bit = false, X16Bit = false, Bytes = new byte[] { 0xA0, 0x42 }, ExpectedLength = 2, ExpectedOperand = "#$42" },
                 
                 // native mode, 16-bit Y
-                new { Emulation = false, A16Bit = false, X16Bit = true, Bytes = new byte[] { 0xA0, 0x42 }, ExpectedLength = 2, ExpectedOperand = "#$42" },
+                new { Emulation = false, A16Bit = false, X16Bit = true, Bytes = new byte[] { 0xA0, 0x42, 0x12 }, ExpectedLength = 3, ExpectedOperand = "#$1242" },
                 
                 // native mode, 8-bit Y, 16-bit A
-                new { Emulation = false, A16Bit = true, X16Bit = false, Bytes = new byte[] { 0xA0, 0x42, 0x12 }, ExpectedLength = 3, ExpectedOperand = "#$1242" },
+                new { Emulation = false, A16Bit = true, X16Bit = false, Bytes = new byte[] { 0xA0, 0x42 }, ExpectedLength = 2, ExpectedOperand = "#$42" },
                 
                 // native mode, 16-bit A and Y
                 new { Emulation = false, A16Bit = true, X16Bit = true, Bytes = new byte[] { 0xA0, 0x42, 0x12 }, ExpectedLength = 3, ExpectedOperand = "#$1242" }

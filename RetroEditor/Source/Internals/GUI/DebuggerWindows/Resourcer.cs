@@ -1,5 +1,4 @@
 using ImGuiNET;
-using Microsoft.CodeAnalysis.Emit;
 using System.Numerics;
 
 internal class Resourcer : IWindow
@@ -9,7 +8,6 @@ internal class Resourcer : IWindow
     LibMameDebugger debugger;
     RomDataParser romData;
     string traceFile = "trace.txt";
-    List<string> traceLog;
     bool traceInProgress = false;
     bool newTraceInProgress = false;
     int newTraceCnt=0;
@@ -26,7 +24,6 @@ internal class Resourcer : IWindow
     public Resourcer(LibMameDebugger debugger)
     {
         this.debugger = debugger;
-        traceLog = new List<string>();
 
         romData = new RomDataParser();
     }
@@ -61,11 +58,14 @@ internal class Resourcer : IWindow
         ImGui.SetCursorPosY(ImGui.GetCursorPosY() + MEMORY_MAP_HEIGHT);
     }
 
+
+    bool cpu_emulationMode=true, cpu_8bitAccumulator=true, cpu_8bitIndex=true;
     public bool Draw()
     {
         DrawMemoryMap();
 
-        var traceDisable = traceInProgress;
+        var jump=false;
+        var traceDisable = traceInProgress||newTraceInProgress;
         if (traceDisable)
         {
             ImGui.BeginDisabled();
@@ -73,8 +73,12 @@ internal class Resourcer : IWindow
         if (ImGui.Button("Capture Frame"))
         {
             traceInProgress = true;
+            if (File.Exists("trace.log"))
+            {
+                File.Delete("trace.log");
+            }
             // Set up trace logging
-            debugger.SendCommand($"trace {traceFile},,noloop");
+            debugger.SendCommand($"trace {traceFile},,noloop,{{tracelog \"E=%02X|P=%02X|\",e,p}}");
             // Wait for vblank
             debugger.SendCommand("gvblank");
         }
@@ -82,8 +86,12 @@ internal class Resourcer : IWindow
         if (ImGui.Button("Capture 100 Milliseconds"))
         {
             traceInProgress = true;
+            if (File.Exists("trace.log"))
+            {
+                File.Delete("trace.log");
+            }
             // Set up trace logging
-            debugger.SendCommand($"trace {traceFile},,noloop");
+            debugger.SendCommand($"trace {traceFile},,noloop,{{tracelog \"E=%02X|P=%02X|\",e,p}}");
             // Wait for vblank
             debugger.SendCommand("gtime 100");
         }
@@ -91,37 +99,41 @@ internal class Resourcer : IWindow
         if (ImGui.Button("New Trace"))
         {
             var pc = romData.GetCPUState(debugger, "PC");
-            var db = romData.GetCPUState(debugger, "DB");
             var e = romData.GetCPUState(debugger, "E");
+            var p = romData.GetCPUState(debugger, "P");
 
             SNES65816Disassembler disassembler = new SNES65816Disassembler();
-            bool done = false;
-            UInt64 length=0;
-            UInt64 address = MapSnesCpuToLorom(pc, out var region);
-            while (!done)
-            {
-                var result = disassembler.DecodeNext(romData.FetchBytes(address,length), pc);
-                if (result.AdditionalBytesNeeded==0)
-                {
-                    Console.WriteLine(result.Instruction);
-                    done = true;
-                }
-                else
-                {
-                    length += (UInt64)result.AdditionalBytesNeeded;
-                }
-            }
+            var nState = (SNES65816State)disassembler.State;
+            nState.SetEmulationMode(e==1);
+            nState.Accumulator8Bit=(p & 0x20) == 0x20;
+            nState.Index8Bit=(p & 0x10) == 0x10;
+            disassembler.State=nState;
+            romData.AddCodeRange(disassembler, pc, out var _);
+            jumpToAddress = romData.MapSnesCpuToLorom(pc,out var _);
             debugger.SendCommand($"step");
-            newTraceCnt=1;
+            newTraceCnt=100;
             newTraceInProgress=true;
         }
         if (traceDisable)
         {
             ImGui.EndDisabled();
         }
-
+        ImGui.SameLine();
+        ImGui.Checkbox("EmulationMode", ref cpu_emulationMode);
+        ImGui.SameLine();
+        if (cpu_emulationMode)
+        {
+            ImGui.BeginDisabled();
+        }
+        ImGui.Checkbox("8Bit Accumulator", ref cpu_8bitAccumulator);
+        ImGui.SameLine();
+        ImGui.Checkbox("8Bit Index", ref cpu_8bitIndex);
+        if (cpu_emulationMode)
+        {
+            ImGui.EndDisabled();
+        }
 //        DisplayRomData();       
-        ScrollableTableView();
+        ScrollableTableView(jump);
 
         return false;
     }
@@ -176,9 +188,8 @@ internal class Resourcer : IWindow
     }
 
     private UInt64 jumpToAddress = 0;
-    private void ScrollableTableView()
+    private void ScrollableTableView(bool jump)
     {
-        bool jump=false;
         if (InputU64ScalarWrapped("Jump to Address", ref jumpToAddress))
         {
             jump=true;
@@ -311,6 +322,35 @@ internal class Resourcer : IWindow
                     {
                         romData.AddUnknownRange(minAddress, maxAddress);
                         clearSelection = true;
+                    }
+                    if (ImGui.IsKeyPressed(ImGuiKey.C))
+                    {
+                        // Convert to code
+                        var disassembler = new SNES65816Disassembler();
+                        var state = ((SNES65816State)disassembler.State);
+                        state.SetEmulationMode(cpu_emulationMode);
+                        state.Accumulator8Bit=cpu_8bitAccumulator;
+                        state.Index8Bit=cpu_8bitIndex;
+                        disassembler.State=state;
+                        romData.AddCodeRange(disassembler, minAddress, maxAddress);
+                        cpu_emulationMode = ((SNES65816State)disassembler.State).EmulationMode;
+                        cpu_8bitAccumulator = ((SNES65816State)disassembler.State).Accumulator8Bit;
+                        cpu_8bitIndex = ((SNES65816State)disassembler.State).Index8Bit;
+                        clearSelection = true;
+                    }
+                    if (ImGui.IsKeyPressed(ImGuiKey.A) && !automated)
+                    {
+                        // Auto disassemble starting at the first selected address
+                        var state = ((SNES65816State)autoDisassembler.State);
+                        state.SetEmulationMode(cpu_emulationMode);
+                        state.Accumulator8Bit=cpu_8bitAccumulator;
+                        state.Index8Bit=cpu_8bitIndex;
+                        autoDisassembler.State=state;
+                        var autoPC = romData.MapRomToCpu(minAddress);
+                        autoStack.Clear();
+                        autoStack.Push(autoPC);
+                        autoState.Push(autoDisassembler.State);
+                        automated=true;
                     }
 
                     if (clearSelection)
@@ -461,93 +501,65 @@ internal class Resourcer : IWindow
         return true;
     }
 
-    public enum SNESLoRomRegion
-    {
-        ROM,
-        IO,
-        SRAM,
-        RAM,
-    }
-
-    public UInt64 MapSnesCpuToLorom(UInt64 address, out SNESLoRomRegion region)
-    {
-        region = SNESLoRomRegion.ROM;
-        var bank = address >> 16;
-        var offset = address & 0xFFFF;
-
-        if (bank==0x7E || bank==0x7F)
-        {
-            region = SNESLoRomRegion.RAM;
-            return ((bank - 0x7E) << 16) | offset;
-        }
-        else if (bank==0xFE || bank==0xFF)
-        {
-            if (offset<0x8000)
-            {
-                // SRAM
-                region = SNESLoRomRegion.SRAM;
-                return ((bank - 0xF0) << 15) | offset;
-            }
-            else
-            {
-                // ROM
-                return 0x3F0000 | ((bank-0xFE)<<15) | (offset&0x7FFF);           
-            }
-        }
-        bank&=0x7F;
-        if (bank<0x40)
-        {
-            if (offset<0x2000)
-            {
-                // Low RAM
-                region = SNESLoRomRegion.RAM;
-                return offset;
-            }
-            else if (offset<0x8000)
-            {
-                // IO
-                region = SNESLoRomRegion.IO;
-                return offset-0x2000;
-            }
-            else
-            {
-                // ROM
-                return (bank << 15) | (offset & 0x7FFF);
-            }
-        }
-        else if (bank<0x70)
-        {
-            // ROM
-            return (bank << 15) | (offset & 0x7FFF);
-        }
-        else
-        {
-            // 70-7D
-            if (offset<0x8000)
-            {
-                region = SNESLoRomRegion.SRAM;
-                return ((bank - 0x70) << 15) | offset;
-            }
-            else
-            {
-                //ROM
-                return (bank<<15) | (offset&0x7FFF);
-            }
-        }
-    }
-
+    bool automated=false;
+    SNES65816Disassembler autoDisassembler = new SNES65816Disassembler();
+    Stack<UInt64> autoStack = new ();
+    Stack<ICpuState> autoState = new ();
     public void Update(float seconds)
     {
+        if (automated)
+        {
+            if (autoStack.Count==0 || autoState.Count==0)
+            {
+                automated = false;
+            }
+            else
+            {
+                var autoPC = autoStack.Pop();
+                var state = autoState.Pop();
+                autoDisassembler.State = state;
+
+                var mappedAddress = romData.MapSnesCpuToLorom(autoPC, out var region);
+                if (region==RomDataParser.SNESLoRomRegion.ROM)
+                {
+                    var r = romData.GetRomRanges.GetRangeContainingAddress(mappedAddress);
+                    if (r.Value!=null && r.Value.GetType() == typeof(CodeRegion))
+                    {
+                        // Already disassembled
+                        return;
+                    }
+                    if (romData.AddCodeRange(autoDisassembler, autoPC, out var instruction))
+                    {
+                        if (instruction.Mnemonic=="XCE")
+                        {
+                            // For now stop at this point, and let user manually fix
+                            //in future could check last instruction is CLC/SEC...
+                            automated = false;
+                        }
+                        else
+                        {
+                            foreach (var next in instruction.NextAddresses)
+                            {
+                                autoStack.Push(next);
+                                autoState.Push(autoDisassembler.State);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        automated=false;
+                        autoStack.Clear();
+                        autoState.Clear();
+                    }
+                }
+            }
+        }
         if (!romLoaded)
         {
             // Read ROM data in chunks
             romData.Parse(debugger);
 
-//            romData.AddStringRange(0x7FC0, 0x7FD4); // LoRom ASCII Title in header
-            var disassembler = new SNES65816Disassembler();
-            UInt64 PC = 0x8000;
-            var disassemble = new[] { romData.GetByte(MapSnesCpuToLorom(PC, out var _)) };
-            disassembler.DecodeNext(disassemble,0x8000);
+            romData.AddStringRange(0x7FC0, 0x7FD4); // LoRom ASCII Title in header
             
             romLoaded = true;
         }
@@ -557,8 +569,17 @@ internal class Resourcer : IWindow
             if (debugger.IsStopped)
             {
                 var pc = romData.GetCPUState(debugger, "PC");
-                var db = romData.GetCPUState(debugger, "DB");
                 var e = romData.GetCPUState(debugger, "E");
+                var p = romData.GetCPUState(debugger, "P");
+
+                SNES65816Disassembler disassembler = new SNES65816Disassembler();
+                var state = ((SNES65816State)disassembler.State);
+                state.SetEmulationMode(e==1);
+                state.Accumulator8Bit=(p & 0x20) == 0x20;
+                state.Index8Bit=(p & 0x10) == 0x10;
+                disassembler.State=state;
+                romData.AddCodeRange(disassembler, pc, out var _);
+                jumpToAddress = romData.MapSnesCpuToLorom(pc,out var _);
                 newTraceCnt--;
                 if (newTraceCnt==0)
                 {
@@ -576,18 +597,19 @@ internal class Resourcer : IWindow
         {
             if (debugger.IsStopped)
             {
+                debugger.SendCommand("traceflush");
+                Thread.Sleep(1000);  // BODGE FOR NOW
                 debugger.SendCommand("trace off");
+
+                // Wait for the trace to finish
+                Thread.Sleep(1000);  // BODGE FOR NOW
 
                 // Read and parse trace file
                 if (File.Exists(traceFile))
                 {
-                    traceLog.Clear();
-                    traceLog.AddRange(File.ReadAllLines(traceFile));
-
                     // Parse disassembly
-                    foreach (var line in traceLog)
+                    foreach (var line in File.ReadAllLines(traceFile))
                     {
-                        //ParseDisassembly(line);
                         ParseLocation(line);
                     }
                 }
@@ -598,23 +620,47 @@ internal class Resourcer : IWindow
 
     private void ParseLocation(string line)
     {
-        // Format: BANK:OFFSET mnemonic operands
-        var parts = line.Split(' ');
-        if (parts.Length < 2) return;
+        // Format: E=XX|P=XX|BANK:OFFSET: mnemonic operands
+        // Example: E=00|P=00|00:0000 LDA #$00
 
-        var addressParts = parts[0].Split(':');
-        if (addressParts.Length < 2) return;
-
-        if (!uint.TryParse(addressParts[0], System.Globalization.NumberStyles.HexNumber, null, out uint bank) ||
-            !uint.TryParse(addressParts[1], System.Globalization.NumberStyles.HexNumber, null, out uint offset))
+        // Split the line into parts
+        // Ignore empty lines or lines that don't contain the expected format
+        if (string.IsNullOrWhiteSpace(line) || !line.Contains("|"))
             return;
 
-        uint address = (bank << 16) | offset;
+        var parts = line.Split('|');
+        if (parts.Length < 3)
+            return;
 
-        // Update memory map data
-        // Add all addresses from this instruction to code addresses
-        romData.AddCodeRange(address, address);
+        // Parse emulation mode (E)
+        if (!parts[0].StartsWith("E=") || !byte.TryParse(parts[0].Substring(2), System.Globalization.NumberStyles.HexNumber, null, out byte e))
+            return;
+
+        // Parse processor status (P)
+        if (!parts[1].StartsWith("P=") || !byte.TryParse(parts[1].Substring(2), System.Globalization.NumberStyles.HexNumber, null, out byte p))
+            return;
+
+        // Parse bank and offset
+        var addressPart = parts[2].Split(' ')[0];
+        var addressComponents = addressPart.Split(':');
+        if (addressComponents.Length != 3 || 
+            !byte.TryParse(addressComponents[0], System.Globalization.NumberStyles.HexNumber, null, out byte bank) ||
+            !ushort.TryParse(addressComponents[1], System.Globalization.NumberStyles.HexNumber, null, out ushort offset))
+            return;
+
+        // Convert bank:offset to SNES address
+        UInt64 snesAddress = (UInt64)((bank << 16) | offset);
+        
+        // Map SNES address to LoROM address
+        // Create a disassembler with the current CPU state
+        SNES65816Disassembler disassembler = new SNES65816Disassembler();
+        var state = ((SNES65816State)disassembler.State);
+        state.SetEmulationMode(e == 1);
+        state.Accumulator8Bit = (p & 0x20) == 0x20;
+        state.Index8Bit = (p & 0x10) == 0x10;
+        disassembler.State = state;
+
+        // Add this location as code
+        romData.AddCodeRange(disassembler, snesAddress, out var _);
     }
-
-
 }
