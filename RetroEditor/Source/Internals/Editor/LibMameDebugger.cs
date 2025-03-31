@@ -205,6 +205,35 @@ internal class LibMameDebugger
         }
     }
 
+    private struct ThreadSafeCommand
+    {
+        public string command;
+        public UInt64 id;
+        public Action<string,int> cb;
+    }
+
+    Queue<ThreadSafeCommand> commandQueue = new();
+    private UInt64 commandId = 1;
+    public int QueueCommand(string command, Action<string,int> callback)
+    {
+        commandQueue.Enqueue(new ThreadSafeCommand {
+            command = command,
+            id = commandId++,
+            cb = callback
+        });
+        return commandQueue.Count;
+    }
+
+    public void ExecuteOperationsThreaded()
+    {
+        if (commandQueue.Count > 0)
+        {
+            var command = commandQueue.Dequeue();
+            var result = SendCommand(command.command);
+            command.cb(result, (int)command.id);
+        }
+    }
+
     public string SendCommand(string command)
     {
         if (remoteCommandCallback.remoteCommandCB != null)
@@ -223,7 +252,12 @@ internal class LibMameDebugger
 
     public bool DebuggerViewReady {get; private set;} = false;
     public bool RemoteCommandReady {get; private set;} = false;
-    private int DebuggerCallback(int kind,IntPtr data)
+
+    delegate void ThreadPump();
+    private ThreadPump threadPump;
+    private nint threadPumpPtr;
+
+    private nint DebuggerCallback(int kind,IntPtr data)
     {
         switch (kind)
         {
@@ -246,6 +280,11 @@ internal class LibMameDebugger
                     IsStopped = false;
                 }
                 return 1;
+            case 3:
+                // Thread Pump
+                threadPump = ExecuteOperationsThreaded;
+                threadPumpPtr = Marshal.GetFunctionPointerForDelegate(threadPump);
+                return threadPumpPtr;
             default:
                 return 0;
         }

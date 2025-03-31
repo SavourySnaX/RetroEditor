@@ -229,6 +229,11 @@ internal class CodeRegion : IRegionInfo
         return new LineInfo($"{I.Key:X8}", BytesForSpan(I.Value.Bytes), I.Value.InstructionText(), $"; {I.Value.cpuState}");
     }
 
+    public Instruction GetInstructionForLine(ulong index)
+    {
+        return instructions.ElementAt((int)index).Value;
+    }
+
     public override ulong LineOffsetForAddress(UInt64 address)
     {
         UInt64 offset=0;
@@ -463,7 +468,31 @@ internal class RomDataParser
                     return false;
                 }
             }
-            romRanges.AddRange(new CodeRegion(address, address + (UInt64)result.BytesConsumed - 1, result.Instruction, this));
+            var current = romRanges.GetRangeContainingAddress(address, out var lineOff);
+            if (current.Value != null)
+            {
+                if (current.Value is CodeRegion cregion)
+                {
+                    // Check we overlap the instruction
+                    var check = cregion.GetInstructionForLine(lineOff);
+                    if (check.ToString()!=result.Instruction.ToString())        // TODO de-shitiffy
+                    {
+                        Console.WriteLine($"Error: instruction overlaps different instruction {check} != {result.Instruction}");
+                        instruction = new();
+                        return false;
+                    }
+                }
+                else
+                {
+                    if (((UInt64)result.Instruction.Bytes.Length) > current.Value.AddressEnd - current.Value.AddressStart + 1)
+                    {
+                        Console.WriteLine($"Error: instruction does not fit! {current.Value.AddressStart:X8} != {result.Instruction.ToString()}");
+                        instruction = new();
+                        return false;
+                    }
+                    romRanges.AddRange(new CodeRegion(address, address + (UInt64)result.BytesConsumed - 1, result.Instruction, this));
+                }
+            }
             instruction = result.Instruction;
             return true;
         }

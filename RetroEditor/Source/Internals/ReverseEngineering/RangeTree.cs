@@ -266,6 +266,17 @@ internal class RangeCollection<T> : IEnumerable<Range<T>> where T : class, IRang
         return avlTree.GetRangeContainingAddress(point);
     }
 
+    public Range<T>? GetRangeContainingAddress(UInt64 point, out UInt64 lineOff)
+    {
+        var range = avlTree.GetRangeContainingAddress(point);
+        lineOff = 0;
+        if (range != null)
+        {
+            lineOff = range.Value.LineOffsetForAddress(point);
+        }
+        return range;
+    }
+
     public UInt64 FetchLineForAddress(UInt64 point)
     {
         var range = avlTree.GetRangeContainingAddress(point);

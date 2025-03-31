@@ -1954,8 +1954,7 @@ namespace RetroEditor.Tests
                     operandCount: 1,
                     operandText: new[] { "($1234)" },
                     isBranch: true,
-                    isTerminator: true,
-                    nextAddresses: new List<ulong> { 0x1234 }
+                    isTerminator: true
                 ),
                 new byte[] { 0x6C, 0x34, 0x12 }
             );
@@ -1972,8 +1971,7 @@ namespace RetroEditor.Tests
                     operandCount: 1,
                     operandText: new[] { "($1234,X)" },
                     isBranch: true,
-                    isTerminator: true,
-                    nextAddresses: new List<ulong> { 0x1234 }
+                    isTerminator: true
                 ),
                 new byte[] { 0x7C, 0x34, 0x12 }
             );
@@ -2004,14 +2002,13 @@ namespace RetroEditor.Tests
                 AssertInstruction(
                     result,
                     mnemonic: "JMP",
-                    bytesConsumed: 4,
+                    bytesConsumed: 3,
                     operandCount: 1,
-                    operandText: new[] { "[$123456]" },
+                    operandText: new[] { "[$1234]" },
                     isBranch: true,
-                    isTerminator: true,
-                    nextAddresses: new List<ulong> { 0x123456 }
+                    isTerminator: true
                 ),
-                new byte[] { 0xDC, 0x56, 0x34, 0x12 }
+                new byte[] { 0xDC, 0x34, 0x12 }
             );
         }
 
@@ -2044,8 +2041,7 @@ namespace RetroEditor.Tests
                     operandCount: 1,
                     operandText: new[] { "($1234,X)" },
                     isBranch: true,
-                    isTerminator: true,
-                    nextAddresses: new List<ulong> { 0x1234 }
+                    isTerminator: true
                 ),
                 new byte[] { 0xFC, 0x34, 0x12 }
             );

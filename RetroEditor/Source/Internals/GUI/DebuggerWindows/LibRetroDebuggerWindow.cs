@@ -10,14 +10,16 @@ internal class LibRetroDebuggerWindow : IWindow
 
     LibRetroPlugin plugin;
     LibRetroPlugin.RetroSystemAVInfo aVInfo;
+    LibMameDebugger mameDebugger;
     float scale = 1.0f;
 
     uint frameWidth, frameHeight;
     Thread? mameThread;
     bool notDone;
 
-    public LibRetroDebuggerWindow(LibRetroPlugin plugin)
+    public LibRetroDebuggerWindow(LibRetroPlugin plugin,LibMameDebugger mameDebugger)
     {
+        this.mameDebugger = mameDebugger;
         this.plugin = plugin;
         this.notDone = true;
     }
