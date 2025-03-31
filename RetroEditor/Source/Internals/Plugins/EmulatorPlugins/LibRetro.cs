@@ -652,7 +652,7 @@ internal class LibRetroPlugin : IDisposable
     private delegate short retro_input_state_t(uint port, uint device, uint index, uint id);
     private delegate void retro_video_refresh_t(IntPtr data, uint width, uint height, UIntPtr pitch);
 
-    public delegate int DebuggerCallbackDelegate(int kind, IntPtr data);
+    public delegate nint DebuggerCallbackDelegate(int kind, IntPtr data);
 
     private retro_environment_t environmentCallback;                // Prevent collection of delegate
     private retro_audio_sample_t audioSampleCallback;               // Prevent collection of delegate

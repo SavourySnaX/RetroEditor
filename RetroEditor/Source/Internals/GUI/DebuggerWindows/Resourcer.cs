@@ -58,6 +58,9 @@ internal class Resourcer : IWindow
         ImGui.SetCursorPosY(ImGui.GetCursorPosY() + MEMORY_MAP_HEIGHT);
     }
 
+    bool traceCommandInProgress=false;
+    bool traceCommandFinishStarted=false;
+    bool traceCommandFinished=false;
 
     bool cpu_emulationMode=true, cpu_8bitAccumulator=true, cpu_8bitIndex=true;
     public bool Draw()
@@ -77,23 +80,30 @@ internal class Resourcer : IWindow
             {
                 File.Delete("trace.log");
             }
+            traceCommandInProgress=true;
+            traceCommandFinished=false;
+            traceCommandFinishStarted=false;
             // Set up trace logging
-            debugger.SendCommand($"trace {traceFile},,noloop,{{tracelog \"E=%02X|P=%02X|\",e,p}}");
+            debugger.QueueCommand($"trace {traceFile},,noloop,{{tracelog \"E=%02X|P=%02X|\",e,p}}", (s,id)=>{});
             // Wait for vblank
-            debugger.SendCommand("gvblank");
+            debugger.QueueCommand("gvblank", (s,id)=>{traceCommandInProgress=false;});
         }
         ImGui.SameLine();
-        if (ImGui.Button("Capture 100 Milliseconds"))
+        if (ImGui.Button("Capture 500 Milliseconds"))
         {
             traceInProgress = true;
             if (File.Exists("trace.log"))
             {
                 File.Delete("trace.log");
             }
+            traceCommandInProgress=true;
+            traceCommandFinished=false;
+            traceCommandFinishStarted=false;
+
             // Set up trace logging
-            debugger.SendCommand($"trace {traceFile},,noloop,{{tracelog \"E=%02X|P=%02X|\",e,p}}");
+            debugger.QueueCommand($"trace {traceFile},,noloop,{{tracelog \"E=%02X|P=%02X|\",e,p}}",(s,id)=>{});
             // Wait for vblank
-            debugger.SendCommand("gtime 100");
+            debugger.QueueCommand("gtime 500",(s,id)=>{traceCommandInProgress=false;});
         }
         ImGui.SameLine();
         if (ImGui.Button("New Trace"))
@@ -640,24 +650,27 @@ internal class Resourcer : IWindow
         }
 
         // Handle trace in progress
-        if (traceInProgress)
+        if (traceInProgress && !traceCommandInProgress)
         {
-            if (debugger.IsStopped)
+            if (debugger.IsStopped && !traceCommandFinishStarted)
             {
-                debugger.SendCommand("traceflush");
-                Thread.Sleep(1000);  // BODGE FOR NOW
-                debugger.SendCommand("trace off");
-
-                // Wait for the trace to finish
-                Thread.Sleep(1000);  // BODGE FOR NOW
-
+                traceCommandFinishStarted=true;
+                traceCommandFinished=false;
+                debugger.QueueCommand("traceflush",(s,id)=>{});
+                debugger.QueueCommand("trace off",(s,id)=>{traceCommandFinished=true;});
+            }
+            if (traceCommandFinished)
+            {
                 // Read and parse trace file
                 if (File.Exists(traceFile))
                 {
                     // Parse disassembly
-                    foreach (var line in File.ReadAllLines(traceFile))
+                    var lines= File.ReadAllLines(traceFile);
+                    int lOffset=0;
+                    foreach (var line in lines)
                     {
                         ParseLocation(line);
+                        lOffset++;
                     }
                 }
                 traceInProgress = false;

@@ -117,7 +117,7 @@ internal class SNES65816Disassembler : DisassemblerBase
         2, 2, 2, 2, 2, 2, 2, 2, 1, 2, 1, 1, 3, 3, 3, 4,  // 0xA0-0xAF
         2, 2, 2, 2, 2, 2, 2, 2, 1, 3, 1, 1, 3, 3, 3, 4,  // 0xB0-0xBF
         2, 2, 2, 2, 2, 2, 2, 2, 1, 2, 1, 1, 3, 3, 3, 4,  // 0xC0-0xCF
-        2, 2, 2, 2, 2, 2, 2, 2, 1, 3, 1, 1, 4, 3, 3, 4,  // 0xD0-0xDF
+        2, 2, 2, 2, 2, 2, 2, 2, 1, 3, 1, 1, 3, 3, 3, 4,  // 0xD0-0xDF
         2, 2, 2, 2, 2, 2, 2, 2, 1, 2, 1, 1, 3, 3, 3, 4,  // 0xE0-0xEF
         2, 2, 2, 2, 3, 2, 2, 2, 1, 3, 1, 1, 3, 3, 3, 4   // 0xF0-0xFF
     };
@@ -549,9 +549,9 @@ internal class SNES65816Disassembler : DisassemblerBase
                 break;
 
             case AddressingMode.AbsoluteLongIndirect:
-                if (baseLength != 4) return DecodeResult.CreateError($"Invalid {mnemonic} absolute long indirect instruction length");
-                target = (ulong)bytes[1] + ((ulong)bytes[2] << 8) + ((ulong)bytes[3] << 16);
-                operands.Add(new Operand($"[${target:X6}]", value: target));
+                if (baseLength != 3) return DecodeResult.CreateError($"Invalid {mnemonic} absolute long indirect instruction length");
+                target = (ulong)bytes[1] + ((ulong)bytes[2] << 8);
+                operands.Add(new Operand($"[${target:X4}]", value: target));
                 break;
 
             case AddressingMode.DirectPage:

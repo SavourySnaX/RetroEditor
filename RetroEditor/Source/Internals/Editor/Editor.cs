@@ -318,9 +318,9 @@ internal class Editor : IEditor, IEditorInternal
         {
             mameInstance = new LibMameDebugger(retro);
 
-            var pluginWindow = new LibRetroDebuggerWindow(retro);
+            var pluginWindow = new LibRetroDebuggerWindow(retro,mameInstance);
             pluginWindow.Initialise();
-            retro.LoadGame("C:\\work\\editor\\snes\\mariow.bin");
+            retro.LoadGame(Path.Combine(Directory.GetCurrentDirectory(), "..", "snes", "mariow.bin"));
             pluginWindow.InitWindow();
             windowManager.AddWindow(pluginWindow, "MAME RETRO", null);
             while (!mameInstance.DebuggerViewReady)
@@ -542,7 +542,7 @@ internal class Editor : IEditor, IEditorInternal
                                 {
                                     mameInstance = new LibMameDebugger(retro);
 
-                                    var pluginWindow = new LibRetroDebuggerWindow(retro);
+                                    var pluginWindow = new LibRetroDebuggerWindow(retro,mameInstance);
                                     pluginWindow.Initialise();
                                     retro.LoadGame(result.Path);
                                     pluginWindow.InitWindow();
