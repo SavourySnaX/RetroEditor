@@ -134,7 +134,7 @@ namespace RetroEditor.Tests
                     mnemonic: "ADC",
                     bytesConsumed: testCase.ExpectedLength,
                     operandCount: 1,
-                    operandText: new[] { testCase.ExpectedOperand }
+                    operandText: [testCase.ExpectedOperand]
                 );
             }
         }
@@ -148,9 +148,9 @@ namespace RetroEditor.Tests
                     mnemonic: "ADC",
                     bytesConsumed: 3,
                     operandCount: 1,
-                    operandText: new[] { "$1234" }
+                    operandText: ["$1234"]
                 ),
-                new byte[] { 0x6D, 0x34, 0x12 }
+                [0x6D, 0x34, 0x12]
             );
         }
         
@@ -163,9 +163,9 @@ namespace RetroEditor.Tests
                     mnemonic: "ADC",
                     bytesConsumed: 4,
                     operandCount: 1,
-                    operandText: new[] { "$123456" }
+                    operandText: ["$123456"]
                 ),
-                new byte[] { 0x6F, 0x56, 0x34, 0x12 }
+                [0x6F, 0x56, 0x34, 0x12]
             );
         }
 
@@ -178,9 +178,9 @@ namespace RetroEditor.Tests
                     mnemonic: "ADC",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "$42" }
+                    operandText: ["$42"]
                 ),
-                new byte[] { 0x65, 0x42 }
+                [0x65, 0x42]
             );
         }
         
@@ -193,9 +193,9 @@ namespace RetroEditor.Tests
                     mnemonic: "ADC",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "($42)" }
+                    operandText: ["($42)"]
                 ),
-                new byte[] { 0x72, 0x42 }
+                [0x72, 0x42]
             );
         }
 
@@ -208,9 +208,9 @@ namespace RetroEditor.Tests
                     mnemonic: "ADC",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "[$42]" }
+                    operandText: ["[$42]"]
                 ),
-                new byte[] { 0x67, 0x42 }
+                [0x67, 0x42]
             );
         }
 
@@ -223,9 +223,9 @@ namespace RetroEditor.Tests
                     mnemonic: "ADC",
                     bytesConsumed: 3,
                     operandCount: 1,
-                    operandText: new[] { "$1234,X" }
+                    operandText: ["$1234,X"]
                 ),
-                new byte[] { 0x7D, 0x34, 0x12 }
+                [0x7D, 0x34, 0x12]
             );
         }
 
@@ -238,9 +238,9 @@ namespace RetroEditor.Tests
                     mnemonic: "ADC",
                     bytesConsumed: 4,
                     operandCount: 1,
-                    operandText: new[] { "$123456,X" }
+                    operandText: ["$123456,X"]
                 ),
-                new byte[] { 0x7F, 0x56, 0x34, 0x12 }
+                [0x7F, 0x56, 0x34, 0x12]
             );
         }
 
@@ -253,9 +253,9 @@ namespace RetroEditor.Tests
                     mnemonic: "ADC",
                     bytesConsumed: 3,
                     operandCount: 1,
-                    operandText: new[] { "$1234,Y" }
+                    operandText: ["$1234,Y"]
                 ),
-                new byte[] { 0x79, 0x34, 0x12 }
+                [0x79, 0x34, 0x12]
             );
         }
 
@@ -268,9 +268,9 @@ namespace RetroEditor.Tests
                     mnemonic: "ADC",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "$42,X" }
+                    operandText: ["$42,X"]
                 ),
-                new byte[] { 0x75, 0x42 }
+                [0x75, 0x42]
             );
         }
 
@@ -283,9 +283,9 @@ namespace RetroEditor.Tests
                     mnemonic: "ADC",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "($42,X)" }
+                    operandText: ["($42,X)"]
                 ),
-                new byte[] { 0x61, 0x42 }
+                [0x61, 0x42]
             );
         }
 
@@ -298,9 +298,9 @@ namespace RetroEditor.Tests
                     mnemonic: "ADC",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "($42),Y" }
+                    operandText: ["($42),Y"]
                 ),
-                new byte[] { 0x71, 0x42 }
+                [0x71, 0x42]
             );
         }
 
@@ -313,9 +313,9 @@ namespace RetroEditor.Tests
                     mnemonic: "ADC",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "[$42],Y" }
+                    operandText: ["[$42],Y"]
                 ),
-                new byte[] { 0x77, 0x42 }
+                [0x77, 0x42]
             );
         }
 
@@ -328,9 +328,9 @@ namespace RetroEditor.Tests
                     mnemonic: "ADC",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "$42,S" }
+                    operandText: ["$42,S"]
                 ),
-                new byte[] { 0x63, 0x42 }
+                [0x63, 0x42]
             );
         }
 
@@ -343,9 +343,9 @@ namespace RetroEditor.Tests
                     mnemonic: "ADC",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "($42,S),Y" }
+                    operandText: ["($42,S),Y"]
                 ),
-                new byte[] { 0x73, 0x42 }
+                [0x73, 0x42]
             );
         }
 
@@ -379,7 +379,7 @@ namespace RetroEditor.Tests
                     mnemonic: "AND",
                     bytesConsumed: testCase.ExpectedLength,
                     operandCount: 1,
-                    operandText: new[] { testCase.ExpectedOperand }
+                    operandText: [testCase.ExpectedOperand]
                 );
             }
         }
@@ -393,9 +393,9 @@ namespace RetroEditor.Tests
                     mnemonic: "AND",
                     bytesConsumed: 3,
                     operandCount: 1,
-                    operandText: new[] { "$1234" }
+                    operandText: ["$1234"]
                 ),
-                new byte[] { 0x2D, 0x34, 0x12 }
+                [0x2D, 0x34, 0x12]
             );
         }
 
@@ -408,9 +408,9 @@ namespace RetroEditor.Tests
                     mnemonic: "AND",
                     bytesConsumed: 4,
                     operandCount: 1,
-                    operandText: new[] { "$123456" }
+                    operandText: ["$123456"]
                 ),
-                new byte[] { 0x2F, 0x56, 0x34, 0x12 }
+                [0x2F, 0x56, 0x34, 0x12]
             );
         }
 
@@ -423,9 +423,9 @@ namespace RetroEditor.Tests
                     mnemonic: "AND",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "$42" }
+                    operandText: ["$42"]
                 ),
-                new byte[] { 0x25, 0x42 }
+                [0x25, 0x42]
             );
         }
 
@@ -438,9 +438,9 @@ namespace RetroEditor.Tests
                     mnemonic: "AND",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "($42)" }
+                    operandText: ["($42)"]
                 ),
-                new byte[] { 0x32, 0x42 }
+                [0x32, 0x42]
             );
         }
 
@@ -453,9 +453,9 @@ namespace RetroEditor.Tests
                     mnemonic: "AND",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "[$42]" }
+                    operandText: ["[$42]"]
                 ),
-                new byte[] { 0x27, 0x42 }
+                [0x27, 0x42]
             );
         }
 
@@ -468,9 +468,9 @@ namespace RetroEditor.Tests
                     mnemonic: "AND",
                     bytesConsumed: 3,
                     operandCount: 1,
-                    operandText: new[] { "$1234,X" }
+                    operandText: ["$1234,X"]
                 ),
-                new byte[] { 0x3D, 0x34, 0x12 }
+                [0x3D, 0x34, 0x12]
             );
         }
 
@@ -483,9 +483,9 @@ namespace RetroEditor.Tests
                     mnemonic: "AND",
                     bytesConsumed: 4,
                     operandCount: 1,
-                    operandText: new[] { "$123456,X" }
+                    operandText: ["$123456,X"]
                 ),
-                new byte[] { 0x3F, 0x56, 0x34, 0x12 }
+                [0x3F, 0x56, 0x34, 0x12]
             );
         }
 
@@ -498,9 +498,9 @@ namespace RetroEditor.Tests
                     mnemonic: "AND",
                     bytesConsumed: 3,
                     operandCount: 1,
-                    operandText: new[] { "$1234,Y" }
+                    operandText: ["$1234,Y"]
                 ),
-                new byte[] { 0x39, 0x34, 0x12 }
+                [0x39, 0x34, 0x12]
             );
         }
 
@@ -513,9 +513,9 @@ namespace RetroEditor.Tests
                     mnemonic: "AND",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "$42,X" }
+                    operandText: ["$42,X"]
                 ),
-                new byte[] { 0x35, 0x42 }
+                [0x35, 0x42]
             );
         }
 
@@ -528,9 +528,9 @@ namespace RetroEditor.Tests
                     mnemonic: "AND",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "($42,X)" }
+                    operandText: ["($42,X)"]
                 ),
-                new byte[] { 0x21, 0x42 }
+                [0x21, 0x42]
             );
         }
 
@@ -543,9 +543,9 @@ namespace RetroEditor.Tests
                     mnemonic: "AND",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "($42),Y" }
+                    operandText: ["($42),Y"]
                 ),
-                new byte[] { 0x31, 0x42 }
+                [0x31, 0x42]
             );
         }
 
@@ -558,9 +558,9 @@ namespace RetroEditor.Tests
                     mnemonic: "AND",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "[$42],Y" }
+                    operandText: ["[$42],Y"]
                 ),
-                new byte[] { 0x37, 0x42 }
+                [0x37, 0x42]
             );
         }
 
@@ -573,9 +573,9 @@ namespace RetroEditor.Tests
                     mnemonic: "AND",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "$42,S" }
+                    operandText: ["$42,S"]
                 ),
-                new byte[] { 0x23, 0x42 }
+                [0x23, 0x42]
             );
         }
 
@@ -588,9 +588,9 @@ namespace RetroEditor.Tests
                     mnemonic: "AND",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "($42,S),Y" }
+                    operandText: ["($42,S),Y"]
                 ),
-                new byte[] { 0x33, 0x42 }
+                [0x33, 0x42]
             );
         }
 
@@ -604,7 +604,7 @@ namespace RetroEditor.Tests
                     bytesConsumed: 1,
                     operandCount: 0
                 ),
-                new byte[] { 0x0A }
+                [0x0A]
             );
         }
 
@@ -617,9 +617,9 @@ namespace RetroEditor.Tests
                     mnemonic: "ASL",
                     bytesConsumed: 3,
                     operandCount: 1,
-                    operandText: new[] { "$1234" }
+                    operandText: ["$1234"]
                 ),
-                new byte[] { 0x0E, 0x34, 0x12 }
+                [0x0E, 0x34, 0x12]
             );
         }
 
@@ -632,9 +632,9 @@ namespace RetroEditor.Tests
                     mnemonic: "ASL",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "$42" }
+                    operandText: ["$42"]
                 ),
-                new byte[] { 0x06, 0x42 }
+                [0x06, 0x42]
             );
         }
 
@@ -647,9 +647,9 @@ namespace RetroEditor.Tests
                     mnemonic: "ASL",
                     bytesConsumed: 3,
                     operandCount: 1,
-                    operandText: new[] { "$1234,X" }
+                    operandText: ["$1234,X"]
                 ),
-                new byte[] { 0x1E, 0x34, 0x12 }
+                [0x1E, 0x34, 0x12]
             );
         }
 
@@ -662,9 +662,9 @@ namespace RetroEditor.Tests
                     mnemonic: "ASL",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "$42,X" }
+                    operandText: ["$42,X"]
                 ),
-                new byte[] { 0x16, 0x42 }
+                [0x16, 0x42]
             );
         }
 
@@ -677,11 +677,11 @@ namespace RetroEditor.Tests
                     mnemonic: "BCC",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "$8002" },
+                    operandText: ["$8002"],
                     isBranch: true,
                     nextAddresses: new List<ulong> { 0x8002, 0x8002 }
                 ),
-                new byte[] { 0x90, 0x00 }
+                [0x90, 0x00]
             );
         }
 
@@ -694,11 +694,11 @@ namespace RetroEditor.Tests
                     mnemonic: "BCC",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "$7FFE" },
+                    operandText: ["$7FFE"],
                     isBranch: true,
                     nextAddresses: new List<ulong> { 0x8002, 0x7FFE }
                 ),
-                new byte[] { 0x90, 0xFC }
+                [0x90, 0xFC]
             );
         }
 
@@ -711,11 +711,11 @@ namespace RetroEditor.Tests
                     mnemonic: "BCS",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "$8002" },
+                    operandText: ["$8002"],
                     isBranch: true,
                     nextAddresses: new List<ulong> { 0x8002, 0x8002 }
                 ),
-                new byte[] { 0xB0, 0x00 }
+                [0xB0, 0x00]
             );
         }
 
@@ -728,11 +728,11 @@ namespace RetroEditor.Tests
                     mnemonic: "BCS",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "$7FFE" },
+                    operandText: ["$7FFE"],
                     isBranch: true,
                     nextAddresses: new List<ulong> { 0x8002, 0x7FFE }
                 ),
-                new byte[] { 0xB0, 0xFC }
+                [0xB0, 0xFC]
             );
         }
 
@@ -745,11 +745,11 @@ namespace RetroEditor.Tests
                     mnemonic: "BEQ",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "$8002" },
+                    operandText: ["$8002"],
                     isBranch: true,
                     nextAddresses: new List<ulong> { 0x8002, 0x8002 }
                 ),
-                new byte[] { 0xF0, 0x00 }
+                [0xF0, 0x00]
             );
         }
 
@@ -762,11 +762,11 @@ namespace RetroEditor.Tests
                     mnemonic: "BEQ",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "$7FFE" },
+                    operandText: ["$7FFE"],
                     isBranch: true,
                     nextAddresses: new List<ulong> { 0x8002, 0x7FFE }
                 ),
-                new byte[] { 0xF0, 0xFC }
+                [0xF0, 0xFC]
             );
         }
 
@@ -779,11 +779,11 @@ namespace RetroEditor.Tests
                     mnemonic: "BMI",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "$8002" },
+                    operandText: ["$8002"],
                     isBranch: true,
                     nextAddresses: new List<ulong> { 0x8002, 0x8002 }
                 ),
-                new byte[] { 0x30, 0x00 }
+                [0x30, 0x00]
             );
         }
 
@@ -796,11 +796,11 @@ namespace RetroEditor.Tests
                     mnemonic: "BMI",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "$7FFE" },
+                    operandText: ["$7FFE"],
                     isBranch: true,
                     nextAddresses: new List<ulong> { 0x8002, 0x7FFE }
                 ),
-                new byte[] { 0x30, 0xFC }
+                [0x30, 0xFC]
             );
         }
 
@@ -813,11 +813,11 @@ namespace RetroEditor.Tests
                     mnemonic: "BNE",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "$8002" },
+                    operandText: ["$8002"],
                     isBranch: true,
                     nextAddresses: new List<ulong> { 0x8002, 0x8002 }
                 ),
-                new byte[] { 0xD0, 0x00 }
+                [0xD0, 0x00]
             );
         }
 
@@ -830,11 +830,11 @@ namespace RetroEditor.Tests
                     mnemonic: "BNE",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "$7FFE" },
+                    operandText: ["$7FFE"],
                     isBranch: true,
                     nextAddresses: new List<ulong> { 0x8002, 0x7FFE }
                 ),
-                new byte[] { 0xD0, 0xFC }
+                [0xD0, 0xFC]
             );
         }
 
@@ -847,11 +847,11 @@ namespace RetroEditor.Tests
                     mnemonic: "BPL",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "$8002" },
+                    operandText: ["$8002"],
                     isBranch: true,
                     nextAddresses: new List<ulong> { 0x8002, 0x8002 }
                 ),
-                new byte[] { 0x10, 0x00 }
+                [0x10, 0x00]
             );
         }
 
@@ -864,11 +864,11 @@ namespace RetroEditor.Tests
                     mnemonic: "BPL",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "$7FFE" },
+                    operandText: ["$7FFE"],
                     isBranch: true,
                     nextAddresses: new List<ulong> { 0x8002, 0x7FFE }
                 ),
-                new byte[] { 0x10, 0xFC }
+                [0x10, 0xFC]
             );
         }
 
@@ -881,12 +881,12 @@ namespace RetroEditor.Tests
                     mnemonic: "BRA",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "$8002" },
+                    operandText: ["$8002"],
                     isBranch: true,
                     isTerminator: true,
                     nextAddresses: new List<ulong> { 0x8002 }
                 ),
-                new byte[] { 0x80, 0x00 }
+                [0x80, 0x00]
             );
         }
 
@@ -899,12 +899,12 @@ namespace RetroEditor.Tests
                     mnemonic: "BRA",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "$7FFE" },
+                    operandText: ["$7FFE"],
                     isBranch: true,
                     isTerminator: true,
                     nextAddresses: new List<ulong> { 0x7FFE }
                 ),
-                new byte[] { 0x80, 0xFC }
+                [0x80, 0xFC]
             );
         }
 
@@ -917,11 +917,11 @@ namespace RetroEditor.Tests
                     mnemonic: "BVC",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "$8002" },
+                    operandText: ["$8002"],
                     isBranch: true,
                     nextAddresses: new List<ulong> { 0x8002, 0x8002 }
                 ),
-                new byte[] { 0x50, 0x00 }
+                [0x50, 0x00]
             );
         }
 
@@ -934,11 +934,11 @@ namespace RetroEditor.Tests
                     mnemonic: "BVC",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "$7FFE" },
+                    operandText: ["$7FFE"],
                     isBranch: true,
                     nextAddresses: new List<ulong> { 0x8002, 0x7FFE }
                 ),
-                new byte[] { 0x50, 0xFC }
+                [0x50, 0xFC]
             );
         }
 
@@ -951,11 +951,11 @@ namespace RetroEditor.Tests
                     mnemonic: "BVS",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "$8002" },
+                    operandText: ["$8002"],
                     isBranch: true,
                     nextAddresses: new List<ulong> { 0x8002, 0x8002 }
                 ),
-                new byte[] { 0x70, 0x00 }
+                [0x70, 0x00]
             );
         }
 
@@ -968,11 +968,11 @@ namespace RetroEditor.Tests
                     mnemonic: "BVS",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "$7FFE" },
+                    operandText: ["$7FFE"],
                     isBranch: true,
                     nextAddresses: new List<ulong> { 0x8002, 0x7FFE }
                 ),
-                new byte[] { 0x70, 0xFC }
+                [0x70, 0xFC]
             );
         }
 
@@ -985,12 +985,12 @@ namespace RetroEditor.Tests
                     mnemonic: "BRL",
                     bytesConsumed: 3,
                     operandCount: 1,
-                    operandText: new[] { "$8003" },
+                    operandText: ["$8003"],
                     isBranch: true,
                     isTerminator: true,
                     nextAddresses: new List<ulong> { 0x8003 }
                 ),
-                new byte[] { 0x82, 0x00, 0x00 }
+                [0x82, 0x00, 0x00]
             );
         }
 
@@ -1003,12 +1003,12 @@ namespace RetroEditor.Tests
                     mnemonic: "BRL",
                     bytesConsumed: 3,
                     operandCount: 1,
-                    operandText: new[] { "$7FFF" },
+                    operandText: ["$7FFF"],
                     isBranch: true,
                     isTerminator: true,
                     nextAddresses: new List<ulong> { 0x7FFF }
                 ),
-                new byte[] { 0x82, 0xFC, 0xFF }
+                [0x82, 0xFC, 0xFF]
             );
         }
 
@@ -1021,12 +1021,12 @@ namespace RetroEditor.Tests
                     mnemonic: "BRL",
                     bytesConsumed: 3,
                     operandCount: 1,
-                    operandText: new[] { "$9003" },
+                    operandText: ["$9003"],
                     isBranch: true,
                     isTerminator: true,
                     nextAddresses: new List<ulong> { 0x9003 }
                 ),
-                new byte[] { 0x82, 0x00, 0x10 }
+                [0x82, 0x00, 0x10]
             );
         }
 
@@ -1060,7 +1060,7 @@ namespace RetroEditor.Tests
                     mnemonic: "BIT",
                     bytesConsumed: testCase.ExpectedLength,
                     operandCount: 1,
-                    operandText: new[] { testCase.ExpectedOperand }
+                    operandText: [testCase.ExpectedOperand]
                 );
             }
         }
@@ -1074,9 +1074,9 @@ namespace RetroEditor.Tests
                     mnemonic: "BIT",
                     bytesConsumed: 3,
                     operandCount: 1,
-                    operandText: new[] { "$1234" }
+                    operandText: ["$1234"]
                 ),
-                new byte[] { 0x2C, 0x34, 0x12 }
+                [0x2C, 0x34, 0x12]
             );
         }
 
@@ -1089,9 +1089,9 @@ namespace RetroEditor.Tests
                     mnemonic: "BIT",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "$42" }
+                    operandText: ["$42"]
                 ),
-                new byte[] { 0x24, 0x42 }
+                [0x24, 0x42]
             );
         }
 
@@ -1104,9 +1104,9 @@ namespace RetroEditor.Tests
                     mnemonic: "BIT",
                     bytesConsumed: 3,
                     operandCount: 1,
-                    operandText: new[] { "$1234,X" }
+                    operandText: ["$1234,X"]
                 ),
-                new byte[] { 0x3C, 0x34, 0x12 }
+                [0x3C, 0x34, 0x12]
             );
         }
 
@@ -1119,9 +1119,9 @@ namespace RetroEditor.Tests
                     mnemonic: "BIT",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "$42,X" }
+                    operandText: ["$42,X"]
                 ),
-                new byte[] { 0x34, 0x42 }
+                [0x34, 0x42]
             );
         }
 
@@ -1134,10 +1134,10 @@ namespace RetroEditor.Tests
                     mnemonic: "BRK",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "#$42" },
+                    operandText: ["#$42"],
                     isTerminator: true
                 ),
-                new byte[] { 0x00, 0x42 }
+                [0x00, 0x42]
             );
         }
 
@@ -1150,10 +1150,10 @@ namespace RetroEditor.Tests
                     mnemonic: "COP",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "#$42" },
+                    operandText: ["#$42"],
                     isTerminator: true
                 ),
-                new byte[] { 0x02, 0x42 }
+                [0x02, 0x42]
             );
         }
 
@@ -1162,7 +1162,7 @@ namespace RetroEditor.Tests
         {
             TestInAllStates(result => 
                 AssertInstruction(result, "CLC", 1),
-                new byte[] { 0x18 }
+                [0x18]
             );
         }
 
@@ -1171,7 +1171,7 @@ namespace RetroEditor.Tests
         {
             TestInAllStates(result => 
                 AssertInstruction(result, "CLI", 1),
-                new byte[] { 0x58 }
+                [0x58]
             );
         }
 
@@ -1180,7 +1180,7 @@ namespace RetroEditor.Tests
         {
             TestInAllStates(result => 
                 AssertInstruction(result, "CLD", 1),
-                new byte[] { 0xD8 }
+                [0xD8]
             );
         }
 
@@ -1189,7 +1189,7 @@ namespace RetroEditor.Tests
         {
             TestInAllStates(result => 
                 AssertInstruction(result, "CLV", 1),
-                new byte[] { 0xB8 }
+                [0xB8]
             );
         }
 
@@ -1203,9 +1203,9 @@ namespace RetroEditor.Tests
                     mnemonic: "CMP",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "$42" }
+                    operandText: ["$42"]
                 ),
-                new byte[] { 0xC5, 0x42 }
+                [0xC5, 0x42]
             );
         }
 
@@ -1218,9 +1218,9 @@ namespace RetroEditor.Tests
                     mnemonic: "CMP",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "($42)" }
+                    operandText: ["($42)"]
                 ),
-                new byte[] { 0xD2, 0x42 }
+                [0xD2, 0x42]
             );
         }
 
@@ -1233,9 +1233,9 @@ namespace RetroEditor.Tests
                     mnemonic: "CMP",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "[$42]" }
+                    operandText: ["[$42]"]
                 ),
-                new byte[] { 0xC7, 0x42 }
+                [0xC7, 0x42]
             );
         }
 
@@ -1248,9 +1248,9 @@ namespace RetroEditor.Tests
                     mnemonic: "CMP",
                     bytesConsumed: 3,
                     operandCount: 1,
-                    operandText: new[] { "$1234,X" }
+                    operandText: ["$1234,X"]
                 ),
-                new byte[] { 0xDD, 0x34, 0x12 }
+                [0xDD, 0x34, 0x12]
             );
         }
 
@@ -1263,9 +1263,9 @@ namespace RetroEditor.Tests
                     mnemonic: "CMP",
                     bytesConsumed: 4,
                     operandCount: 1,
-                    operandText: new[] { "$123456,X" }
+                    operandText: ["$123456,X"]
                 ),
-                new byte[] { 0xDF, 0x56, 0x34, 0x12 }
+                [0xDF, 0x56, 0x34, 0x12]
             );
         }
 
@@ -1278,9 +1278,9 @@ namespace RetroEditor.Tests
                     mnemonic: "CMP",
                     bytesConsumed: 3,
                     operandCount: 1,
-                    operandText: new[] { "$1234,Y" }
+                    operandText: ["$1234,Y"]
                 ),
-                new byte[] { 0xD9, 0x34, 0x12 }
+                [0xD9, 0x34, 0x12]
             );
         }
 
@@ -1293,9 +1293,9 @@ namespace RetroEditor.Tests
                     mnemonic: "CMP",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "$42,X" }
+                    operandText: ["$42,X"]
                 ),
-                new byte[] { 0xD5, 0x42 }
+                [0xD5, 0x42]
             );
         }
 
@@ -1308,9 +1308,9 @@ namespace RetroEditor.Tests
                     mnemonic: "CMP",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "($42,X)" }
+                    operandText: ["($42,X)"]
                 ),
-                new byte[] { 0xC1, 0x42 }
+                [0xC1, 0x42]
             );
         }
 
@@ -1323,9 +1323,9 @@ namespace RetroEditor.Tests
                     mnemonic: "CMP",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "($42),Y" }
+                    operandText: ["($42),Y"]
                 ),
-                new byte[] { 0xD1, 0x42 }
+                [0xD1, 0x42]
             );
         }
 
@@ -1338,9 +1338,9 @@ namespace RetroEditor.Tests
                     mnemonic: "CMP",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "[$42],Y" }
+                    operandText: ["[$42],Y"]
                 ),
-                new byte[] { 0xD7, 0x42 }
+                [0xD7, 0x42]
             );
         }
 
@@ -1353,9 +1353,9 @@ namespace RetroEditor.Tests
                     mnemonic: "CMP",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "$42,S" }
+                    operandText: ["$42,S"]
                 ),
-                new byte[] { 0xC3, 0x42 }
+                [0xC3, 0x42]
             );
         }
 
@@ -1368,9 +1368,9 @@ namespace RetroEditor.Tests
                     mnemonic: "CMP",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "($42,S),Y" }
+                    operandText: ["($42,S),Y"]
                 ),
-                new byte[] { 0xD3, 0x42 }
+                [0xD3, 0x42]
             );
         }
 
@@ -1404,7 +1404,7 @@ namespace RetroEditor.Tests
                     mnemonic: "CPX",
                     bytesConsumed: testCase.ExpectedLength,
                     operandCount: 1,
-                    operandText: new[] { testCase.ExpectedOperand }
+                    operandText: [testCase.ExpectedOperand]
                 );
             }
         }
@@ -1418,9 +1418,9 @@ namespace RetroEditor.Tests
                     mnemonic: "CPX",
                     bytesConsumed: 3,
                     operandCount: 1,
-                    operandText: new[] { "$1234" }
+                    operandText: ["$1234"]
                 ),
-                new byte[] { 0xEC, 0x34, 0x12 }
+                [0xEC, 0x34, 0x12]
             );
         }
 
@@ -1433,9 +1433,9 @@ namespace RetroEditor.Tests
                     mnemonic: "CPX",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "$42" }
+                    operandText: ["$42"]
                 ),
-                new byte[] { 0xE4, 0x42 }
+                [0xE4, 0x42]
             );
         }
 
@@ -1469,7 +1469,7 @@ namespace RetroEditor.Tests
                     mnemonic: "CPY",
                     bytesConsumed: testCase.ExpectedLength,
                     operandCount: 1,
-                    operandText: new[] { testCase.ExpectedOperand }
+                    operandText: [testCase.ExpectedOperand]
                 );
             }
         }
@@ -1483,9 +1483,9 @@ namespace RetroEditor.Tests
                     mnemonic: "CPY",
                     bytesConsumed: 3,
                     operandCount: 1,
-                    operandText: new[] { "$1234" }
+                    operandText: ["$1234"]
                 ),
-                new byte[] { 0xCC, 0x34, 0x12 }
+                [0xCC, 0x34, 0x12]
             );
         }
 
@@ -1498,9 +1498,9 @@ namespace RetroEditor.Tests
                     mnemonic: "CPY",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "$42" }
+                    operandText: ["$42"]
                 ),
-                new byte[] { 0xC4, 0x42 }
+                [0xC4, 0x42]
             );
         }
 
@@ -1514,7 +1514,7 @@ namespace RetroEditor.Tests
                     bytesConsumed: 1,
                     operandCount: 0
                 ),
-                new byte[] { 0x3A }
+                [0x3A]
             );
         }
 
@@ -1527,9 +1527,9 @@ namespace RetroEditor.Tests
                     mnemonic: "DEC",
                     bytesConsumed: 3,
                     operandCount: 1,
-                    operandText: new[] { "$1234" }
+                    operandText: ["$1234"]
                 ),
-                new byte[] { 0xCE, 0x34, 0x12 }
+                [0xCE, 0x34, 0x12]
             );
         }
 
@@ -1542,9 +1542,9 @@ namespace RetroEditor.Tests
                     mnemonic: "DEC",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "$42" }
+                    operandText: ["$42"]
                 ),
-                new byte[] { 0xC6, 0x42 }
+                [0xC6, 0x42]
             );
         }
 
@@ -1557,9 +1557,9 @@ namespace RetroEditor.Tests
                     mnemonic: "DEC",
                     bytesConsumed: 3,
                     operandCount: 1,
-                    operandText: new[] { "$1234,X" }
+                    operandText: ["$1234,X"]
                 ),
-                new byte[] { 0xDE, 0x34, 0x12 }
+                [0xDE, 0x34, 0x12]
             );
         }
 
@@ -1572,9 +1572,9 @@ namespace RetroEditor.Tests
                     mnemonic: "DEC",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "$42,X" }
+                    operandText: ["$42,X"]
                 ),
-                new byte[] { 0xD6, 0x42 }
+                [0xD6, 0x42]
             );
         }
 
@@ -1608,7 +1608,7 @@ namespace RetroEditor.Tests
                     mnemonic: "EOR",
                     bytesConsumed: testCase.ExpectedLength,
                     operandCount: 1,
-                    operandText: new[] { testCase.ExpectedOperand }
+                    operandText: [testCase.ExpectedOperand]
                 );
             }
         }
@@ -1622,9 +1622,9 @@ namespace RetroEditor.Tests
                     mnemonic: "EOR",
                     bytesConsumed: 3,
                     operandCount: 1,
-                    operandText: new[] { "$1234" }
+                    operandText: ["$1234"]
                 ),
-                new byte[] { 0x4D, 0x34, 0x12 }
+                [0x4D, 0x34, 0x12]
             );
         }
 
@@ -1637,9 +1637,9 @@ namespace RetroEditor.Tests
                     mnemonic: "EOR",
                     bytesConsumed: 4,
                     operandCount: 1,
-                    operandText: new[] { "$123456" }
+                    operandText: ["$123456"]
                 ),
-                new byte[] { 0x4F, 0x56, 0x34, 0x12 }
+                [0x4F, 0x56, 0x34, 0x12]
             );
         }
 
@@ -1652,9 +1652,9 @@ namespace RetroEditor.Tests
                     mnemonic: "EOR",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "$42" }
+                    operandText: ["$42"]
                 ),
-                new byte[] { 0x45, 0x42 }
+                [0x45, 0x42]
             );
         }
 
@@ -1667,9 +1667,9 @@ namespace RetroEditor.Tests
                     mnemonic: "EOR",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "($42)" }
+                    operandText: ["($42)"]
                 ),
-                new byte[] { 0x52, 0x42 }
+                [0x52, 0x42]
             );
         }
 
@@ -1682,9 +1682,9 @@ namespace RetroEditor.Tests
                     mnemonic: "EOR",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "[$42]" }
+                    operandText: ["[$42]"]
                 ),
-                new byte[] { 0x47, 0x42 }
+                [0x47, 0x42]
             );
         }
 
@@ -1697,9 +1697,9 @@ namespace RetroEditor.Tests
                     mnemonic: "EOR",
                     bytesConsumed: 3,
                     operandCount: 1,
-                    operandText: new[] { "$1234,X" }
+                    operandText: ["$1234,X"]
                 ),
-                new byte[] { 0x5D, 0x34, 0x12 }
+                [0x5D, 0x34, 0x12]
             );
         }
 
@@ -1712,9 +1712,9 @@ namespace RetroEditor.Tests
                     mnemonic: "EOR",
                     bytesConsumed: 4,
                     operandCount: 1,
-                    operandText: new[] { "$123456,X" }
+                    operandText: ["$123456,X"]
                 ),
-                new byte[] { 0x5F, 0x56, 0x34, 0x12 }
+                [0x5F, 0x56, 0x34, 0x12]
             );
         }
 
@@ -1727,9 +1727,9 @@ namespace RetroEditor.Tests
                     mnemonic: "EOR",
                     bytesConsumed: 3,
                     operandCount: 1,
-                    operandText: new[] { "$1234,Y" }
+                    operandText: ["$1234,Y"]
                 ),
-                new byte[] { 0x59, 0x34, 0x12 }
+                [0x59, 0x34, 0x12]
             );
         }
 
@@ -1742,9 +1742,9 @@ namespace RetroEditor.Tests
                     mnemonic: "EOR",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "$42,X" }
+                    operandText: ["$42,X"]
                 ),
-                new byte[] { 0x55, 0x42 }
+                [0x55, 0x42]
             );
         }
 
@@ -1757,9 +1757,9 @@ namespace RetroEditor.Tests
                     mnemonic: "EOR",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "($42,X)" }
+                    operandText: ["($42,X)"]
                 ),
-                new byte[] { 0x41, 0x42 }
+                [0x41, 0x42]
             );
         }
 
@@ -1772,9 +1772,9 @@ namespace RetroEditor.Tests
                     mnemonic: "EOR",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "($42),Y" }
+                    operandText: ["($42),Y"]
                 ),
-                new byte[] { 0x51, 0x42 }
+                [0x51, 0x42]
             );
         }
 
@@ -1787,9 +1787,9 @@ namespace RetroEditor.Tests
                     mnemonic: "EOR",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "[$42],Y" }
+                    operandText: ["[$42],Y"]
                 ),
-                new byte[] { 0x57, 0x42 }
+                [0x57, 0x42]
             );
         }
 
@@ -1802,9 +1802,9 @@ namespace RetroEditor.Tests
                     mnemonic: "EOR",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "$42,S" }
+                    operandText: ["$42,S"]
                 ),
-                new byte[] { 0x43, 0x42 }
+                [0x43, 0x42]
             );
         }
 
@@ -1817,9 +1817,9 @@ namespace RetroEditor.Tests
                     mnemonic: "EOR",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "($42,S),Y" }
+                    operandText: ["($42,S),Y"]
                 ),
-                new byte[] { 0x53, 0x42 }
+                [0x53, 0x42]
             );
         }
 
@@ -1833,7 +1833,7 @@ namespace RetroEditor.Tests
                     bytesConsumed: 1,
                     operandCount: 0
                 ),
-                new byte[] { 0x1A }
+                [0x1A]
             );
         }
 
@@ -1846,9 +1846,9 @@ namespace RetroEditor.Tests
                     mnemonic: "INC",
                     bytesConsumed: 3,
                     operandCount: 1,
-                    operandText: new[] { "$1234" }
+                    operandText: ["$1234"]
                 ),
-                new byte[] { 0xEE, 0x34, 0x12 }
+                [0xEE, 0x34, 0x12]
             );
         }
 
@@ -1861,9 +1861,9 @@ namespace RetroEditor.Tests
                     mnemonic: "INC",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "$42" }
+                    operandText: ["$42"]
                 ),
-                new byte[] { 0xE6, 0x42 }
+                [0xE6, 0x42]
             );
         }
 
@@ -1876,9 +1876,9 @@ namespace RetroEditor.Tests
                     mnemonic: "INC",
                     bytesConsumed: 3,
                     operandCount: 1,
-                    operandText: new[] { "$1234,X" }
+                    operandText: ["$1234,X"]
                 ),
-                new byte[] { 0xFE, 0x34, 0x12 }
+                [0xFE, 0x34, 0x12]
             );
         }
 
@@ -1891,9 +1891,9 @@ namespace RetroEditor.Tests
                     mnemonic: "INC",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "$42,X" }
+                    operandText: ["$42,X"]
                 ),
-                new byte[] { 0xF6, 0x42 }
+                [0xF6, 0x42]
             );
         }
 
@@ -1907,7 +1907,7 @@ namespace RetroEditor.Tests
                     bytesConsumed: 1,
                     operandCount: 0
                 ),
-                new byte[] { 0xE8 }
+                [0xE8]
             );
         }
 
@@ -1921,7 +1921,7 @@ namespace RetroEditor.Tests
                     bytesConsumed: 1,
                     operandCount: 0
                 ),
-                new byte[] { 0xC8 }
+                [0xC8]
             );
         }
 
@@ -1934,12 +1934,12 @@ namespace RetroEditor.Tests
                     mnemonic: "JMP",
                     bytesConsumed: 3,
                     operandCount: 1,
-                    operandText: new[] { "$1234" },
+                    operandText: ["$1234"],
                     isBranch: true,
                     isTerminator: true,
                     nextAddresses: new List<ulong> { 0x1234 }
                 ),
-                new byte[] { 0x4C, 0x34, 0x12 }
+                [0x4C, 0x34, 0x12]
             );
         }
 
@@ -1952,11 +1952,11 @@ namespace RetroEditor.Tests
                     mnemonic: "JMP",
                     bytesConsumed: 3,
                     operandCount: 1,
-                    operandText: new[] { "($1234)" },
+                    operandText: ["($1234)"],
                     isBranch: true,
                     isTerminator: true
                 ),
-                new byte[] { 0x6C, 0x34, 0x12 }
+                [0x6C, 0x34, 0x12]
             );
         }
 
@@ -1969,11 +1969,11 @@ namespace RetroEditor.Tests
                     mnemonic: "JMP",
                     bytesConsumed: 3,
                     operandCount: 1,
-                    operandText: new[] { "($1234,X)" },
+                    operandText: ["($1234,X)"],
                     isBranch: true,
                     isTerminator: true
                 ),
-                new byte[] { 0x7C, 0x34, 0x12 }
+                [0x7C, 0x34, 0x12]
             );
         }
 
@@ -1986,12 +1986,12 @@ namespace RetroEditor.Tests
                     mnemonic: "JMP",
                     bytesConsumed: 4,
                     operandCount: 1,
-                    operandText: new[] { "$123456" },
+                    operandText: ["$123456"],
                     isBranch: true,
                     isTerminator: true,
                     nextAddresses: new List<ulong> { 0x123456 }
                 ),
-                new byte[] { 0x5C, 0x56, 0x34, 0x12 }
+                [0x5C, 0x56, 0x34, 0x12]
             );
         }
 
@@ -2004,11 +2004,11 @@ namespace RetroEditor.Tests
                     mnemonic: "JMP",
                     bytesConsumed: 3,
                     operandCount: 1,
-                    operandText: new[] { "[$1234]" },
+                    operandText: ["[$1234]"],
                     isBranch: true,
                     isTerminator: true
                 ),
-                new byte[] { 0xDC, 0x34, 0x12 }
+                [0xDC, 0x34, 0x12]
             );
         }
 
@@ -2021,12 +2021,12 @@ namespace RetroEditor.Tests
                     mnemonic: "JSR",
                     bytesConsumed: 3,
                     operandCount: 1,
-                    operandText: new[] { "$1234" },
+                    operandText: ["$1234"],
                     isBranch: true,
                     isTerminator: true,
                     nextAddresses: new List<ulong> { 0x1234 }
                 ),
-                new byte[] { 0x20, 0x34, 0x12 }
+                [0x20, 0x34, 0x12]
             );
         }
 
@@ -2039,11 +2039,11 @@ namespace RetroEditor.Tests
                     mnemonic: "JSR",
                     bytesConsumed: 3,
                     operandCount: 1,
-                    operandText: new[] { "($1234,X)" },
+                    operandText: ["($1234,X)"],
                     isBranch: true,
                     isTerminator: true
                 ),
-                new byte[] { 0xFC, 0x34, 0x12 }
+                [0xFC, 0x34, 0x12]
             );
         }
 
@@ -2056,12 +2056,12 @@ namespace RetroEditor.Tests
                     mnemonic: "JSL",
                     bytesConsumed: 4,
                     operandCount: 1,
-                    operandText: new[] { "$123456" },
+                    operandText: ["$123456"],
                     isBranch: true,
                     isTerminator: true,
                     nextAddresses: new List<ulong> { 0x123456 }
                 ),
-                new byte[] { 0x22, 0x56, 0x34, 0x12 }
+                [0x22, 0x56, 0x34, 0x12]
             );
         }
 
@@ -2095,7 +2095,7 @@ namespace RetroEditor.Tests
                     mnemonic: "LDA",
                     bytesConsumed: testCase.ExpectedLength,
                     operandCount: 1,
-                    operandText: new[] { testCase.ExpectedOperand }
+                    operandText: [testCase.ExpectedOperand]
                 );
             }
         }
@@ -2109,9 +2109,9 @@ namespace RetroEditor.Tests
                     mnemonic: "LDA",
                     bytesConsumed: 3,
                     operandCount: 1,
-                    operandText: new[] { "$1234" }
+                    operandText: ["$1234"]
                 ),
-                new byte[] { 0xAD, 0x34, 0x12 }
+                [0xAD, 0x34, 0x12]
             );
         }
 
@@ -2124,9 +2124,9 @@ namespace RetroEditor.Tests
                     mnemonic: "LDA",
                     bytesConsumed: 4,
                     operandCount: 1,
-                    operandText: new[] { "$123456" }
+                    operandText: ["$123456"]
                 ),
-                new byte[] { 0xAF, 0x56, 0x34, 0x12 }
+                [0xAF, 0x56, 0x34, 0x12]
             );
         }
 
@@ -2139,9 +2139,9 @@ namespace RetroEditor.Tests
                     mnemonic: "LDA",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "$42" }
+                    operandText: ["$42"]
                 ),
-                new byte[] { 0xA5, 0x42 }
+                [0xA5, 0x42]
             );
         }
 
@@ -2154,9 +2154,9 @@ namespace RetroEditor.Tests
                     mnemonic: "LDA",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "($42)" }
+                    operandText: ["($42)"]
                 ),
-                new byte[] { 0xB2, 0x42 }
+                [0xB2, 0x42]
             );
         }
 
@@ -2169,9 +2169,9 @@ namespace RetroEditor.Tests
                     mnemonic: "LDA",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "[$42]" }
+                    operandText: ["[$42]"]
                 ),
-                new byte[] { 0xA7, 0x42 }
+                [0xA7, 0x42]
             );
         }
 
@@ -2184,9 +2184,9 @@ namespace RetroEditor.Tests
                     mnemonic: "LDA",
                     bytesConsumed: 3,
                     operandCount: 1,
-                    operandText: new[] { "$1234,X" }
+                    operandText: ["$1234,X"]
                 ),
-                new byte[] { 0xBD, 0x34, 0x12 }
+                [0xBD, 0x34, 0x12]
             );
         }
 
@@ -2199,9 +2199,9 @@ namespace RetroEditor.Tests
                     mnemonic: "LDA",
                     bytesConsumed: 4,
                     operandCount: 1,
-                    operandText: new[] { "$123456,X" }
+                    operandText: ["$123456,X"]
                 ),
-                new byte[] { 0xBF, 0x56, 0x34, 0x12 }
+                [0xBF, 0x56, 0x34, 0x12]
             );
         }
 
@@ -2214,9 +2214,9 @@ namespace RetroEditor.Tests
                     mnemonic: "LDA",
                     bytesConsumed: 3,
                     operandCount: 1,
-                    operandText: new[] { "$1234,Y" }
+                    operandText: ["$1234,Y"]
                 ),
-                new byte[] { 0xB9, 0x34, 0x12 }
+                [0xB9, 0x34, 0x12]
             );
         }
 
@@ -2229,9 +2229,9 @@ namespace RetroEditor.Tests
                     mnemonic: "LDA",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "$42,X" }
+                    operandText: ["$42,X"]
                 ),
-                new byte[] { 0xB5, 0x42 }
+                [0xB5, 0x42]
             );
         }
 
@@ -2244,9 +2244,9 @@ namespace RetroEditor.Tests
                     mnemonic: "LDA",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "($42,X)" }
+                    operandText: ["($42,X)"]
                 ),
-                new byte[] { 0xA1, 0x42 }
+                [0xA1, 0x42]
             );
         }
 
@@ -2259,9 +2259,9 @@ namespace RetroEditor.Tests
                     mnemonic: "LDA",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "($42),Y" }
+                    operandText: ["($42),Y"]
                 ),
-                new byte[] { 0xB1, 0x42 }
+                [0xB1, 0x42]
             );
         }
 
@@ -2274,9 +2274,9 @@ namespace RetroEditor.Tests
                     mnemonic: "LDA",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "[$42],Y" }
+                    operandText: ["[$42],Y"]
                 ),
-                new byte[] { 0xB7, 0x42 }
+                [0xB7, 0x42]
             );
         }
 
@@ -2289,9 +2289,9 @@ namespace RetroEditor.Tests
                     mnemonic: "LDA",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "$42,S" }
+                    operandText: ["$42,S"]
                 ),
-                new byte[] { 0xA3, 0x42 }
+                [0xA3, 0x42]
             );
         }
 
@@ -2304,9 +2304,9 @@ namespace RetroEditor.Tests
                     mnemonic: "LDA",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "($42,S),Y" }
+                    operandText: ["($42,S),Y"]
                 ),
-                new byte[] { 0xB3, 0x42 }
+                [0xB3, 0x42]
             );
         }
 
@@ -2340,7 +2340,7 @@ namespace RetroEditor.Tests
                     mnemonic: "LDX",
                     bytesConsumed: testCase.ExpectedLength,
                     operandCount: 1,
-                    operandText: new[] { testCase.ExpectedOperand }
+                    operandText: [testCase.ExpectedOperand]
                 );
             }
         }
@@ -2354,9 +2354,9 @@ namespace RetroEditor.Tests
                     mnemonic: "LDX",
                     bytesConsumed: 3,
                     operandCount: 1,
-                    operandText: new[] { "$1234" }
+                    operandText: ["$1234"]
                 ),
-                new byte[] { 0xAE, 0x34, 0x12 }
+                [0xAE, 0x34, 0x12]
             );
         }
 
@@ -2369,9 +2369,9 @@ namespace RetroEditor.Tests
                     mnemonic: "LDX",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "$42" }
+                    operandText: ["$42"]
                 ),
-                new byte[] { 0xA6, 0x42 }
+                [0xA6, 0x42]
             );
         }
 
@@ -2384,9 +2384,9 @@ namespace RetroEditor.Tests
                     mnemonic: "LDX",
                     bytesConsumed: 3,
                     operandCount: 1,
-                    operandText: new[] { "$1234,Y" }
+                    operandText: ["$1234,Y"]
                 ),
-                new byte[] { 0xBE, 0x34, 0x12 }
+                [0xBE, 0x34, 0x12]
             );
         }
 
@@ -2399,9 +2399,9 @@ namespace RetroEditor.Tests
                     mnemonic: "LDX",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "$42,Y" }
+                    operandText: ["$42,Y"]
                 ),
-                new byte[] { 0xB6, 0x42 }
+                [0xB6, 0x42]
             );
         }
 
@@ -2435,7 +2435,7 @@ namespace RetroEditor.Tests
                     mnemonic: "LDY",
                     bytesConsumed: testCase.ExpectedLength,
                     operandCount: 1,
-                    operandText: new[] { testCase.ExpectedOperand }
+                    operandText: [testCase.ExpectedOperand]
                 );
             }
         }
@@ -2449,9 +2449,9 @@ namespace RetroEditor.Tests
                     mnemonic: "LDY",
                     bytesConsumed: 3,
                     operandCount: 1,
-                    operandText: new[] { "$1234" }
+                    operandText: ["$1234"]
                 ),
-                new byte[] { 0xAC, 0x34, 0x12 }
+                [0xAC, 0x34, 0x12]
             );
         }
 
@@ -2464,9 +2464,9 @@ namespace RetroEditor.Tests
                     mnemonic: "LDY",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "$42" }
+                    operandText: ["$42"]
                 ),
-                new byte[] { 0xA4, 0x42 }
+                [0xA4, 0x42]
             );
         }
 
@@ -2479,9 +2479,9 @@ namespace RetroEditor.Tests
                     mnemonic: "LDY",
                     bytesConsumed: 3,
                     operandCount: 1,
-                    operandText: new[] { "$1234,X" }
+                    operandText: ["$1234,X"]
                 ),
-                new byte[] { 0xBC, 0x34, 0x12 }
+                [0xBC, 0x34, 0x12]
             );
         }
 
@@ -2494,9 +2494,9 @@ namespace RetroEditor.Tests
                     mnemonic: "LDY",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "$42,X" }
+                    operandText: ["$42,X"]
                 ),
-                new byte[] { 0xB4, 0x42 }
+                [0xB4, 0x42]
             );
         }
 
@@ -2510,7 +2510,7 @@ namespace RetroEditor.Tests
                     bytesConsumed: 1,
                     operandCount: 0
                 ),
-                new byte[] { 0x4A }
+                [0x4A]
             );
         }
 
@@ -2523,9 +2523,9 @@ namespace RetroEditor.Tests
                     mnemonic: "LSR",
                     bytesConsumed: 3,
                     operandCount: 1,
-                    operandText: new[] { "$1234" }
+                    operandText: ["$1234"]
                 ),
-                new byte[] { 0x4E, 0x34, 0x12 }
+                [0x4E, 0x34, 0x12]
             );
         }
 
@@ -2538,9 +2538,9 @@ namespace RetroEditor.Tests
                     mnemonic: "LSR",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "$42" }
+                    operandText: ["$42"]
                 ),
-                new byte[] { 0x46, 0x42 }
+                [0x46, 0x42]
             );
         }
 
@@ -2553,9 +2553,9 @@ namespace RetroEditor.Tests
                     mnemonic: "LSR",
                     bytesConsumed: 3,
                     operandCount: 1,
-                    operandText: new[] { "$1234,X" }
+                    operandText: ["$1234,X"]
                 ),
-                new byte[] { 0x5E, 0x34, 0x12 }
+                [0x5E, 0x34, 0x12]
             );
         }
 
@@ -2568,9 +2568,9 @@ namespace RetroEditor.Tests
                     mnemonic: "LSR",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "$42,X" }
+                    operandText: ["$42,X"]
                 ),
-                new byte[] { 0x56, 0x42 }
+                [0x56, 0x42]
             );
         }
 
@@ -2583,9 +2583,9 @@ namespace RetroEditor.Tests
                     mnemonic: "MVN",
                     bytesConsumed: 3,
                     operandCount: 2,
-                    operandText: new[] { "$12", "$34" }
+                    operandText: ["$12", "$34"]
                 ),
-                new byte[] { 0x54, 0x12, 0x34 }
+                [0x54, 0x12, 0x34]
             );
         }
 
@@ -2598,9 +2598,9 @@ namespace RetroEditor.Tests
                     mnemonic: "MVP",
                     bytesConsumed: 3,
                     operandCount: 2,
-                    operandText: new[] { "$12", "$34" }
+                    operandText: ["$12", "$34"]
                 ),
-                new byte[] { 0x44, 0x12, 0x34 }
+                [0x44, 0x12, 0x34]
             );
         }
 
@@ -2614,7 +2614,7 @@ namespace RetroEditor.Tests
                     bytesConsumed: 1,
                     operandCount: 0
                 ),
-                new byte[] { 0xEA }
+                [0xEA]
             );
         }
 
@@ -2648,7 +2648,7 @@ namespace RetroEditor.Tests
                     mnemonic: "ORA",
                     bytesConsumed: testCase.ExpectedLength,
                     operandCount: 1,
-                    operandText: new[] { testCase.ExpectedOperand }
+                    operandText: [testCase.ExpectedOperand]
                 );
             }
         }
@@ -2662,9 +2662,9 @@ namespace RetroEditor.Tests
                     mnemonic: "ORA",
                     bytesConsumed: 3,
                     operandCount: 1,
-                    operandText: new[] { "$1234" }
+                    operandText: ["$1234"]
                 ),
-                new byte[] { 0x0D, 0x34, 0x12 }
+                [0x0D, 0x34, 0x12]
             );
         }
 
@@ -2677,9 +2677,9 @@ namespace RetroEditor.Tests
                     mnemonic: "ORA",
                     bytesConsumed: 4,
                     operandCount: 1,
-                    operandText: new[] { "$123456" }
+                    operandText: ["$123456"]
                 ),
-                new byte[] { 0x0F, 0x56, 0x34, 0x12 }
+                [0x0F, 0x56, 0x34, 0x12]
             );
         }
 
@@ -2692,9 +2692,9 @@ namespace RetroEditor.Tests
                     mnemonic: "ORA",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "$42" }
+                    operandText: ["$42"]
                 ),
-                new byte[] { 0x05, 0x42 }
+                [0x05, 0x42]
             );
         }
 
@@ -2707,9 +2707,9 @@ namespace RetroEditor.Tests
                     mnemonic: "ORA",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "($42)" }
+                    operandText: ["($42)"]
                 ),
-                new byte[] { 0x12, 0x42 }
+                [0x12, 0x42]
             );
         }
 
@@ -2722,9 +2722,9 @@ namespace RetroEditor.Tests
                     mnemonic: "ORA",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "[$42]" }
+                    operandText: ["[$42]"]
                 ),
-                new byte[] { 0x07, 0x42 }
+                [0x07, 0x42]
             );
         }
 
@@ -2737,9 +2737,9 @@ namespace RetroEditor.Tests
                     mnemonic: "ORA",
                     bytesConsumed: 3,
                     operandCount: 1,
-                    operandText: new[] { "$1234,X" }
+                    operandText: ["$1234,X"]
                 ),
-                new byte[] { 0x1D, 0x34, 0x12 }
+                [0x1D, 0x34, 0x12]
             );
         }
 
@@ -2752,9 +2752,9 @@ namespace RetroEditor.Tests
                     mnemonic: "ORA",
                     bytesConsumed: 4,
                     operandCount: 1,
-                    operandText: new[] { "$123456,X" }
+                    operandText: ["$123456,X"]
                 ),
-                new byte[] { 0x1F, 0x56, 0x34, 0x12 }
+                [0x1F, 0x56, 0x34, 0x12]
             );
         }
 
@@ -2767,9 +2767,9 @@ namespace RetroEditor.Tests
                     mnemonic: "ORA",
                     bytesConsumed: 3,
                     operandCount: 1,
-                    operandText: new[] { "$1234,Y" }
+                    operandText: ["$1234,Y"]
                 ),
-                new byte[] { 0x19, 0x34, 0x12 }
+                [0x19, 0x34, 0x12]
             );
         }
 
@@ -2782,9 +2782,9 @@ namespace RetroEditor.Tests
                     mnemonic: "ORA",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "$42,X" }
+                    operandText: ["$42,X"]
                 ),
-                new byte[] { 0x15, 0x42 }
+                [0x15, 0x42]
             );
         }
 
@@ -2797,9 +2797,9 @@ namespace RetroEditor.Tests
                     mnemonic: "ORA",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "($42,X)" }
+                    operandText: ["($42,X)"]
                 ),
-                new byte[] { 0x01, 0x42 }
+                [0x01, 0x42]
             );
         }
 
@@ -2812,9 +2812,9 @@ namespace RetroEditor.Tests
                     mnemonic: "ORA",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "($42),Y" }
+                    operandText: ["($42),Y"]
                 ),
-                new byte[] { 0x11, 0x42 }
+                [0x11, 0x42]
             );
         }
 
@@ -2827,9 +2827,9 @@ namespace RetroEditor.Tests
                     mnemonic: "ORA",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "[$42],Y" }
+                    operandText: ["[$42],Y"]
                 ),
-                new byte[] { 0x17, 0x42 }
+                [0x17, 0x42]
             );
         }
 
@@ -2842,9 +2842,9 @@ namespace RetroEditor.Tests
                     mnemonic: "ORA",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "$42,S" }
+                    operandText: ["$42,S"]
                 ),
-                new byte[] { 0x03, 0x42 }
+                [0x03, 0x42]
             );
         }
 
@@ -2857,9 +2857,9 @@ namespace RetroEditor.Tests
                     mnemonic: "ORA",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "($42,S),Y" }
+                    operandText: ["($42,S),Y"]
                 ),
-                new byte[] { 0x13, 0x42 }
+                [0x13, 0x42]
             );
         }
 
@@ -2872,9 +2872,9 @@ namespace RetroEditor.Tests
                     mnemonic: "PEA",
                     bytesConsumed: 3,
                     operandCount: 1,
-                    operandText: new[] { "$1234" }
+                    operandText: ["$1234"]
                 ),
-                new byte[] { 0xF4, 0x34, 0x12 }
+                [0xF4, 0x34, 0x12]
             );
         }
 
@@ -2887,9 +2887,9 @@ namespace RetroEditor.Tests
                     mnemonic: "PEI",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "($42)" }
+                    operandText: ["($42)"]
                 ),
-                new byte[] { 0xD4, 0x42 }
+                [0xD4, 0x42]
             );
         }
 
@@ -2902,9 +2902,9 @@ namespace RetroEditor.Tests
                     mnemonic: "PER",
                     bytesConsumed: 3,
                     operandCount: 1,
-                    operandText: new[] { "$9203" }
+                    operandText: ["$9203"]
                 ),
-                new byte[] { 0x62, 0x00, 0x12 }
+                [0x62, 0x00, 0x12]
             );
         }
 
@@ -2918,7 +2918,7 @@ namespace RetroEditor.Tests
                     bytesConsumed: 1,
                     operandCount: 0
                 ),
-                new byte[] { 0x48 }
+                [0x48]
             );
         }
 
@@ -2932,7 +2932,7 @@ namespace RetroEditor.Tests
                     bytesConsumed: 1,
                     operandCount: 0
                 ),
-                new byte[] { 0x8B }
+                [0x8B]
             );
         }
 
@@ -2946,7 +2946,7 @@ namespace RetroEditor.Tests
                     bytesConsumed: 1,
                     operandCount: 0
                 ),
-                new byte[] { 0x0B }
+                [0x0B]
             );
         }
 
@@ -2960,7 +2960,7 @@ namespace RetroEditor.Tests
                     bytesConsumed: 1,
                     operandCount: 0
                 ),
-                new byte[] { 0x4B }
+                [0x4B]
             );
         }
 
@@ -2974,7 +2974,7 @@ namespace RetroEditor.Tests
                     bytesConsumed: 1,
                     operandCount: 0
                 ),
-                new byte[] { 0x08 }
+                [0x08]
             );
         }
 
@@ -2988,7 +2988,7 @@ namespace RetroEditor.Tests
                     bytesConsumed: 1,
                     operandCount: 0
                 ),
-                new byte[] { 0xDA }
+                [0xDA]
             );
         }
 
@@ -3002,7 +3002,7 @@ namespace RetroEditor.Tests
                     bytesConsumed: 1,
                     operandCount: 0
                 ),
-                new byte[] { 0x5A }
+                [0x5A]
             );
         }
 
@@ -3016,7 +3016,7 @@ namespace RetroEditor.Tests
                     bytesConsumed: 1,
                     operandCount: 0
                 ),
-                new byte[] { 0x68 }
+                [0x68]
             );
         }
 
@@ -3030,7 +3030,7 @@ namespace RetroEditor.Tests
                     bytesConsumed: 1,
                     operandCount: 0
                 ),
-                new byte[] { 0xAB }
+                [0xAB]
             );
         }
 
@@ -3044,7 +3044,7 @@ namespace RetroEditor.Tests
                     bytesConsumed: 1,
                     operandCount: 0
                 ),
-                new byte[] { 0x2B }
+                [0x2B]
             );
         }
 
@@ -3058,7 +3058,7 @@ namespace RetroEditor.Tests
                     bytesConsumed: 1,
                     operandCount: 0
                 ),
-                new byte[] { 0x28 }
+                [0x28]
             );
         }
 
@@ -3072,7 +3072,7 @@ namespace RetroEditor.Tests
                     bytesConsumed: 1,
                     operandCount: 0
                 ),
-                new byte[] { 0xFA }
+                [0xFA]
             );
         }
 
@@ -3086,7 +3086,7 @@ namespace RetroEditor.Tests
                     bytesConsumed: 1,
                     operandCount: 0
                 ),
-                new byte[] { 0x7A }
+                [0x7A]
             );
         }
 
@@ -3099,9 +3099,9 @@ namespace RetroEditor.Tests
                     mnemonic: "REP",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "#$42" }
+                    operandText: ["#$42"]
                 ),
-                new byte[] { 0xC2, 0x42 }
+                [0xC2, 0x42]
             );
         }
 
@@ -3115,7 +3115,7 @@ namespace RetroEditor.Tests
                     bytesConsumed: 1,
                     operandCount: 0
                 ),
-                new byte[] { 0x2A }
+                [0x2A]
             );
         }
 
@@ -3128,9 +3128,9 @@ namespace RetroEditor.Tests
                     mnemonic: "ROL",
                     bytesConsumed: 3,
                     operandCount: 1,
-                    operandText: new[] { "$1234" }
+                    operandText: ["$1234"]
                 ),
-                new byte[] { 0x2E, 0x34, 0x12 }
+                [0x2E, 0x34, 0x12]
             );
         }
 
@@ -3143,9 +3143,9 @@ namespace RetroEditor.Tests
                     mnemonic: "ROL",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "$42" }
+                    operandText: ["$42"]
                 ),
-                new byte[] { 0x26, 0x42 }
+                [0x26, 0x42]
             );
         }
 
@@ -3158,9 +3158,9 @@ namespace RetroEditor.Tests
                     mnemonic: "ROL",
                     bytesConsumed: 3,
                     operandCount: 1,
-                    operandText: new[] { "$1234,X" }
+                    operandText: ["$1234,X"]
                 ),
-                new byte[] { 0x3E, 0x34, 0x12 }
+                [0x3E, 0x34, 0x12]
             );
         }
 
@@ -3173,9 +3173,9 @@ namespace RetroEditor.Tests
                     mnemonic: "ROL",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "$42,X" }
+                    operandText: ["$42,X"]
                 ),
-                new byte[] { 0x36, 0x42 }
+                [0x36, 0x42]
             );
         }
 
@@ -3189,7 +3189,7 @@ namespace RetroEditor.Tests
                     bytesConsumed: 1,
                     operandCount: 0
                 ),
-                new byte[] { 0x6A }
+                [0x6A]
             );
         }
 
@@ -3202,9 +3202,9 @@ namespace RetroEditor.Tests
                     mnemonic: "ROR",
                     bytesConsumed: 3,
                     operandCount: 1,
-                    operandText: new[] { "$1234" }
+                    operandText: ["$1234"]
                 ),
-                new byte[] { 0x6E, 0x34, 0x12 }
+                [0x6E, 0x34, 0x12]
             );
         }
 
@@ -3217,9 +3217,9 @@ namespace RetroEditor.Tests
                     mnemonic: "ROR",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "$42" }
+                    operandText: ["$42"]
                 ),
-                new byte[] { 0x66, 0x42 }
+                [0x66, 0x42]
             );
         }
 
@@ -3232,9 +3232,9 @@ namespace RetroEditor.Tests
                     mnemonic: "ROR",
                     bytesConsumed: 3,
                     operandCount: 1,
-                    operandText: new[] { "$1234,X" }
+                    operandText: ["$1234,X"]
                 ),
-                new byte[] { 0x7E, 0x34, 0x12 }
+                [0x7E, 0x34, 0x12]
             );
         }
 
@@ -3247,9 +3247,9 @@ namespace RetroEditor.Tests
                     mnemonic: "ROR",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "$42,X" }
+                    operandText: ["$42,X"]
                 ),
-                new byte[] { 0x76, 0x42 }
+                [0x76, 0x42]
             );
         }
 
@@ -3264,7 +3264,7 @@ namespace RetroEditor.Tests
                     operandCount: 0,
                     isTerminator: true
                 ),
-                new byte[] { 0x40 }
+                [0x40]
             );
         }
 
@@ -3279,7 +3279,7 @@ namespace RetroEditor.Tests
                     operandCount: 0,
                     isTerminator: true
                 ),
-                new byte[] { 0x60 }
+                [0x60]
             );
         }
 
@@ -3294,7 +3294,7 @@ namespace RetroEditor.Tests
                     operandCount: 0,
                     isTerminator: true
                 ),
-                new byte[] { 0x6B }
+                [0x6B]
             );
         }
 
@@ -3328,7 +3328,7 @@ namespace RetroEditor.Tests
                     mnemonic: "SBC",
                     bytesConsumed: testCase.ExpectedLength,
                     operandCount: 1,
-                    operandText: new[] { testCase.ExpectedOperand }
+                    operandText: [testCase.ExpectedOperand]
                 );
             }
         }
@@ -3342,9 +3342,9 @@ namespace RetroEditor.Tests
                     mnemonic: "SBC",
                     bytesConsumed: 3,
                     operandCount: 1,
-                    operandText: new[] { "$1234" }
+                    operandText: ["$1234"]
                 ),
-                new byte[] { 0xED, 0x34, 0x12 }
+                [0xED, 0x34, 0x12]
             );
         }
 
@@ -3357,9 +3357,9 @@ namespace RetroEditor.Tests
                     mnemonic: "SBC",
                     bytesConsumed: 4,
                     operandCount: 1,
-                    operandText: new[] { "$123456" }
+                    operandText: ["$123456"]
                 ),
-                new byte[] { 0xEF, 0x56, 0x34, 0x12 }
+                [0xEF, 0x56, 0x34, 0x12]
             );
         }
 
@@ -3372,9 +3372,9 @@ namespace RetroEditor.Tests
                     mnemonic: "SBC",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "$42" }
+                    operandText: ["$42"]
                 ),
-                new byte[] { 0xE5, 0x42 }
+                [0xE5, 0x42]
             );
         }
 
@@ -3387,9 +3387,9 @@ namespace RetroEditor.Tests
                     mnemonic: "SBC",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "($42)" }
+                    operandText: ["($42)"]
                 ),
-                new byte[] { 0xF2, 0x42 }
+                [0xF2, 0x42]
             );
         }
 
@@ -3402,9 +3402,9 @@ namespace RetroEditor.Tests
                     mnemonic: "SBC",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "[$42]" }
+                    operandText: ["[$42]"]
                 ),
-                new byte[] { 0xE7, 0x42 }
+                [0xE7, 0x42]
             );
         }
 
@@ -3417,9 +3417,9 @@ namespace RetroEditor.Tests
                     mnemonic: "SBC",
                     bytesConsumed: 3,
                     operandCount: 1,
-                    operandText: new[] { "$1234,X" }
+                    operandText: ["$1234,X"]
                 ),
-                new byte[] { 0xFD, 0x34, 0x12 }
+                [0xFD, 0x34, 0x12]
             );
         }
 
@@ -3432,9 +3432,9 @@ namespace RetroEditor.Tests
                     mnemonic: "SBC",
                     bytesConsumed: 4,
                     operandCount: 1,
-                    operandText: new[] { "$123456,X" }
+                    operandText: ["$123456,X"]
                 ),
-                new byte[] { 0xFF, 0x56, 0x34, 0x12 }
+                [0xFF, 0x56, 0x34, 0x12]
             );
         }
 
@@ -3447,9 +3447,9 @@ namespace RetroEditor.Tests
                     mnemonic: "SBC",
                     bytesConsumed: 3,
                     operandCount: 1,
-                    operandText: new[] { "$1234,Y" }
+                    operandText: ["$1234,Y"]
                 ),
-                new byte[] { 0xF9, 0x34, 0x12 }
+                [0xF9, 0x34, 0x12]
             );
         }
 
@@ -3462,9 +3462,9 @@ namespace RetroEditor.Tests
                     mnemonic: "SBC",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "$42,X" }
+                    operandText: ["$42,X"]
                 ),
-                new byte[] { 0xF5, 0x42 }
+                [0xF5, 0x42]
             );
         }
 
@@ -3477,9 +3477,9 @@ namespace RetroEditor.Tests
                     mnemonic: "SBC",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "($42,X)" }
+                    operandText: ["($42,X)"]
                 ),
-                new byte[] { 0xE1, 0x42 }
+                [0xE1, 0x42]
             );
         }
 
@@ -3492,9 +3492,9 @@ namespace RetroEditor.Tests
                     mnemonic: "SBC",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "($42),Y" }
+                    operandText: ["($42),Y"]
                 ),
-                new byte[] { 0xF1, 0x42 }
+                [0xF1, 0x42]
             );
         }
 
@@ -3507,9 +3507,9 @@ namespace RetroEditor.Tests
                     mnemonic: "SBC",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "[$42],Y" }
+                    operandText: ["[$42],Y"]
                 ),
-                new byte[] { 0xF7, 0x42 }
+                [0xF7, 0x42]
             );
         }
 
@@ -3522,9 +3522,9 @@ namespace RetroEditor.Tests
                     mnemonic: "SBC",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "$42,S" }
+                    operandText: ["$42,S"]
                 ),
-                new byte[] { 0xE3, 0x42 }
+                [0xE3, 0x42]
             );
         }
 
@@ -3537,9 +3537,9 @@ namespace RetroEditor.Tests
                     mnemonic: "SBC",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "($42,S),Y" }
+                    operandText: ["($42,S),Y"]
                 ),
-                new byte[] { 0xF3, 0x42 }
+                [0xF3, 0x42]
             );
         }
 
@@ -3553,7 +3553,7 @@ namespace RetroEditor.Tests
                     bytesConsumed: 1,
                     operandCount: 0
                 ),
-                new byte[] { 0x38 }
+                [0x38]
             );
         }
 
@@ -3567,7 +3567,7 @@ namespace RetroEditor.Tests
                     bytesConsumed: 1,
                     operandCount: 0
                 ),
-                new byte[] { 0xF8 }
+                [0xF8]
             );
         }
 
@@ -3581,7 +3581,7 @@ namespace RetroEditor.Tests
                     bytesConsumed: 1,
                     operandCount: 0
                 ),
-                new byte[] { 0x78 }
+                [0x78]
             );
         }
 
@@ -3594,9 +3594,9 @@ namespace RetroEditor.Tests
                     mnemonic: "SEP",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "#$42" }
+                    operandText: ["#$42"]
                 ),
-                new byte[] { 0xE2, 0x42 }
+                [0xE2, 0x42]
             );
         }
 
@@ -3609,9 +3609,9 @@ namespace RetroEditor.Tests
                     mnemonic: "STA",
                     bytesConsumed: 3,
                     operandCount: 1,
-                    operandText: new[] { "$1234" }
+                    operandText: ["$1234"]
                 ),
-                new byte[] { 0x8D, 0x34, 0x12 }
+                [0x8D, 0x34, 0x12]
             );
         }
 
@@ -3624,9 +3624,9 @@ namespace RetroEditor.Tests
                     mnemonic: "STA",
                     bytesConsumed: 4,
                     operandCount: 1,
-                    operandText: new[] { "$123456" }
+                    operandText: ["$123456"]
                 ),
-                new byte[] { 0x8F, 0x56, 0x34, 0x12 }
+                [0x8F, 0x56, 0x34, 0x12]
             );
         }
 
@@ -3639,9 +3639,9 @@ namespace RetroEditor.Tests
                     mnemonic: "STA",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "$42" }
+                    operandText: ["$42"]
                 ),
-                new byte[] { 0x85, 0x42 }
+                [0x85, 0x42]
             );
         }
 
@@ -3654,9 +3654,9 @@ namespace RetroEditor.Tests
                     mnemonic: "STA",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "($42)" }
+                    operandText: ["($42)"]
                 ),
-                new byte[] { 0x92, 0x42 }
+                [0x92, 0x42]
             );
         }
 
@@ -3669,9 +3669,9 @@ namespace RetroEditor.Tests
                     mnemonic: "STA",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "[$42]" }
+                    operandText: ["[$42]"]
                 ),
-                new byte[] { 0x87, 0x42 }
+                [0x87, 0x42]
             );
         }
 
@@ -3684,9 +3684,9 @@ namespace RetroEditor.Tests
                     mnemonic: "STA",
                     bytesConsumed: 3,
                     operandCount: 1,
-                    operandText: new[] { "$1234,X" }
+                    operandText: ["$1234,X"]
                 ),
-                new byte[] { 0x9D, 0x34, 0x12 }
+                [0x9D, 0x34, 0x12]
             );
         }
 
@@ -3699,9 +3699,9 @@ namespace RetroEditor.Tests
                     mnemonic: "STA",
                     bytesConsumed: 4,
                     operandCount: 1,
-                    operandText: new[] { "$123456,X" }
+                    operandText: ["$123456,X"]
                 ),
-                new byte[] { 0x9F, 0x56, 0x34, 0x12 }
+                [0x9F, 0x56, 0x34, 0x12]
             );
         }
 
@@ -3714,9 +3714,9 @@ namespace RetroEditor.Tests
                     mnemonic: "STA",
                     bytesConsumed: 3,
                     operandCount: 1,
-                    operandText: new[] { "$1234,Y" }
+                    operandText: ["$1234,Y"]
                 ),
-                new byte[] { 0x99, 0x34, 0x12 }
+                [0x99, 0x34, 0x12]
             );
         }
 
@@ -3729,9 +3729,9 @@ namespace RetroEditor.Tests
                     mnemonic: "STA",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "$42,X" }
+                    operandText: ["$42,X"]
                 ),
-                new byte[] { 0x95, 0x42 }
+                [0x95, 0x42]
             );
         }
 
@@ -3744,9 +3744,9 @@ namespace RetroEditor.Tests
                     mnemonic: "STA",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "($42,X)" }
+                    operandText: ["($42,X)"]
                 ),
-                new byte[] { 0x81, 0x42 }
+                [0x81, 0x42]
             );
         }
 
@@ -3759,9 +3759,9 @@ namespace RetroEditor.Tests
                     mnemonic: "STA",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "($42),Y" }
+                    operandText: ["($42),Y"]
                 ),
-                new byte[] { 0x91, 0x42 }
+                [0x91, 0x42]
             );
         }
 
@@ -3774,9 +3774,9 @@ namespace RetroEditor.Tests
                     mnemonic: "STA",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "[$42],Y" }
+                    operandText: ["[$42],Y"]
                 ),
-                new byte[] { 0x97, 0x42 }
+                [0x97, 0x42]
             );
         }
 
@@ -3789,9 +3789,9 @@ namespace RetroEditor.Tests
                     mnemonic: "STA",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "$42,S" }
+                    operandText: ["$42,S"]
                 ),
-                new byte[] { 0x83, 0x42 }
+                [0x83, 0x42]
             );
         }
 
@@ -3804,9 +3804,9 @@ namespace RetroEditor.Tests
                     mnemonic: "STA",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "($42,S),Y" }
+                    operandText: ["($42,S),Y"]
                 ),
-                new byte[] { 0x93, 0x42 }
+                [0x93, 0x42]
             );
         }
 
@@ -3821,7 +3821,7 @@ namespace RetroEditor.Tests
                     operandCount: 0,
                     isTerminator: true
                 ),
-                new byte[] { 0xDB }
+                [0xDB]
             );
         }
 
@@ -3834,9 +3834,9 @@ namespace RetroEditor.Tests
                     mnemonic: "STX",
                     bytesConsumed: 3,
                     operandCount: 1,
-                    operandText: new[] { "$1234" }
+                    operandText: ["$1234"]
                 ),
-                new byte[] { 0x8E, 0x34, 0x12 }
+                [0x8E, 0x34, 0x12]
             );
         }
 
@@ -3849,9 +3849,9 @@ namespace RetroEditor.Tests
                     mnemonic: "STX",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "$42" }
+                    operandText: ["$42"]
                 ),
-                new byte[] { 0x86, 0x42 }
+                [0x86, 0x42]
             );
         }
 
@@ -3864,9 +3864,9 @@ namespace RetroEditor.Tests
                     mnemonic: "STX",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "$42,Y" }
+                    operandText: ["$42,Y"]
                 ),
-                new byte[] { 0x96, 0x42 }
+                [0x96, 0x42]
             );
         }
 
@@ -3879,9 +3879,9 @@ namespace RetroEditor.Tests
                     mnemonic: "STY",
                     bytesConsumed: 3,
                     operandCount: 1,
-                    operandText: new[] { "$1234" }
+                    operandText: ["$1234"]
                 ),
-                new byte[] { 0x8C, 0x34, 0x12 }
+                [0x8C, 0x34, 0x12]
             );
         }
 
@@ -3894,9 +3894,9 @@ namespace RetroEditor.Tests
                     mnemonic: "STY",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "$42" }
+                    operandText: ["$42"]
                 ),
-                new byte[] { 0x84, 0x42 }
+                [0x84, 0x42]
             );
         }
 
@@ -3909,9 +3909,9 @@ namespace RetroEditor.Tests
                     mnemonic: "STY",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "$42,X" }
+                    operandText: ["$42,X"]
                 ),
-                new byte[] { 0x94, 0x42 }
+                [0x94, 0x42]
             );
         }
 
@@ -3924,9 +3924,9 @@ namespace RetroEditor.Tests
                     mnemonic: "STZ",
                     bytesConsumed: 3,
                     operandCount: 1,
-                    operandText: new[] { "$1234" }
+                    operandText: ["$1234"]
                 ),
-                new byte[] { 0x9C, 0x34, 0x12 }
+                [0x9C, 0x34, 0x12]
             );
         }
 
@@ -3939,9 +3939,9 @@ namespace RetroEditor.Tests
                     mnemonic: "STZ",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "$42" }
+                    operandText: ["$42"]
                 ),
-                new byte[] { 0x64, 0x42 }
+                [0x64, 0x42]
             );
         }
 
@@ -3954,9 +3954,9 @@ namespace RetroEditor.Tests
                     mnemonic: "STZ",
                     bytesConsumed: 3,
                     operandCount: 1,
-                    operandText: new[] { "$1234,X" }
+                    operandText: ["$1234,X"]
                 ),
-                new byte[] { 0x9E, 0x34, 0x12 }
+                [0x9E, 0x34, 0x12]
             );
         }
 
@@ -3969,9 +3969,9 @@ namespace RetroEditor.Tests
                     mnemonic: "STZ",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "$42,X" }
+                    operandText: ["$42,X"]
                 ),
-                new byte[] { 0x74, 0x42 }
+                [0x74, 0x42]
             );
         }
 
@@ -3985,7 +3985,7 @@ namespace RetroEditor.Tests
                     bytesConsumed: 1,
                     operandCount: 0
                 ),
-                new byte[] { 0xAA }
+                [0xAA]
             );
         }
 
@@ -3999,7 +3999,7 @@ namespace RetroEditor.Tests
                     bytesConsumed: 1,
                     operandCount: 0
                 ),
-                new byte[] { 0xA8 }
+                [0xA8]
             );
         }
 
@@ -4013,7 +4013,7 @@ namespace RetroEditor.Tests
                     bytesConsumed: 1,
                     operandCount: 0
                 ),
-                new byte[] { 0x5B }
+                [0x5B]
             );
         }
 
@@ -4027,7 +4027,7 @@ namespace RetroEditor.Tests
                     bytesConsumed: 1,
                     operandCount: 0
                 ),
-                new byte[] { 0x1B }
+                [0x1B]
             );
         }
 
@@ -4041,7 +4041,7 @@ namespace RetroEditor.Tests
                     bytesConsumed: 1,
                     operandCount: 0
                 ),
-                new byte[] { 0x7B }
+                [0x7B]
             );
         }
 
@@ -4055,7 +4055,7 @@ namespace RetroEditor.Tests
                     bytesConsumed: 1,
                     operandCount: 0
                 ),
-                new byte[] { 0x3B }
+                [0x3B]
             );
         }
 
@@ -4069,7 +4069,7 @@ namespace RetroEditor.Tests
                     bytesConsumed: 1,
                     operandCount: 0
                 ),
-                new byte[] { 0xBA }
+                [0xBA]
             );
         }
 
@@ -4083,7 +4083,7 @@ namespace RetroEditor.Tests
                     bytesConsumed: 1,
                     operandCount: 0
                 ),
-                new byte[] { 0x8A }
+                [0x8A]
             );
         }
 
@@ -4097,7 +4097,7 @@ namespace RetroEditor.Tests
                     bytesConsumed: 1,
                     operandCount: 0
                 ),
-                new byte[] { 0x9A }
+                [0x9A]
             );
         }
 
@@ -4111,7 +4111,7 @@ namespace RetroEditor.Tests
                     bytesConsumed: 1,
                     operandCount: 0
                 ),
-                new byte[] { 0x9B }
+                [0x9B]
             );
         }
 
@@ -4125,7 +4125,7 @@ namespace RetroEditor.Tests
                     bytesConsumed: 1,
                     operandCount: 0
                 ),
-                new byte[] { 0x98 }
+                [0x98]
             );
         }
 
@@ -4139,7 +4139,7 @@ namespace RetroEditor.Tests
                     bytesConsumed: 1,
                     operandCount: 0
                 ),
-                new byte[] { 0xBB }
+                [0xBB]
             );
         }
 
@@ -4152,9 +4152,9 @@ namespace RetroEditor.Tests
                     mnemonic: "TRB",
                     bytesConsumed: 3,
                     operandCount: 1,
-                    operandText: new[] { "$1234" }
+                    operandText: ["$1234"]
                 ),
-                new byte[] { 0x1C, 0x34, 0x12 }
+                [0x1C, 0x34, 0x12]
             );
         }
 
@@ -4167,9 +4167,9 @@ namespace RetroEditor.Tests
                     mnemonic: "TRB",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "$42" }
+                    operandText: ["$42"]
                 ),
-                new byte[] { 0x14, 0x42 }
+                [0x14, 0x42]
             );
         }
 
@@ -4182,9 +4182,9 @@ namespace RetroEditor.Tests
                     mnemonic: "TSB",
                     bytesConsumed: 3,
                     operandCount: 1,
-                    operandText: new[] { "$1234" }
+                    operandText: ["$1234"]
                 ),
-                new byte[] { 0x0C, 0x34, 0x12 }
+                [0x0C, 0x34, 0x12]
             );
         }
 
@@ -4197,9 +4197,9 @@ namespace RetroEditor.Tests
                     mnemonic: "TSB",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "$42" }
+                    operandText: ["$42"]
                 ),
-                new byte[] { 0x04, 0x42 }
+                [0x04, 0x42]
             );
         }
 
@@ -4213,7 +4213,7 @@ namespace RetroEditor.Tests
                     bytesConsumed: 1,
                     operandCount: 0
                 ),
-                new byte[] { 0xCB }
+                [0xCB]
             );
         }
 
@@ -4226,9 +4226,9 @@ namespace RetroEditor.Tests
                     mnemonic: "WDM",
                     bytesConsumed: 2,
                     operandCount: 1,
-                    operandText: new[] { "#$42" }
+                    operandText: ["#$42"]
                 ),
-                new byte[] { 0x42, 0x42 }
+                [0x42, 0x42]
             );
         }
 
@@ -4242,7 +4242,7 @@ namespace RetroEditor.Tests
                     bytesConsumed: 1,
                     operandCount: 0
                 ),
-                new byte[] { 0xEB }
+                [0xEB]
             );
         }
 
@@ -4256,7 +4256,7 @@ namespace RetroEditor.Tests
                     bytesConsumed: 1,
                     operandCount: 0
                 ),
-                new byte[] { 0xFB }
+                [0xFB]
             );
         }
     }

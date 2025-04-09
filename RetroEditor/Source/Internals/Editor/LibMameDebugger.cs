@@ -47,6 +47,7 @@ internal class LibMameDebugger
         this.memoryCounter=0;
         this.plugin = plugin;
         this.plugin.SetDebuggerCallback(DebuggerCallback);
+        threadPump = ExecuteOperationsThreaded;
     }
 /*
     public void OpenDebugger()
@@ -282,7 +283,6 @@ internal class LibMameDebugger
                 return 1;
             case 3:
                 // Thread Pump
-                threadPump = ExecuteOperationsThreaded;
                 threadPumpPtr = Marshal.GetFunctionPointerForDelegate(threadPump);
                 return threadPumpPtr;
             default:
