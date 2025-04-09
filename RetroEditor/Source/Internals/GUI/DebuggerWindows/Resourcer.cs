@@ -89,7 +89,7 @@ internal class Resourcer : IWindow
             debugger.QueueCommand("gvblank", (s,id)=>{traceCommandInProgress=false;});
         }
         ImGui.SameLine();
-        if (ImGui.Button("Capture 500 Milliseconds"))
+        if (ImGui.Button("Capture 1 Second"))
         {
             traceInProgress = true;
             if (File.Exists("trace.log"))
@@ -103,7 +103,7 @@ internal class Resourcer : IWindow
             // Set up trace logging
             debugger.QueueCommand($"trace {traceFile},,noloop,{{tracelog \"E=%02X|P=%02X|\",e,p}}",(s,id)=>{});
             // Wait for vblank
-            debugger.QueueCommand("gtime 500",(s,id)=>{traceCommandInProgress=false;});
+            debugger.QueueCommand("gtime 1000",(s,id)=>{traceCommandInProgress=false;});
         }
         ImGui.SameLine();
         if (ImGui.Button("New Trace"))
@@ -573,7 +573,7 @@ internal class Resourcer : IWindow
                 if (region==RomDataParser.SNESLoRomRegion.ROM)
                 {
                     var r = romData.GetRomRanges.GetRangeContainingAddress(mappedAddress);
-                    if (r.Value!=null && r.Value.GetType() == typeof(CodeRegion))
+                    if (r!=null && r.Value.GetType() == typeof(CodeRegion))
                     {
                         // Already disassembled
                         return;
@@ -659,7 +659,7 @@ internal class Resourcer : IWindow
                 debugger.QueueCommand("traceflush",(s,id)=>{});
                 debugger.QueueCommand("trace off",(s,id)=>{traceCommandFinished=true;});
             }
-            if (traceCommandFinished)
+            if (debugger.IsStopped && traceCommandFinished)
             {
                 // Read and parse trace file
                 if (File.Exists(traceFile))

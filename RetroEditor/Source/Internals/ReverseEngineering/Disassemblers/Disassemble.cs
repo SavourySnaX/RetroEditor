@@ -21,7 +21,7 @@ internal class Operand
     public bool IsDestination { get; set; }
 
     /// <summary>
-    /// The value of the operand (if it's an immediate value)
+    /// The value of the operand (if it's directly compulable - e.g. an immediate value)
     /// </summary>
     public ulong? Value { get; set; }
 

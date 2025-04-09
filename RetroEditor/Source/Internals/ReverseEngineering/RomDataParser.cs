@@ -469,7 +469,7 @@ internal class RomDataParser
                 }
             }
             var current = romRanges.GetRangeContainingAddress(address, out var lineOff);
-            if (current.Value != null)
+            if (current != null)
             {
                 if (current.Value is CodeRegion cregion)
                 {
