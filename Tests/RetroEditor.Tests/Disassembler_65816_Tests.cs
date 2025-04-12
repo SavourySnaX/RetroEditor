@@ -76,7 +76,7 @@ namespace RetroEditor.Tests
                 foreach (var operand in operands)
                 {
                     Assert.IsNotNull(operand);
-                    Assert.AreEqual(operandText[o], operand.Text);
+                    Assert.AreEqual(operandText[o], operand.Text());
                     o++;
                 }
             }

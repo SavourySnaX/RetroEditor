@@ -1,33 +1,25 @@
 using RetroEditor.Plugins;
 
-/// <summary>
-/// Represents an operand in an instruction
-/// </summary>
-internal class Operand
-{
-    /// <summary>
-    /// The text representation of the operand
-    /// </summary>
-    public string Text { get; set; }
 
-    /// <summary>
-    /// Whether this operand is a source operand
-    /// </summary>
+internal interface ISymbolProvider
+{
+    bool HasSymbol(ulong address, int symbolLength);  // Maybe we need more disambiguation ... TODO
+    string GetSymbol(ulong address, int symbolLength);  // Maybe we need more disambiguation ... TODO
+}
+
+internal abstract class IOperand
+{
+    public abstract string Text(ISymbolProvider symbols);
+    public abstract string Text();
+
     public bool IsSource { get; set; }
 
-    /// <summary>
-    /// Whether this operand is a destination operand
-    /// </summary>
     public bool IsDestination { get; set; }
 
-    /// <summary>
-    /// The value of the operand (if it's directly compulable - e.g. an immediate value)
-    /// </summary>
-    public ulong? Value { get; set; }
+    public ulong Value { get; set; }
 
-    public Operand(string text, bool isSource = false, bool isDestination = false, ulong? value = null)
+    public IOperand(bool isSource = false, bool isDestination = false, ulong value = 0)
     {
-        Text = text;
         IsSource = isSource;
         IsDestination = isDestination;
         Value = value;
@@ -52,7 +44,7 @@ internal class Instruction
     /// <summary>
     /// The operands of the instruction
     /// </summary>
-    public List<Operand> Operands { get; set; }
+    public List<IOperand> Operands { get; set; }
 
     /// <summary>
     /// The raw bytes that make up this instruction
@@ -77,14 +69,14 @@ internal class Instruction
 
     public Instruction()
     {
-        Operands = new List<Operand>();
+        Operands = new List<IOperand>();
         NextAddresses = new List<ulong>();
         Mnemonic = string.Empty;
         Bytes = Array.Empty<byte>();
         cpuState = new EmptyState();
     }
 
-    public Instruction(ulong address, string mnemonic, List<Operand> operands, byte[] bytes, ICpuState state)
+    public Instruction(ulong address, string mnemonic, List<IOperand> operands, byte[] bytes, ICpuState state)
     {
         Address = address;
         Mnemonic = mnemonic;
@@ -96,13 +88,13 @@ internal class Instruction
 
     public override string ToString()
     {
-        string operandsText = string.Join(", ", Operands.Select(o => o.Text));
+        string operandsText = string.Join(", ", Operands.Select(o => o.Text()));
         return $"{Address:X8}: {Mnemonic} {operandsText}";
     }
 
-    public string InstructionText()
+    public string InstructionText(ISymbolProvider symbols)
     {
-        string operandsText = string.Join(", ", Operands.Select(o => o.Text));
+        string operandsText = string.Join(", ", Operands.Select(o => o.Text(symbols)));
         return $"{Mnemonic} {operandsText}";
     }
 }

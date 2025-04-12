@@ -440,7 +440,7 @@ internal class SNES65816Disassembler : DisassemblerBase
         if (bytes.Length < baseLength)
             return DecodeResult.NeedMoreBytes(baseLength - bytes.Length);
 
-        var operands = new List<Operand>();
+        var operands = new List<IOperand>();
         var instructionBytes = new byte[baseLength];
         bytes.Slice(0, baseLength).CopyTo(instructionBytes);
 
@@ -489,7 +489,7 @@ internal class SNES65816Disassembler : DisassemblerBase
                 break;
             case AddressingMode.ImmediateShort:
                 if (baseLength != 2) return DecodeResult.CreateError($"Invalid {mnemonic} instruction length");
-                operands.Add(new Operand($"#${bytes[1]:X2}", value: bytes[1]));
+                operands.Add(new O65816_ImmediateByteOperand(bytes[1]));
                 break;
 
             case AddressingMode.ImmediateA:
@@ -497,135 +497,135 @@ internal class SNES65816Disassembler : DisassemblerBase
                 if (baseLength != immediateLength) return DecodeResult.CreateError($"Invalid {mnemonic} immediate instruction length");
                 if (immediateLength == 2)
                 {
-                    operands.Add(new Operand($"#${bytes[1]:X2}", value: bytes[1]));
+                    operands.Add(new O65816_ImmediateByteOperand(bytes[1]));
                 }
                 else
                 {
                     var immediateValue = (ulong)(bytes[1] + (bytes[2] << 8));
-                    operands.Add(new Operand($"#${immediateValue:X4}", value: immediateValue));
+                    operands.Add(new O65816_ImmediateWordOperand(value: immediateValue));
                 }
                 break;
 
             case AddressingMode.Absolute:
                 if (baseLength != 3) return DecodeResult.CreateError($"Invalid {mnemonic} absolute instruction length");
                 var target = (ulong)bytes[1] + ((ulong)bytes[2] << 8);
-                operands.Add(new Operand($"${target:X4}", value: target));
+                operands.Add(new O65816_Absolute(value: target));
                 break;
 
             case AddressingMode.AbsoluteIndexedX:
                 if (baseLength != 3) return DecodeResult.CreateError($"Invalid {mnemonic} absolute X instruction length");
                 target = (ulong)bytes[1] + ((ulong)bytes[2] << 8);
-                operands.Add(new Operand($"${target:X4},X", value: target));
+                operands.Add(new O65816_AbsoluteX(value: target));
                 break;
 
             case AddressingMode.AbsoluteIndexedY:
                 if (baseLength != 3) return DecodeResult.CreateError($"Invalid {mnemonic} absolute Y instruction length");
                 target = (ulong)bytes[1] + ((ulong)bytes[2] << 8);
-                operands.Add(new Operand($"${target:X4},Y", value: target));
+                operands.Add(new O65816_AbsoluteY(value: target));
                 break;
 
             case AddressingMode.AbsoluteLong:
                 if (baseLength != 4) return DecodeResult.CreateError($"Invalid {mnemonic} absolute long instruction length");
                 target = (ulong)bytes[1] + ((ulong)bytes[2] << 8) + ((ulong)bytes[3] << 16);
-                operands.Add(new Operand($"${target:X6}", value: target));
+                operands.Add(new O65816_AbsoluteLong(value: target));
                 break;
 
             case AddressingMode.AbsoluteLongIndexedX:
                 if (baseLength != 4) return DecodeResult.CreateError($"Invalid {mnemonic} absolute long X instruction length");
                 target = (ulong)bytes[1] + ((ulong)bytes[2] << 8) + ((ulong)bytes[3] << 16);
-                operands.Add(new Operand($"${target:X6},X", value: target));
+                operands.Add(new O65816_AbsoluteLongX(value: target));
                 break;
 
             case AddressingMode.AbsoluteIndirect:
                 if (baseLength != 3) return DecodeResult.CreateError($"Invalid {mnemonic} absolute indirect instruction length");
                 target = (ulong)bytes[1] + ((ulong)bytes[2] << 8);
-                operands.Add(new Operand($"(${target:X4})", value: target));
+                operands.Add(new O65816_AbsoluteIndirect(value: target));
                 break;
 
             case AddressingMode.AbsoluteIndirectIndexedX:
                 if (baseLength != 3) return DecodeResult.CreateError($"Invalid {mnemonic} absolute indirect X instruction length");
                 target = (ulong)bytes[1] + ((ulong)bytes[2] << 8);
-                operands.Add(new Operand($"(${target:X4},X)", value: target));
+                operands.Add(new O65816_AbsoluteIndirectX(value: target));
                 break;
 
             case AddressingMode.AbsoluteLongIndirect:
                 if (baseLength != 3) return DecodeResult.CreateError($"Invalid {mnemonic} absolute long indirect instruction length");
                 target = (ulong)bytes[1] + ((ulong)bytes[2] << 8);
-                operands.Add(new Operand($"[${target:X4}]", value: target));
+                operands.Add(new O65816_AbsoluteLongIndirect(value: target));
                 break;
 
             case AddressingMode.DirectPage:
                 if (baseLength != 2) return DecodeResult.CreateError($"Invalid {mnemonic} direct page instruction length");
-                operands.Add(new Operand($"${bytes[1]:X2}", value: bytes[1]));
+                operands.Add(new O65816_DirectPage(value: bytes[1]));
                 break;
 
             case AddressingMode.DirectPageIndexedX:
                 if (baseLength != 2) return DecodeResult.CreateError($"Invalid {mnemonic} direct page X instruction length");
-                operands.Add(new Operand($"${bytes[1]:X2},X", value: bytes[1]));
+                operands.Add(new O65816_DirectPageX(value: bytes[1]));
                 break;
             
             case AddressingMode.DirectPageIndexedY:
                 if (baseLength != 2) return DecodeResult.CreateError($"Invalid {mnemonic} direct page Y instruction length");
-                operands.Add(new Operand($"${bytes[1]:X2},Y", value: bytes[1]));
+                operands.Add(new O65816_DirectPageY(value: bytes[1]));
                 break;
 
             case AddressingMode.DirectPageIndirect:
                 if (baseLength != 2) return DecodeResult.CreateError($"Invalid {mnemonic} direct page indirect instruction length");
-                operands.Add(new Operand($"(${bytes[1]:X2})", value: bytes[1]));
+                operands.Add(new O65816_DirectPageIndirect(value: bytes[1]));
                 break;
 
             case AddressingMode.DirectPageIndirectX:
                 if (baseLength != 2) return DecodeResult.CreateError($"Invalid {mnemonic} direct page indirect X instruction length");
-                operands.Add(new Operand($"(${bytes[1]:X2},X)", value: bytes[1]));
+                operands.Add(new O65816_DirectPageIndirectX(value: bytes[1]));
                 break;
 
             case AddressingMode.DirectPageIndirectIndexedY:
                 if (baseLength != 2) return DecodeResult.CreateError($"Invalid {mnemonic} direct page indirect Y instruction length");
-                operands.Add(new Operand($"(${bytes[1]:X2}),Y", value: bytes[1]));
+                operands.Add(new O65816_DirectPageIndirectY(value: bytes[1]));
                 break;
 
             case AddressingMode.DirectPageIndirectLong:
                 if (baseLength != 2) return DecodeResult.CreateError($"Invalid {mnemonic} direct page indirect long instruction length");
                 target = (ulong)bytes[1];
-                operands.Add(new Operand($"[${target:X2}]", value: target));
+                operands.Add(new O65816_DirectPageIndirectLong(value: target));
                 break;
             
             case AddressingMode.DirectPageIndirectLongIndexedY:
                 if (baseLength != 2) return DecodeResult.CreateError($"Invalid {mnemonic} direct page indirect long indexed Y instruction length");
                 target = (ulong)bytes[1];
-                operands.Add(new Operand($"[${target:X2}],Y", value: target));
+                operands.Add(new O65816_DirectPageIndirectLongY(value: target));
                 break;
 
             case AddressingMode.StackRelative:
                 if (baseLength != 2) return DecodeResult.CreateError($"Invalid {mnemonic} stack relative instruction length");
-                operands.Add(new Operand($"${bytes[1]:X2},S", value: bytes[1]));
+                operands.Add(new O65816_StackRelative(value: bytes[1]));
                 break;
 
             case AddressingMode.StackRelativeIndirectY:
                 if (baseLength != 2) return DecodeResult.CreateError($"Invalid {mnemonic} stack relative indirect Y instruction length");
-                operands.Add(new Operand($"(${bytes[1]:X2},S),Y", value: bytes[1]));
+                operands.Add(new O65816_StackRelativeIndirectY(value: bytes[1]));
                 break;
 
             case AddressingMode.BlockMove:
                 if (baseLength != 3) return DecodeResult.CreateError($"Invalid {mnemonic} block move instruction length");
                 var source = (ulong)bytes[1];
                 var dest = (ulong)bytes[2];
-                operands.Add(new Operand($"${source:X2}", value: source, isSource: true));
-                operands.Add(new Operand($"${dest:X2}", value: source, isDestination: true));
+                operands.Add(new O65816_BlockMove(value: source, true));
+                operands.Add(new O65816_BlockMove(value: dest, false));
                 break;
 
             case AddressingMode.ProgramCounterRelative:
                 if (baseLength != 2) return DecodeResult.CreateError($"Invalid {mnemonic} program counter relative instruction length");
                 target = address + 2 + (ulong)(sbyte)bytes[1];
                 target&=0xFFFF;
-                operands.Add(new Operand($"${target:X4}", value: target));
+                operands.Add(new O65816_PCRelative(value: target));
                 break;
 
             case AddressingMode.ProgramCounterRelativeLong:
                 if (baseLength != 3) return DecodeResult.CreateError($"Invalid {mnemonic} program counter relative long instruction length");
                 target = address + 3 + (ulong)(short)((ushort)bytes[1] + (ushort)(bytes[2] << 8));
                 target&=0xFFFF;
-                operands.Add(new Operand($"${target:X4}", value: target));
+                operands.Add(new O65816_PCRelative(value: target));
                 break;
         }
 
@@ -673,7 +673,7 @@ internal class SNES65816Disassembler : DisassemblerBase
         bool nextInstruction=!instruction.IsBasicBlockTerminator;
         if (instruction.IsBranch)
         {
-            var value = operands[0].Value.GetValueOrDefault();
+            var value = operands[0].Value;
             bool isFollowable=false;
             if (addressingMode==AddressingMode.Absolute)
             {
@@ -691,7 +691,7 @@ internal class SNES65816Disassembler : DisassemblerBase
                 value&=0xFFFF;
                 isFollowable=true;
             }
-            if (operands.Count > 0 && operands[0].Value != null)
+            if (operands.Count > 0)
             {
                 if (isFollowable)
                 {
