@@ -29,6 +29,8 @@ internal interface IRomDataParser
 {
     byte GetByte(UInt64 address);
     ReadOnlySpan<byte> FetchBytes(UInt64 address, UInt64 length);
+    
+    ISymbolProvider SymbolProvider { get; }
 }
 
 internal abstract class IRegionInfo : IRange
@@ -144,8 +146,8 @@ internal class StringRegion : IRegionInfo
     public StringRegion(UInt64 start, UInt64 end, IRomDataParser parent) : base(start, end, parent, ResourcerConfig.ConfigColour.String)
     {
     }
-    
-    public override ulong GetLineCount() => (AddressEnd - AddressStart + 16)/16;
+
+    public override ulong GetLineCount() => (AddressEnd - AddressStart + 16) / 16;
 
     public override void Combining(IRegionInfo other) { }
     public override IRegionInfo Split(ulong start, ulong end) => new UnknownRegion(start, end, Parent);
@@ -153,7 +155,7 @@ internal class StringRegion : IRegionInfo
     public override LineInfo GetLineInfo(ulong index)
     {
         StringBuilder s = new StringBuilder();
-        if (index==0)
+        if (index == 0)
         {
             s.Append($"db \"");
             for (UInt64 j = AddressStart; j <= AddressEnd; j++)
@@ -168,8 +170,8 @@ internal class StringRegion : IRegionInfo
             }
             s.Append('"');
         }
-        var I = AddressStart+(index * 16);
-        return new LineInfo(index == 0 ? $"{I:X8}" : "", BytesForLine(I,Math.Min(AddressEnd,I+16)), s.ToString(), "");
+        var I = AddressStart + (index * 16);
+        return new LineInfo(index == 0 ? $"{I:X8}" : "", BytesForLine(I, Math.Min(AddressEnd, I + 16)), s.ToString(), "");
     }
 
     public override ulong LineOffsetForAddress(UInt64 address)
@@ -183,18 +185,38 @@ internal class StringRegion : IRegionInfo
     }
 }
 
+internal class SymbolProvider : ISymbolProvider
+{
+    public Dictionary<(ulong, int), string> symbols;
+    public SymbolProvider()
+    {
+        symbols = new();
+    }
+
+    public void AddSymbol(ulong address, int size, string symbol)
+    {
+        if (symbols.ContainsKey((address, size)))
+            symbols[(address, size)] = symbol;
+        else
+            symbols.Add((address, size), symbol);
+    }
+
+    public bool HasSymbol(ulong address, int size) => symbols.ContainsKey((address, size));
+    public string GetSymbol(ulong address, int size) => symbols[(address, size)];
+}
+
 internal class CodeRegion : IRegionInfo
 {
-    protected SortedDictionary<ulong, Instruction> instructions = new ();
+    protected SortedDictionary<ulong, Instruction> instructions = new();
     public CodeRegion(UInt64 start, UInt64 end, Instruction instruction, IRomDataParser parent) : base(start, end, parent, ResourcerConfig.ConfigColour.Code)
     {
         instructions.Add(start, instruction);
     }
-    
+
     public override ulong GetLineCount() => (UInt64)instructions.Count;
 
-    public override void Combining(IRegionInfo other) 
-    { 
+    public override void Combining(IRegionInfo other)
+    {
         if (other is CodeRegion cregion)
         {
             foreach (var i in cregion.instructions)
@@ -232,7 +254,7 @@ internal class CodeRegion : IRegionInfo
     public override LineInfo GetLineInfo(ulong index)
     {
         var I = instructions.ElementAt((int)index);
-        return new LineInfo($"{I.Key:X8}", BytesForSpan(I.Value.Bytes), I.Value.InstructionText(), $"; {I.Value.cpuState}");
+        return new LineInfo($"{I.Key:X8}", BytesForSpan(I.Value.Bytes), I.Value.InstructionText(Parent.SymbolProvider), $"; {I.Value.cpuState}");
     }
 
     public Instruction GetInstructionForLine(ulong index)
@@ -242,14 +264,14 @@ internal class CodeRegion : IRegionInfo
 
     public override ulong LineOffsetForAddress(UInt64 address)
     {
-        UInt64 offset=0;
+        UInt64 offset = 0;
         foreach (var i in instructions)
         {
             if (i.Key >= address)
                 return offset;
             offset++;
         }
-        return (UInt64)(instructions.Count-1);
+        return (UInt64)(instructions.Count - 1);
     }
 
     public override ulong AddressForLine(UInt64 line)
@@ -391,6 +413,7 @@ internal class RomDataParser : IRomDataParser
 {
     private const int BYTES_PER_LINE = 16;
     RangeCollection<IRegionInfo> romRanges = new RangeCollection<IRegionInfo>();
+    SymbolProvider symbolProvider = new SymbolProvider();
     private byte[] romData = new byte[0];
     private int romIndex = 0;
     private UInt64 minAddress, maxAddress;
@@ -914,6 +937,13 @@ internal class RomDataParser : IRomDataParser
     }
 
     public byte[] GetRomData => romData;
+
+    public ISymbolProvider SymbolProvider => symbolProvider;
+
+    public void AddSymbol(ulong value, int size, string symbol)
+    {
+        symbolProvider.AddSymbol(value, size, symbol);
+    }
 
     public byte GetByte(UInt64 address)
     {

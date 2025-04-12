@@ -5,18 +5,35 @@ using Xunit;
 
 namespace RetroEditor.Tests
 {
+    internal class Operand : IOperand
+    {
+        private readonly string _text;
+        public Operand(string text, bool isSource = false, bool isDestination = false, ulong value = 0) : base(isSource, isDestination, value)
+        {
+            _text = text;
+        }
+
+        public override string Text(ISymbolProvider symbols)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override string Text()
+        {
+            return _text;
+        }
+    }
     public class DisassemblerSystemTests
     {
         [Fact]
         public void TestOperandCreation()
         {
             var operand = new Operand("$1234", true, false);
-            Assert.Equal("$1234", operand.Text);
+            Assert.Equal("$1234", operand.Text());
             Assert.True(operand.IsSource);
             Assert.False(operand.IsDestination);
-            Assert.Null(operand.Value);
             operand = new Operand("#42", false, true, 42);
-            Assert.Equal("#42", operand.Text);
+            Assert.Equal("#42", operand.Text());
             Assert.False(operand.IsSource);
             Assert.True(operand.IsDestination);
             Assert.Equal(42ul, operand.Value);
@@ -25,7 +42,7 @@ namespace RetroEditor.Tests
         [Fact]
         public void TestInstructionCreation()
         {
-            var operands = new List<Operand> { new Operand("$1234") };
+            var operands = new List<IOperand> { new Operand("$1234") };
             var bytes = new byte[] { 0xA9, 0x34, 0x12 };
             var instruction = new Instruction(0x8000, "LDA", operands, bytes, new EmptyState());
 
@@ -46,7 +63,7 @@ namespace RetroEditor.Tests
             Assert.True(result.NeedsMoreBytes);
             Assert.Equal(2, result.AdditionalBytesNeeded);
 
-            var instruction = new Instruction(0x8000, "NOP", new List<Operand>(), new byte[] { 0xEA }, new EmptyState());
+            var instruction = new Instruction(0x8000, "NOP", new List<IOperand>(), new byte[] { 0xEA }, new EmptyState());
             result = DecodeResult.CreateSuccess(instruction, 1);
             Assert.True(result.Success);
             Assert.False(result.NeedsMoreBytes);
