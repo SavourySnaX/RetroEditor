@@ -258,6 +258,134 @@ internal class CodeRegion : IRegionInfo
     }
 }
 
+internal class LabelRegion : IRegionInfo
+{
+    string label = "";
+    public LabelRegion(string label, UInt64 start, UInt64 end, IRomDataParser parent) : base(start, end, parent, ResourcerConfig.ConfigColour.Label)
+    {
+        this.label = label;
+    }
+
+    public override ulong GetLineCount() => 1;
+
+    public override void Combining(IRegionInfo other) { }
+    public override IRegionInfo Split(ulong start, ulong end) => new UnknownRegion(start, end, Parent);
+
+    public override LineInfo GetLineInfo(ulong index)
+    {
+        return new LineInfo($"{label}:", "", "", "");
+    }
+
+    public override ulong LineOffsetForAddress(UInt64 address)
+    {
+        return address - AddressStart;
+    }
+
+    public override ulong AddressForLine(UInt64 line)
+    {
+        return AddressStart + line;
+    }
+}
+
+internal class MultiLineComment : IRegionInfo
+{
+    public string[] comments;
+    public MultiLineComment(string[] comments, UInt64 start, UInt64 end, IRomDataParser parent) : base(start, end, parent, ResourcerConfig.ConfigColour.Comment)
+    {
+        this.comments = comments;
+    }
+
+    public override ulong GetLineCount() => (ulong)comments.Length;
+
+    public override void Combining(IRegionInfo other) { }
+    public override IRegionInfo Split(ulong start, ulong end) => new UnknownRegion(start, end, Parent);
+
+    public override LineInfo GetLineInfo(ulong index)
+    {
+        return new LineInfo("", $"{comments[index]}", "", "");
+    }
+
+    public override ulong LineOffsetForAddress(UInt64 address)
+    {
+        return address - AddressStart;
+    }
+
+    public override ulong AddressForLine(UInt64 line)
+    {
+        return AddressStart;
+    }
+}
+
+internal class DualRegion : IRegionInfo
+{
+    private readonly IRegionInfo primaryRegion;
+    private readonly IRegionInfo secondaryRegion;
+
+    public DualRegion(IRegionInfo primary, IRegionInfo secondary, IRomDataParser parent) : base(primary.AddressStart, primary.AddressEnd, parent, primary.Colour)
+    {
+        if (primary.AddressStart != secondary.AddressStart || primary.AddressEnd != secondary.AddressEnd)
+        {
+            //throw new ArgumentException("Primary and secondary regions must have the same address range.");
+        }
+
+        primaryRegion = primary;
+        secondaryRegion = secondary;
+    }
+
+    public override ulong GetLineCount()
+    {
+        return primaryRegion.GetLineCount() + secondaryRegion.GetLineCount();
+    }
+
+    public override void Combining(IRegionInfo other)
+    {
+        if (other is DualRegion dualOther)
+        {
+            primaryRegion.Combining(dualOther.primaryRegion);
+            secondaryRegion.Combining(dualOther.secondaryRegion);
+        }
+        else
+        {
+            throw new ArgumentException("Cannot combine non-dual regions.");
+        }
+    }
+
+    public override IRegionInfo Split(ulong start, ulong end)
+    {
+        var primarySplit = primaryRegion.Split(start, end);
+        var secondarySplit = secondaryRegion.Split(start, end);
+        return new DualRegion(primarySplit, secondarySplit, Parent);
+    }
+
+    public override LineInfo GetLineInfo(ulong index)
+    {
+        if (index < primaryRegion.GetLineCount())
+        {
+            return primaryRegion.GetLineInfo(index);
+        }
+        else
+        {
+            return secondaryRegion.GetLineInfo(index - primaryRegion.GetLineCount());
+        }
+    }
+
+    public override ulong LineOffsetForAddress(ulong address)
+    {
+        return primaryRegion.LineOffsetForAddress(address);
+    }
+
+    public override ulong AddressForLine(ulong line)
+    {
+        if (line < primaryRegion.GetLineCount())
+        {
+            return primaryRegion.AddressForLine(line);
+        }
+        else
+        {
+            return secondaryRegion.AddressForLine(line - primaryRegion.GetLineCount());
+        }
+    }
+}
 
 internal class RomDataParser : IRomDataParser
 {
@@ -511,6 +639,40 @@ internal class RomDataParser : IRomDataParser
     public void AddUnknownRange(UInt64 start, UInt64 end)
     {
         romRanges.AddRange(new UnknownRegion(start, end, this));
+    }
+
+    public void AddDualRange(IRegionInfo info, UInt64 start, UInt64 end)
+    {
+        var existing = romRanges.GetRangeContainingAddress(start, out var lineOff);
+        if (existing == null)
+        {
+            romRanges.AddRange(info);
+            return;
+        }
+        if (existing.Value is CodeRegion codeRegion)
+        {
+            var instruction = codeRegion.GetInstructionForLine(lineOff);
+            var newCode = new CodeRegion(start, end, instruction, this);
+            var dual = new DualRegion(info, newCode, this);
+            romRanges.AddRange(dual);
+        }
+        else
+        {
+            var dual = new DualRegion(info, existing.Value, this);
+            romRanges.AddRange(dual);
+        }
+    }
+
+    public void AddLabelRange(string label, UInt64 start, UInt64 end)
+    {
+        var labelP = new LabelRegion(label, start, end, this);
+        AddDualRange(labelP, start, end);
+    }
+
+    public void AddCommentRange(string[] comments, UInt64 start, UInt64 end)
+    {
+        var commentP = new MultiLineComment(comments, start, end, this);
+        AddDualRange(commentP, start, end);
     }
 
 
@@ -767,4 +929,4 @@ internal class RomDataParser : IRomDataParser
         length = Math.Min(length, (UInt64)romData.Length - address);
         return new ReadOnlySpan<byte>(romData, (int)address, (int)length);
     }
-} 
+}
