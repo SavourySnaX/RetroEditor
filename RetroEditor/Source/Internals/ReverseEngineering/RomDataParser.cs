@@ -25,9 +25,15 @@ internal struct LineInfo
     }
 }
 
+internal interface IRomDataParser
+{
+    byte GetByte(UInt64 address);
+    ReadOnlySpan<byte> FetchBytes(UInt64 address, UInt64 length);
+}
+
 internal abstract class IRegionInfo : IRange
 {
-    public IRegionInfo(UInt64 start,UInt64 end,RomDataParser parent,uint color)
+    public IRegionInfo(UInt64 start, UInt64 end, IRomDataParser parent, ResourcerConfig.ConfigColour color)
     {
         AddressStart = start;
         AddressEnd = end;
@@ -39,7 +45,7 @@ internal abstract class IRegionInfo : IRange
     public UInt64 AddressEnd { get; protected set; }
 
     public UInt64 LineCount => GetLineCount();
-    protected RomDataParser Parent;
+    protected IRomDataParser Parent { get; }
 
     public bool IsSame(IRange other)
     {
@@ -64,7 +70,7 @@ internal abstract class IRegionInfo : IRange
             throw new ArgumentOutOfRangeException("Position is out of range");
         var oldEnd = AddressEnd;
         AddressEnd = position;
-        return Split(position+1, oldEnd);
+        return Split(position + 1, oldEnd);
     }
 
     public IRange SplitBefore(ulong position)
@@ -82,19 +88,19 @@ internal abstract class IRegionInfo : IRange
     {
         StringBuilder sb = new StringBuilder();
 
-        foreach(var db in bytes)
+        foreach (var db in bytes)
         {
             sb.Append($"{db:X2} ");
         }
         return sb.ToString();
     }
 
-    public string BytesForLine(UInt64 start,UInt64 end)
+    public string BytesForLine(UInt64 start, UInt64 end)
     {
-        return BytesForSpan(Parent.FetchBytes(start,end-start+1));
+        return BytesForSpan(Parent.FetchBytes(start, end - start + 1));
     }
 
-    public uint Colour { get; private set; }
+    public ResourcerConfig.ConfigColour Colour { get; private set; }
 
     public abstract IRegionInfo Split(UInt64 start, UInt64 end);
     public abstract void Combining(IRegionInfo other);
@@ -107,7 +113,7 @@ internal abstract class IRegionInfo : IRange
 
 internal class UnknownRegion : IRegionInfo
 {
-    public UnknownRegion(UInt64 start, UInt64 end, RomDataParser parent) : base(start, end, parent, parent.UnknownColor)
+    public UnknownRegion(UInt64 start, UInt64 end, IRomDataParser parent) : base(start, end, parent, ResourcerConfig.ConfigColour.Unknown)
     {
     }
     
@@ -135,7 +141,7 @@ internal class UnknownRegion : IRegionInfo
 
 internal class StringRegion : IRegionInfo
 {
-    public StringRegion(UInt64 start, UInt64 end, RomDataParser parent) : base(start, end, parent, parent.StringColor)
+    public StringRegion(UInt64 start, UInt64 end, IRomDataParser parent) : base(start, end, parent, ResourcerConfig.ConfigColour.String)
     {
     }
     
@@ -180,7 +186,7 @@ internal class StringRegion : IRegionInfo
 internal class CodeRegion : IRegionInfo
 {
     protected SortedDictionary<ulong, Instruction> instructions = new ();
-    public CodeRegion(UInt64 start, UInt64 end, Instruction instruction, RomDataParser parent) : base(start, end, parent, parent.CodeColor)
+    public CodeRegion(UInt64 start, UInt64 end, Instruction instruction, IRomDataParser parent) : base(start, end, parent, ResourcerConfig.ConfigColour.Code)
     {
         instructions.Add(start, instruction);
     }
@@ -252,7 +258,8 @@ internal class CodeRegion : IRegionInfo
     }
 }
 
-internal class RomDataParser 
+
+internal class RomDataParser : IRomDataParser
 {
     private const int BYTES_PER_LINE = 16;
     RangeCollection<IRegionInfo> romRanges = new RangeCollection<IRegionInfo>();
@@ -260,27 +267,18 @@ internal class RomDataParser
     private int romIndex = 0;
     private UInt64 minAddress, maxAddress;
 
-    public uint UnknownColor;
-    public uint CodeColor;
-    public uint DataColor;
-    public uint StringColor;
-
     public RomDataParser()
     {
-        UnknownColor = ImGui.GetColorU32(new Vector4(0, 0, 0, .5f));
-        CodeColor = ImGui.GetColorU32(new Vector4(0, 0, 1, .5f));
-        DataColor = ImGui.GetColorU32(new Vector4(0, 1, 0, .5f));
-        StringColor = ImGui.GetColorU32(new Vector4(1, 0, 0, .5f));
     }
 
     private LibMameDebugger.DView OpenMemView(LibMameDebugger debugger)
     {
         var view = new LibMameDebugger.DView(debugger.AllocView(LibRetroPlugin.debug_view_type.Memory), 0, 0, 256, 256, "");
-        
+
         // Find ROM source index
         int sourceCount = debugger.GetSourcesCount(ref view);
         var sources = debugger.GetSourcesList(ref view);
-        
+
         for (int i = 0; i < sourceCount; i++)
         {
             if (sources[i].Contains("Region ':snsslot:cart:rom'"))
@@ -296,11 +294,11 @@ internal class RomDataParser
     private LibMameDebugger.DView OpenCPUView(LibMameDebugger debugger, string cpuName)
     {
         var view = new LibMameDebugger.DView(debugger.AllocView(LibRetroPlugin.debug_view_type.State), 0, 0, 32, 32, "");
-        
+
         // Find ROM source index
         int sourceCount = debugger.GetSourcesCount(ref view);
         var sources = debugger.GetSourcesList(ref view);
-        
+
         for (int i = 0; i < sourceCount; i++)
         {
             if (sources[i].Contains(cpuName))
@@ -352,14 +350,14 @@ internal class RomDataParser
         var bank = address >> 16;
         var offset = address & 0xFFFF;
 
-        if (bank==0x7E || bank==0x7F)
+        if (bank == 0x7E || bank == 0x7F)
         {
             region = SNESLoRomRegion.RAM;
             return ((bank - 0x7E) << 16) | offset;
         }
-        else if (bank==0xFE || bank==0xFF)
+        else if (bank == 0xFE || bank == 0xFF)
         {
-            if (offset<0x8000)
+            if (offset < 0x8000)
             {
                 // SRAM
                 region = SNESLoRomRegion.SRAM;
@@ -368,23 +366,23 @@ internal class RomDataParser
             else
             {
                 // ROM
-                return 0x3F0000 | ((bank-0xFE)<<15) | (offset&0x7FFF);           
+                return 0x3F0000 | ((bank - 0xFE) << 15) | (offset & 0x7FFF);
             }
         }
-        bank&=0x7F;
-        if (bank<0x40)
+        bank &= 0x7F;
+        if (bank < 0x40)
         {
-            if (offset<0x2000)
+            if (offset < 0x2000)
             {
                 // Low RAM
                 region = SNESLoRomRegion.RAM;
                 return offset;
             }
-            else if (offset<0x8000)
+            else if (offset < 0x8000)
             {
                 // IO
                 region = SNESLoRomRegion.IO;
-                return offset-0x2000;
+                return offset - 0x2000;
             }
             else
             {
@@ -392,7 +390,7 @@ internal class RomDataParser
                 return (bank << 15) | (offset & 0x7FFF);
             }
         }
-        else if (bank<0x70)
+        else if (bank < 0x70)
         {
             // ROM
             return (bank << 15) | (offset & 0x7FFF);
@@ -400,7 +398,7 @@ internal class RomDataParser
         else
         {
             // 70-7D
-            if (offset<0x8000)
+            if (offset < 0x8000)
             {
                 region = SNESLoRomRegion.SRAM;
                 return ((bank - 0x70) << 15) | offset;
@@ -408,27 +406,27 @@ internal class RomDataParser
             else
             {
                 //ROM
-                return (bank<<15) | (offset&0x7FFF);
+                return (bank << 15) | (offset & 0x7FFF);
             }
         }
     }
 
     public void AddCodeRange(DisassemblerBase disassembler, UInt64 minAddress, UInt64 maxAddress)
     {
-        while (minAddress<=maxAddress)
+        while (minAddress <= maxAddress)
         {
             // minAddress is linear, need to compute approx PC
             var pc = MapRomToCpu(minAddress);
             if (AddCodeRange(disassembler, pc, out var i))
             {
-                pc+= (UInt64)i.Bytes.Length;
+                pc += (UInt64)i.Bytes.Length;
                 if (i.IsBasicBlockTerminator)
                 {
                     return;
                 }
                 if (i.NextAddresses.Contains(pc))
                 {
-                    minAddress+= (UInt64)i.Bytes.Length;
+                    minAddress += (UInt64)i.Bytes.Length;
                 }
             }
             else
@@ -443,7 +441,7 @@ internal class RomDataParser
         bool done = false;
         UInt64 length = 0;
         UInt64 address = MapSnesCpuToLorom(pc, out var region);
-        if (region!=RomDataParser.SNESLoRomRegion.ROM)
+        if (region != RomDataParser.SNESLoRomRegion.ROM)
         {
             // Not a valid LoROM address
             Console.WriteLine($"Invalid LoROM address: {address:X8} in region {region} {pc:X6}");
@@ -475,7 +473,7 @@ internal class RomDataParser
                 {
                     // Check we overlap the instruction
                     var check = cregion.GetInstructionForLine(lineOff);
-                    if (check.ToString()!=result.Instruction.ToString())        // TODO de-shitiffy
+                    if (check.ToString() != result.Instruction.ToString())        // TODO de-shitiffy
                     {
                         Console.WriteLine($"Error: instruction overlaps different instruction {check} != {result.Instruction}");
                         instruction = new();
@@ -502,14 +500,14 @@ internal class RomDataParser
 
     public void AddDataRange(UInt64 start, UInt64 end)
     {
-       // romRanges.AddRange(new RegionInfo(start,end,Regions.Data, this));
+        // romRanges.AddRange(new RegionInfo(start,end,Regions.Data, this));
     }
 
     public void AddStringRange(UInt64 start, UInt64 end)
     {
         romRanges.AddRange(new StringRegion(start, end, this));
     }
-    
+
     public void AddUnknownRange(UInt64 start, UInt64 end)
     {
         romRanges.AddRange(new UnknownRegion(start, end, this));
@@ -576,9 +574,9 @@ internal class RomDataParser
         {
             CloseView(debugger, view);
         }
-        
+
     }
-    
+
     private UInt64 ParseState(LibMameDebugger.DView view, string register)
     {
         int bytesPerLine = view.view.W * 2; // Each character is 2 bytes (char + attribute)
@@ -587,7 +585,7 @@ internal class RomDataParser
         {
             int lineStart = y * bytesPerLine;
             int x = 0;
-            
+
             // Skip initial spaces
             while (x < view.view.W && (char)view.state[lineStart + x * 2] == ' ')
                 x++;
@@ -634,7 +632,7 @@ internal class RomDataParser
         {
             int lineStart = y * bytesPerLine;
             int x = 0;
-            
+
             // Skip initial spaces
             while (x < view.view.W && (char)view.state[lineStart + x * 2] == ' ')
                 x++;
@@ -693,7 +691,7 @@ internal class RomDataParser
         {
             int lineStart = y * bytesPerLine;
             int x = 0;
-            
+
             // Skip initial spaces
             while (x < view.view.W && (char)view.state[lineStart + x * 2] == ' ')
                 x++;
@@ -720,7 +718,7 @@ internal class RomDataParser
             // Count valid bytes in the last row
             int lineStart = lastValidRow * bytesPerLine;
             int x = 0;
-            
+
             // Skip to bytes section
             while (x < view.view.W && (char)view.state[lineStart + x * 2] != ' ')
                 x++;
@@ -746,7 +744,7 @@ internal class RomDataParser
             // Adjust the last address by the number of valid bytes
             if (validBytes > 0)
             {
-                lastAddress += (UInt64)validBytes-1;        // -1 because the address is inclusive
+                lastAddress += (UInt64)validBytes - 1;        // -1 because the address is inclusive
             }
         }
 

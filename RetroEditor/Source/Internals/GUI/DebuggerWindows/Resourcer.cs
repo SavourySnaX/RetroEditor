@@ -1,9 +1,10 @@
 using ImGuiNET;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System.Numerics;
 
 internal class Resourcer : IWindow
 {
-    public float UpdateInterval => 1/60.0f;
+    public float UpdateInterval => 1 / 60.0f;
     
     LibMameDebugger debugger;
     RomDataParser romData;
@@ -21,11 +22,15 @@ internal class Resourcer : IWindow
     // Memory map data
     private const int MEMORY_MAP_HEIGHT = 50;
 
+    private ResourcerConfig config;
+
     public Resourcer(LibMameDebugger debugger)
     {
         this.debugger = debugger;
 
         romData = new RomDataParser();
+
+        config = new ResourcerConfig();
     }
 
     public void Close()
@@ -51,7 +56,7 @@ internal class Resourcer : IWindow
             drawList.AddRectFilled(
                 new Vector2(pos.X + region.Value.AddressStart * scale, pos.Y),
                 new Vector2(pos.X + region.Value.AddressEnd * scale, pos.Y + size.Y),
-                region.Value.Colour
+                config.GetColorU32(region.Value.Colour)
             );
         }
 
@@ -322,8 +327,10 @@ internal class Resourcer : IWindow
                     foreach (var srow in selectedRows)
                     {
                         var address = regions.FetchAddressForLine(srow);
+                        var lastAddress = regions.FetchAddressForLine(srow+1);
                         if (address < minAddress)
                             minAddress = address;
+                        address = (UInt64)lastAddress - 1;
                         if (address > maxAddress)
                             maxAddress = address;
                     }
@@ -469,7 +476,8 @@ internal class Resourcer : IWindow
                         }
                         else
                         {
-                            ImGui.TableSetBgColor(ImGuiTableBgTarget.RowBg1, fetched.Value.Colour);
+                            // Set Colour based on kind
+                            ImGui.TableSetBgColor(ImGuiTableBgTarget.RowBg1, config.GetColorU32(fetched.Value.Colour));
                         }
 
                         if (clicked)
