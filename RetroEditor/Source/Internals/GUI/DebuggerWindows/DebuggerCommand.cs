@@ -51,9 +51,8 @@ internal class DebuggerCommand : IWindow
             {
                 ImGui.SetScrollHereY(1.0f);
             }
-
-            ImGui.EndChild();
         }
+        ImGui.EndChild();
 
         return false;
     }

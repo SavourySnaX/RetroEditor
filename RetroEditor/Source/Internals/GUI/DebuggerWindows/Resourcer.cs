@@ -212,11 +212,11 @@ internal class Resourcer : IWindow
     {
         if (InputU64ScalarWrapped("Jump to Address", ref jumpToAddress))
         {
-            jump=true;
+            jump = true;
         }
 
         // Start Table and render header
-        float [] widths = new float[4];
+        float[] widths = new float[4];
 
         ImGui.Columns(4, "MOO", true);
         ImGui.Text("Address");
@@ -235,7 +235,7 @@ internal class Resourcer : IWindow
         ImGui.Columns(1);
         ImGui.Separator();
 
-        ImGuiTableFlags tableFlags = ImGuiTableFlags.None|ImGuiTableFlags.BordersV|ImGuiTableFlags.RowBg;
+        ImGuiTableFlags tableFlags = ImGuiTableFlags.None | ImGuiTableFlags.BordersV | ImGuiTableFlags.RowBg;
 
         var rowHeight = ImGui.GetTextLineHeight() + ImGui.GetStyle().ItemSpacing.Y;
         var contentSize = ImGui.GetContentRegionAvail();
@@ -253,7 +253,7 @@ internal class Resourcer : IWindow
             var regions = romData.GetRomRanges;
             var romDataSize = regions.LineCount;
 
-            UInt64 currentLine = (UInt64)(0 + scroll/rowHeight);
+            UInt64 currentLine = (UInt64)(0 + scroll / rowHeight);
             UInt64 firstLine = currentLine;
             float availableHeight = ImGui.GetContentRegionAvail().Y;
             float tableHeight = availableHeight;
@@ -270,7 +270,7 @@ internal class Resourcer : IWindow
                         cursorPosition--;
                         selectedRows.Clear();
                         selectedRows.Add(cursorPosition.Value);
-                        moved=true;
+                        moved = true;
                     }
                 }
                 if (ImGui.IsKeyPressed(ImGuiKey.DownArrow))
@@ -280,7 +280,7 @@ internal class Resourcer : IWindow
                         cursorPosition++;
                         selectedRows.Clear();
                         selectedRows.Add(cursorPosition.Value);
-                        moved=true;
+                        moved = true;
                     }
                 }
                 if (ImGui.IsKeyPressed(ImGuiKey.PageUp))
@@ -292,7 +292,7 @@ internal class Resourcer : IWindow
                         cursorPosition = newPosition;
                         selectedRows.Clear();
                         selectedRows.Add(cursorPosition.Value);
-                        moved=true;
+                        moved = true;
                     }
                 }
                 if (ImGui.IsKeyPressed(ImGuiKey.PageDown))
@@ -303,7 +303,7 @@ internal class Resourcer : IWindow
                         cursorPosition = newPosition;
                         selectedRows.Clear();
                         selectedRows.Add(cursorPosition.Value);
-                        moved=true;
+                        moved = true;
                     }
                 }
                 if (ImGui.IsKeyPressed(ImGuiKey.Home))
@@ -311,14 +311,14 @@ internal class Resourcer : IWindow
                     cursorPosition = 0;
                     selectedRows.Clear();
                     selectedRows.Add(0);
-                    moved=true;
+                    moved = true;
                 }
                 if (ImGui.IsKeyPressed(ImGuiKey.End))
                 {
                     cursorPosition = romData.GetRomRanges.LineCount - 1;
                     selectedRows.Clear();
                     selectedRows.Add(cursorPosition.Value);
-                    moved=true;
+                    moved = true;
                 }
                 if (selectedRows.Count > 0)
                 {
@@ -327,7 +327,7 @@ internal class Resourcer : IWindow
                     foreach (var srow in selectedRows)
                     {
                         var address = regions.FetchAddressForLine(srow);
-                        var lastAddress = regions.FetchAddressForLine(srow+1);
+                        var lastAddress = regions.FetchAddressForLine(srow + 1);
                         if (address < minAddress)
                             minAddress = address;
                         address = (UInt64)lastAddress - 1;
@@ -351,9 +351,9 @@ internal class Resourcer : IWindow
                         var disassembler = new SNES65816Disassembler();
                         var state = ((SNES65816State)disassembler.State);
                         state.SetEmulationMode(cpu_emulationMode);
-                        state.Accumulator8Bit=cpu_8bitAccumulator;
-                        state.Index8Bit=cpu_8bitIndex;
-                        disassembler.State=state;
+                        state.Accumulator8Bit = cpu_8bitAccumulator;
+                        state.Index8Bit = cpu_8bitIndex;
+                        disassembler.State = state;
                         romData.AddCodeRange(disassembler, minAddress, maxAddress);
                         cpu_emulationMode = ((SNES65816State)disassembler.State).EmulationMode;
                         cpu_8bitAccumulator = ((SNES65816State)disassembler.State).Accumulator8Bit;
@@ -365,14 +365,14 @@ internal class Resourcer : IWindow
                         // Auto disassemble starting at the first selected address
                         var state = ((SNES65816State)autoDisassembler.State);
                         state.SetEmulationMode(cpu_emulationMode);
-                        state.Accumulator8Bit=cpu_8bitAccumulator;
-                        state.Index8Bit=cpu_8bitIndex;
-                        autoDisassembler.State=state;
+                        state.Accumulator8Bit = cpu_8bitAccumulator;
+                        state.Index8Bit = cpu_8bitIndex;
+                        autoDisassembler.State = state;
                         var autoPC = romData.MapRomToCpu(minAddress);
                         autoStack.Clear();
                         autoStack.Push(autoPC);
                         autoState.Push(autoDisassembler.State);
-                        automated=true;
+                        automated = true;
                     }
 
                     if (cursorPosition.HasValue && ImGui.IsKeyPressed(ImGuiKey.Period) && ImGui.IsKeyDown(ImGuiKey.LeftShift))
@@ -387,7 +387,7 @@ internal class Resourcer : IWindow
                                 cursorPosition = nextRegion.LineStart;
                                 selectedRows.Clear();
                                 selectedRows.Add(cursorPosition.Value);
-                                moved=true;
+                                moved = true;
                             }
                         }
                     }
@@ -403,7 +403,7 @@ internal class Resourcer : IWindow
                                 cursorPosition = nextRegion.LineEnd;
                                 selectedRows.Clear();
                                 selectedRows.Add(cursorPosition.Value);
-                                moved=true;
+                                moved = true;
                             }
                         }
                     }
@@ -417,7 +417,7 @@ internal class Resourcer : IWindow
 
             if (ImGui.BeginTable("RomDataView", 4, tableFlags))
             {
-                ImGui.TableSetupColumn("Address", ImGuiTableColumnFlags.WidthFixed, widths[0] - ImGui.GetStyle().ItemSpacing.X*2);
+                ImGui.TableSetupColumn("Address", ImGuiTableColumnFlags.WidthFixed, widths[0] - ImGui.GetStyle().ItemSpacing.X * 2);
                 ImGui.TableSetupColumn("Bytes", ImGuiTableColumnFlags.WidthFixed, widths[1] - ImGui.GetStyle().ItemSpacing.X);
                 ImGui.TableSetupColumn("Details", ImGuiTableColumnFlags.WidthFixed, widths[2] - ImGui.GetStyle().ItemSpacing.X);
                 ImGui.TableSetupColumn("Comments", ImGuiTableColumnFlags.WidthFixed, widths[3] - ImGui.GetStyle().ItemSpacing.X);
@@ -428,7 +428,7 @@ internal class Resourcer : IWindow
                 {
                     var actualLine = currentLine;
                     var fetched = regions.GetRangeContainingLine(currentLine, out var line);
-                    if (fetched==null)
+                    if (fetched == null)
                     {
                         break;
                     }
@@ -441,24 +441,24 @@ internal class Resourcer : IWindow
                         {
                             currentLine = fetched.LineEnd + 1;
                             fetched = regions.GetRangeContainingLine(currentLine, out line);
-                            if (fetched==null)
+                            if (fetched == null)
                             {
                                 break;
                             }
                             lineCount = fetched.Value.LineCount;
                         }
-                        
-                        ImGui.PushID((int)(actualLine-firstLine));
+
+                        ImGui.PushID((int)(actualLine - firstLine));
                         ImGui.TableNextRow();
                         // Make the row interactive
                         ImGui.TableSetColumnIndex(0);
-                        
+
                         var lData = fetched.Value.GetLineInfo(line);
 
                         // Handle row selection
                         bool isSelected = selectedRows.Contains(actualLine);
                         bool isCursor = cursorPosition == actualLine;
-                        
+
                         bool clicked = ImGui.Selectable($"{lData.Address:X8}", isSelected, ImGuiSelectableFlags.SpanAllColumns);//, new Vector2(0, rowHeight));
 
                         // Set row background color based on selection state
@@ -533,7 +533,7 @@ internal class Resourcer : IWindow
             {
                 var jumpLine = romData.GetRomRanges.FetchLineForAddress(jumpToAddress);
                 ImGui.SetScrollY(jumpLine * rowHeight);
-                jump=false;
+                jump = false;
             }
 
             if (moved && cursorPosition.HasValue)
@@ -543,15 +543,14 @@ internal class Resourcer : IWindow
                 {
                     ImGui.SetScrollY(cursorPosition.Value * rowHeight);
                 }
-                else if (scroll+(visibleLines-1)*rowHeight < cursorPosition.Value * rowHeight)
+                else if (scroll + (visibleLines - 1) * rowHeight < cursorPosition.Value * rowHeight)
                 {
-                    ImGui.SetScrollY(cursorPosition.Value * rowHeight - (visibleLines-1)*rowHeight);
+                    ImGui.SetScrollY(cursorPosition.Value * rowHeight - (visibleLines - 1) * rowHeight);
                 }
                 moved = false;
             }
-
-            ImGui.EndChild();
         }
+        ImGui.EndChild();
     }
 
     public bool Initialise()
