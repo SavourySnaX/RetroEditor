@@ -330,10 +330,27 @@ internal class Resourcer : IWindow
                         var lastAddress = regions.FetchAddressForLine(srow + 1);
                         if (address < minAddress)
                             minAddress = address;
-                        address = (UInt64)lastAddress - 1;
+                        if (lastAddress>0)
+                            lastAddress--;
+                        address = Math.Max(minAddress, lastAddress);
                         if (address > maxAddress)
                             maxAddress = address;
                     }
+                    if (cursorPosition != null)
+                    {
+                        UInt64 cursorMinAddress = regions.FetchAddressForLine(cursorPosition.Value);
+                        UInt64 cursorMaxAddress = regions.FetchAddressForLine(cursorPosition.Value + 1);
+                        if (cursorMaxAddress > 0)
+                            cursorMaxAddress--;
+                        cursorMaxAddress = Math.Max(cursorMinAddress, cursorMaxAddress);
+
+                        if (ImGui.IsKeyPressed(ImGuiKey.L))
+                        {
+                            // Labels only apply to current line
+                            romData.AddLabelRange("BILLY", cursorMinAddress, cursorMaxAddress);
+                        }
+                    }
+
                     bool clearSelection = false;
                     if (ImGui.IsKeyPressed(ImGuiKey.S))
                     {
@@ -361,19 +378,19 @@ internal class Resourcer : IWindow
                         clearSelection = true;
                     }
                     if (ImGui.IsKeyPressed(ImGuiKey.A) && !automated)
-                    {
-                        // Auto disassemble starting at the first selected address
-                        var state = ((SNES65816State)autoDisassembler.State);
-                        state.SetEmulationMode(cpu_emulationMode);
-                        state.Accumulator8Bit = cpu_8bitAccumulator;
-                        state.Index8Bit = cpu_8bitIndex;
-                        autoDisassembler.State = state;
-                        var autoPC = romData.MapRomToCpu(minAddress);
-                        autoStack.Clear();
-                        autoStack.Push(autoPC);
-                        autoState.Push(autoDisassembler.State);
-                        automated = true;
-                    }
+                        {
+                            // Auto disassemble starting at the first selected address
+                            var state = ((SNES65816State)autoDisassembler.State);
+                            state.SetEmulationMode(cpu_emulationMode);
+                            state.Accumulator8Bit = cpu_8bitAccumulator;
+                            state.Index8Bit = cpu_8bitIndex;
+                            autoDisassembler.State = state;
+                            var autoPC = romData.MapRomToCpu(minAddress);
+                            autoStack.Clear();
+                            autoStack.Push(autoPC);
+                            autoState.Push(autoDisassembler.State);
+                            automated = true;
+                        }
 
                     if (cursorPosition.HasValue && ImGui.IsKeyPressed(ImGuiKey.Period) && ImGui.IsKeyDown(ImGuiKey.LeftShift))
                     {
@@ -624,7 +641,9 @@ internal class Resourcer : IWindow
             romData.Parse(debugger);
 
             romData.AddStringRange(0x7FC0, 0x7FD4); // LoRom ASCII Title in header
-            
+
+            romData.AddCommentRange(["RetroEditor Resourcer Version 0.1", "", "A WIP Tool for re-sourcing ROMS", "", ""], 0, 0);
+
             romLoaded = true;
         }
 
