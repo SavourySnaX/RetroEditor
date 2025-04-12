@@ -41,9 +41,8 @@ class LogView : IWindow
             {
                 ImGui.SetScrollHereY(1.0f);
             }
-
-            ImGui.EndChild();
         }
+        ImGui.EndChild();
     }
 
     public bool Draw()
