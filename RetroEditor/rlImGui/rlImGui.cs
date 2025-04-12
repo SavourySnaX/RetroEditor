@@ -42,23 +42,12 @@ namespace rlImGui_cs
         internal static bool rlImGuiIsAltDown() { return Raylib.IsKeyDown(KeyboardKey.RightAlt) || Raylib.IsKeyDown(KeyboardKey.LeftAlt); }
         internal static bool rlImGuiIsSuperDown() { return Raylib.IsKeyDown(KeyboardKey.RightSuper) || Raylib.IsKeyDown(KeyboardKey.LeftSuper); }
 
-        public delegate void SetupUserFontsCallback(ImGuiIOPtr imGuiIo);
+        internal delegate void SetupUserFontsCallback(ImGuiIOPtr imGuiIo);
 
         internal static SetupUserFontsCallback? SetupUserFonts = null;
 
         internal static void Setup(bool darkTheme = true, bool enableDocking = false)
         {
-            MouseCursorMap = new Dictionary<ImGuiMouseCursor, MouseCursor>();
-            MouseCursorMap = new Dictionary<ImGuiMouseCursor, MouseCursor>();
-
-            LastFrameFocused = Raylib.IsWindowFocused();
-            LastControlPressed = false;
-            LastShiftPressed = false;
-            LastAltPressed = false;
-            LastSuperPressed = false;
-
-            FontTexture.Id = 0;
-
             BeginInitImGui();
 
             if (darkTheme)
@@ -76,6 +65,16 @@ namespace rlImGui_cs
 
         internal static void BeginInitImGui()
         {
+            MouseCursorMap = new Dictionary<ImGuiMouseCursor, MouseCursor>();
+
+            LastFrameFocused = Raylib.IsWindowFocused();
+            LastControlPressed = false;
+            LastShiftPressed = false;
+            LastAltPressed = false;
+            LastSuperPressed = false;
+
+            FontTexture.Id = 0;
+
             SetupKeymap();
 
             ImGuiContext = ImGui.CreateContext();
@@ -208,9 +207,6 @@ namespace rlImGui_cs
             MouseCursorMap[ImGuiMouseCursor.NotAllowed] = MouseCursor.NotAllowed;
         }
 
-        /// <summary>
-        /// Forces the font texture atlas to be recomputed and re-cached
-        /// </summary>
         internal static unsafe void ReloadFonts()
         {
             ImGui.SetCurrentContext(ImGuiContext);
@@ -228,7 +224,7 @@ namespace rlImGui_cs
                 Format = PixelFormat.UncompressedR8G8B8A8,
             };
 
-            if (Raylib.IsTextureReady(FontTexture))
+            if (Raylib.IsTextureValid(FontTexture))
                 Raylib.UnloadTexture(FontTexture);
 
             FontTexture = Raylib.LoadTextureFromImage(image);
@@ -249,6 +245,8 @@ namespace rlImGui_cs
         private unsafe delegate sbyte* GetClipTextCallback(IntPtr userData);
         private unsafe delegate void SetClipTextCallback(IntPtr userData, sbyte* text);
 
+        private static GetClipTextCallback GetClipCallback = null!;
+        private static SetClipTextCallback SetClipCallback = null!;
         internal static void EndInitImGui()
         {
             SetupMouseCursors();
@@ -296,6 +294,8 @@ namespace rlImGui_cs
 
             ImGuiIOPtr io = ImGui.GetIO();
 
+            ImGuiPlatformIOPtr platformIO = ImGui.GetPlatformIO();
+
             if (SetupUserFonts != null)
                 SetupUserFonts(io);
 
@@ -307,14 +307,14 @@ namespace rlImGui_cs
             // copy/paste callbacks
             unsafe
             {
-                GetClipTextCallback getClip = new GetClipTextCallback(rImGuiGetClipText);
-                SetClipTextCallback setClip = new SetClipTextCallback(rlImGuiSetClipText);
+                SetClipCallback = new SetClipTextCallback(rlImGuiSetClipText);
+                platformIO.Platform_SetClipboardTextFn = Marshal.GetFunctionPointerForDelegate(SetClipCallback);
 
-                io.SetClipboardTextFn = Marshal.GetFunctionPointerForDelegate(setClip);
-                io.GetClipboardTextFn = Marshal.GetFunctionPointerForDelegate(getClip);
+                GetClipCallback = new GetClipTextCallback(rImGuiGetClipText);
+                platformIO.Platform_GetClipboardTextFn = Marshal.GetFunctionPointerForDelegate(GetClipCallback);
             }
 
-            io.ClipboardUserData = IntPtr.Zero;
+            platformIO.Platform_ClipboardUserData = IntPtr.Zero;
             ReloadFonts();
         }
 
