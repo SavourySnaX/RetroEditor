@@ -76,6 +76,10 @@ namespace RetroEditor.Tests
             return AddressStart + line;
         }
 
+        public void Overwrite(IRange other)
+        {
+        }
+
     }
 
     public class RangeCollectionTests

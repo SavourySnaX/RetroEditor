@@ -20,6 +20,7 @@ internal interface IRange
     UInt64 LineOffsetForAddress(UInt64 address);
     // Return the address for the given line (or closest address if pre/post )
     UInt64 AddressForLine(UInt64 line);
+    void Overwrite(IRange other);
 }
 
 internal class Range<T> where T : class, IRange
@@ -31,6 +32,11 @@ internal class Range<T> where T : class, IRange
     public Range(T value)
     {
         Value = value;
+    }
+
+    internal void Overwrite<T>(Range<T> newRange) where T : class, IRange
+    {
+        Value.Overwrite(newRange.Value);
     }
 }
 
@@ -88,6 +94,7 @@ internal class AVLTree<T> : IEnumerable<Range<T>> where T : class, IRange
                 node.Right = Insert(node.Right, rightRange);
             }
 
+            node.Range.Overwrite(newRange);
             node.Range = newRange;
             return node;
         }
@@ -180,6 +187,10 @@ internal class AVLTree<T> : IEnumerable<Range<T>> where T : class, IRange
         }
     }
 
+    public void Recompute()
+    {
+        MergeAdjacentRanges();
+    }
 
     private void InOrderTraversal(AVLNode<T>? node, List<Range<T>> ranges)
     {
@@ -306,6 +317,11 @@ internal class RangeCollection<T> : IEnumerable<Range<T>> where T : class, IRang
             lineOff = line - range.LineStart;
         }
         return range;
+    }
+
+    public void Recompute()
+    {
+        avlTree.Recompute();
     }
 
     public int Count => avlTree.Count;
