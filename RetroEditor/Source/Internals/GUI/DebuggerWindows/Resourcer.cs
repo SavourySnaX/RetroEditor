@@ -66,6 +66,7 @@ internal class Resourcer : IWindow
     bool traceCommandInProgress=false;
     bool traceCommandFinishStarted=false;
     bool traceCommandFinished=false;
+    bool traceContinue = false;
 
     bool cpu_emulationMode=true, cpu_8bitAccumulator=true, cpu_8bitIndex=true;
     public bool Draw()
@@ -111,6 +112,23 @@ internal class Resourcer : IWindow
             debugger.QueueCommand("gtime 1000",(s,id)=>{traceCommandInProgress=false;});
         }
         ImGui.SameLine();
+        if (ImGui.Button("Capture Continuous"))
+        {
+            traceInProgress = true;
+            if (File.Exists("trace.log"))
+            {
+                File.Delete("trace.log");
+            }
+            traceCommandInProgress=true;
+            traceCommandFinished=false;
+            traceCommandFinishStarted=false;
+            traceContinue = true;
+
+            // Set up trace logging
+            debugger.QueueCommand($"trace {traceFile},,noloop,{{tracelog \"E=%02X|P=%02X|\",e,p}}",(s,id)=>{});
+            debugger.QueueCommand("gtime 500",(s,id)=>{traceCommandInProgress=false;});
+        }
+        ImGui.SameLine();
         if (ImGui.Button("New Trace"))
         {
             var pc = romData.GetCPUState(debugger, "PC");
@@ -119,17 +137,30 @@ internal class Resourcer : IWindow
 
             SNES65816Disassembler disassembler = new SNES65816Disassembler();
             var nState = (SNES65816State)disassembler.State;
-            nState.SetEmulationMode(e==1);
-            nState.Accumulator8Bit=(p & 0x20) == 0x20;
-            nState.Index8Bit=(p & 0x10) == 0x10;
-            disassembler.State=nState;
+            nState.SetEmulationMode(e == 1);
+            nState.Accumulator8Bit = (p & 0x20) == 0x20;
+            nState.Index8Bit = (p & 0x10) == 0x10;
+            disassembler.State = nState;
             romData.AddCodeRange(disassembler, pc, out var _);
-            jumpToAddress = romData.MapSnesCpuToLorom(pc,out var _);
+            jumpToAddress = romData.MapSnesCpuToLorom(pc, out var _);
             debugger.SendCommand($"step");
-            newTraceCnt=100;
-            newTraceInProgress=true;
+            newTraceCnt = 100;
+            newTraceInProgress = true;
         }
         if (traceDisable)
+        {
+            ImGui.EndDisabled();
+        }
+        if (!traceDisable)
+        {
+            ImGui.BeginDisabled();
+        }
+        ImGui.SameLine();
+        if (ImGui.Button("Stop Trace"))
+        {
+            traceContinue = false;
+        }
+        if (!traceDisable)
         {
             ImGui.EndDisabled();
         }
@@ -347,7 +378,10 @@ internal class Resourcer : IWindow
                         if (ImGui.IsKeyPressed(ImGuiKey.L))
                         {
                             // Labels only apply to current line
-                            romData.AddLabelRange("BILLY", cursorMinAddress, cursorMaxAddress);
+                        }
+                        if (ImGui.IsKeyPressed(ImGuiKey.Semicolon))
+                        {
+                            romData.AddCommentRange(["I AM THE VERY MODEL OF A MODERN MAJOR GENERAL", "I'VE INFORMATION ANIMAL VEGETABLE AND MINERAL", "....."], cursorMinAddress);
                         }
                     }
 
@@ -642,7 +676,7 @@ internal class Resourcer : IWindow
 
             romData.AddStringRange(0x7FC0, 0x7FD4); // LoRom ASCII Title in header
 
-            romData.AddCommentRange(["RetroEditor Resourcer Version 0.1", "", "A WIP Tool for re-sourcing ROMS", "", ""], 0, 0);
+            romData.AddCommentRange(["RetroEditor Resourcer Version 0.1", "", "A WIP Tool for re-sourcing ROMS", "", ""], 0);
 
             romData.AddSymbol(0x2100, 2, "INIDISP");
             romData.AddSymbol(0x2101, 2, "OBSEL");
@@ -817,7 +851,24 @@ internal class Resourcer : IWindow
                         lOffset++;
                     }
                 }
-                traceInProgress = false;
+                if (traceContinue)
+                {
+                    if (File.Exists("trace.log"))
+                    {
+                        File.Delete("trace.log");
+                    }
+                    traceCommandInProgress = true;
+                    traceCommandFinished = false;
+                    traceCommandFinishStarted = false;
+
+                    // Set up trace logging
+                    debugger.QueueCommand($"trace {traceFile},,noloop,{{tracelog \"E=%02X|P=%02X|\",e,p}}", (s, id) => { });
+                    debugger.QueueCommand("gtime 500", (s, id) => { traceCommandInProgress = false; });
+                }
+                else
+                {
+                    traceInProgress = false;
+                }
             }
         }
     }

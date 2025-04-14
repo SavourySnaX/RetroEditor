@@ -1,6 +1,4 @@
-using System.Numerics;
 using System.Text;
-using ImGuiNET;
 
 internal enum Regions
 {
@@ -49,19 +47,27 @@ internal abstract class IRegionInfo : IRange
     public UInt64 LineCount => GetLineCount();
     protected IRomDataParser Parent { get; }
 
-    public bool IsSame(IRange other)
+    public bool IsSame(IRange otherRange)
     {
-        return GetType() == other.GetType();
+        var other = otherRange as IRegionInfo;
+        if (other == null)
+            return false;
+        return GetType() == other.GetType() && Above.Count == 0 && Below.Count == 0 && other.Above.Count == 0 && other.Below.Count == 0;
     }
 
     public void CombineAdjacent(IRange other)
     {
+        var otherRange = other as IRegionInfo;
+        if (otherRange == null)
+            throw new ArgumentException("Cannot combine different regions");
         if (!IsSame(other))
             throw new ArgumentException("Cannot combine different regions");
         if (other.AddressStart != AddressEnd + 1)
             throw new ArgumentException("Cannot combine non-adjacent ranges");
         AddressEnd = other.AddressEnd;
         Combining((IRegionInfo)other);
+        if (Above.Count > 0 || Below.Count > 0 || otherRange.Above.Count > 0 || otherRange.Below.Count > 0)
+            throw new ArgumentException("Cannot combine non-adjacent ranges with children");
     }
 
     public IRange SplitAfter(ulong position)
@@ -72,7 +78,10 @@ internal abstract class IRegionInfo : IRange
             throw new ArgumentOutOfRangeException("Position is out of range");
         var oldEnd = AddressEnd;
         AddressEnd = position;
-        return Split(position + 1, oldEnd);
+        var after = Split(position + 1, oldEnd);
+        after.Below = this.Below;
+        Below = new();
+        return after;
     }
 
     public IRange SplitBefore(ulong position)
@@ -83,7 +92,10 @@ internal abstract class IRegionInfo : IRange
             throw new ArgumentOutOfRangeException("Position is out of range");
         var oldStart = AddressStart;
         AddressStart = position;
-        return Split(oldStart, position - 1);
+        var before = Split(oldStart, position - 1);
+        before.Above = this.Above;
+        Above = new();
+        return before;
     }
 
     public string BytesForSpan(ReadOnlySpan<byte> bytes)
@@ -102,15 +114,157 @@ internal abstract class IRegionInfo : IRange
         return BytesForSpan(Parent.FetchBytes(start, end - start + 1));
     }
 
+    public List<IRegionInfo> Above = new();
+    public List<IRegionInfo> Below = new();
+
     public ResourcerConfig.ConfigColour Colour { get; private set; }
 
     public abstract IRegionInfo Split(UInt64 start, UInt64 end);
     public abstract void Combining(IRegionInfo other);
-    public abstract UInt64 GetLineCount();
-    public abstract LineInfo GetLineInfo(UInt64 index);
-    public abstract UInt64 LineOffsetForAddress(UInt64 address);
-    public abstract UInt64 AddressForLine(UInt64 line);
+    public UInt64 GetLineCount()
+    {
+        UInt64 lineCount = 0;
+        foreach (var r in Above)
+        {
+            lineCount += r.GetLineCount();
+        }
+        foreach (var r in Below)
+        {
+            lineCount += r.GetLineCount();
+        }
+        return lineCount + GetRegionLineCount();
+    }
 
+    public LineInfo GetLineInfo(UInt64 index)
+    {
+        UInt64 lineCount;
+        foreach (var r in Above)
+        {
+            lineCount = r.GetLineCount();
+            if (index < lineCount)
+            {
+                return r.GetLineInfo(index);
+            }
+            index -= lineCount;
+        }
+        lineCount = GetRegionLineCount();
+        if (index < lineCount)
+        {
+            return GetRegionLineInfo(index);
+        }
+        index -= lineCount;
+        foreach (var r in Below)
+        {
+            lineCount = r.GetLineCount();
+            if (index < lineCount)
+            {
+                return r.GetLineInfo(index);
+            }
+            index -= lineCount;
+        }
+        throw new ArgumentOutOfRangeException("Index is out of range");
+    }
+
+    public UInt64 LineOffsetForAddress(UInt64 address)
+    {
+        UInt64 lineCount = 0;
+        foreach (var r in Above)
+        {
+            lineCount += r.GetLineCount();
+        }
+        return lineCount + RegionLineOffsetForAddress(address);
+
+    }
+    public UInt64 AddressForLine(UInt64 line)
+    {
+        UInt64 lineCount;
+        foreach (var r in Above)
+        {
+            lineCount = r.GetLineCount();
+            if (line < lineCount)
+            {
+                return RegionAddressForLine(0);
+            }
+            line -= lineCount;
+        }
+        lineCount = GetRegionLineCount();
+        if (line < lineCount)
+        {
+            return RegionAddressForLine(line);
+        }
+        return RegionAddressForLine(lineCount - 1);
+    }
+
+    public abstract UInt64 GetRegionLineCount();
+    public abstract LineInfo GetRegionLineInfo(UInt64 index);
+    public abstract UInt64 RegionLineOffsetForAddress(UInt64 address);
+    public abstract UInt64 RegionAddressForLine(UInt64 line);
+
+    public void Overwrite(IRange other)
+    {
+        // This node is being overwritten, make sure other has 
+        var otherRegion = other as IRegionInfo;
+        if (otherRegion == null)
+        {
+            throw new ArgumentException("Cannot replace different regions");
+        }
+        if (otherRegion.Above.Count != 0)
+        {
+            throw new ArgumentException("Cannot replace regions with children");
+        }
+        else
+        {
+            otherRegion.Above = Above;
+            Above = new();
+        }
+        if (otherRegion.Below.Count != 0)
+        {
+            throw new ArgumentException("Cannot replace regions with children");
+        }
+        else
+        {
+            otherRegion.Below = Below;
+            Below = new();
+        }
+    }
+    
+    public UInt64 ComputeTrueIndex(UInt64 index)
+    {
+        foreach (var r in Above)
+        {
+            index -= r.GetLineCount();
+        }
+        return index;
+    }
+}
+
+internal class MultiLineComment : IRegionInfo
+{
+    private string[] lines;
+    public MultiLineComment(string[] lines,IRomDataParser parent) : base(0, 0, parent, ResourcerConfig.ConfigColour.Comment)
+    {
+        this.lines = lines;
+    }
+
+    public override ulong GetRegionLineCount() => (ulong)lines.Length;
+
+    public override void Combining(IRegionInfo other) => throw new NotImplementedException("Cannot combine a comment region");
+    public override IRegionInfo Split(ulong start, ulong end) => throw new NotImplementedException("Cannot split a comment region");
+
+    public override LineInfo GetRegionLineInfo(ulong index)
+    {
+        return new LineInfo($"", "", $"{lines[index]}", "");
+    }
+
+    public override ulong RegionLineOffsetForAddress(UInt64 address)
+    {
+        return address - AddressStart;
+    }
+
+    public override ulong RegionAddressForLine(UInt64 line)
+    {
+        return AddressStart + line;
+    }
 }
 
 internal class UnknownRegion : IRegionInfo
@@ -118,24 +272,24 @@ internal class UnknownRegion : IRegionInfo
     public UnknownRegion(UInt64 start, UInt64 end, IRomDataParser parent) : base(start, end, parent, ResourcerConfig.ConfigColour.Unknown)
     {
     }
-    
-    public override ulong GetLineCount() => AddressEnd - AddressStart + 1;
+
+    public override ulong GetRegionLineCount() => AddressEnd - AddressStart + 1;
 
     public override void Combining(IRegionInfo other) { }
     public override IRegionInfo Split(ulong start, ulong end) => new UnknownRegion(start, end, Parent);
 
-    public override LineInfo GetLineInfo(ulong index)
+    public override LineInfo GetRegionLineInfo(ulong index)
     {
         var db = Parent.GetByte(AddressStart + index);
         return new LineInfo($"{AddressStart + index:X8}", db.ToString("X2"), $"{(Char.IsControl((char)db) ? '.' : (char)db)}", "");
     }
 
-    public override ulong LineOffsetForAddress(UInt64 address)
+    public override ulong RegionLineOffsetForAddress(UInt64 address)
     {
         return address - AddressStart;
     }
 
-    public override ulong AddressForLine(UInt64 line)
+    public override ulong RegionAddressForLine(UInt64 line)
     {
         return AddressStart + line;
     }
@@ -147,12 +301,12 @@ internal class StringRegion : IRegionInfo
     {
     }
 
-    public override ulong GetLineCount() => (AddressEnd - AddressStart + 16) / 16;
+    public override ulong GetRegionLineCount() => (AddressEnd - AddressStart + 16) / 16;
 
     public override void Combining(IRegionInfo other) { }
     public override IRegionInfo Split(ulong start, ulong end) => new UnknownRegion(start, end, Parent);
 
-    public override LineInfo GetLineInfo(ulong index)
+    public override LineInfo GetRegionLineInfo(ulong index)
     {
         StringBuilder s = new StringBuilder();
         if (index == 0)
@@ -174,12 +328,12 @@ internal class StringRegion : IRegionInfo
         return new LineInfo(index == 0 ? $"{I:X8}" : "", BytesForLine(I, Math.Min(AddressEnd, I + 16)), s.ToString(), "");
     }
 
-    public override ulong LineOffsetForAddress(UInt64 address)
+    public override ulong RegionLineOffsetForAddress(UInt64 address)
     {
         return (address - AddressStart) / 16;
     }
 
-    public override ulong AddressForLine(UInt64 line)
+    public override ulong RegionAddressForLine(UInt64 line)
     {
         return AddressStart + (line * 16);
     }
@@ -213,7 +367,7 @@ internal class CodeRegion : IRegionInfo
         instructions.Add(start, instruction);
     }
 
-    public override ulong GetLineCount() => (UInt64)instructions.Count;
+    public override ulong GetRegionLineCount() => (UInt64)instructions.Count;
 
     public override void Combining(IRegionInfo other)
     {
@@ -251,7 +405,7 @@ internal class CodeRegion : IRegionInfo
         return newRegion;
     }
 
-    public override LineInfo GetLineInfo(ulong index)
+    public override LineInfo GetRegionLineInfo(ulong index)
     {
         var I = instructions.ElementAt((int)index);
         return new LineInfo($"{I.Key:X8}", BytesForSpan(I.Value.Bytes), I.Value.InstructionText(Parent.SymbolProvider), $"; {I.Value.cpuState}");
@@ -259,10 +413,11 @@ internal class CodeRegion : IRegionInfo
 
     public Instruction GetInstructionForLine(ulong index)
     {
+        index = ComputeTrueIndex(index);
         return instructions.ElementAt((int)index).Value;
     }
 
-    public override ulong LineOffsetForAddress(UInt64 address)
+    public override ulong RegionLineOffsetForAddress(UInt64 address)
     {
         UInt64 offset = 0;
         foreach (var i in instructions)
@@ -274,138 +429,9 @@ internal class CodeRegion : IRegionInfo
         return (UInt64)(instructions.Count - 1);
     }
 
-    public override ulong AddressForLine(UInt64 line)
+    public override ulong RegionAddressForLine(UInt64 line)
     {
         return instructions.ElementAt((int)line).Key;
-    }
-}
-
-internal class LabelRegion : IRegionInfo
-{
-    string label = "";
-    public LabelRegion(string label, UInt64 start, UInt64 end, IRomDataParser parent) : base(start, end, parent, ResourcerConfig.ConfigColour.Label)
-    {
-        this.label = label;
-    }
-
-    public override ulong GetLineCount() => 1;
-
-    public override void Combining(IRegionInfo other) { }
-    public override IRegionInfo Split(ulong start, ulong end) => new UnknownRegion(start, end, Parent);
-
-    public override LineInfo GetLineInfo(ulong index)
-    {
-        return new LineInfo($"{label}:", "", "", "");
-    }
-
-    public override ulong LineOffsetForAddress(UInt64 address)
-    {
-        return address - AddressStart;
-    }
-
-    public override ulong AddressForLine(UInt64 line)
-    {
-        return AddressStart + line;
-    }
-}
-
-internal class MultiLineComment : IRegionInfo
-{
-    public string[] comments;
-    public MultiLineComment(string[] comments, UInt64 start, UInt64 end, IRomDataParser parent) : base(start, end, parent, ResourcerConfig.ConfigColour.Comment)
-    {
-        this.comments = comments;
-    }
-
-    public override ulong GetLineCount() => (ulong)comments.Length;
-
-    public override void Combining(IRegionInfo other) { }
-    public override IRegionInfo Split(ulong start, ulong end) => new UnknownRegion(start, end, Parent);
-
-    public override LineInfo GetLineInfo(ulong index)
-    {
-        return new LineInfo("", $"{comments[index]}", "", "");
-    }
-
-    public override ulong LineOffsetForAddress(UInt64 address)
-    {
-        return address - AddressStart;
-    }
-
-    public override ulong AddressForLine(UInt64 line)
-    {
-        return AddressStart;
-    }
-}
-
-internal class DualRegion : IRegionInfo
-{
-    private readonly IRegionInfo primaryRegion;
-    private readonly IRegionInfo secondaryRegion;
-
-    public DualRegion(IRegionInfo primary, IRegionInfo secondary, IRomDataParser parent) : base(primary.AddressStart, primary.AddressEnd, parent, primary.Colour)
-    {
-        if (primary.AddressStart != secondary.AddressStart || primary.AddressEnd != secondary.AddressEnd)
-        {
-            //throw new ArgumentException("Primary and secondary regions must have the same address range.");
-        }
-
-        primaryRegion = primary;
-        secondaryRegion = secondary;
-    }
-
-    public override ulong GetLineCount()
-    {
-        return primaryRegion.GetLineCount() + secondaryRegion.GetLineCount();
-    }
-
-    public override void Combining(IRegionInfo other)
-    {
-        if (other is DualRegion dualOther)
-        {
-            primaryRegion.Combining(dualOther.primaryRegion);
-            secondaryRegion.Combining(dualOther.secondaryRegion);
-        }
-        else
-        {
-            throw new ArgumentException("Cannot combine non-dual regions.");
-        }
-    }
-
-    public override IRegionInfo Split(ulong start, ulong end)
-    {
-        var primarySplit = primaryRegion.Split(start, end);
-        var secondarySplit = secondaryRegion.Split(start, end);
-        return new DualRegion(primarySplit, secondarySplit, Parent);
-    }
-
-    public override LineInfo GetLineInfo(ulong index)
-    {
-        if (index < primaryRegion.GetLineCount())
-        {
-            return primaryRegion.GetLineInfo(index);
-        }
-        else
-        {
-            return secondaryRegion.GetLineInfo(index - primaryRegion.GetLineCount());
-        }
-    }
-
-    public override ulong LineOffsetForAddress(ulong address)
-    {
-        return primaryRegion.LineOffsetForAddress(address);
-    }
-
-    public override ulong AddressForLine(ulong line)
-    {
-        if (line < primaryRegion.GetLineCount())
-        {
-            return primaryRegion.AddressForLine(line);
-        }
-        else
-        {
-            return secondaryRegion.AddressForLine(line - primaryRegion.GetLineCount());
-        }
     }
 }
 
@@ -594,8 +620,8 @@ internal class RomDataParser : IRomDataParser
         UInt64 address = MapSnesCpuToLorom(pc, out var region);
         if (region != RomDataParser.SNESLoRomRegion.ROM)
         {
-            // Not a valid LoROM address
-            Console.WriteLine($"Invalid LoROM address: {address:X8} in region {region} {pc:X6}");
+            // Not a valid LoROM address - code probably in ram
+            //Console.WriteLine($"Invalid LoROM address: {address:X8} in region {region} {pc:X6}");
             instruction = new();
             return false;
         }
@@ -662,40 +688,6 @@ internal class RomDataParser : IRomDataParser
     public void AddUnknownRange(UInt64 start, UInt64 end)
     {
         romRanges.AddRange(new UnknownRegion(start, end, this));
-    }
-
-    public void AddDualRange(IRegionInfo info, UInt64 start, UInt64 end)
-    {
-        var existing = romRanges.GetRangeContainingAddress(start, out var lineOff);
-        if (existing == null)
-        {
-            romRanges.AddRange(info);
-            return;
-        }
-        if (existing.Value is CodeRegion codeRegion)
-        {
-            var instruction = codeRegion.GetInstructionForLine(lineOff);
-            var newCode = new CodeRegion(start, end, instruction, this);
-            var dual = new DualRegion(info, newCode, this);
-            romRanges.AddRange(dual);
-        }
-        else
-        {
-            var dual = new DualRegion(info, existing.Value, this);
-            romRanges.AddRange(dual);
-        }
-    }
-
-    public void AddLabelRange(string label, UInt64 start, UInt64 end)
-    {
-        var labelP = new LabelRegion(label, start, end, this);
-        AddDualRange(labelP, start, end);
-    }
-
-    public void AddCommentRange(string[] comments, UInt64 start, UInt64 end)
-    {
-        var commentP = new MultiLineComment(comments, start, end, this);
-        AddDualRange(commentP, start, end);
     }
 
 
@@ -958,5 +950,12 @@ internal class RomDataParser : IRomDataParser
             return new byte[0];
         length = Math.Min(length, (UInt64)romData.Length - address);
         return new ReadOnlySpan<byte>(romData, (int)address, (int)length);
+    }
+
+    internal void AddCommentRange(String[] value, UInt64 start)
+    {
+        var region = romRanges.GetRangeContainingAddress(start, out var lineOff);
+        region.Value.Above.Add(new MultiLineComment(value, this));
+        romRanges.Recompute();
     }
 }
