@@ -1,4 +1,7 @@
+using System.Runtime.CompilerServices;
 using System.Text;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 
 internal enum Regions
 {
@@ -45,7 +48,7 @@ internal abstract class IRegionInfo : IRange
     public UInt64 AddressEnd { get; protected set; }
 
     public UInt64 LineCount => GetLineCount();
-    protected IRomDataParser Parent { get; }
+    protected IRomDataParser Parent { get; private set; }
 
     public bool IsSame(IRange otherRange)
     {
@@ -227,7 +230,7 @@ internal abstract class IRegionInfo : IRange
             Below = new();
         }
     }
-    
+
     public UInt64 ComputeTrueIndex(UInt64 index)
     {
         foreach (var r in Above)
@@ -236,6 +239,68 @@ internal abstract class IRegionInfo : IRange
         }
         return index;
     }
+
+    public Dictionary<string, object> Save()
+    {
+        var dict = new Dictionary<string, object>
+        {
+            { "AddressStart", AddressStart },
+            { "AddressEnd", AddressEnd },
+            { "Colour", Colour.ToString() },
+            { "Above", Above.Select(r => r.Save()).ToList() },
+            { "Below", Below.Select(r => r.Save()).ToList() },
+            { "Type", GetType().Name }
+        };
+        RegionSave(dict);
+        return dict;
+    }
+
+    public abstract void RegionSave(Dictionary<string, object> dict);
+
+    public static IRegionInfo Load(Dictionary<string, object> dict, IRomDataParser parent)
+    {
+        var start = ((JsonElement)dict["AddressStart"]).GetUInt64();
+        var end = ((JsonElement)dict["AddressEnd"]).GetUInt64();
+        var colour = (ResourcerConfig.ConfigColour)Enum.Parse(typeof(ResourcerConfig.ConfigColour), ((JsonElement)dict["Colour"]).GetString());
+        var type = Type.GetType(((JsonElement)dict["Type"]).GetString());
+
+        if (type == null)
+            throw new ArgumentException($"Cannot find type {dict["Type"]}");
+
+        var region = RuntimeHelpers.GetUninitializedObject(type) as IRegionInfo;
+        if (region == null)
+        {
+            throw new ArgumentException($"Cannot create type {dict["Type"]}");
+        }
+        region = region.RegionLoad(dict);
+        region.AddressEnd = end;
+        region.AddressStart = start;
+        region.Parent = parent;
+        region.Colour = colour;
+
+        // deserialize Above and below
+        var aboveElem = (JsonElement)dict["Above"];
+        region.Above = new List<IRegionInfo>();
+        foreach (var item in aboveElem.EnumerateArray())
+        {
+            var itemDict = JsonSerializer.Deserialize<Dictionary<string, object>>(item.ToString());
+            var aboveRegion = Load(itemDict, parent);
+            region.Above.Add(aboveRegion);
+        }
+        var belowElem = (JsonElement)dict["Below"];
+        region.Below = new List<IRegionInfo>();
+        foreach (var item in belowElem.EnumerateArray())
+        {
+            var itemDict = JsonSerializer.Deserialize<Dictionary<string, object>>(item.ToString());
+            var belowRegion = Load(itemDict, parent);
+            region.Below.Add(belowRegion);
+        }
+
+        region.RegionLoad(dict);
+        return region;
+    }
+
+    public abstract IRegionInfo RegionLoad(Dictionary<string, object> dict);
 }
 
 internal class MultiLineComment : IRegionInfo
@@ -265,6 +330,22 @@ internal class MultiLineComment : IRegionInfo
     {
         return AddressStart + line;
     }
+
+    public override void RegionSave(Dictionary<string, object> dict)
+    {
+        dict["Lines"] = lines.ToList();
+    }
+
+    public override IRegionInfo RegionLoad(Dictionary<string, object> dict)
+    {
+        var lineElem = (JsonElement)dict["Lines"];
+        lines = new string[lineElem.GetArrayLength()];
+        for (int i = 0; i < lineElem.GetArrayLength(); i++)
+        {
+            lines[i] = lineElem[i].GetString();
+        }
+        return this;
+    }
 }
 
 internal class UnknownRegion : IRegionInfo
@@ -292,6 +373,15 @@ internal class UnknownRegion : IRegionInfo
     public override ulong RegionAddressForLine(UInt64 line)
     {
         return AddressStart + line;
+    }
+
+    public override void RegionSave(Dictionary<string, object> dict)
+    {
+    }
+
+    public override IRegionInfo RegionLoad(Dictionary<string, object> dict)
+    {
+        return this;
     }
 }
 
@@ -336,6 +426,15 @@ internal class StringRegion : IRegionInfo
     public override ulong RegionAddressForLine(UInt64 line)
     {
         return AddressStart + (line * 16);
+    }
+
+    public override void RegionSave(Dictionary<string, object> dict)
+    {
+    }
+
+    public override IRegionInfo RegionLoad(Dictionary<string, object> dict)
+    {
+        return this;
     }
 }
 
@@ -432,6 +531,28 @@ internal class CodeRegion : IRegionInfo
     public override ulong RegionAddressForLine(UInt64 line)
     {
         return instructions.ElementAt((int)line).Key;
+    }
+
+    public override void RegionSave(Dictionary<string, object> dict)
+    {
+        dict["Instructions"] = instructions.Select(i => new { Key = i.Key, Value = i.Value.Save() }).ToList();
+    }
+
+    public override IRegionInfo RegionLoad(Dictionary<string, object> dict)
+    {
+        instructions = new SortedDictionary<ulong, Instruction>();
+        var instructionsElem = (JsonElement)dict["Instructions"];
+        foreach (var i in instructionsElem.EnumerateArray())
+        {
+            // i is a JsonElement representing an object with Key and Value
+            var address = i.GetProperty("Key").GetUInt64();
+            var cdict = JsonSerializer.Deserialize<Dictionary<string, object>>(i.GetProperty("Value").ToString());
+            if (cdict == null)
+                throw new ArgumentException("Cannot deserialize instruction");
+            var instruction = Instruction.Load(cdict);
+            instructions.Add(address, instruction);
+        }
+        return this;
     }
 }
 
@@ -714,7 +835,6 @@ internal class RomDataParser : IRomDataParser
 
             minAddress = 0;
             maxAddress = romSize - 1;
-            romRanges.AddRange(new UnknownRegion(minAddress, maxAddress, this));
 
             // Now we know the size of the rom, so, set the address of the view to the start of the rom
             UInt64 offset = 0;
@@ -952,10 +1072,63 @@ internal class RomDataParser : IRomDataParser
         return new ReadOnlySpan<byte>(romData, (int)address, (int)length);
     }
 
+    //TODO - doesn't handle mid region insertion....
     internal void AddCommentRange(String[] value, UInt64 start)
     {
         var region = romRanges.GetRangeContainingAddress(start, out var lineOff);
-        region.Value.Above.Add(new MultiLineComment(value, this));
-        romRanges.Recompute();
+        if (region != null)
+        {
+            region.Value.Above.Add(new MultiLineComment(value, this));
+            romRanges.Recompute();
+        }
+    }
+
+    public void Save(string filePath)
+    {
+        // Serialize symbolProvider.symbols as Dictionary<string, string>
+        var serializableSymbols = symbolProvider.symbols.ToDictionary(
+            kvp => $"{kvp.Key.Item1}:{kvp.Key.Item2}",
+            kvp => kvp.Value
+        );
+        var romRangesDto = romRanges.Select(r => r.Value.Save()).ToList();
+        var data = new
+        {
+            RomRanges = romRangesDto,
+            SymbolProvider = serializableSymbols
+        };
+        var json = JsonSerializer.Serialize(data, new JsonSerializerOptions { WriteIndented = true });
+        File.WriteAllText(filePath, json);
+    }
+
+    public void Load(string filePath)
+    {
+        var json = File.ReadAllText(filePath);
+        var doc = JsonDocument.Parse(json);
+        var root = doc.RootElement;
+        if (root.TryGetProperty("SymbolProvider", out var symbolsElem))
+        {
+            var dict = new Dictionary<(ulong, int), string>();
+            foreach (var prop in symbolsElem.EnumerateObject())
+            {
+                var keyParts = prop.Name.Split(':');
+                if (keyParts.Length == 2 && ulong.TryParse(keyParts[0], out var addr) && int.TryParse(keyParts[1], out var size))
+                {
+                    dict[(addr, size)] = prop.Value.GetString() ?? string.Empty;
+                }
+            }
+            symbolProvider.symbols = dict;
+        }
+        if (root.TryGetProperty("RomRanges", out var rangesElem))
+        {
+            foreach (var rangeElem in rangesElem.EnumerateArray())
+            {
+                var rangeDict = rangeElem.Deserialize<Dictionary<string, object>>();
+                if (rangeDict != null)
+                {
+                    var range = IRegionInfo.Load(rangeDict, this);
+                    romRanges.AddRange(range);
+                }
+            }
+        }
     }
 }
