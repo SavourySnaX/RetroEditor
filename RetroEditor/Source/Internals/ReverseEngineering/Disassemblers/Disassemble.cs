@@ -1,3 +1,7 @@
+using System.Runtime.CompilerServices;
+using System.Text.Json;
+using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
 using RetroEditor.Plugins;
 
 
@@ -23,6 +27,34 @@ internal abstract class IOperand
         IsSource = isSource;
         IsDestination = isDestination;
         Value = value;
+    }
+
+    // Custom serialization for operands
+    public virtual Dictionary<string, object> Save()
+    {
+        return new Dictionary<string, object>
+        {
+            { "Type", GetType().AssemblyQualifiedName },
+            { "IsSource", IsSource },
+            { "IsDestination", IsDestination },
+            { "Value", Value }
+        };
+    }
+
+    // Custom deserialization for operands
+    public static IOperand Load(Dictionary<string, object> dict)
+    {
+        var typeName = ((JsonElement)dict["Type"]).GetString();
+        var type = Type.GetType(typeName);
+        if (type == null)
+            throw new InvalidOperationException($"Unknown operand type: {typeName}");
+        var operand = RuntimeHelpers.GetUninitializedObject(type) as IOperand;
+        if (operand==null)
+            throw new InvalidOperationException($"Cannot create operand of type: {typeName}");
+        operand.IsSource = ((JsonElement)dict["IsSource"]).GetBoolean();
+        operand.IsDestination = ((JsonElement)dict["IsDestination"]).GetBoolean();
+        operand.Value = ((JsonElement)dict["Value"]).GetUInt64();
+        return operand;
     }
 }
 
@@ -97,6 +129,61 @@ internal class Instruction
         string operandsText = string.Join(", ", Operands.Select(o => o.Text(symbols)));
         return $"{Mnemonic} {operandsText}";
     }
+
+    // Custom serialization for Instruction
+    public virtual Dictionary<string, object> Save()
+    {
+        return new Dictionary<string, object>
+        {
+            { "Address", Address },
+            { "Mnemonic", Mnemonic },
+            { "Operands", Operands.Select(o => o.Save()).ToList() },
+            { "Bytes", Bytes },
+            { "IsBranch", IsBranch },
+            { "IsBasicBlockTerminator", IsBasicBlockTerminator },
+            { "NextAddresses", NextAddresses },
+            { "CpuStateType", cpuState.GetType().Name},
+            { "CpuState", cpuState.Save() }  
+        };
+    }
+
+    // Custom deserialization for Instruction
+    public static Instruction Load(Dictionary<string, object> dict)
+    {
+        var instr = new Instruction();
+        instr.Address = ((JsonElement)dict["Address"]).GetUInt64();
+        instr.Mnemonic = dict["Mnemonic"]?.ToString() ?? string.Empty;
+        instr.Operands = new List<IOperand>();
+        foreach (var o in ((JsonElement)dict["Operands"]).EnumerateArray())
+        {
+            var odict = JsonSerializer.Deserialize<Dictionary<string, object>>(o.ToString());
+            if (odict != null)
+                instr.Operands.Add(IOperand.Load(odict));
+        }
+        instr.Bytes = ((JsonElement)dict["Bytes"]).GetBytesFromBase64();
+        instr.IsBranch = ((JsonElement)dict["IsBranch"]).GetBoolean();
+        instr.IsBasicBlockTerminator = ((JsonElement)dict["IsBasicBlockTerminator"]).GetBoolean();
+        if (dict["NextAddresses"] is IEnumerable<object> nextList)
+            instr.NextAddresses = nextList.Select(Convert.ToUInt64).ToList();
+        else
+            instr.NextAddresses = new List<ulong>();
+        var type = Type.GetType(((JsonElement)dict["CpuStateType"]).GetString());
+        if (type == null)
+            throw new ArgumentException($"Cannot find type {dict["CpuStateType"]}");
+
+        var cpuState = RuntimeHelpers.GetUninitializedObject(type) as ICpuState;
+        if (cpuState == null)
+        {
+            throw new ArgumentException($"Cannot create type {dict["CpuStateType"]}");
+        }
+        var stateDict = JsonSerializer.Deserialize<Dictionary<string, object>>(dict["CpuState"].ToString());
+        if (stateDict == null)
+        {
+            throw new ArgumentException($"Cannot deserialize state for type {dict["CpuStateType"]}");
+        }
+        instr.cpuState = cpuState.Load(stateDict);
+        return instr;
+    }
 }
 
 /// <summary>
@@ -108,6 +195,9 @@ internal interface ICpuState
     /// Creates a deep copy of the CPU state
     /// </summary>
     public ICpuState Clone();
+
+    public Dictionary<string, object> Save();
+    public ICpuState Load(Dictionary<string, object> dict);
 }
 
 internal struct EmptyState : ICpuState
@@ -115,6 +205,16 @@ internal struct EmptyState : ICpuState
     public ICpuState Clone()
     {
         return new EmptyState();
+    }
+
+    public ICpuState Load(Dictionary<string, object> dict)
+    {
+        return new EmptyState();
+    }
+
+    public Dictionary<string, object> Save()
+    {
+        return new Dictionary<string, object>();
     }
 }
 

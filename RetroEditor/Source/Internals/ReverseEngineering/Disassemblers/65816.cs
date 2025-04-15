@@ -1,3 +1,4 @@
+using System.Text.Json;
 using RetroEditor.Plugins;
 
 /// <summary>
@@ -60,6 +61,33 @@ internal struct SNES65816State : ICpuState
             Accumulator8Bit = this.Accumulator8Bit,
             Index8Bit = this.Index8Bit
         };
+    }
+
+    public ICpuState Load(Dictionary<string, object> dict)
+    {
+        if (dict == null)
+            throw new ArgumentNullException(nameof(dict));
+        var emulationMode = ((JsonElement)dict["EmulationMode"]).GetBoolean();
+        var accumulator8Bit = ((JsonElement)dict["Accumulator8Bit"]).GetBoolean();
+        var index8Bit = ((JsonElement)dict["Index8Bit"]).GetBoolean();
+
+        return new SNES65816State
+        {
+            EmulationMode = emulationMode,
+            Accumulator8Bit = accumulator8Bit,
+            Index8Bit = index8Bit
+        };
+    }
+
+    public Dictionary<string, object> Save()
+    {
+        var dict = new Dictionary<string, object>
+        {
+            { "EmulationMode", EmulationMode },
+            { "Accumulator8Bit", Accumulator8Bit },
+            { "Index8Bit", Index8Bit }
+        };
+        return dict;
     }
 
     public void SetEmulationMode(bool emulationMode)

@@ -34,7 +34,7 @@ internal class Range<T> where T : class, IRange
         Value = value;
     }
 
-    internal void Overwrite<T>(Range<T> newRange) where T : class, IRange
+    internal void Overwrite(Range<T> newRange) 
     {
         Value.Overwrite(newRange.Value);
     }
