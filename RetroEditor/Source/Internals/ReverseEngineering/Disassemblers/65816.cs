@@ -706,8 +706,8 @@ internal class SNES65816Disassembler : DisassemblerBase
             if (addressingMode==AddressingMode.Absolute)
             {
                 value&=0xFFFF;
-                value|=address&0xFF0000;
-                isFollowable=true;
+                value |= address & 0xFF0000;
+                isFollowable =true;
             }
             else if (addressingMode==AddressingMode.AbsoluteLong)
             {
@@ -717,7 +717,8 @@ internal class SNES65816Disassembler : DisassemblerBase
             else if (addressingMode==AddressingMode.ProgramCounterRelative || addressingMode==AddressingMode.ProgramCounterRelativeLong)
             {
                 value&=0xFFFF;
-                isFollowable=true;
+                value |= address & 0xFF0000;
+                isFollowable =true;
             }
             if (operands.Count > 0)
             {

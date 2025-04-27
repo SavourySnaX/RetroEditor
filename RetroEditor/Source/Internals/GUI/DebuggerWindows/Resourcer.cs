@@ -422,6 +422,8 @@ internal class Resourcer : IWindow
                             autoDisassembler.State = state;
                             var autoPC = romData.MapRomToCpu(minAddress);
                             autoStack.Clear();
+                            autoState.Clear();
+                            stacked.Clear();
                             autoStack.Push(autoPC);
                             autoState.Push(autoDisassembler.State);
                             automated = true;
@@ -614,11 +616,13 @@ internal class Resourcer : IWindow
     SNES65816Disassembler autoDisassembler = new SNES65816Disassembler();
     Stack<UInt64> autoStack = new ();
     Stack<ICpuState> autoState = new ();
+    HashSet<UInt64> stacked = new();
+
     public void Update(float seconds)
     {
         if (automated)
         {
-            if (autoStack.Count==0 || autoState.Count==0)
+            if (autoStack.Count == 0 || autoState.Count == 0)
             {
                 automated = false;
             }
@@ -629,43 +633,39 @@ internal class Resourcer : IWindow
                 autoDisassembler.State = state;
 
                 var mappedAddress = romData.MapSnesCpuToLorom(autoPC, out var region);
-                if (region==RomDataParser.SNESLoRomRegion.ROM)
+                if (region == RomDataParser.SNESLoRomRegion.ROM)
                 {
                     var r = romData.GetRomRanges.GetRangeContainingAddress(mappedAddress);
-                    if (r!=null && r.Value.GetType() == typeof(CodeRegion))
+                    if (r != null && r.Value.GetType() == typeof(CodeRegion))
                     {
                         // Already disassembled
                         return;
                     }
                     if (romData.AddCodeRange(autoDisassembler, autoPC, out var instruction))
                     {
-                        if (instruction.Mnemonic=="XCE")
+                        if (instruction.Mnemonic == "XCE")
                         {
-                            return;   
+                            return;
                         }
                         else
                         {
                             foreach (var next in instruction.NextAddresses)
                             {
-                                autoStack.Push(next);
-                                autoState.Push(autoDisassembler.State);
-                            }
-                            if (instruction.IsBasicBlockTerminator && instruction.IsBranch)
-                            {
-                                if (instruction.Mnemonic=="JSR" || instruction.Mnemonic=="JSL")
+                                if (!stacked.Contains(next))
                                 {
-                                    // Allow branches to be followed both ways
-                                    autoStack.Push(instruction.Address+(UInt64)instruction.Bytes.Length);
+                                    autoStack.Push(next);
                                     autoState.Push(autoDisassembler.State);
+                                    stacked.Add(next);
                                 }
                             }
                         }
                     }
                     else
                     {
-                        automated=false;
+                        automated = false;
                         autoStack.Clear();
                         autoState.Clear();
+                        stacked.Clear();
                     }
                 }
             }
@@ -802,7 +802,7 @@ internal class Resourcer : IWindow
                     romData.AddSymbol(0x4303 + (UInt64)(0x10 * a), 2, $"A1T{a}H");
                     romData.AddSymbol(0x4304 + (UInt64)(0x10 * a), 2, $"A1B{a}");
                     romData.AddSymbol(0x4305 + (UInt64)(0x10 * a), 2, $"DAS{a}L");
-                    romData.AddSymbol(0x4306+(UInt64)(0x10*a), 2, $"DAS{a}H");
+                    romData.AddSymbol(0x4306 + (UInt64)(0x10 * a), 2, $"DAS{a}H");
                     romData.AddSymbol(0x430A + (UInt64)(0x10 * a), 2, $"NTRL{a}");
                 }
             }
@@ -820,14 +820,14 @@ internal class Resourcer : IWindow
 
                 SNES65816Disassembler disassembler = new SNES65816Disassembler();
                 var state = ((SNES65816State)disassembler.State);
-                state.SetEmulationMode(e==1);
-                state.Accumulator8Bit=(p & 0x20) == 0x20;
-                state.Index8Bit=(p & 0x10) == 0x10;
-                disassembler.State=state;
+                state.SetEmulationMode(e == 1);
+                state.Accumulator8Bit = (p & 0x20) == 0x20;
+                state.Index8Bit = (p & 0x10) == 0x10;
+                disassembler.State = state;
                 romData.AddCodeRange(disassembler, pc, out var _);
-                jumpToAddress = romData.MapSnesCpuToLorom(pc,out var _);
+                jumpToAddress = romData.MapSnesCpuToLorom(pc, out var _);
                 newTraceCnt--;
-                if (newTraceCnt==0)
+                if (newTraceCnt == 0)
                 {
                     newTraceInProgress = false;
                 }
@@ -843,10 +843,10 @@ internal class Resourcer : IWindow
         {
             if (debugger.IsStopped && !traceCommandFinishStarted)
             {
-                traceCommandFinishStarted=true;
-                traceCommandFinished=false;
-                debugger.QueueCommand("traceflush",(s,id)=>{});
-                debugger.QueueCommand("trace off",(s,id)=>{traceCommandFinished=true;});
+                traceCommandFinishStarted = true;
+                traceCommandFinished = false;
+                debugger.QueueCommand("traceflush", (s, id) => { });
+                debugger.QueueCommand("trace off", (s, id) => { traceCommandFinished = true; });
             }
             if (debugger.IsStopped && traceCommandFinished)
             {
@@ -854,8 +854,8 @@ internal class Resourcer : IWindow
                 if (File.Exists(traceFile))
                 {
                     // Parse disassembly
-                    var lines= File.ReadAllLines(traceFile);
-                    int lOffset=0;
+                    var lines = File.ReadAllLines(traceFile);
+                    int lOffset = 0;
                     foreach (var line in lines)
                     {
                         ParseLocation(line);
@@ -879,6 +879,28 @@ internal class Resourcer : IWindow
                 else
                 {
                     traceInProgress = false;
+                    // After trace, perform a walk of any blocks that end in non terminating branches
+
+                    foreach (var b in romData.GetRomRanges)
+                    {
+                        if (b.Value is CodeRegion codeRegion)
+                        {
+                            var lastLine = codeRegion.LineCount - 1;
+                            var lastInstruction = codeRegion.GetInstructionForLine(lastLine);
+                            if (lastInstruction.IsBranch && !lastInstruction.IsBasicBlockTerminator)
+                            {
+                                // Conditional instruction
+                                var next = lastInstruction.Address + (UInt64)lastInstruction.Bytes.Length;
+                                if (!stacked.Contains(next))
+                                {
+                                    autoStack.Push(next);
+                                    autoState.Push(lastInstruction.cpuState);
+                                    stacked.Add(next);
+                                    automated = true;
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -909,14 +931,14 @@ internal class Resourcer : IWindow
         // Parse bank and offset
         var addressPart = parts[2].Split(' ')[0];
         var addressComponents = addressPart.Split(':');
-        if (addressComponents.Length != 3 || 
+        if (addressComponents.Length != 3 ||
             !byte.TryParse(addressComponents[0], System.Globalization.NumberStyles.HexNumber, null, out byte bank) ||
             !ushort.TryParse(addressComponents[1], System.Globalization.NumberStyles.HexNumber, null, out ushort offset))
             return;
 
         // Convert bank:offset to SNES address
         UInt64 snesAddress = (UInt64)((bank << 16) | offset);
-        
+
         // Map SNES address to LoROM address
         // Create a disassembler with the current CPU state
         SNES65816Disassembler disassembler = new SNES65816Disassembler();
