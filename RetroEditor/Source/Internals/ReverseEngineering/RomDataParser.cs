@@ -261,8 +261,17 @@ internal abstract class IRegionInfo : IRange
     {
         var start = ((JsonElement)dict["AddressStart"]).GetUInt64();
         var end = ((JsonElement)dict["AddressEnd"]).GetUInt64();
-        var colour = (ResourcerConfig.ConfigColour)Enum.Parse(typeof(ResourcerConfig.ConfigColour), ((JsonElement)dict["Colour"]).GetString());
-        var type = Type.GetType(((JsonElement)dict["Type"]).GetString());
+        var element = (JsonElement)dict["Colour"];
+        if (element.ValueKind == JsonValueKind.Null)
+            throw new ArgumentException("Colour is null");
+        var elementColour = element.GetString();
+        if (elementColour == null)
+            throw new ArgumentException("Colour is null");
+        var colour = (ResourcerConfig.ConfigColour)Enum.Parse(typeof(ResourcerConfig.ConfigColour), elementColour);
+        var typeName = ((JsonElement)dict["Type"]).GetString();
+        if (typeName == null)
+            throw new ArgumentException("Type is null");
+        var type = Type.GetType(typeName);
 
         if (type == null)
             throw new ArgumentException($"Cannot find type {dict["Type"]}");
@@ -294,6 +303,8 @@ internal abstract class IRegionInfo : IRange
         foreach (var item in belowElem.EnumerateArray())
         {
             var itemDict = JsonSerializer.Deserialize<Dictionary<string, object>>(item.ToString());
+            if (itemDict == null)
+                throw new ArgumentException("Cannot deserialize region");
             var belowRegion = Load(itemDict, parent);
             region.Below.Add(belowRegion);
         }
@@ -344,7 +355,13 @@ internal class MultiLineComment : IRegionInfo
         lines = new string[lineElem.GetArrayLength()];
         for (int i = 0; i < lineElem.GetArrayLength(); i++)
         {
-            lines[i] = lineElem[i].GetString();
+            var line = lineElem[i];
+            if (line.ValueKind != JsonValueKind.String)
+                throw new ArgumentException("Line is not a string");
+            var lineString = line.GetString();
+            if (lineString == null)
+                throw new ArgumentException("Line is null");
+            lines[i] = lineString;
         }
         return this;
     }
