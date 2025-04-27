@@ -1,7 +1,5 @@
 using System.Runtime.CompilerServices;
 using System.Text.Json;
-using System.Text.Json.Nodes;
-using System.Text.Json.Serialization;
 using RetroEditor.Plugins;
 
 
@@ -45,6 +43,10 @@ internal abstract class IOperand
     public static IOperand Load(Dictionary<string, object> dict)
     {
         var typeName = ((JsonElement)dict["Type"]).GetString();
+        if (typeName == null)
+        {
+            throw new InvalidOperationException("Cannot find type for operand");
+        }
         var type = Type.GetType(typeName);
         if (type == null)
             throw new InvalidOperationException($"Unknown operand type: {typeName}");
@@ -94,12 +96,15 @@ internal class Instruction
     public bool IsBasicBlockTerminator { get; set; }
 
     public List<ulong> NextAddresses { get; set; }
+
+    public List<(ulong address, int size)> MemoryAccesses { get; set; }
     public ICpuState cpuState { get; set; }
 
     public Instruction()
     {
         Operands = new List<IOperand>();
         NextAddresses = new List<ulong>();
+        MemoryAccesses = new List<(ulong address, int size)>();
         Mnemonic = string.Empty;
         Bytes = Array.Empty<byte>();
         cpuState = new EmptyState();
@@ -112,6 +117,7 @@ internal class Instruction
         Operands = operands;
         Bytes = bytes;
         NextAddresses = new List<ulong>();
+        MemoryAccesses = new List<(ulong address, int size)>();
         cpuState = state;
     }
 
@@ -164,7 +170,13 @@ internal class Instruction
             instr.NextAddresses = nextList.Select(Convert.ToUInt64).ToList();
         else
             instr.NextAddresses = new List<ulong>();
-        var type = Type.GetType(((JsonElement)dict["CpuStateType"]).GetString());
+        var cpuStateType = (JsonElement)dict["CpuStateType"];
+        if (cpuStateType.ValueKind != JsonValueKind.String)
+            throw new ArgumentException($"Invalid type for CpuStateType: {cpuStateType.ValueKind}");
+        var cpuStateTypeString = cpuStateType.GetString();
+        if (cpuStateTypeString == null)
+            throw new ArgumentException($"Cannot find type for CpuStateType: {cpuStateType}");
+        var type = Type.GetType(cpuStateTypeString);
         if (type == null)
             throw new ArgumentException($"Cannot find type {dict["CpuStateType"]}");
 
@@ -173,12 +185,20 @@ internal class Instruction
         {
             throw new ArgumentException($"Cannot create type {dict["CpuStateType"]}");
         }
-        var stateDict = JsonSerializer.Deserialize<Dictionary<string, object>>(dict["CpuState"].ToString());
-        if (stateDict == null)
+        var stateDict = dict["CpuState"] as JsonElement?;
+        if (stateDict == null || stateDict.Value.ValueKind != JsonValueKind.Object)
+        {
+            throw new ArgumentException($"Invalid type for CpuState: {stateDict?.ValueKind}");
+        }
+        cpuStateTypeString = stateDict.Value.ToString();
+        if (cpuStateTypeString == null)
+            throw new ArgumentException($"Cannot find type for CpuState: {stateDict}");
+        var stateDictso = JsonSerializer.Deserialize<Dictionary<string, object>>(cpuStateTypeString);
+        if (stateDictso == null)
         {
             throw new ArgumentException($"Cannot deserialize state for type {dict["CpuStateType"]}");
         }
-        instr.cpuState = cpuState.Load(stateDict);
+        instr.cpuState = cpuState.Load(stateDictso);
         return instr;
     }
 }
