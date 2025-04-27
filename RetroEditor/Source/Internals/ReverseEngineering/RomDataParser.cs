@@ -284,6 +284,8 @@ internal abstract class IRegionInfo : IRange
         foreach (var item in aboveElem.EnumerateArray())
         {
             var itemDict = JsonSerializer.Deserialize<Dictionary<string, object>>(item.ToString());
+            if (itemDict == null)
+                throw new ArgumentException("Cannot deserialize region");
             var aboveRegion = Load(itemDict, parent);
             region.Above.Add(aboveRegion);
         }
@@ -759,9 +761,7 @@ internal class RomDataParser : IRomDataParser
                 }
                 else
                 {
-                    Console.WriteLine($"Error: {result.ErrorMessage}");
-                    instruction = new();
-                    return false;
+                    throw new Exception($"Error: {result.ErrorMessage}");
                 }
             }
             var current = romRanges.GetRangeContainingAddress(address, out var lineOff);
@@ -773,18 +773,14 @@ internal class RomDataParser : IRomDataParser
                     var check = cregion.GetInstructionForLine(lineOff);
                     if (check.ToString() != result.Instruction.ToString())        // TODO de-shitiffy
                     {
-                        Console.WriteLine($"Error: instruction overlaps different instruction {check} != {result.Instruction}");
-                        instruction = new();
-                        return false;
+                        throw new Exception($"Error: instruction overlaps different instruction {check} != {result.Instruction}");
                     }
                 }
                 else
                 {
                     if (((UInt64)result.Instruction.Bytes.Length) > current.Value.AddressEnd - current.Value.AddressStart + 1)
                     {
-                        Console.WriteLine($"Error: instruction does not fit! {current.Value.AddressStart:X8} != {result.Instruction.ToString()}");
-                        instruction = new();
-                        return false;
+                        throw new Exception($"Error: instruction does not fit! {current.Value.AddressStart:X8} != {result.Instruction.ToString()}");
                     }
                     romRanges.AddRange(new CodeRegion(address, address + (UInt64)result.BytesConsumed - 1, result.Instruction, this));
                 }

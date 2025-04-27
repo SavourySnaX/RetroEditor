@@ -34,7 +34,7 @@ internal abstract class IOperand
     {
         return new Dictionary<string, object>
         {
-            { "Type", GetType().AssemblyQualifiedName },
+            { "Type", GetType().Name },
             { "IsSource", IsSource },
             { "IsDestination", IsDestination },
             { "Value", Value }
@@ -93,9 +93,6 @@ internal class Instruction
     /// </summary>
     public bool IsBasicBlockTerminator { get; set; }
 
-    /// <summary>
-    /// The possible next instruction addresses after this instruction
-    /// </summary>
     public List<ulong> NextAddresses { get; set; }
     public ICpuState cpuState { get; set; }
 
@@ -143,7 +140,7 @@ internal class Instruction
             { "IsBasicBlockTerminator", IsBasicBlockTerminator },
             { "NextAddresses", NextAddresses },
             { "CpuStateType", cpuState.GetType().Name},
-            { "CpuState", cpuState.Save() }  
+            { "CpuState", cpuState.Save() }
         };
     }
 
