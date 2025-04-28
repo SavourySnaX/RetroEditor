@@ -105,6 +105,25 @@ internal struct SNES65816State : ICpuState
     }
 }
 
+internal struct SNES65816RegisterState : ICpuRegisterState
+{
+    public byte DBR;
+    public UInt16 S, D;
+    public UInt16 X, Y;
+
+    public ICpuRegisterState Clone()
+    {
+        return new SNES65816RegisterState
+        {
+            DBR = this.DBR,
+            S = this.S,
+            D = this.D,
+            X = this.X,
+            Y = this.Y
+        };
+    }
+}
+
 /// <summary>
 /// Disassembler for the 65816 CPU
 /// </summary>
@@ -738,5 +757,95 @@ internal class SNES65816Disassembler : DisassemblerBase
         }
 
         return DecodeResult.CreateSuccess(instruction, baseLength);
+    }
+
+    public override List<(UInt64 address, int size)> FetchMemoryAccesses(Instruction ins, ICpuRegisterState registerState)
+    {
+        SNES65816RegisterState registers = (SNES65816RegisterState)registerState;
+        SNES65816State state = (SNES65816State)ins.cpuState;
+        var accesses = new List<(UInt64 address, int size)>();
+
+        if (registers.D!=0)
+        {
+            throw new Exception($"D is non 0 value... todo");
+        }
+        if (registers.DBR!=0)
+        {
+            throw new Exception($"DBR is non 0 value... todo");
+        }
+        if (state.EmulationMode)
+        {
+            throw new Exception($"Emulation mode not supported");
+        }
+        if (state.Accumulator8Bit)
+        {
+            throw new Exception($"8 bit accumulator not supported");
+        }
+        if (state.Index8Bit)
+        {
+            throw new Exception($"8 bit index not supported");
+        }
+
+        var X = registers.X;
+        var Y = registers.Y;
+        if (state.Index8Bit)
+        {
+            X&=0xFF;
+            Y&=0xFF;
+        }
+
+        foreach (var operand in ins.Operands)
+        {
+            UInt64 EffectiveAddress=0;
+
+            if (operand is O65816_Absolute absolute)
+            {
+                EffectiveAddress=registers.DBR;
+                EffectiveAddress<<=16;
+                EffectiveAddress|=operand.Value;
+            }
+            else if (operand is O65816_AbsoluteX absoluteX)
+            {
+                EffectiveAddress=registers.DBR;
+                EffectiveAddress<<=16;
+                EffectiveAddress|=operand.Value;
+                EffectiveAddress+=X;
+            }
+            else if (operand is O65816_AbsoluteY absoluteY)
+            {
+                EffectiveAddress=registers.DBR;
+                EffectiveAddress<<=16;
+                EffectiveAddress|=operand.Value;
+                EffectiveAddress+=X;
+            }
+            else if (operand is O65816_AbsoluteLong absoluteLong)
+            {
+                EffectiveAddress=absoluteLong.Value;
+            }
+            else if (operand is O65816_AbsoluteLongX absoluteLongX)
+            {
+                EffectiveAddress=absoluteLongX.Value;
+                EffectiveAddress+=X;
+            }
+            else if (operand is O65816_DirectPage directPage)
+            {
+                EffectiveAddress=directPage.Value;
+                EffectiveAddress+=registers.D;
+                EffectiveAddress&=0xFFFF;
+            }
+            else if (operand is O65816_DirectPageX directPageX)
+            {
+                EffectiveAddress=directPageX.Value;
+                EffectiveAddress+=registers.D;
+                EffectiveAddress+=X;
+                EffectiveAddress&=0xFFFF;
+            }
+            else
+            {
+                throw new Exception($"Unsupported operand type: {operand.GetType()}");
+            }
+            accesses.Add((EffectiveAddress, 1));
+        }
+        return accesses;
     }
 }
