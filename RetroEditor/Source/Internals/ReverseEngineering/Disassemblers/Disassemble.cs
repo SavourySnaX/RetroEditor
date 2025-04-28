@@ -97,14 +97,12 @@ internal class Instruction
 
     public List<ulong> NextAddresses { get; set; }
 
-    public List<(ulong address, int size)> MemoryAccesses { get; set; }
     public ICpuState cpuState { get; set; }
 
     public Instruction()
     {
         Operands = new List<IOperand>();
         NextAddresses = new List<ulong>();
-        MemoryAccesses = new List<(ulong address, int size)>();
         Mnemonic = string.Empty;
         Bytes = Array.Empty<byte>();
         cpuState = new EmptyState();
@@ -117,7 +115,6 @@ internal class Instruction
         Operands = operands;
         Bytes = bytes;
         NextAddresses = new List<ulong>();
-        MemoryAccesses = new List<(ulong address, int size)>();
         cpuState = state;
     }
 
@@ -215,6 +212,11 @@ internal interface ICpuState
 
     public Dictionary<string, object> Save();
     public ICpuState Load(Dictionary<string, object> dict);
+}
+
+internal interface ICpuRegisterState
+{
+    public ICpuRegisterState Clone();
 }
 
 internal struct EmptyState : ICpuState
@@ -331,6 +333,8 @@ internal interface IDisassembler
     /// <param name="address">The address where the bytes start</param>
     /// <returns>A result indicating success, need for more bytes, or error</returns>
     DecodeResult DecodeNext(ReadOnlySpan<byte> bytes, ulong address);
+
+    List<(ulong address, int size)> FetchMemoryAccesses(Instruction ins, ICpuRegisterState registers);
 }
 
 /// <summary>
@@ -363,6 +367,8 @@ internal abstract class DisassemblerBase : IDisassembler
     /// Attempts to decode the next instruction from the given bytes
     /// </summary>
     public abstract DecodeResult DecodeNext(ReadOnlySpan<byte> bytes, ulong address);
+
+    public abstract List<(ulong address, int size)> FetchMemoryAccesses(Instruction ins, ICpuRegisterState registers);
 
     /// <summary>
     /// Helper method to read a value from memory in the correct endianness

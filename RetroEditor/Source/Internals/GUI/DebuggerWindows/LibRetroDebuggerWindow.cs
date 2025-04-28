@@ -113,7 +113,8 @@ internal class LibRetroDebuggerWindow : IWindow
 
     public void Close()
     {
-        // probably need to send something to unblock the mame thread though
         notDone = false;
+        // probably need to send something to unblock the mame thread though
+        mameDebugger.SendCommand("go");
     }
 }
