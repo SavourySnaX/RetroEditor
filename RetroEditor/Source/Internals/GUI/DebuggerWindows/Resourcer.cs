@@ -14,11 +14,6 @@ internal class Resourcer : IWindow
     int newTraceCnt=0;
     bool romLoaded = false;
 
-    // Selection state
-    private HashSet<UInt64> selectedRows = new HashSet<UInt64>();
-    private UInt64? cursorPosition = null;
-    private UInt64? selectionStart = null;
-
     // Memory map data
     private const int MEMORY_MAP_HEIGHT = 50;
 
@@ -74,7 +69,6 @@ internal class Resourcer : IWindow
     {
         DrawMemoryMap();
 
-        var jump=false;
         var traceDisable = traceInProgress||newTraceInProgress;
         if (traceDisable)
         {
@@ -143,7 +137,7 @@ internal class Resourcer : IWindow
             nState.Index8Bit = (p & 0x10) == 0x10;
             disassembler.State = nState;
             romData.AddCodeRange(disassembler, pc, out var _);
-            jumpToAddress = romData.MapSnesCpuToLorom(pc, out var _);
+            cartridgeVars.jumpToAddress = romData.MapSnesCpuToLorom(pc, out var _);
             debugger.SendCommand($"step");
             newTraceCnt = 100;
             newTraceInProgress = true;
@@ -184,8 +178,22 @@ internal class Resourcer : IWindow
         ImGui.Checkbox("Automated", ref automated);
         ImGui.EndDisabled();
 
-//        DisplayRomData();       
-        ScrollableTableView(jump);
+
+        if (ImGui.BeginTabBar("ResourcerTabs"))
+        {
+            if (ImGui.BeginTabItem("Cartridge"))
+            {
+                ScrollableTableView(romData.GetRomRanges, RomDataParser.RangeRegion.Cartridge, cartridgeVars);
+                ImGui.EndTabItem();
+            }
+            if (ImGui.BeginTabItem("Ram"))
+            {
+                ScrollableTableView(romData.GetRamRanges, RomDataParser.RangeRegion.RAM, ramVars);
+                ImGui.EndTabItem();
+            }
+            ImGui.EndTabBar();
+        }
+
 
         return false;
     }
@@ -239,10 +247,22 @@ internal class Resourcer : IWindow
         }
     }
 
-    private UInt64 jumpToAddress = 0;
-    private void ScrollableTableView(bool jump)
+    private class ScrollViewVars
     {
-        if (InputU64ScalarWrapped("Jump to Address", ref jumpToAddress))
+        public UInt64 jumpToAddress = 0;
+        // Selection state
+        public HashSet<UInt64> selectedRows = new HashSet<UInt64>();
+        public UInt64? cursorPosition = null;
+        public UInt64? selectionStart = null;
+    }
+
+    ScrollViewVars cartridgeVars = new();
+    ScrollViewVars ramVars = new();
+
+    private void ScrollableTableView(RangeCollection<IRegionInfo> regions, RomDataParser.RangeRegion rangeRegion, ScrollViewVars vars)
+    {
+        var jump=false;
+        if (InputU64ScalarWrapped("Jump to Address", ref vars.jumpToAddress))
         {
             jump = true;
         }
@@ -277,12 +297,6 @@ internal class Resourcer : IWindow
 
             bool moved = false;
 
-
-            var rom = romData.GetRomData;
-            var romStartOffset = romData.GetMinAddress;
-            var romEndOffset = romData.GetMaxAddress;
-
-            var regions = romData.GetRomRanges;
             var romDataSize = regions.LineCount;
 
             UInt64 currentLine = (UInt64)(0 + scroll / rowHeight);
@@ -297,66 +311,66 @@ internal class Resourcer : IWindow
 
                 if (ImGui.IsKeyPressed(ImGuiKey.UpArrow))
                 {
-                    if (cursorPosition.HasValue && cursorPosition.Value > 0)
+                    if (vars.cursorPosition.HasValue && vars.cursorPosition.Value > 0)
                     {
-                        cursorPosition--;
-                        selectedRows.Clear();
-                        selectedRows.Add(cursorPosition.Value);
+                        vars.cursorPosition--;
+                        vars.selectedRows.Clear();
+                        vars.selectedRows.Add(vars.cursorPosition.Value);
                         moved = true;
                     }
                 }
                 if (ImGui.IsKeyPressed(ImGuiKey.DownArrow))
                 {
-                    if (cursorPosition.HasValue && cursorPosition.Value < romData.GetRomRanges.LineCount - 1)
+                    if (vars.cursorPosition.HasValue && vars.cursorPosition.Value < romData.GetRomRanges.LineCount - 1)
                     {
-                        cursorPosition++;
-                        selectedRows.Clear();
-                        selectedRows.Add(cursorPosition.Value);
+                        vars.cursorPosition++;
+                        vars.selectedRows.Clear();
+                        vars.selectedRows.Add(vars.cursorPosition.Value);
                         moved = true;
                     }
                 }
                 if (ImGui.IsKeyPressed(ImGuiKey.PageUp))
                 {
-                    if (cursorPosition.HasValue)
+                    if (vars.cursorPosition.HasValue)
                     {
-                        var newPosition = cursorPosition.Value >= (UInt64)visibleLines ?
-                            cursorPosition.Value - (UInt64)visibleLines : 0;
-                        cursorPosition = newPosition;
-                        selectedRows.Clear();
-                        selectedRows.Add(cursorPosition.Value);
+                        var newPosition = vars.cursorPosition.Value >= (UInt64)visibleLines ?
+                            vars.cursorPosition.Value - (UInt64)visibleLines : 0;
+                        vars.cursorPosition = newPosition;
+                        vars.selectedRows.Clear();
+                        vars.selectedRows.Add(vars.cursorPosition.Value);
                         moved = true;
                     }
                 }
                 if (ImGui.IsKeyPressed(ImGuiKey.PageDown))
                 {
-                    if (cursorPosition.HasValue)
+                    if (vars.cursorPosition.HasValue)
                     {
-                        var newPosition = (UInt64)Math.Min(romData.GetRomRanges.LineCount - 1, cursorPosition.Value + (UInt64)visibleLines);
-                        cursorPosition = newPosition;
-                        selectedRows.Clear();
-                        selectedRows.Add(cursorPosition.Value);
+                        var newPosition = (UInt64)Math.Min(romData.GetRomRanges.LineCount - 1, vars.cursorPosition.Value + (UInt64)visibleLines);
+                        vars.cursorPosition = newPosition;
+                        vars.selectedRows.Clear();
+                        vars.selectedRows.Add(vars.cursorPosition.Value);
                         moved = true;
                     }
                 }
                 if (ImGui.IsKeyPressed(ImGuiKey.Home))
                 {
-                    cursorPosition = 0;
-                    selectedRows.Clear();
-                    selectedRows.Add(0);
+                    vars.cursorPosition = 0;
+                    vars.selectedRows.Clear();
+                    vars.selectedRows.Add(0);
                     moved = true;
                 }
                 if (ImGui.IsKeyPressed(ImGuiKey.End))
                 {
-                    cursorPosition = romData.GetRomRanges.LineCount - 1;
-                    selectedRows.Clear();
-                    selectedRows.Add(cursorPosition.Value);
+                    vars.cursorPosition = romData.GetRomRanges.LineCount - 1;
+                    vars.selectedRows.Clear();
+                    vars.selectedRows.Add(vars.cursorPosition.Value);
                     moved = true;
                 }
-                if (selectedRows.Count > 0)
+                if (vars.selectedRows.Count > 0)
                 {
                     UInt64 minAddress = UInt64.MaxValue;
                     UInt64 maxAddress = UInt64.MinValue;
-                    foreach (var srow in selectedRows)
+                    foreach (var srow in vars.selectedRows)
                     {
                         var address = regions.FetchAddressForLine(srow);
                         var lastAddress = regions.FetchAddressForLine(srow + 1);
@@ -368,10 +382,10 @@ internal class Resourcer : IWindow
                         if (address > maxAddress)
                             maxAddress = address;
                     }
-                    if (cursorPosition != null)
+                    if (vars.cursorPosition != null)
                     {
-                        UInt64 cursorMinAddress = regions.FetchAddressForLine(cursorPosition.Value);
-                        UInt64 cursorMaxAddress = regions.FetchAddressForLine(cursorPosition.Value + 1);
+                        UInt64 cursorMinAddress = regions.FetchAddressForLine(vars.cursorPosition.Value);
+                        UInt64 cursorMaxAddress = regions.FetchAddressForLine(vars.cursorPosition.Value + 1);
                         if (cursorMaxAddress > 0)
                             cursorMaxAddress--;
                         cursorMaxAddress = Math.Max(cursorMinAddress, cursorMaxAddress);
@@ -382,37 +396,39 @@ internal class Resourcer : IWindow
                         }
                         if (ImGui.IsKeyPressed(ImGuiKey.Semicolon))
                         {
-                            romData.AddCommentRange(["I AM THE VERY MODEL OF A MODERN MAJOR GENERAL", "I'VE INFORMATION ANIMAL VEGETABLE AND MINERAL", "....."], cursorMinAddress);
+                            romData.AddCommentRange(rangeRegion, ["I AM THE VERY MODEL OF A MODERN MAJOR GENERAL", "I'VE INFORMATION ANIMAL VEGETABLE AND MINERAL", "....."], cursorMinAddress);
                         }
                     }
 
                     bool clearSelection = false;
                     if (ImGui.IsKeyPressed(ImGuiKey.S))
                     {
-                        romData.AddStringRange(minAddress, maxAddress);
+                        romData.AddStringRange(rangeRegion, minAddress, maxAddress);
                         clearSelection = true;
                     }
                     if (ImGui.IsKeyPressed(ImGuiKey.U))
                     {
-                        romData.AddUnknownRange(minAddress, maxAddress);
+                        romData.AddUnknownRange(rangeRegion, minAddress, maxAddress);
                         clearSelection = true;
                     }
-                    if (ImGui.IsKeyPressed(ImGuiKey.C))
+                    if (rangeRegion==RomDataParser.RangeRegion.Cartridge)
                     {
-                        // Convert to code
-                        var disassembler = new SNES65816Disassembler();
-                        var state = ((SNES65816State)disassembler.State);
-                        state.SetEmulationMode(cpu_emulationMode);
-                        state.Accumulator8Bit = cpu_8bitAccumulator;
-                        state.Index8Bit = cpu_8bitIndex;
-                        disassembler.State = state;
-                        romData.AddCodeRange(disassembler, minAddress, maxAddress);
-                        cpu_emulationMode = ((SNES65816State)disassembler.State).EmulationMode;
-                        cpu_8bitAccumulator = ((SNES65816State)disassembler.State).Accumulator8Bit;
-                        cpu_8bitIndex = ((SNES65816State)disassembler.State).Index8Bit;
-                        clearSelection = true;
-                    }
-                    if (ImGui.IsKeyPressed(ImGuiKey.A) && !automated)
+                        if (ImGui.IsKeyPressed(ImGuiKey.C))
+                        {
+                            // Convert to code
+                            var disassembler = new SNES65816Disassembler();
+                            var state = ((SNES65816State)disassembler.State);
+                            state.SetEmulationMode(cpu_emulationMode);
+                            state.Accumulator8Bit = cpu_8bitAccumulator;
+                            state.Index8Bit = cpu_8bitIndex;
+                            disassembler.State = state;
+                            romData.AddCodeRange(disassembler, minAddress, maxAddress);
+                            cpu_emulationMode = ((SNES65816State)disassembler.State).EmulationMode;
+                            cpu_8bitAccumulator = ((SNES65816State)disassembler.State).Accumulator8Bit;
+                            cpu_8bitIndex = ((SNES65816State)disassembler.State).Index8Bit;
+                            clearSelection = true;
+                        }
+                        if (ImGui.IsKeyPressed(ImGuiKey.A) && !automated)
                         {
                             // Auto disassemble starting at the first selected address
                             var state = ((SNES65816State)autoDisassembler.State);
@@ -428,35 +444,36 @@ internal class Resourcer : IWindow
                             autoState.Push(autoDisassembler.State);
                             automated = true;
                         }
+                    }
 
-                    if (cursorPosition.HasValue && ImGui.IsKeyPressed(ImGuiKey.Period) && ImGui.IsKeyDown(ImGuiKey.LeftShift))
+                    if (vars.cursorPosition.HasValue && ImGui.IsKeyPressed(ImGuiKey.Period) && ImGui.IsKeyDown(ImGuiKey.LeftShift))
                     {
                         // Jump to next region
-                        var currentRegion = regions.GetRangeContainingLine(cursorPosition.Value, out var line);
+                        var currentRegion = regions.GetRangeContainingLine(vars.cursorPosition.Value, out var line);
                         if (currentRegion != null)
                         {
                             var nextRegion = regions.GetRangeContainingLine(currentRegion.LineEnd + 1, out line);
                             if (nextRegion != null)
                             {
-                                cursorPosition = nextRegion.LineStart;
-                                selectedRows.Clear();
-                                selectedRows.Add(cursorPosition.Value);
+                                vars.cursorPosition = nextRegion.LineStart;
+                                vars.selectedRows.Clear();
+                                vars.selectedRows.Add(vars.cursorPosition.Value);
                                 moved = true;
                             }
                         }
                     }
-                    if (cursorPosition.HasValue && ImGui.IsKeyPressed(ImGuiKey.Comma) && ImGui.IsKeyDown(ImGuiKey.LeftShift))
+                    if (vars.cursorPosition.HasValue && ImGui.IsKeyPressed(ImGuiKey.Comma) && ImGui.IsKeyDown(ImGuiKey.LeftShift))
                     {
                         // Jump to prior region
-                        var currentRegion = regions.GetRangeContainingLine(cursorPosition.Value, out var line);
+                        var currentRegion = regions.GetRangeContainingLine(vars.cursorPosition.Value, out var line);
                         if (currentRegion != null)
                         {
                             var nextRegion = regions.GetRangeContainingLine(currentRegion.LineStart - 1, out line);
                             if (nextRegion != null)
                             {
-                                cursorPosition = nextRegion.LineEnd;
-                                selectedRows.Clear();
-                                selectedRows.Add(cursorPosition.Value);
+                                vars.cursorPosition = nextRegion.LineEnd;
+                                vars.selectedRows.Clear();
+                                vars.selectedRows.Add(vars.cursorPosition.Value);
                                 moved = true;
                             }
                         }
@@ -464,7 +481,7 @@ internal class Resourcer : IWindow
 
                     if (clearSelection)
                     {
-                        selectedRows.Clear();
+                        vars.selectedRows.Clear();
                     }
                 }
             }
@@ -510,8 +527,8 @@ internal class Resourcer : IWindow
                         var lData = fetched.Value.GetLineInfo(line);
 
                         // Handle row selection
-                        bool isSelected = selectedRows.Contains(actualLine);
-                        bool isCursor = cursorPosition == actualLine;
+                        bool isSelected = vars.selectedRows.Contains(actualLine);
+                        bool isCursor = vars.cursorPosition == actualLine;
 
                         bool clicked = ImGui.Selectable($"{lData.Address:X8}", isSelected, ImGuiSelectableFlags.SpanAllColumns);//, new Vector2(0, rowHeight));
 
@@ -539,32 +556,32 @@ internal class Resourcer : IWindow
                             if (ImGui.IsKeyDown(ImGuiKey.ModShift))
                             {
                                 // Range selection
-                                if (!selectionStart.HasValue)
+                                if (!vars.selectionStart.HasValue)
                                 {
-                                    selectionStart = cursorPosition ?? actualLine;
+                                    vars.selectionStart = vars.cursorPosition ?? actualLine;
                                 }
-                                var start = Math.Min(selectionStart.Value, actualLine);
-                                var end = Math.Max(selectionStart.Value, actualLine);
-                                selectedRows.Clear();
+                                var start = Math.Min(vars.selectionStart.Value, actualLine);
+                                var end = Math.Max(vars.selectionStart.Value, actualLine);
+                                vars.selectedRows.Clear();
                                 for (var j = start; j <= end; j++)
                                 {
-                                    selectedRows.Add(j);
+                                    vars.selectedRows.Add(j);
                                 }
                             }
                             else
                             {
-                                selectedRows.Clear();
+                                vars.selectedRows.Clear();
                                 // Toggle selection
                                 if (isSelected)
                                 {
-                                    selectedRows.Remove(actualLine);
+                                    vars.selectedRows.Remove(actualLine);
                                 }
                                 else
                                 {
-                                    selectedRows.Add(actualLine);
+                                    vars.selectedRows.Add(actualLine);
                                 }
-                                cursorPosition = actualLine;
-                                selectionStart = null;
+                                vars.cursorPosition = actualLine;
+                                vars.selectionStart = null;
                             }
                         }
 
@@ -585,21 +602,21 @@ internal class Resourcer : IWindow
 
             if (jump)
             {
-                var jumpLine = romData.GetRomRanges.FetchLineForAddress(jumpToAddress);
+                var jumpLine = romData.GetRomRanges.FetchLineForAddress(vars.jumpToAddress);
                 ImGui.SetScrollY(jumpLine * rowHeight);
                 jump = false;
             }
 
-            if (moved && cursorPosition.HasValue)
+            if (moved && vars.cursorPosition.HasValue)
             {
                 // Set Scroll position to keep the currsor in 
-                if (scroll > cursorPosition.Value * rowHeight)
+                if (scroll > vars.cursorPosition.Value * rowHeight)
                 {
-                    ImGui.SetScrollY(cursorPosition.Value * rowHeight);
+                    ImGui.SetScrollY(vars.cursorPosition.Value * rowHeight);
                 }
-                else if (scroll + (visibleLines - 1) * rowHeight < cursorPosition.Value * rowHeight)
+                else if (scroll + (visibleLines - 1) * rowHeight < vars.cursorPosition.Value * rowHeight)
                 {
-                    ImGui.SetScrollY(cursorPosition.Value * rowHeight - (visibleLines - 1) * rowHeight);
+                    ImGui.SetScrollY(vars.cursorPosition.Value * rowHeight - (visibleLines - 1) * rowHeight);
                 }
                 moved = false;
             }
@@ -682,11 +699,12 @@ internal class Resourcer : IWindow
             }
             else
             {
-                romData.AddUnknownRange(romData.GetMinAddress, romData.GetMaxAddress);
+                romData.AddUnknownRange(RomDataParser.RangeRegion.Cartridge, romData.GetMinAddress, romData.GetMaxAddress);
+                romData.AddUnknownRange(RomDataParser.RangeRegion.RAM, 0, 128*1024-1);
 
-
-                romData.AddStringRange(0x7FC0, 0x7FD4); // LoRom ASCII Title in header
-                romData.AddCommentRange(["RetroEditor Resourcer Version 0.1", "", "A WIP Tool for re-sourcing ROMS", "", ""], 0);
+                romData.AddStringRange(RomDataParser.RangeRegion.Cartridge, 0x7FC0, 0x7FD4); // LoRom ASCII Title in header
+                romData.AddCommentRange(RomDataParser.RangeRegion.Cartridge, ["RetroEditor Resourcer Version 0.1", "", "A WIP Tool for re-sourcing ROMS", "", ""], 0);
+                romData.AddCommentRange(RomDataParser.RangeRegion.RAM, ["RetroEditor Resourcer Version 0.1", "", "A WIP Tool for re-sourcing ROMS", "", ""], 0);
 
                 romData.AddSymbol(0x2100, 2, "INIDISP");
                 romData.AddSymbol(0x2101, 2, "OBSEL");
@@ -825,7 +843,7 @@ internal class Resourcer : IWindow
                 state.Index8Bit = (p & 0x10) == 0x10;
                 disassembler.State = state;
                 romData.AddCodeRange(disassembler, pc, out var _);
-                jumpToAddress = romData.MapSnesCpuToLorom(pc, out var _);
+                cartridgeVars.jumpToAddress = romData.MapSnesCpuToLorom(pc, out var _);
                 newTraceCnt--;
                 if (newTraceCnt == 0)
                 {
@@ -998,9 +1016,21 @@ internal class Resourcer : IWindow
             if (memKind == RomDataParser.SNESLoRomRegion.ROM)
             {
                 var c = romData.GetRomRanges.GetRangeContainingAddress(regionAddress);
-                if (c.Value.GetType()==typeof(UnknownRegion))
+                if (c!=null && c.Value.GetType()==typeof(UnknownRegion))
                 {
-                    romData.AddDataRange(regionAddress, regionAddress, 1);
+                    romData.AddDataRange(RomDataParser.RangeRegion.Cartridge, regionAddress, regionAddress, 1);
+                }
+            }
+            if (memKind == RomDataParser.SNESLoRomRegion.RAM)
+            {
+                var c = romData.GetRamRanges.GetRangeContainingAddress(regionAddress);
+                if (c != null && c.Value.GetType() == typeof(UnknownRegion))
+                {
+                    if ( regionAddress==0)
+                    {
+                        Console.WriteLine("");
+                    romData.AddDataRange(RomDataParser.RangeRegion.RAM, regionAddress, regionAddress, 1);
+                    }
                 }
             }
         }
