@@ -369,19 +369,28 @@ internal class MultiLineComment : IRegionInfo
 
 internal class UnknownRegion : IRegionInfo
 {
-    public UnknownRegion(UInt64 start, UInt64 end, IRomDataParser parent) : base(start, end, parent, ResourcerConfig.ConfigColour.Unknown)
+    private bool dataIsKnown;
+    public UnknownRegion(UInt64 start, UInt64 end, bool hasData, IRomDataParser parent) : base(start, end, parent, ResourcerConfig.ConfigColour.Unknown)
     {
+        dataIsKnown=hasData;
     }
 
     public override ulong GetRegionLineCount() => AddressEnd - AddressStart + 1;
 
     public override void Combining(IRegionInfo other) { }
-    public override IRegionInfo Split(ulong start, ulong end) => new UnknownRegion(start, end, Parent);
+    public override IRegionInfo Split(ulong start, ulong end) => new UnknownRegion(start, end, dataIsKnown, Parent);
 
     public override LineInfo GetRegionLineInfo(ulong index)
     {
-        var db = Parent.GetByte(AddressStart + index);
-        return new LineInfo($"{AddressStart + index:X8}", db.ToString("X2"), $"{(Char.IsControl((char)db) ? '.' : (char)db)}", "");
+        if (dataIsKnown)
+        {
+            var db = Parent.GetByte(AddressStart + index);
+            return new LineInfo($"{AddressStart + index:X8}", db.ToString("X2"), $"{(Char.IsControl((char)db) ? '.' : (char)db)}", "");
+        }
+        else
+        {
+            return new LineInfo($"{AddressStart + index:X8}", "??", "??", "");
+        }
     }
 
     public override ulong RegionLineOffsetForAddress(UInt64 address)
@@ -406,19 +415,28 @@ internal class UnknownRegion : IRegionInfo
 
 internal class DataByteRegion : IRegionInfo
 {
-    public DataByteRegion(UInt64 start, UInt64 end, IRomDataParser parent) : base(start, end, parent, ResourcerConfig.ConfigColour.String)
+    private bool dataIsKnown;
+    public DataByteRegion(UInt64 start, UInt64 end, bool hasData, IRomDataParser parent) : base(start, end, parent, ResourcerConfig.ConfigColour.Data)
     {
+        dataIsKnown = hasData;
     }
 
-    public override ulong GetRegionLineCount() => AddressEnd - AddressStart;
+    public override ulong GetRegionLineCount() => AddressEnd - AddressStart + 1;
 
     public override void Combining(IRegionInfo other) { }
-    public override IRegionInfo Split(ulong start, ulong end) => new DataByteRegion(start, end, Parent);
+    public override IRegionInfo Split(ulong start, ulong end) => new DataByteRegion(start, end, dataIsKnown, Parent);
 
     public override LineInfo GetRegionLineInfo(ulong index)
     {
-        var db = Parent.GetByte(AddressStart + index);
-        return new LineInfo($"{AddressStart + index:X8}", $"{db:X2}", $"{(Char.IsControl((char)db) ? '.' : (char)db)}", "");
+        if (dataIsKnown)
+        {
+            var db = Parent.GetByte(AddressStart + index);
+            return new LineInfo($"{AddressStart + index:X8}", $"{db:X2}", $"{(Char.IsControl((char)db) ? '.' : (char)db)}", "");
+        }
+        else
+        {
+            return new LineInfo($"{AddressStart + index:X8}", $"??", "??", "");
+        }
     }
 
     public override ulong RegionLineOffsetForAddress(UInt64 address)
@@ -443,11 +461,11 @@ internal class DataByteRegion : IRegionInfo
 
 internal class DataWordRegion : IRegionInfo
 {
-    public DataWordRegion(UInt64 start, UInt64 end, IRomDataParser parent) : base(start, end, parent, ResourcerConfig.ConfigColour.String)
+    public DataWordRegion(UInt64 start, UInt64 end, IRomDataParser parent) : base(start, end, parent, ResourcerConfig.ConfigColour.Data)
     {
     }
 
-    public override ulong GetRegionLineCount() => (AddressEnd - AddressStart)/2;
+    public override ulong GetRegionLineCount() => (AddressEnd - AddressStart + 2)/2;
 
     public override void Combining(IRegionInfo other) { }
     public override IRegionInfo Split(ulong start, ulong end) => new DataWordRegion(start, end, Parent);
@@ -484,11 +502,11 @@ internal class DataWordRegion : IRegionInfo
 
 internal class DataTripleRegion : IRegionInfo
 {
-    public DataTripleRegion(UInt64 start, UInt64 end, IRomDataParser parent) : base(start, end, parent, ResourcerConfig.ConfigColour.String)
+    public DataTripleRegion(UInt64 start, UInt64 end, IRomDataParser parent) : base(start, end, parent, ResourcerConfig.ConfigColour.Data)
     {
     }
 
-    public override ulong GetRegionLineCount() => (AddressEnd - AddressStart)/3;
+    public override ulong GetRegionLineCount() => (AddressEnd - AddressStart + 3)/3;
 
     public override void Combining(IRegionInfo other) { }
     public override IRegionInfo Split(ulong start, ulong end) => new DataTripleRegion(start, end, Parent);
@@ -529,35 +547,50 @@ internal class DataTripleRegion : IRegionInfo
 
 internal class StringRegion : IRegionInfo
 {
-    public StringRegion(UInt64 start, UInt64 end, IRomDataParser parent) : base(start, end, parent, ResourcerConfig.ConfigColour.String)
+    private bool dataIsKnown;
+    public StringRegion(UInt64 start, UInt64 end, bool hasData, IRomDataParser parent) : base(start, end, parent, ResourcerConfig.ConfigColour.String)
     {
+        dataIsKnown = hasData;
     }
 
     public override ulong GetRegionLineCount() => (AddressEnd - AddressStart + 16) / 16;
 
     public override void Combining(IRegionInfo other) { }
-    public override IRegionInfo Split(ulong start, ulong end) => new UnknownRegion(start, end, Parent);
+    public override IRegionInfo Split(ulong start, ulong end) => new StringRegion(start, end, dataIsKnown, Parent);
 
     public override LineInfo GetRegionLineInfo(ulong index)
     {
-        StringBuilder s = new StringBuilder();
-        if (index == 0)
+        if (dataIsKnown)
         {
-            s.Append($"db \"");
-            for (UInt64 j = AddressStart; j <= AddressEnd; j++)
+            StringBuilder s = new StringBuilder();
+            if (index == 0)
             {
-                var db = Parent.GetByte(j);
-                if (Char.IsControl((char)db) || db > 0x7F)
+                s.Append($"db \"");
+                for (UInt64 j = AddressStart; j <= AddressEnd; j++)
                 {
-                    s.Append($"\",${db:X2},\"");
+                    var db = Parent.GetByte(j);
+                    if (Char.IsControl((char)db) || db > 0x7F)
+                    {
+                        s.Append($"\",${db:X2},\"");
+                    }
+                    else
+                        s.Append((char)db);
                 }
-                else
-                    s.Append((char)db);
+                s.Append('"');
             }
-            s.Append('"');
+            var I = AddressStart + (index * 16);
+            return new LineInfo(index == 0 ? $"{I:X8}" : "", BytesForLine(I, Math.Min(AddressEnd, I + 16)), s.ToString(), "");
         }
-        var I = AddressStart + (index * 16);
-        return new LineInfo(index == 0 ? $"{I:X8}" : "", BytesForLine(I, Math.Min(AddressEnd, I + 16)), s.ToString(), "");
+        else
+        {
+            StringBuilder s = new ();
+            var I = AddressStart + (index * 16);
+            for (var a=0;I<=Math.Min(AddressEnd,I+16);a++)
+            {
+                s.Append($"?? ");
+            }
+            return new LineInfo(index == 0 ? $"{I:X8}" : "", s.ToString().Trim(), $"ds {AddressEnd - AddressStart + 1}", "");
+        }
     }
 
     public override ulong RegionLineOffsetForAddress(UInt64 address)
@@ -702,6 +735,7 @@ internal class RomDataParser : IRomDataParser
 {
     private const int BYTES_PER_LINE = 16;
     RangeCollection<IRegionInfo> romRanges = new RangeCollection<IRegionInfo>();
+    RangeCollection<IRegionInfo> ramRanges = new RangeCollection<IRegionInfo>();
     SymbolProvider symbolProvider = new SymbolProvider();
     private byte[] romData = new byte[0];
     private int romIndex = 0;
@@ -935,23 +969,54 @@ internal class RomDataParser : IRomDataParser
         return false;
     }
 
-    public void AddDataRange(UInt64 start, UInt64 end, int size)
+    public void AddDataRange(RangeRegion region, UInt64 start, UInt64 end, int size)
     {
-        romRanges.AddRange(new DataByteRegion(start, end, this));
+        switch (region)
+        {
+            case RangeRegion.Cartridge:
+                romRanges.AddRange(new DataByteRegion(start, end, true, this));
+                break;
+            case RangeRegion.RAM:
+                ramRanges.AddRange(new DataByteRegion(start, end, false, this));
+                break;
+        }
     }
 
-    public void AddStringRange(UInt64 start, UInt64 end)
+    public void AddStringRange(RangeRegion region, UInt64 start, UInt64 end)
     {
-        romRanges.AddRange(new StringRegion(start, end, this));
+        switch (region)
+        {
+            case RangeRegion.Cartridge:
+                romRanges.AddRange(new StringRegion(start, end, true, this));
+                break;
+            case RangeRegion.RAM:
+                ramRanges.AddRange(new StringRegion(start, end, false, this));
+                break;
+        }
     }
 
-    public void AddUnknownRange(UInt64 start, UInt64 end)
+    public void AddUnknownRange(RangeRegion region, UInt64 start, UInt64 end)
     {
-        romRanges.AddRange(new UnknownRegion(start, end, this));
+        switch (region)
+        {
+            case RangeRegion.Cartridge:
+                romRanges.AddRange(new UnknownRegion(start, end, true, this));
+                break;
+            case RangeRegion.RAM:
+                ramRanges.AddRange(new UnknownRegion(start, end, false, this));
+                break;
+        }
+    }
+
+    public enum RangeRegion
+    {
+        Cartridge,
+        RAM
     }
 
 
     public RangeCollection<IRegionInfo> GetRomRanges => romRanges;
+    public RangeCollection<IRegionInfo> GetRamRanges => ramRanges;
 
     public UInt64 GetMinAddress => minAddress;
     public UInt64 GetMaxAddress => maxAddress;
@@ -1212,13 +1277,30 @@ internal class RomDataParser : IRomDataParser
     }
 
     //TODO - doesn't handle mid region insertion....
-    internal void AddCommentRange(String[] value, UInt64 start)
+    internal void AddCommentRange(RangeRegion rangeRegion, String[] value, UInt64 start)
     {
-        var region = romRanges.GetRangeContainingAddress(start, out var lineOff);
+        Range<IRegionInfo>? region = null;
+        switch (rangeRegion)
+        {
+            case RangeRegion.Cartridge:
+                region = romRanges.GetRangeContainingAddress(start, out _);
+                break;
+            case RangeRegion.RAM:
+                region = ramRanges.GetRangeContainingAddress(start, out _);
+                break;
+        }
         if (region != null)
         {
             region.Value.Above.Add(new MultiLineComment(value, this));
-            romRanges.Recompute();
+        }
+        switch (rangeRegion)
+        {
+            case RangeRegion.Cartridge:
+                romRanges.Recompute();
+                break;
+            case RangeRegion.RAM:
+                ramRanges.Recompute();
+                break;
         }
     }
 
@@ -1230,9 +1312,11 @@ internal class RomDataParser : IRomDataParser
             kvp => kvp.Value
         );
         var romRangesDto = romRanges.Select(r => r.Value.Save()).ToList();
+        var ramRangesDto = ramRanges.Select(r => r.Value.Save()).ToList();
         var data = new
         {
             RomRanges = romRangesDto,
+            RamRanges = ramRangesDto,
             SymbolProvider = serializableSymbols
         };
         var json = JsonSerializer.Serialize(data, new JsonSerializerOptions { WriteIndented = true });
@@ -1266,6 +1350,18 @@ internal class RomDataParser : IRomDataParser
                 {
                     var range = IRegionInfo.Load(rangeDict, this);
                     romRanges.AddRange(range);
+                }
+            }
+        }
+        if (root.TryGetProperty("RamRanges", out rangesElem))
+        {
+            foreach (var rangeElem in rangesElem.EnumerateArray())
+            {
+                var rangeDict = rangeElem.Deserialize<Dictionary<string, object>>();
+                if (rangeDict != null)
+                {
+                    var range = IRegionInfo.Load(rangeDict, this);
+                    ramRanges.AddRange(range);
                 }
             }
         }
