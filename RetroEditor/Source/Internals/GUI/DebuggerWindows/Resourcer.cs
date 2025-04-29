@@ -91,7 +91,7 @@ internal class Resourcer : IWindow
             traceCommandFinished=false;
             traceCommandFinishStarted=false;
             // Set up trace logging
-            debugger.QueueCommand($"trace {traceFile},,noloop,{{tracelog \"E=%02X|P=%02X|\",e,p}}", (s,id)=>{});
+            debugger.QueueCommand($"trace {traceFile},,noloop,{{tracelog {TRACEREGS}}}", (s,id)=>{});
             // Wait for vblank
             debugger.QueueCommand("gvblank", (s,id)=>{traceCommandInProgress=false;});
         }
@@ -108,7 +108,7 @@ internal class Resourcer : IWindow
             traceCommandFinishStarted=false;
 
             // Set up trace logging
-            debugger.QueueCommand($"trace {traceFile},,noloop,{{tracelog \"E=%02X|P=%02X|\",e,p}}",(s,id)=>{});
+            debugger.QueueCommand($"trace {traceFile},,noloop,{{tracelog {TRACEREGS}}}",(s,id)=>{});
             // Wait for vblank
             debugger.QueueCommand("gtime 1000",(s,id)=>{traceCommandInProgress=false;});
         }
@@ -126,7 +126,7 @@ internal class Resourcer : IWindow
             traceContinue = true;
 
             // Set up trace logging
-            debugger.QueueCommand($"trace {traceFile},,noloop,{{tracelog \"E=%02X|P=%02X|\",e,p}}",(s,id)=>{});
+            debugger.QueueCommand($"trace {traceFile},,noloop,{{tracelog {TRACEREGS}}}",(s,id)=>{});
             debugger.QueueCommand("gtime 500",(s,id)=>{traceCommandInProgress=false;});
         }
         ImGui.SameLine();
@@ -873,14 +873,14 @@ internal class Resourcer : IWindow
                     traceCommandFinishStarted = false;
 
                     // Set up trace logging
-                    debugger.QueueCommand($"trace {traceFile},,noloop,{{tracelog \"E=%02X|P=%02X|\",e,p}}", (s, id) => { });
+                    debugger.QueueCommand($"trace {traceFile},,noloop,{{tracelog {TRACEREGS}}}", (s, id) => { });
                     debugger.QueueCommand("gtime 500", (s, id) => { traceCommandInProgress = false; });
                 }
                 else
                 {
                     traceInProgress = false;
                     // After trace, perform a walk of any blocks that end in non terminating branches
-
+/*
                     foreach (var b in romData.GetRomRanges)
                     {
                         if (b.Value is CodeRegion codeRegion)
@@ -900,16 +900,17 @@ internal class Resourcer : IWindow
                                 }
                             }
                         }
-                    }
+                    }*/
                 }
             }
         }
     }
 
+    readonly string TRACEREGS = "\"E=%02X|P=%02X|DB=%02X|D=%04X|X=%04X|Y=%04X|S=%04X|\",e,p,db,d,x,y,s";
+
     private void ParseLocation(string line)
     {
-        // Format: E=XX|P=XX|BANK:OFFSET: mnemonic operands
-        // Example: E=00|P=00|00:0000 LDA #$00
+        // Format: TRACEREGS E=00|P=00|DB=00|D=0000|X=0000|Y=0000|S=0000|BANK:OFFSET: mnemonic operands
 
         // Split the line into parts
         // Ignore empty lines or lines that don't contain the expected format
@@ -917,7 +918,7 @@ internal class Resourcer : IWindow
             return;
 
         var parts = line.Split('|');
-        if (parts.Length < 3)
+        if (parts.Length < 7)
             return;
 
         // Parse emulation mode (E)
@@ -928,8 +929,28 @@ internal class Resourcer : IWindow
         if (!parts[1].StartsWith("P=") || !byte.TryParse(parts[1].Substring(2), System.Globalization.NumberStyles.HexNumber, null, out byte p))
             return;
 
+        // Parse data bank (DB)
+        if (!parts[2].StartsWith("DB=") || !byte.TryParse(parts[2].Substring(3), System.Globalization.NumberStyles.HexNumber, null, out byte db))
+            return;
+
+        // Parse direct offset (D)
+        if (!parts[3].StartsWith("D=") || !ushort.TryParse(parts[3].Substring(2), System.Globalization.NumberStyles.HexNumber, null, out ushort d))
+            return;
+
+        // Parse index register (X)
+        if (!parts[4].StartsWith("X=") || !ushort.TryParse(parts[4].Substring(2), System.Globalization.NumberStyles.HexNumber, null, out ushort x))
+            return;
+
+        // Parse index register (Y)
+        if (!parts[5].StartsWith("Y=") || !ushort.TryParse(parts[5].Substring(2), System.Globalization.NumberStyles.HexNumber, null, out ushort y))
+            return;
+
+        // Parse stack pointer (S)
+        if (!parts[6].StartsWith("S=") || !ushort.TryParse(parts[6].Substring(2), System.Globalization.NumberStyles.HexNumber, null, out ushort s))
+            return;
+
         // Parse bank and offset
-        var addressPart = parts[2].Split(' ')[0];
+        var addressPart = parts[7].Split(' ')[0];
         var addressComponents = addressPart.Split(':');
         if (addressComponents.Length != 3 ||
             !byte.TryParse(addressComponents[0], System.Globalization.NumberStyles.HexNumber, null, out byte bank) ||
@@ -949,6 +970,39 @@ internal class Resourcer : IWindow
         disassembler.State = state;
 
         // Add this location as code
-        romData.AddCodeRange(disassembler, snesAddress, out var _);
+        romData.AddCodeRange(disassembler, snesAddress, out var i);
+        if (i.Bytes.Length == 0)
+        {
+            // No bytes, so no code
+            return;
+        }
+        if (i.IsBranch)
+        {
+            return;
+        }
+
+        SNES65816RegisterState registerState = new SNES65816RegisterState
+        {
+            DBR = db,
+            D = d,
+            X = x,
+            Y = y,
+            S = s
+        };
+
+        var mem = disassembler.FetchMemoryAccesses(i, registerState);
+        foreach (var addr in mem)
+        {
+            var regionAddress = romData.MapSnesCpuToLorom(addr.address, out var memKind);
+
+            if (memKind == RomDataParser.SNESLoRomRegion.ROM)
+            {
+                var c = romData.GetRomRanges.GetRangeContainingAddress(regionAddress);
+                if (c.Value.GetType()==typeof(UnknownRegion))
+                {
+                    romData.AddDataRange(regionAddress, regionAddress, 1);
+                }
+            }
+        }
     }
 }

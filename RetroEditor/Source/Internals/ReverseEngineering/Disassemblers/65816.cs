@@ -765,27 +765,6 @@ internal class SNES65816Disassembler : DisassemblerBase
         SNES65816State state = (SNES65816State)ins.cpuState;
         var accesses = new List<(UInt64 address, int size)>();
 
-        if (registers.D!=0)
-        {
-            throw new Exception($"D is non 0 value... todo");
-        }
-        if (registers.DBR!=0)
-        {
-            throw new Exception($"DBR is non 0 value... todo");
-        }
-        if (state.EmulationMode)
-        {
-            throw new Exception($"Emulation mode not supported");
-        }
-        if (state.Accumulator8Bit)
-        {
-            throw new Exception($"8 bit accumulator not supported");
-        }
-        if (state.Index8Bit)
-        {
-            throw new Exception($"8 bit index not supported");
-        }
-
         var X = registers.X;
         var Y = registers.Y;
         if (state.Index8Bit)
@@ -840,9 +819,16 @@ internal class SNES65816Disassembler : DisassemblerBase
                 EffectiveAddress+=X;
                 EffectiveAddress&=0xFFFF;
             }
+            else if (operand is O65816_ImmediateByteOperand ||
+                     operand is O65816_ImmediateWordOperand ||
+                     operand is O65816_PCRelative)
+            {
+                // Immediate values are not memory accesses
+                continue;
+            }
             else
             {
-                throw new Exception($"Unsupported operand type: {operand.GetType()}");
+                Console.WriteLine($"Unsupported operand type: {ins} | {operand.GetType()}");
             }
             accesses.Add((EffectiveAddress, 1));
         }
