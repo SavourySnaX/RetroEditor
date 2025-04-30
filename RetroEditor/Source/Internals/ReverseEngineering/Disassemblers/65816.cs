@@ -759,11 +759,11 @@ internal class SNES65816Disassembler : DisassemblerBase
         return DecodeResult.CreateSuccess(instruction, baseLength);
     }
 
-    public override List<(UInt64 address, int size)> FetchMemoryAccesses(Instruction ins, ICpuRegisterState registerState)
+    public override List<(UInt64 address, uint size)> FetchMemoryAccesses(Instruction ins, ICpuRegisterState registerState)
     {
         SNES65816RegisterState registers = (SNES65816RegisterState)registerState;
         SNES65816State state = (SNES65816State)ins.cpuState;
-        var accesses = new List<(UInt64 address, int size)>();
+        var accesses = new List<(UInt64 address, uint size)>();
 
         var X = registers.X;
         var Y = registers.Y;
@@ -773,51 +773,80 @@ internal class SNES65816Disassembler : DisassemblerBase
             Y&=0xFF;
         }
 
+        uint fetchSize = state.Accumulator8Bit ? 1u : 2u;
         foreach (var operand in ins.Operands)
         {
-            UInt64 EffectiveAddress=0;
+            UInt64 EffectiveAddress = 0;
 
             if (operand is O65816_Absolute absolute)
             {
-                EffectiveAddress=registers.DBR;
-                EffectiveAddress<<=16;
-                EffectiveAddress|=operand.Value;
+                EffectiveAddress = registers.DBR;
+                EffectiveAddress <<= 16;
+                EffectiveAddress |= operand.Value;
             }
             else if (operand is O65816_AbsoluteX absoluteX)
             {
-                EffectiveAddress=registers.DBR;
-                EffectiveAddress<<=16;
-                EffectiveAddress|=operand.Value;
-                EffectiveAddress+=X;
+                EffectiveAddress = registers.DBR;
+                EffectiveAddress <<= 16;
+                EffectiveAddress |= operand.Value;
+                EffectiveAddress += X;
             }
             else if (operand is O65816_AbsoluteY absoluteY)
             {
-                EffectiveAddress=registers.DBR;
-                EffectiveAddress<<=16;
-                EffectiveAddress|=operand.Value;
-                EffectiveAddress+=X;
+                EffectiveAddress = registers.DBR;
+                EffectiveAddress <<= 16;
+                EffectiveAddress |= operand.Value;
+                EffectiveAddress += X;
             }
             else if (operand is O65816_AbsoluteLong absoluteLong)
             {
-                EffectiveAddress=absoluteLong.Value;
+                EffectiveAddress = absoluteLong.Value;
             }
             else if (operand is O65816_AbsoluteLongX absoluteLongX)
             {
-                EffectiveAddress=absoluteLongX.Value;
-                EffectiveAddress+=X;
+                EffectiveAddress = absoluteLongX.Value;
+                EffectiveAddress += X;
             }
             else if (operand is O65816_DirectPage directPage)
             {
-                EffectiveAddress=directPage.Value;
-                EffectiveAddress+=registers.D;
-                EffectiveAddress&=0xFFFF;
+                EffectiveAddress = directPage.Value;
+                EffectiveAddress += registers.D;
+                EffectiveAddress &= 0xFFFF;
             }
             else if (operand is O65816_DirectPageX directPageX)
             {
-                EffectiveAddress=directPageX.Value;
-                EffectiveAddress+=registers.D;
-                EffectiveAddress+=X;
-                EffectiveAddress&=0xFFFF;
+                EffectiveAddress = directPageX.Value;
+                EffectiveAddress += registers.D;
+                EffectiveAddress += X;
+                EffectiveAddress &= 0xFFFF;
+            }
+            else if (operand is O65816_DirectPageY directPageY)
+            {
+                EffectiveAddress = directPageY.Value;
+                EffectiveAddress += registers.D;
+                EffectiveAddress += Y;
+                EffectiveAddress &= 0xFFFF;
+            }
+            else if (operand is O65816_DirectPageIndirect directPageIndirect)
+            {
+                EffectiveAddress = directPageIndirect.Value;
+                EffectiveAddress += registers.D;
+                EffectiveAddress &= 0xFFFF;
+                fetchSize = 2;
+            }
+            else if (operand is O65816_DirectPageIndirectLong directPageIndirectLong)
+            {
+                EffectiveAddress = directPageIndirectLong.Value;
+                EffectiveAddress += registers.D;
+                EffectiveAddress &= 0xFFFF;
+                fetchSize = 3;
+            }
+            else if (operand is O65816_DirectPageIndirectLongY directPageIndirectLongY)
+            {
+                EffectiveAddress = directPageIndirectLongY.Value;
+                EffectiveAddress += registers.D;
+                EffectiveAddress &= 0xFFFF;
+                fetchSize = 3;
             }
             else if (operand is O65816_ImmediateByteOperand ||
                      operand is O65816_ImmediateWordOperand ||
@@ -830,7 +859,7 @@ internal class SNES65816Disassembler : DisassemblerBase
             {
                 Console.WriteLine($"Unsupported operand type: {ins} | {operand.GetType()}");
             }
-            accesses.Add((EffectiveAddress, 1));
+            accesses.Add((EffectiveAddress, fetchSize));
         }
         return accesses;
     }
