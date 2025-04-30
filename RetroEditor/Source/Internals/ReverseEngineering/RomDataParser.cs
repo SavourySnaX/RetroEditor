@@ -50,7 +50,7 @@ internal abstract class IRegionInfo : IRange
     public UInt64 LineCount => GetLineCount();
     protected IRomDataParser Parent { get; private set; }
 
-    public bool IsSame(IRange otherRange)
+    public virtual bool IsSame(IRange otherRange)
     {
         var other = otherRange as IRegionInfo;
         if (other == null)
@@ -413,40 +413,75 @@ internal class UnknownRegion : IRegionInfo
     }
 }
 
-internal class DataByteRegion : IRegionInfo
+internal class DataRegion : IRegionInfo
 {
     private bool dataIsKnown;
-    public DataByteRegion(UInt64 start, UInt64 end, bool hasData, IRomDataParser parent) : base(start, end, parent, ResourcerConfig.ConfigColour.Data)
+    private UInt64 size;
+    public DataRegion(UInt64 start, UInt64 end, UInt64 size, bool hasData, IRomDataParser parent) : base(start, end, parent, ResourcerConfig.ConfigColour.Data)
     {
         dataIsKnown = hasData;
+        this.size = size;
     }
 
-    public override ulong GetRegionLineCount() => AddressEnd - AddressStart + 1;
+    public override ulong GetRegionLineCount() => (AddressEnd - AddressStart + size)/size;
 
     public override void Combining(IRegionInfo other) { }
-    public override IRegionInfo Split(ulong start, ulong end) => new DataByteRegion(start, end, dataIsKnown, Parent);
+    public override IRegionInfo Split(ulong start, ulong end) => new DataRegion(start, end, size, dataIsKnown, Parent);
+
+    LineInfo GetByteLineInfo(ulong index)
+    {
+        var db = Parent.GetByte(AddressStart + index);
+        return new LineInfo($"{AddressStart + index:X8}", BytesForLine(AddressStart+index,AddressStart+index+size-1), $"db {db:X2}", "");
+    }
+
+    LineInfo GetWordLineInfo(ulong index)
+    {
+        UInt16 dw = Parent.GetByte(AddressStart + index+0);
+        dw <<= 8;
+        dw |= Parent.GetByte(AddressStart + index+1);
+        return new LineInfo($"{AddressStart + index:X8}", BytesForSpan(Parent.FetchBytes(AddressStart+index,2)), $"dw {dw:X4}", "");
+    }
+
+    LineInfo GetTripleLineInfo(ulong index)
+    {
+        UInt32 dl = Parent.GetByte(AddressStart + index+0);
+        dl <<= 8;
+        dl |= Parent.GetByte(AddressStart + index+1);
+        dl <<= 8;
+        dl |= Parent.GetByte(AddressStart + index+2);
+        return new LineInfo($"{AddressStart + index:X8}", BytesForSpan(Parent.FetchBytes(AddressStart+index,3)), $"dl {dl:X6}", "");
+    }
 
     public override LineInfo GetRegionLineInfo(ulong index)
     {
         if (dataIsKnown)
         {
-            var db = Parent.GetByte(AddressStart + index);
-            return new LineInfo($"{AddressStart + index:X8}", $"{db:X2}", $"{(Char.IsControl((char)db) ? '.' : (char)db)}", "");
+            switch (size)
+            {
+                case 1:
+                    return GetByteLineInfo(index);
+                case 2:
+                    return GetWordLineInfo(index);
+                case 3:
+                    return GetTripleLineInfo(index);
+                default:
+                    throw new ArgumentException($"Unknown size {size}");
+            }
         }
         else
         {
-            return new LineInfo($"{AddressStart + index:X8}", $"??", "??", "");
+            return new LineInfo($"{AddressStart + index:X8}", $"??", $"ds {size}", "");
         }
     }
 
     public override ulong RegionLineOffsetForAddress(UInt64 address)
     {
-        return address - AddressStart;
+        return (address - AddressStart)/size;
     }
 
     public override ulong RegionAddressForLine(UInt64 line)
     {
-        return AddressStart + line;
+        return AddressStart + line * size;
     }
 
     public override void RegionSave(Dictionary<string, object> dict)
@@ -457,93 +492,19 @@ internal class DataByteRegion : IRegionInfo
     {
         return this;
     }
-}
 
-internal class DataWordRegion : IRegionInfo
-{
-    public DataWordRegion(UInt64 start, UInt64 end, IRomDataParser parent) : base(start, end, parent, ResourcerConfig.ConfigColour.Data)
+    public override bool IsSame(IRange otherRange)
     {
-    }
-
-    public override ulong GetRegionLineCount() => (AddressEnd - AddressStart + 2)/2;
-
-    public override void Combining(IRegionInfo other) { }
-    public override IRegionInfo Split(ulong start, ulong end) => new DataWordRegion(start, end, Parent);
-
-    public override LineInfo GetRegionLineInfo(ulong index)
-    {
-        var dbA = Parent.GetByte(AddressStart + index);
-        var dbB = Parent.GetByte(AddressStart + index+1);
-        UInt16 dw = dbA;
-        dw <<= 8;
-        dw |= dbB;
-        return new LineInfo($"{AddressStart + index:X8}", $"{dw:X4}", $"{(Char.IsControl((char)dbA) ? '.' : (char)dbA)}{(Char.IsControl((char)dbB)?'.':(char)dbB)}", "");
-    }
-
-    public override ulong RegionLineOffsetForAddress(UInt64 address)
-    {
-        return (address - AddressStart)/2;
-    }
-
-    public override ulong RegionAddressForLine(UInt64 line)
-    {
-        return AddressStart + line*2;
-    }
-
-    public override void RegionSave(Dictionary<string, object> dict)
-    {
-    }
-
-    public override IRegionInfo RegionLoad(Dictionary<string, object> dict)
-    {
-        return this;
+        if (base.IsSame(otherRange))
+        {
+            if (otherRange is DataRegion other)
+            {
+                return size == other.size;
+            }
+        }
+        return false;
     }
 }
-
-internal class DataTripleRegion : IRegionInfo
-{
-    public DataTripleRegion(UInt64 start, UInt64 end, IRomDataParser parent) : base(start, end, parent, ResourcerConfig.ConfigColour.Data)
-    {
-    }
-
-    public override ulong GetRegionLineCount() => (AddressEnd - AddressStart + 3)/3;
-
-    public override void Combining(IRegionInfo other) { }
-    public override IRegionInfo Split(ulong start, ulong end) => new DataTripleRegion(start, end, Parent);
-
-    public override LineInfo GetRegionLineInfo(ulong index)
-    {
-        var dbA = Parent.GetByte(AddressStart + index);
-        var dbB = Parent.GetByte(AddressStart + index+1);
-        var dbC = Parent.GetByte(AddressStart + index+2);
-        UInt32 dt = dbA;
-        dt <<= 8;
-        dt |= dbB;
-        dt <<= 8;
-        dt |= dbC;
-        return new LineInfo($"{AddressStart + index:X8}", $"{dt:X6}", $"{(Char.IsControl((char)dbA) ? '.' : (char)dbA)}{(Char.IsControl((char)dbB) ? '.' : (char)dbB)}{(Char.IsControl((char)dbC) ? '.' : (char)dbC)}", "");
-    }
-
-    public override ulong RegionLineOffsetForAddress(UInt64 address)
-    {
-        return (address - AddressStart)/3;
-    }
-
-    public override ulong RegionAddressForLine(UInt64 line)
-    {
-        return AddressStart + line*3;
-    }
-
-    public override void RegionSave(Dictionary<string, object> dict)
-    {
-    }
-
-    public override IRegionInfo RegionLoad(Dictionary<string, object> dict)
-    {
-        return this;
-    }
-}
-
 
 internal class StringRegion : IRegionInfo
 {
@@ -969,15 +930,15 @@ internal class RomDataParser : IRomDataParser
         return false;
     }
 
-    public void AddDataRange(RangeRegion region, UInt64 start, UInt64 end, int size)
+    public void AddDataRange(RangeRegion region, UInt64 start, UInt64 end, uint size)
     {
         switch (region)
         {
             case RangeRegion.Cartridge:
-                romRanges.AddRange(new DataByteRegion(start, end, true, this));
+                romRanges.AddRange(new DataRegion(start, end, size, true, this));
                 break;
             case RangeRegion.RAM:
-                ramRanges.AddRange(new DataByteRegion(start, end, false, this));
+                ramRanges.AddRange(new DataRegion(start, end, size, false, this));
                 break;
         }
     }

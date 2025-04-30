@@ -1013,24 +1013,25 @@ internal class Resourcer : IWindow
         {
             var regionAddress = romData.MapSnesCpuToLorom(addr.address, out var memKind);
 
-            if (memKind == RomDataParser.SNESLoRomRegion.ROM)
+            if (addr.size == 2)
             {
-                var c = romData.GetRomRanges.GetRangeContainingAddress(regionAddress);
-                if (c!=null && c.Value.GetType()==typeof(UnknownRegion))
-                {
-                    romData.AddDataRange(RomDataParser.RangeRegion.Cartridge, regionAddress, regionAddress, 1);
-                }
+                Console.WriteLine($"{i} {addr.address:X8} {addr.size} {regionAddress:X8}");
             }
+
+            if (memKind == RomDataParser.SNESLoRomRegion.ROM)
+                {
+                    var c = romData.GetRomRanges.GetRangeContainingAddress(regionAddress);
+                    if (c != null && c.Value.GetType() == typeof(UnknownRegion))
+                    {
+                        romData.AddDataRange(RomDataParser.RangeRegion.Cartridge, regionAddress, regionAddress + addr.size-1, addr.size);
+                    }
+                }
             if (memKind == RomDataParser.SNESLoRomRegion.RAM)
             {
                 var c = romData.GetRamRanges.GetRangeContainingAddress(regionAddress);
                 if (c != null && c.Value.GetType() == typeof(UnknownRegion))
                 {
-                    if ( regionAddress==0)
-                    {
-                        Console.WriteLine("");
-                    romData.AddDataRange(RomDataParser.RangeRegion.RAM, regionAddress, regionAddress, 1);
-                    }
+                    romData.AddDataRange(RomDataParser.RangeRegion.RAM, regionAddress, regionAddress + addr.size-1, addr.size);
                 }
             }
         }
