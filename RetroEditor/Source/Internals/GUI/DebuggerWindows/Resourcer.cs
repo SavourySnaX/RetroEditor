@@ -1013,25 +1013,28 @@ internal class Resourcer : IWindow
         {
             var regionAddress = romData.MapSnesCpuToLorom(addr.address, out var memKind);
 
-            if (addr.size == 2)
-            {
-                Console.WriteLine($"{i} {addr.address:X8} {addr.size} {regionAddress:X8}");
-            }
-
             if (memKind == RomDataParser.SNESLoRomRegion.ROM)
+            {
+                var c = romData.GetRomRanges.GetRangeContainingAddress(regionAddress);
+                if (c != null && c.Value.GetType() == typeof(UnknownRegion))
                 {
-                    var c = romData.GetRomRanges.GetRangeContainingAddress(regionAddress);
-                    if (c != null && c.Value.GetType() == typeof(UnknownRegion))
-                    {
-                        romData.AddDataRange(RomDataParser.RangeRegion.Cartridge, regionAddress, regionAddress + addr.size-1, addr.size);
-                    }
+                    romData.AddDataRange(RomDataParser.RangeRegion.Cartridge, regionAddress, regionAddress + addr.size-1, addr.size);
                 }
+                else
+                {
+                    Console.WriteLine($"Skipping {addr.address:X8} ({regionAddress:X8}) {addr.size} as it is not unknown");
+                }
+            }
             if (memKind == RomDataParser.SNESLoRomRegion.RAM)
             {
                 var c = romData.GetRamRanges.GetRangeContainingAddress(regionAddress);
                 if (c != null && c.Value.GetType() == typeof(UnknownRegion))
                 {
                     romData.AddDataRange(RomDataParser.RangeRegion.RAM, regionAddress, regionAddress + addr.size-1, addr.size);
+                }
+                else
+                {
+                    Console.WriteLine($"Skipping {addr.address:X8} ({regionAddress:X8}) {addr.size} as it is not unknown");
                 }
             }
         }

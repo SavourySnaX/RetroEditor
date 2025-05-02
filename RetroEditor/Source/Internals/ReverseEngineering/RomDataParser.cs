@@ -426,7 +426,10 @@ internal class DataRegion : IRegionInfo
     public override ulong GetRegionLineCount() => (AddressEnd - AddressStart + size)/size;
 
     public override void Combining(IRegionInfo other) { }
-    public override IRegionInfo Split(ulong start, ulong end) => new DataRegion(start, end, size, dataIsKnown, Parent);
+    public override IRegionInfo Split(ulong start, ulong end)
+    {
+        return new DataRegion(start, end, size, dataIsKnown, Parent);
+    }
 
     LineInfo GetByteLineInfo(ulong index)
     {
