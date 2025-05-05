@@ -22,9 +22,9 @@ namespace RetroEditor.Tests
         internal void SetState(bool emulation, bool a16bit, bool x16bit)
         {
             var state = (SNES65816State)_disassembler.State;
+            state.SetEmulationMode(emulation);
             state.Accumulator8Bit = !a16bit;
             state.Index8Bit = !x16bit;
-            state.SetEmulationMode(emulation);
             _disassembler.State=state;
         }
 
