@@ -985,6 +985,15 @@ internal class RomDataParser : IRomDataParser
     public UInt64 GetMinAddress => minAddress;
     public UInt64 GetMaxAddress => maxAddress;
 
+    internal void LoadRomData(ReadOnlySpan<byte> data)
+    {
+        if (romData.Length < data.Length)
+        {
+            romData = new byte[data.Length];
+        }
+        data.CopyTo(romData.AsSpan(0, data.Length));
+    }
+
     public void Parse(LibMameDebugger debugger)
     {
         // Initialize ROM view
