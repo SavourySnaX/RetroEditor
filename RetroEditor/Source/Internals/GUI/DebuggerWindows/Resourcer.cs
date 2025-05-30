@@ -1015,8 +1015,7 @@ internal class Resourcer : IWindow
 
             if (memKind == RomDataParser.SNESLoRomRegion.ROM)
             {
-                var c = romData.GetRomRanges.GetRangeContainingAddress(regionAddress);
-                if (c != null && c.Value.GetType() == typeof(UnknownRegion))
+                if (romData.CheckRegionUnknown(regionAddress,regionAddress+addr.size-1))
                 {
                     romData.AddDataRange(RomDataParser.RangeRegion.Cartridge, regionAddress, regionAddress + addr.size-1, addr.size);
                 }
@@ -1027,8 +1026,7 @@ internal class Resourcer : IWindow
             }
             if (memKind == RomDataParser.SNESLoRomRegion.RAM)
             {
-                var c = romData.GetRamRanges.GetRangeContainingAddress(regionAddress);
-                if (c != null && c.Value.GetType() == typeof(UnknownRegion))
+                if (romData.CheckRegionUnknown(regionAddress,regionAddress+addr.size-1))
                 {
                     romData.AddDataRange(RomDataParser.RangeRegion.RAM, regionAddress, regionAddress + addr.size-1, addr.size);
                 }

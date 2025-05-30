@@ -428,6 +428,10 @@ internal class DataRegion : IRegionInfo
     public override void Combining(IRegionInfo other) { }
     public override IRegionInfo Split(ulong start, ulong end)
     {
+        if (size!=end-start+1)
+        {
+            throw new ArgumentException($"Cannot split a data region of size {size} into {end-start+1}");
+        }
         return new DataRegion(start, end, size, dataIsKnown, Parent);
     }
 
@@ -931,6 +935,19 @@ internal class RomDataParser : IRomDataParser
         }
         instruction = new();
         return false;
+    }
+
+    public bool CheckRegionUnknown(UInt64 start, UInt64 end)
+    {
+        for (UInt64 i = start; i <= end; i++)
+        {
+            var range = romRanges.GetRangeContainingAddress(i, out _);
+            if (!(range!=null && range.Value is UnknownRegion))
+            {
+                return false;
+            }
+        }
+        return true;
     }
 
     public void AddDataRange(RangeRegion region, UInt64 start, UInt64 end, uint size)
