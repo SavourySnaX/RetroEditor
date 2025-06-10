@@ -8,6 +8,7 @@ internal class LibRetroPlayerWindow : IWindow
 
     LibRetroPlugin plugin;
     LibRetroPlugin.RetroSystemAVInfo aVInfo;
+    LibRetroPlugin.RetroSystemInfo sysInfo;
     float scale = 2.0f;
 
     uint frameWidth, frameHeight;
@@ -24,6 +25,8 @@ internal class LibRetroPlayerWindow : IWindow
             return false;
         }
         plugin.Init();
+
+        sysInfo = plugin.GetSystemInfo();
 
         return true;
     }
