@@ -230,8 +230,8 @@ internal class LibRetroPlugin : IDisposable
             path = pathOverride;
         }
         nativeGameInfo = Marshal.AllocHGlobal(Marshal.SizeOf<retro_game_info_ext>());   // we need to own this memory, dispose will free
-        keyArray=new bool[RetroKeyArrayCount];
-        keyMap=new int[RetroKeyArrayCount];
+        keyArray = new bool[RetroKeyArrayCount];
+        keyMap = new int[RetroKeyArrayCount];
         InitKeyboardToRetroKeyMap();
         disableVideo = false;
         frameBuffer = Array.Empty<byte>();
@@ -259,13 +259,23 @@ internal class LibRetroPlugin : IDisposable
         nativeReset = Marshal.GetDelegateForFunctionPointer<retro_reset>(NativeLibrary.GetExport(libraryHandle, "retro_reset"));
         nativeRun = Marshal.GetDelegateForFunctionPointer<retro_run>(NativeLibrary.GetExport(libraryHandle, "retro_run"));
         nativeDeinit = Marshal.GetDelegateForFunctionPointer<retro_deinit>(NativeLibrary.GetExport(libraryHandle, "retro_deinit"));
-        
-        environmentCallback=EnvironmentCallback;
-        audioSampleCallback=AudioSampleCallback;
-        audioSampleBatchCallback=AudioSampleBatchCallback;
-        inputPollCallback=InputPollCallback;
-        inputStateCallback=InputStateCallback;
-        videoRefreshCallback=VideoRefreshCallback;
+
+        environmentCallback = EnvironmentCallback;
+        audioSampleCallback = AudioSampleCallback;
+        audioSampleBatchCallback = AudioSampleBatchCallback;
+        inputPollCallback = InputPollCallback;
+        inputStateCallback = InputStateCallback;
+        videoRefreshCallback = VideoRefreshCallback;
+
+        audioHelper = new RayLibAudioHelper();
+        temporaryPath = Path.Combine(Directory.GetCurrentDirectory(), "Temp");
+        Directory.CreateDirectory(temporaryPath);
+        debuggerTrampoline = IntPtr.Zero;
+        debuggerCallback = null;
+        loadedPath = "";
+        memoryMaps = Array.Empty<MemoryMap>();
+
+        core_options = new();
 
         nativeSetEnvironment.Invoke(environmentCallback);
         nativeSetAudioSample.Invoke(audioSampleCallback);
@@ -273,14 +283,6 @@ internal class LibRetroPlugin : IDisposable
         nativeSetInputPoll.Invoke(inputPollCallback);
         nativeSetInputState.Invoke(inputStateCallback);
         nativeSetVideoRefresh.Invoke(videoRefreshCallback);
-
-        audioHelper = new RayLibAudioHelper();
-        temporaryPath = Path.Combine(Directory.GetCurrentDirectory(), "Temp");
-        Directory.CreateDirectory(temporaryPath);
-        debuggerTrampoline=IntPtr.Zero;
-        debuggerCallback=null;
-        loadedPath = "";
-        memoryMaps = Array.Empty<MemoryMap>();
     }
 
     public void SetDebuggerCallback(DebuggerCallbackDelegate callback)
@@ -645,6 +647,9 @@ internal class LibRetroPlugin : IDisposable
     private bool[] keyArray;
     private int[] keyMap;
 
+    private Dictionary<string, string[]> core_options;
+
+
     private delegate byte retro_environment_t(uint cmd, IntPtr data);
     private delegate void retro_audio_sample_t(short left, short right);
     private delegate void retro_audio_sample_batch_t(IntPtr data, UIntPtr frames);
@@ -958,7 +963,7 @@ internal class LibRetroPlugin : IDisposable
                     while (true)
                     {
                         var descriptor = Marshal.PtrToStructure<retro_input_descriptor>(data);
-                        if (descriptor.description==IntPtr.Zero)
+                        if (descriptor.description == IntPtr.Zero)
                         {
                             break;
                         }
@@ -981,6 +986,13 @@ internal class LibRetroPlugin : IDisposable
                 {
                     var variable = Marshal.PtrToStructure<retro_variable>(data);
                     var key = Marshal.PtrToStringAnsi(variable.key);
+                    if (key!=null && core_options.ContainsKey(key))
+                    {
+                        _editor.Log(LogType.Debug, "LibRetro", $"Get variable: {key} {core_options[key][1]}");
+                        variable.value = Marshal.StringToHGlobalAnsi(core_options[key][1]);
+                        Marshal.StructureToPtr(variable, data, true);
+                        return 1;
+                    }
                     _editor.Log(LogType.Debug, "LibRetro", $"Get variable: {key}");
                     if (key == "mame_media_type")
                     {
@@ -1000,7 +1012,7 @@ internal class LibRetroPlugin : IDisposable
                         Marshal.StructureToPtr(variable, data, true);
                         return 1;
                     }*/
-                    return 0;
+                    return 1;
                 }
             case EnvironmentCommand.ENVIRONMENT_SET_VARIABLES:
                 {
@@ -1008,13 +1020,36 @@ internal class LibRetroPlugin : IDisposable
                     while (true)
                     {
                         var variable = Marshal.PtrToStructure<retro_variable>(data);
-                        if (variable.key==IntPtr.Zero && variable.value==IntPtr.Zero)
+                        if (variable.key == IntPtr.Zero && variable.value == IntPtr.Zero)
                         {
                             break;
                         }
                         var key = Marshal.PtrToStringAnsi(variable.key);
                         var value = Marshal.PtrToStringAnsi(variable.value);
-                        _editor.Log(LogType.Debug, "LibRetro", $"Set variable: {key}, {value}");
+                        var valueS = value?.Split(";");
+                        if (key!=null && valueS != null && valueS.Length == 2)
+                        {
+                            _editor.Log(LogType.Debug, "LibRetro", $"Set variable: {key}, {value}");
+
+                            var valueDisplayName = valueS[0].Trim();    // Stored in 0th slot
+                            var valueOptions = valueS[1].Trim().Split("|");
+                            if (valueOptions != null)
+                            {
+                                var storeData = new string[valueOptions.Length + 1];
+                                Array.Copy(valueOptions, 0, storeData, 1, valueOptions.Length);
+                                storeData[0] = valueDisplayName;
+
+                                core_options.Add(key, storeData);
+                            }
+                            else
+                            {
+                                _editor.Log(LogType.Warning, " LibRetro", $"Skipping Variable {key} as {value} not supported (options empty)");
+                            }
+                        }
+                        else
+                        {
+                            _editor.Log(LogType.Warning, " LibRetro", $"Skipping Variable {key} as {value} not supported (display name and/or options empty)");
+                        }
                         data += varSize;
                     }
                     return 1;
@@ -1060,12 +1095,12 @@ internal class LibRetroPlugin : IDisposable
                     while (true)
                     {
                         var controller = Marshal.PtrToStructure<retro_controller_info>(data);
-                        if (controller.types==IntPtr.Zero && controller.num_types==0)
+                        if (controller.types == IntPtr.Zero && controller.num_types == 0)
                         {
                             break;
                         }
                         var descSize = Marshal.SizeOf<retro_controller_description>();
-                        for (int a=0;a<controller.num_types;a++)
+                        for (int a = 0; a < controller.num_types; a++)
                         {
                             var controllerDesc = Marshal.PtrToStructure<retro_controller_description>(controller.types + (a * descSize));
                             var description = Marshal.PtrToStringAnsi(controllerDesc.description);
@@ -1082,7 +1117,7 @@ internal class LibRetroPlugin : IDisposable
                     var memoryMap = Marshal.PtrToStructure<retro_memory_map>(data);
 
                     memoryMaps = new MemoryMap[memoryMap.num_descriptors];
-                    for (int a=0;a<memoryMap.num_descriptors;a++)
+                    for (int a = 0; a < memoryMap.num_descriptors; a++)
                     {
                         var ptr = memoryMap.descriptors + (a * Marshal.SizeOf<retro_memory_descriptor>());
                         var descriptor = Marshal.PtrToStructure<retro_memory_descriptor>(ptr);
@@ -1095,7 +1130,7 @@ internal class LibRetroPlugin : IDisposable
                             select = (UInt64)descriptor.select,
                             disconnect = (UInt64)descriptor.disconnect,
                             len = (UInt64)descriptor.len,
-                            addressSpace = Marshal.PtrToStringAnsi(descriptor.addressSpace)??""
+                            addressSpace = Marshal.PtrToStringAnsi(descriptor.addressSpace) ?? ""
                         };
                         _editor.Log(LogType.Debug, "LibRetro", $"MEMORY MAP : {memoryMaps[a].flags}, {memoryMaps[a].ptr}, {memoryMaps[a].offset}, {memoryMaps[a].start}, {memoryMaps[a].select}, {memoryMaps[a].disconnect}, {memoryMaps[a].len}, {memoryMaps[a].addressSpace}");
                     }
@@ -1165,7 +1200,7 @@ internal class LibRetroPlugin : IDisposable
 
             default:
                 {
-                    _editor.Log(LogType.Warning, "LibRetro", $"Unhandled Environment callback :  {cmd} {(experimental?"Experimental":"")} {(frontendPrivate?"Private":"")}");
+                    _editor.Log(LogType.Warning, "LibRetro", $"Unhandled Environment callback :  {cmd} {(experimental ? "Experimental" : "")} {(frontendPrivate ? "Private" : "")}");
                 }
                 return 0;
         }
