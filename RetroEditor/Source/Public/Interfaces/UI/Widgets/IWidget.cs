@@ -84,5 +84,13 @@ namespace RetroEditor.Plugins
         /// <param name="objectMap">Object implemented IObjectMap interface</param>
         /// <returns>Widget</returns>
         IWidgetItem AddObjectMapWidget(IObjectMap objectMap);
+
+        /// <summary>
+        /// Adds a render widget to the window
+        /// </summary>
+        /// <param name="renderWidget">Object implementing the IRender3DWidget interface</param>
+        /// <returns>Widget</returns>
+        IWidgetItem AddRenderWidget(IRender3DWidget renderWidget);
+
     }
 }

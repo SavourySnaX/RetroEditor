@@ -86,6 +86,13 @@ internal class WidgetFactory : IWidget
         return t;
     }
 
+    public IWidgetItem AddRenderWidget(IRender3DWidget renderWidget)
+    {
+        var t = new Render3DWidget(renderWidget);
+        widgets.Add(t);
+        return t;
+    }
+
     private List<IWidgetUpdateDraw> widgets;
 
     public IEnumerable<IWidgetUpdateDraw> Widgets => widgets;
