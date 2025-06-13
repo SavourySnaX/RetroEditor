@@ -63,11 +63,31 @@ public class StarFoxTesting : IUserWindow, IRender3DWidget
 
     public uint Height => 512;
 
-    public Vector3F CameraPosition => new Vector3F(0, 30, -100);
+    public Vector3F CameraPosition => new Vector3F(0, -30, -100);
     public Vector3F CameraLookAt => new Vector3F(0, 0, 0);
-    public Vector3F CameraUp => new Vector3F(0, 1, 0);
+    public Vector3F CameraUp => new Vector3F(0, -1, 0);
     public float CameraFovY => 45.0f;
     public bool CameraOrthographic => false;
+
+    private struct ObjectHeader
+    {
+        public ushort vertOffset;
+        public byte vertBank;
+        public ushort faceOffset;
+        public ushort zPosition;
+        public byte scale;
+        public ushort ColInfo;
+        public ushort sizeX;
+        public ushort sizeY;
+        public ushort sizeZ;
+        public ushort alignment;
+        public ushort materials;
+        public ushort id1;
+        public ushort id2;
+        public ushort id3;
+        public ushort id4;
+    }
+
     public Triangle[] Triangles
     {
         get
@@ -82,12 +102,19 @@ public class StarFoxTesting : IUserWindow, IRender3DWidget
         }
     }
 
-    private Triangle [] _triangles = new Triangle[0];
+    public Line[] Lines => _lines;
+    public Point[] Points => _points;
+
+    private Triangle[] _triangles = new Triangle[0];
+    private Line[] _lines = new Line[0];
+    private Point[] _points = new Point[0];
 
     private IEditor _editorInterface;
     private IMemoryAccess _rom;
     private bool reload = false;
-    private int modelNumber = 10;
+    private int modelNumber = 0;
+    private ObjectHeader currentObject;
+    private int colorIndex = 1;
 
     public StarFoxTesting(IEditor editorInterface, IMemoryAccess rom)
     {
@@ -105,49 +132,65 @@ public class StarFoxTesting : IUserWindow, IRender3DWidget
         }
         catch (Exception ex)
         {
-            _editorInterface.Log(LogType.Error,$"Failed to load model: {ex.Message}");
-            _triangles = Array.Empty<Triangle>();
+            _editorInterface.Log(LogType.Error, $"Failed to load model: {ex.Message}");
         }
     }
+    
+    private string ModelHeader => "Vert | Bank | Face | ZPos | Scal | ColI | SizX | SizY | SizZ | Algn | Mats | ID1  | ID2  | ID3  | ID4 ";
+    private string ModelName => $"{currentObject.vertOffset:X4} | {currentObject.vertBank:X2}   | {currentObject.faceOffset:X4} | {currentObject.zPosition:X4} | {currentObject.scale:X2}   | {currentObject.ColInfo:X4} | {currentObject.sizeX:X4} | {currentObject.sizeY:X4} | {currentObject.sizeZ:X4} | {currentObject.alignment:X4} | {currentObject.materials:X4} | {currentObject.id1:X4} | {currentObject.id2:X4} | {currentObject.id3:X4} | {currentObject.id4:X4}";
 
     private void LoadModel(IMemoryAccess rom)
     {
+        _triangles = Array.Empty<Triangle>();
+        _lines = Array.Empty<Line>();
+        _points = Array.Empty<Point>();
+        
         var modelIdTable = rom.ReadBytes(ReadKind.Rom, 0x264B, 250 * 2);
         var modelEntry = rom.FetchMachineOrder16(modelNumber * 2, modelIdTable);
         var modelOffset = modelEntry - 0x8000;
 
         var objectEntry = rom.ReadBytes(ReadKind.Rom, (uint)modelOffset, 0x1C);
 
-        var vertOffset = rom.FetchMachineOrder16(0, objectEntry);
-        var vertBank = objectEntry[2];
-        var faceOffset = rom.FetchMachineOrder16(3, objectEntry);
-        var zPosition = rom.FetchMachineOrder16(5, objectEntry);
-        var scale = objectEntry[7];
-        var ColInfo = rom.FetchMachineOrder16(8, objectEntry);
-        var sizeX = rom.FetchMachineOrder16(10, objectEntry);
-        var sizeY = rom.FetchMachineOrder16(12, objectEntry);
-        var sizeZ = rom.FetchMachineOrder16(14, objectEntry);
-        var alignment = rom.FetchMachineOrder16(16, objectEntry);
-        var materials = rom.FetchMachineOrder16(18, objectEntry);
-        var id1 = rom.FetchMachineOrder16(20, objectEntry);
-        var id2 = rom.FetchMachineOrder16(22, objectEntry);
-        var id3 = rom.FetchMachineOrder16(24, objectEntry);
-        var id4 = rom.FetchMachineOrder16(26, objectEntry);
+        currentObject.vertOffset = rom.FetchMachineOrder16(0, objectEntry);
+        currentObject.vertBank = objectEntry[2];
+        currentObject.faceOffset = rom.FetchMachineOrder16(3, objectEntry);
+        currentObject.zPosition = rom.FetchMachineOrder16(5, objectEntry);
+        currentObject.scale = objectEntry[7];
+        currentObject.ColInfo = rom.FetchMachineOrder16(8, objectEntry);
+        currentObject.sizeX = rom.FetchMachineOrder16(10, objectEntry);
+        currentObject.sizeY = rom.FetchMachineOrder16(12, objectEntry);
+        currentObject.sizeZ = rom.FetchMachineOrder16(14, objectEntry);
+        currentObject.alignment = rom.FetchMachineOrder16(16, objectEntry);
+        currentObject.materials = rom.FetchMachineOrder16(18, objectEntry);
+        currentObject.id1 = rom.FetchMachineOrder16(20, objectEntry);
+        currentObject.id2 = rom.FetchMachineOrder16(22, objectEntry);
+        currentObject.id3 = rom.FetchMachineOrder16(24, objectEntry);
+        currentObject.id4 = rom.FetchMachineOrder16(26, objectEntry);
 
-        var vertDataOffset = (uint)(vertBank * 0x8000 + (vertOffset - 0x8000));
-        var faceDataOffset = (uint)(vertBank * 0x8000 + (faceOffset - 0x8000));
+        temp_modelLabel.Name = ModelName;
+        temp_modelName.Name = NameTable.Length > modelNumber ? NameTable[modelNumber] : $"Model {modelOffset + 0x8000:X4}";
+
+        if ((currentObject.vertBank == 0) && (currentObject.vertOffset == 0))
+        {
+            return; // No vertex data, nothing to do
+        }
+
+        if (currentObject.vertOffset < 0x8000 || currentObject.vertOffset > 0xFFFF)
+        {
+            throw new InvalidDataException($"Invalid vertex offset: {currentObject.vertOffset}");
+        }
+        if (currentObject.faceOffset < 0x8000 || currentObject.faceOffset > 0xFFFF)
+        {
+            throw new InvalidDataException($"Invalid face offset: {currentObject.faceOffset}");
+        }
+        var vertDataOffset = (uint)(currentObject.vertBank * 0x8000 + (currentObject.vertOffset - 0x8000));
+        var faceDataOffset = (uint)(currentObject.vertBank * 0x8000 + (currentObject.faceOffset - 0x8000));
 
         // Experiment, extract things we need
         var vertData = rom.ReadBytes(ReadKind.Rom, vertDataOffset, 32768);
         var faceData = rom.ReadBytes(ReadKind.Rom, faceDataOffset, 32768);
 
-        List<Vector3F> allVerticesList = new();
-        do
-        {
-            allVerticesList.AddRange(ProcessVertexData(rom, ref vertData));
-        } while (CodeIsVertexData(vertData[0]));
-
-        var allVertices = allVerticesList.ToArray();
+        var allVertices = ProcessVertexData(rom, ref vertData).ToArray();
 
         var triangleCode = faceData[0];
         faceData = faceData[1..];
@@ -175,13 +218,20 @@ public class StarFoxTesting : IUserWindow, IRender3DWidget
         var faceOffsets = ProcessBSP(rom, faceData);
 
         var triangleList = new List<Triangle>();
+        var lineList = new List<Line>();
+        var pointList = new List<Point>();
 
         foreach (var fOffset in faceOffsets)
         {
-            triangleList.AddRange(ProcessFaceData(rom, faceData.Slice(fOffset), allVertices));
+            var face = ProcessFaceOrSpriteData(rom, faceData.Slice(fOffset), allVertices);
+            triangleList.AddRange(face.tris);
+            lineList.AddRange(face.lines);
+            pointList.AddRange(face.points);
         }
 
         _triangles = triangleList.ToArray();
+        _lines = lineList.ToArray();
+        _points = pointList.ToArray();
     }
 
     public bool CodeIsVertexData(byte code)
@@ -250,7 +300,8 @@ public class StarFoxTesting : IUserWindow, IRender3DWidget
         var bspCode = bspData[currentBspOffset];
         currentBspOffset++;
 
-        if (bspCode == 0x14)
+        // 0x14 is just a standard face group, 0x50 is a special sprite case
+        if (bspCode == 0x14 || bspCode == 0x50)
         {
             return [0]; // No BSP tree, return this index
         }
@@ -276,8 +327,10 @@ public class StarFoxTesting : IUserWindow, IRender3DWidget
             currentBspOffset += 4;
 
             ProcessBSPElement(rom, bspData, currentBspOffset, ref faceOffset); // Process left child
-            ProcessBSPElement(rom, bspData, currentBspOffset + oppositeSkip - 1, ref faceOffset); // Process right child
-
+            if (oppositeSkip != 0)  // Don't process right child if skip is 0
+            {
+                ProcessBSPElement(rom, bspData, currentBspOffset + oppositeSkip - 1, ref faceOffset); // Process right child
+            }
             faceOffset.Add(currentBspOffset + faceDataOffset - 2);
 
         }
@@ -299,10 +352,56 @@ public class StarFoxTesting : IUserWindow, IRender3DWidget
         }
     }
 
-    int colorIndex = 1;
-    private List<Triangle> ProcessFaceData(IMemoryAccess rom, ReadOnlySpan<byte> faceData, Vector3F[] vertices)
+    private (List<Triangle> tris,List<Line> lines,List<Point> points) ProcessFaceOrSpriteData(IMemoryAccess rom, ReadOnlySpan<byte> faceData, Vector3F[] vertices)
+    {
+        if (faceData[0] == 0x50)
+        {
+            var center = vertices[faceData[1]];
+            var color = faceData[2];
+            var size = faceData[3];
+            if (faceData[4] != 0x00)
+            {
+                throw new InvalidDataException($"Unexpected sprite data code: 0x{faceData[4]:X2}");
+            }
+
+            var a = colorIndex / (8 * 8 * 8);
+            var b = (colorIndex / (8 * 8)) % 8;
+            var c = (colorIndex / 8) % 8;
+
+            // Build a simple triangle for the sprite
+            var triangleA = new Triangle
+            {
+                Vertex1 = center + new Vector3F(size, size, 0),
+                Vertex2 = center + new Vector3F(-size, size, 0),
+                Vertex3 = center + new Vector3F(-size, -size, 0),
+                Color = new Color4B((byte)(16 + 32 * a), (byte)(16 + 32 * b), (byte)(16 + 32 * c), 255) // Default color
+            };
+            var triangleB = new Triangle
+            {
+                Vertex1 = center + new Vector3F(size, size, 0),
+                Vertex2 = center + new Vector3F(-size, -size, 0),
+                Vertex3 = center + new Vector3F(size, -size, 0),
+                Color = new Color4B((byte)(16 + 32 * a), (byte)(16 + 32 * b), (byte)(16 + 32 * c), 255) // Default color
+            };
+            colorIndex++;
+
+            return (new List<Triangle>([triangleA, triangleB]), new List<Line>(), new List<Point>());
+        }
+        else if (faceData[0] == 0x14)
+        {
+            return ProcessFaceData(rom, faceData, vertices);
+        }
+        else
+        {
+            throw new InvalidDataException($"Unexpected face data code: 0x{faceData[0]:X2}");
+        }
+    }
+
+    private (List<Triangle> tris, List<Line> lines, List<Point> points) ProcessFaceData(IMemoryAccess rom, ReadOnlySpan<byte> faceData, Vector3F[] vertices)
     {
         var triangles = new List<Triangle>();
+        var lines = new List<Line>();
+        var points = new List<Point>();
 
         var startOfGroup = faceData[0];
         faceData = faceData[1..];
@@ -334,7 +433,7 @@ public class StarFoxTesting : IUserWindow, IRender3DWidget
                 verts[i] = faceData[5 + i];
             }
 
-            faceData = faceData[(5+numSides)..];
+            faceData = faceData[(5 + numSides)..];
 
             if (numSides >= 3)  // TODO line and point data
             {
@@ -349,6 +448,7 @@ public class StarFoxTesting : IUserWindow, IRender3DWidget
                     var a = colorIndex / (8 * 8 * 8);
                     var b = (colorIndex / (8 * 8)) % 8;
                     var c = (colorIndex / 8) % 8;
+                    colorIndex++;
 
                     var triangle = new Triangle
                     {
@@ -358,21 +458,64 @@ public class StarFoxTesting : IUserWindow, IRender3DWidget
                         Color = new Color4B((byte)(16 + 32 * a), (byte)(16 + 32 * b), (byte)(16 + 32 * c), 255) // Default color
                     };
                     triangles.Add(triangle);
-
-                    colorIndex++;
                 }
+            }
+            else if (numSides == 2)
+            {
+                // Just a line
+                var p0 = verts[0];
+                var p1 = verts[1];
+
+                var a = colorIndex / (8 * 8 * 8);
+                var b = (colorIndex / (8 * 8)) % 8;
+                var c = (colorIndex / 8) % 8;
+                colorIndex++;
+
+                var line = new Line
+                {
+                    Vertex1 = vertices[p0],
+                    Vertex2 = vertices[p1],
+                    Color = new Color4B((byte)(16 + 32 * a), (byte)(16 + 32 * b), (byte)(16 + 32 * c), 255) // Default color
+                };
+                lines.Add(line);
+            }
+            else if (numSides == 1)
+            {
+                // Just a point
+                var p0 = verts[0];
+
+                var a = colorIndex / (8 * 8 * 8);
+                var b = (colorIndex / (8 * 8)) % 8;
+                var c = (colorIndex / 8) % 8;
+                colorIndex++;
+
+                var point = new Point
+                {
+                    Position = vertices[p0],
+                    Color = new Color4B((byte)(16 + 32 * a), (byte)(16 + 32 * b), (byte)(16 + 32 * c), 255) // Default color
+                };
+                points.Add(point);
             }
         }
 
-        return triangles;
+        return (triangles, lines, points);
     }
 
     IWidgetRanged temp_modelSelect;
+    IWidgetLabel temp_modelLabel;
+    IWidgetLabel temp_modelName;
+
+    public readonly string[] NameTable = new string[]    {
+
+    };
 
     public void ConfigureWidgets(IMemoryAccess rom, IWidget widget, IPlayerControls playerControls)
     {
         widget.AddRenderWidget(this);
-        temp_modelSelect = widget.AddSlider("Model", modelNumber, 1, 249, () => { reload = true; });
+        temp_modelName = widget.AddLabel("");
+        temp_modelSelect = widget.AddSlider("Model", modelNumber, 0, 248, () => { reload = true; });
+        widget.AddLabel(ModelHeader);
+        temp_modelLabel = widget.AddLabel(ModelName);
     }
 
     public void OnClose()

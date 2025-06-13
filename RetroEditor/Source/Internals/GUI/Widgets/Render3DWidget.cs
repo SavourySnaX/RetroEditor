@@ -1,5 +1,4 @@
 using System.Numerics;
-using ImGuiNET;
 using Raylib_cs;
 using RetroEditor.Plugins;
 using rlImGui_cs;
@@ -45,6 +44,20 @@ internal class Render3DWidget : IWidgetItem, IWidgetUpdateDraw
             var v3 = new Vector3(triangle.Vertex3.x, triangle.Vertex3.y, triangle.Vertex3.z);
 
             Raylib.DrawTriangle3D(v1, v2, v3, new Color(triangle.Color.R, triangle.Color.G, triangle.Color.B, triangle.Color.A));
+        }
+
+        foreach (var line in _widget.Lines)
+        {
+            var v1 = new Vector3(line.Vertex1.x, line.Vertex1.y, line.Vertex1.z);
+            var v2 = new Vector3(line.Vertex2.x, line.Vertex2.y, line.Vertex2.z);
+
+            Raylib.DrawLine3D(v1, v2, new Color(line.Color.R, line.Color.G, line.Color.B, line.Color.A));
+        }
+
+        foreach (var point in _widget.Points)
+        {
+            var position = new Vector3(point.Position.x, point.Position.y, point.Position.z);
+            Raylib.DrawPoint3D(position, new Color(point.Color.R, point.Color.G, point.Color.B, point.Color.A));
         }
 
         Raylib.EndMode3D();
