@@ -88,26 +88,95 @@ public class StarFoxTesting : IUserWindow, IRender3DWidget
         public ushort id4;
     }
 
+    private struct Frame
+    {
+        public Triangle[] _triangles;
+        public Line[] _lines;
+        public Point[] _points;
+
+        public Frame(Triangle[] triangles, Line[] lines, Point[] points)
+        {
+            _triangles = triangles;
+            _lines = lines;
+            _points = points;
+        }
+    }
+
+    private struct Animation
+    {
+        private int _frameCount;
+        private int _currentFrame;
+        private List<Frame> _frames;
+
+        public Animation(int count)
+        {
+            _frameCount = count;
+            _currentFrame = 0;
+            _frames = new List<Frame>(count);
+        }
+
+        public void NextFrame()
+        {
+            _currentFrame = _frameCount<=0 ? 0 : (_currentFrame + 1) % _frameCount;
+        }
+
+        public void AddFrame(Triangle[] triangles, Line[] lines, Point[] points)
+        {
+            if (_frames.Count < _frameCount)
+            {
+                _frames.Add(new Frame(triangles, lines, points));
+            }
+        }
+
+        public Triangle[] Triangles
+        {
+            get
+            {
+                if (_currentFrame < _frames.Count)
+                {
+                    return _frames[_currentFrame]._triangles;
+                }
+                return Array.Empty<Triangle>();
+            }
+        }
+
+        public Line[] Lines
+        {
+            get
+            {
+                if (_currentFrame < _frames.Count)
+                {
+                    return _frames[_currentFrame]._lines;
+                }
+                return Array.Empty<Line>();
+            }
+        }
+
+        public Point[] Points
+        {
+            get
+            {
+                if (_currentFrame < _frames.Count)
+                {
+                    return _frames[_currentFrame]._points;
+                }
+                return Array.Empty<Point>();
+            }
+        }
+    }
+
+    private Animation _animation = new Animation(0);
+
     public Triangle[] Triangles
     {
         get
         {
-            if (reload)
-            {
-                reload = false;
-                modelNumber = temp_modelSelect.Value;
-                LoadModelSafe(_rom);
-            }
-            return _triangles;
+            return _animation.Triangles;
         }
     }
 
-    public Line[] Lines => _lines;
-    public Point[] Points => _points;
-
-    private Triangle[] _triangles = new Triangle[0];
-    private Line[] _lines = new Line[0];
-    private Point[] _points = new Point[0];
+    public Line[] Lines => _animation.Lines;
+    public Point[] Points => _animation.Points;
 
     private IEditor _editorInterface;
     private IMemoryAccess _rom;
@@ -122,6 +191,17 @@ public class StarFoxTesting : IUserWindow, IRender3DWidget
         _rom = rom;
 
         LoadModelSafe(_rom);
+    }
+
+    public void Update(float seconds)
+    {
+        if (reload)
+        {
+            reload = false;
+            modelNumber = temp_modelSelect.Value;
+            LoadModelSafe(_rom);
+        }
+        _animation.NextFrame();
     }
 
     private void LoadModelSafe(IMemoryAccess rom)
@@ -141,10 +221,8 @@ public class StarFoxTesting : IUserWindow, IRender3DWidget
 
     private void LoadModel(IMemoryAccess rom)
     {
-        _triangles = Array.Empty<Triangle>();
-        _lines = Array.Empty<Line>();
-        _points = Array.Empty<Point>();
-        
+        _animation = new Animation(0);
+
         var modelIdTable = rom.ReadBytes(ReadKind.Rom, 0x264B, 250 * 2);
         var modelEntry = rom.FetchMachineOrder16(modelNumber * 2, modelIdTable);
         var modelOffset = modelEntry - 0x8000;
@@ -188,50 +266,63 @@ public class StarFoxTesting : IUserWindow, IRender3DWidget
 
         // Experiment, extract things we need
         var vertData = rom.ReadBytes(ReadKind.Rom, vertDataOffset, 32768);
-        var faceData = rom.ReadBytes(ReadKind.Rom, faceDataOffset, 32768);
 
-        var allVertices = ProcessVertexData(rom, ref vertData).ToArray();
-
-        var triangleCode = faceData[0];
-        faceData = faceData[1..];
-
-        if (triangleCode != 0x30)
+        int currentFrame = 0;
+        var totalFrames = 1;
+        List<List<Vector3F>> allVertices = new List<List<Vector3F>>();
+        while (currentFrame < totalFrames)
         {
-            throw new InvalidDataException($"Expected triangle code 0x30, got 0x{triangleCode:X2}");
-        }
-        var numTris = faceData[0];
-        faceData = faceData[1..];
-
-        var triangles = new int[3 * numTris];
-        for (int a = 0; a < numTris; a++)
-        {
-            var p0 = faceData[0];
-            var p1 = faceData[1];
-            var p2 = faceData[2];
-            faceData = faceData[3..];
-
-            triangles[a * 3 + 0] = p0;
-            triangles[a * 3 + 1] = p1;
-            triangles[a * 3 + 2] = p2;
+            var verts = ProcessVertexData(rom, currentFrame, vertData);
+            totalFrames = verts.frameCnt;
+            currentFrame++;
+            allVertices.Add(verts.verticesForFrame);
         }
 
-        var faceOffsets = ProcessBSP(rom, faceData);
-
-        var triangleList = new List<Triangle>();
-        var lineList = new List<Line>();
-        var pointList = new List<Point>();
-
-        foreach (var fOffset in faceOffsets)
+        totalFrames= allVertices.Count;
+        _animation = new Animation(totalFrames);
+        for (currentFrame = 0; currentFrame < totalFrames; currentFrame++)
         {
-            var face = ProcessFaceOrSpriteData(rom, faceData.Slice(fOffset), allVertices);
-            triangleList.AddRange(face.tris);
-            lineList.AddRange(face.lines);
-            pointList.AddRange(face.points);
+            var faceData = rom.ReadBytes(ReadKind.Rom, faceDataOffset, 32768);
+            var triangleCode = faceData[0];
+            faceData = faceData[1..];
+
+            if (triangleCode != 0x30)
+            {
+                throw new InvalidDataException($"Expected triangle code 0x30, got 0x{triangleCode:X2}");
+            }
+            var numTris = faceData[0];
+            faceData = faceData[1..];
+
+            var triangles = new int[3 * numTris];
+            for (int a = 0; a < numTris; a++)
+            {
+                var p0 = faceData[0];
+                var p1 = faceData[1];
+                var p2 = faceData[2];
+                faceData = faceData[3..];
+
+                triangles[a * 3 + 0] = p0;
+                triangles[a * 3 + 1] = p1;
+                triangles[a * 3 + 2] = p2;
+            }
+
+            var faceOffsets = ProcessBSP(rom, faceData);
+
+            var triangleList = new List<Triangle>();
+            var lineList = new List<Line>();
+            var pointList = new List<Point>();
+
+            foreach (var fOffset in faceOffsets)
+            {
+                var face = ProcessFaceOrSpriteData(rom, faceData.Slice(fOffset), allVertices[currentFrame].ToArray());
+                triangleList.AddRange(face.tris);
+                lineList.AddRange(face.lines);
+                pointList.AddRange(face.points);
+            }
+            _animation.AddFrame(triangleList.ToArray(), lineList.ToArray(), pointList.ToArray());
         }
 
-        _triangles = triangleList.ToArray();
-        _lines = lineList.ToArray();
-        _points = pointList.ToArray();
+
     }
 
     public bool CodeIsVertexData(byte code)
@@ -239,8 +330,9 @@ public class StarFoxTesting : IUserWindow, IRender3DWidget
         return code == 0x04 || code == 0x38 || code == 0x1C || code == 0x20 || code==0x08 || code == 0x34;
     }
 
-    public List<Vector3F> ProcessVertexData(IMemoryAccess rom, ref ReadOnlySpan<byte> vertexData)
+    public (List<Vector3F> verticesForFrame, int frameCnt) ProcessVertexData(IMemoryAccess rom, int currentFrame, ReadOnlySpan<byte> vertexData)
     {
+        var frameCnt = 0;
         var vertices = new List<Vector3F>();
 
         var vertexCode = vertexData[0];
@@ -257,8 +349,12 @@ public class StarFoxTesting : IUserWindow, IRender3DWidget
             {
                 // Animation data - For now, we just process the first set of vertices
                 var frameCount = vertexData[0];
-                var firstOffset = rom.FetchMachineOrder16(1, vertexData);
-                vertexData = vertexData[(2 + firstOffset)..]; // Skip to next vertex code
+                if (frameCnt<frameCount)
+                {
+                    frameCnt = frameCount;
+                }
+                var firstOffset = rom.FetchMachineOrder16(1+2*currentFrame, vertexData);
+                vertexData = vertexData[(2 * (currentFrame + 1) + firstOffset)..]; // Skip to next vertex code
             }
             else if (vertexCode == 0x20)
             {
@@ -289,7 +385,7 @@ public class StarFoxTesting : IUserWindow, IRender3DWidget
             vertexData = vertexData[1..];
         }
 
-        return vertices;
+        return (vertices, frameCnt);
     }
 
     public int[] ProcessBSP(IMemoryAccess rom, ReadOnlySpan<byte> bspData)

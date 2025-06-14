@@ -25,6 +25,7 @@ internal class Render3DWidget : IWidgetItem, IWidgetUpdateDraw
 
     public void Update(IWidgetLog logger, float seconds)
     {
+        _widget.Update(seconds);
     }
 
     public void Draw(IWidgetLog logger)

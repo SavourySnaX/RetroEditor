@@ -182,6 +182,11 @@ namespace RetroEditor.Plugins
         uint Height { get; }
 
         /// <summary>
+        /// Updates the 3D scene, called every update cycle
+        /// </summary>
+        void Update(float seconds);
+
+        /// <summary>
         /// Camera position in the 3D scene
         /// </summary>
         Vector3F CameraPosition { get; }
