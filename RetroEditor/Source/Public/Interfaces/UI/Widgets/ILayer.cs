@@ -28,4 +28,40 @@ namespace RetroEditor.Plugins
         /// <param name="tile">tile index</param>
         void SetTile(uint x, uint y, uint tile);
     }
+
+    /// <summary>
+    /// Flags to indicate the flip state of a tile in a layer
+    /// </summary>
+    [Flags]
+    public enum FlipState : byte
+    {
+        /// <summary>
+        /// No flip state
+        /// </summary>
+        None = 0,
+        /// <summary>
+        /// Flip the tile horizontally
+        /// </summary>
+        X = 1 << 0,
+        /// <summary>
+        /// Flip the tile vertically
+        /// </summary>
+        Y = 1 << 1,
+        /// <summary>
+        /// Flip the tile both horizontally and vertically
+        /// </summary>
+        XY = X | Y
+    }
+
+    /// <summary>
+    /// Interface for a layer that supports flipping tiles
+    /// </summary>
+    public interface ILayerWithFlip : ILayer
+    {
+        /// <summary>
+        /// Get the flip data for the layer
+        /// </summary>
+        /// <returns>Flat array of flip states for each tile</returns>
+        ReadOnlySpan<FlipState> GetFlipData();
+    }
 }

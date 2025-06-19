@@ -32,6 +32,11 @@ internal class TileMapWidget : IWidgetItem, IWidgetUpdateDraw
             var bitmaps = palette.Bitmaps;
 
             var mapData = layer.GetMapData();
+            ReadOnlySpan<FlipState> flipStates = ReadOnlySpan<FlipState>.Empty;
+            if (layer is ILayerWithFlip layerWithFlip)
+            {
+                flipStates = layerWithFlip.GetFlipData();
+            }
 
             var mousePos = ImGui.GetMousePos();
             var localPos = mousePos - pos;
@@ -62,6 +67,14 @@ internal class TileMapWidget : IWidgetItem, IWidgetUpdateDraw
                     }
                 }
             }
+
+            var uvMinX= new Vector2(1, 0);
+            var uvMaxX= new Vector2(0, 1);
+            var uvMinY= new Vector2(0, 1);
+            var uvMaxY= new Vector2(1, 0);
+            var uvMinXY= new Vector2(1, 1);
+            var uvMaxXY= new Vector2(0, 0);
+
             var offY = 0;
             for (uint y = 0; y < layer.Height; y++)
             {
@@ -72,7 +85,29 @@ internal class TileMapWidget : IWidgetItem, IWidgetUpdateDraw
                     var tiles = palette.TilePalette.FetchTiles();
                     var tileData = tiles[(int)tilenum];
 
-                    AbiSafe_ImGuiWrapper.DrawList_AddImage(drawList, (nint)bitmaps[(int)tilenum].Id, new Vector2(pos.X + offX, pos.Y + offY), new Vector2(pos.X + offX + tileData.Width * _iTileMap.ScaleX, pos.Y + offY + tileData.Height * _iTileMap.ScaleY));
+                    var uvMin = new Vector2(0, 0);
+                    var uvMax = new Vector2(1, 1);
+                    if (flipStates.Length > 0)
+                    {
+                        var flipState = flipStates[(int)(y * layer.Width + x)];
+                        if (flipState.HasFlag(FlipState.X) && flipState.HasFlag(FlipState.Y))
+                        {
+                            uvMin = uvMinXY;
+                            uvMax = uvMaxXY;
+                        }
+                        else if (flipState.HasFlag(FlipState.X))
+                        {
+                            uvMin = uvMinX;
+                            uvMax = uvMaxX;
+                        }
+                        else if (flipState.HasFlag(FlipState.Y))
+                        {
+                            uvMin = uvMinY;
+                            uvMax = uvMaxY;
+                        }
+                    }
+
+                    AbiSafe_ImGuiWrapper.DrawList_AddImage(drawList, (nint)bitmaps[(int)tilenum].Id, new Vector2(pos.X + offX, pos.Y + offY), new Vector2(pos.X + offX + tileData.Width * _iTileMap.ScaleX, pos.Y + offY + tileData.Height * _iTileMap.ScaleY), uvMin, uvMax);
                     offX += (int)(palette.LargestWidth * _iTileMap.ScaleX);
                 }
                 offY += (int)(palette.LargestHeight * _iTileMap.ScaleY);
