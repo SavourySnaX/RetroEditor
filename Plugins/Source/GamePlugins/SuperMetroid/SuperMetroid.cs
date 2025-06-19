@@ -51,8 +51,291 @@ public class SuperMetroid : IRetroPlugin, IMenuProvider
             {
                 editorInterface.OpenUserWindow($"Testing", GetTesting(editorInterface, rom));
             });
+        menu.AddItem("Room",
+            (editorInterface, menuItem) =>
+            {
+                var room = new SuperMetroidRoom(rom);
+                editorInterface.OpenUserWindow($"Room Editor", room);
+            });
     }
 }
+
+
+// WE NEED 2 THINGS DOING SOON
+// 1. ROM PLUGINS EXIST, GAME PLUGINS EXIST, we need a shared helpers PLUGINS - E.G. SNES Helpers that contain Map16 stuff etc...
+// 2. WE NEED A WAY TO SHARE DATA BETWEEN WINDOWS/WIDGETS (although in principle data could be shared via the main plugin)
+//    e.g. the current room, the tile palette for that room, the tilemap for that room, should be seperate windows .. 
+public class SuperMetroidRoom : ITilePalette, ITileMap, IUserWindow
+{
+    public float UpdateInterval => 1 / 30.0f;
+
+    public uint Width => 256 * 8;
+
+    public uint Height => 256 * 6;
+
+    public uint NumLayers => 1;
+
+    public float ScaleX => 1.0f;
+
+    public float ScaleY => 1.0f;
+
+    public uint MaxTiles => TileCount;
+
+    public int SelectedTile { get; set; }
+
+    public uint TilesPerRow => 32;
+
+    TilePaletteStore palette;
+    SuperMetroidTile[] tiles;
+
+    class SuperMetroidTile : ITile
+    {
+        public uint Width => 16;
+
+        public uint Height => 16;
+
+        public string Name => _name;
+
+        private string _name;
+        private Pixel[] _imageData;
+
+        public SuperMetroidTile(string name, Tile16x16 map16, SuperMetroidVRam vram, SuperMetroidPalette palette)
+        {
+            _name = name;
+            _imageData = new Pixel[16 * 16];
+
+            // Rasterise the tiles
+            SuperMetroidRenderHelpers.DrawGfxTile(0, 0, map16, false, false, vram, ref _imageData, 16, 16, palette);
+        }
+        public Pixel[] GetImageData()
+        {
+            return _imageData;
+        }
+    }
+
+    class SuperMetroidLayer : ILayerWithFlip
+    {
+        public uint Width => (256 * 8) / 16; // 128 tiles wide
+
+        public uint Height => (256 * 6) / 16; // 96 tiles high
+
+        private uint[] map;
+        private FlipState[] flips;
+
+        public ReadOnlySpan<uint> GetMapData()
+        {
+            return map.AsSpan();
+        }
+
+        public ReadOnlySpan<FlipState> GetFlipData()
+        {
+            return flips.AsSpan();
+        }
+
+        public void SetTile(uint x, uint y, uint tile)
+        {
+            // TODO
+        }
+
+        public SuperMetroidLayer(IMemoryAccess rom, int w, int h, ReadOnlySpan<byte> mapData)
+        {
+            map = new uint[w * h];
+            flips = new FlipState[w * h];
+
+            for (int y = 0; y < h; y++)
+            {
+                for (int x = 0; x < w; x++)
+                {
+                    var blockIndex = (int)(y * w + x);
+                    var block = mapData.Slice(blockIndex * 2, 2);
+
+                    var layer1Data = rom.FetchMachineOrder16(0, block);
+                    var type = layer1Data >> 12; // Tile type
+                    var yFlip = (layer1Data >> 11) & 0x01; // Y Flip
+                    var xFlip = (layer1Data >> 10) & 0x01; // Y Flip
+                    var tileIndex = layer1Data & 0x3FF; // Tile index
+
+                    map[blockIndex] = (uint)tileIndex;
+                    flips[blockIndex] = FlipState.None;
+                    if (xFlip == 1)
+                    {
+                        flips[blockIndex] |= FlipState.X;
+                    }
+                    if (yFlip == 1)
+                    {
+                        flips[blockIndex] |= FlipState.Y;
+                    }
+                }
+            }
+        }
+    }
+
+    private SuperMetroidLayer layer1;
+
+    public void ConfigureWidgets(IMemoryAccess rom, IWidget widget, IPlayerControls playerControls)
+    {
+        widget.AddLabel("Tile Palette");
+        widget.AddTilePaletteWidget(palette);
+        widget.AddLabel("Tile Map Editor");
+        widget.AddTileMapWidget(this);
+    }
+
+    public void OnClose()
+    {
+    }
+
+    public ILayer FetchLayer(uint layer)
+    {
+        return layer1;
+    }
+
+    public TilePaletteStore FetchPalette(uint layer)
+    {
+        return palette;
+    }
+
+    public void Update(float seconds)
+    {
+    }
+
+    public ReadOnlySpan<ITile> FetchTiles()
+    {
+        return tiles;
+    }
+
+    private const uint TileCount = 1024;
+
+    public SuperMetroidRoom(IMemoryAccess rom)
+    {
+        RetroEditorPlugin_SuperMetroid.LoRom addressTranslation = new();
+
+        var roomAddress = 0x793FEu;
+        var snesAddress = addressTranslation.ToImage(roomAddress);
+
+        var roomProperties = rom.ReadBytes(ReadKind.Rom, roomAddress, 41);
+
+        var roomHeader = new RoomHeader(rom, roomProperties[0..11]);
+        var stateCondition = rom.FetchMachineOrder16(11, roomProperties);
+        if (stateCondition != 0xE5E6) // DEFAULT
+        {
+            // TODO: Handle unexpected state condition
+        }
+        var stateHeader = new StateHeader(rom, roomProperties[13..]);
+
+        var levelDataAddress = stateHeader.LevelDataAddress;
+        var tileset = stateHeader.TileSet;
+        var levelRomLocation = addressTranslation.ToImage(levelDataAddress);
+
+        var levelData = rom.ReadBytes(ReadKind.Rom, levelRomLocation, 32768); // Read 32KB of level data
+
+        var decompressedData = new byte[0x10000];
+
+        // Decompress the level data
+        var decompSize = RetroEditorPlugin_SuperMetroid.LC_LZ5.Decompress(ref decompressedData, levelData, out var bytesRead);
+
+        var vram = new SuperMetroidVRam(rom, tileset);
+
+        tiles = new SuperMetroidTile[TileCount];
+        for (int a = 0; a < TileCount; a++)
+        {
+            var tile = vram.Map16[a];
+            if (vram.Map16.Has(a))
+            {
+                var name = $"Tile {a}";
+                tiles[a] = new SuperMetroidTile(name, tile, vram, vram.Palette);
+            }
+        }
+
+        palette = new TilePaletteStore(this);
+
+        var layer1Size = rom.FetchMachineOrder16(0, decompressedData);
+        var numBlocks = layer1Size / 2;
+        var blockData = decompressedData.AsSpan(2, numBlocks * 2);
+        var btsData = decompressedData.AsSpan(2 + numBlocks * 2, numBlocks);
+        var layer2Data = decompressedData.AsSpan(2 + numBlocks * 3, numBlocks * 2); // TODO make sure we have layer 2 data first :)
+
+
+        layer1 = new SuperMetroidLayer(rom, roomHeader.Width * 16, roomHeader.Height * 16, blockData);
+    }
+}
+
+
+struct RoomHeader
+{
+    public byte RoomIndex;
+    public byte RoomArea;
+    public byte XPosMiniMap;
+    public byte YPosMiniMap;
+    public byte Width;
+    public byte Height;
+    public byte UpScroll;
+    public byte DownScroll;
+    public byte CREBitSet;
+    public ushort DoorListPointer;      // Bank 8F
+
+    public RoomHeader(IMemoryAccess rom, ReadOnlySpan<byte> data)
+    {
+        if (data.Length < 11)
+            throw new ArgumentException("Data must be at least 11 bytes long", nameof(data));
+
+        RoomIndex = data[0];
+        RoomArea = data[1];
+        XPosMiniMap = data[2];
+        YPosMiniMap = data[3];
+        Width = data[4];
+        Height = data[5];
+        UpScroll = data[6];
+        DownScroll = data[7];
+        CREBitSet = data[8];
+        DoorListPointer = rom.FetchMachineOrder16(9, data);
+    }
+}
+
+struct StateHeader
+{
+    public ushort LevelDataPointer;
+    public byte LevelDataBank;
+    public byte TileSet;
+    public byte MusicCollection;
+    public byte MusicTrack;
+    public ushort FXPointer;                // Bank 83
+    public ushort EnemyPopulationPointer;   // Bank A1
+    public ushort EnemySet;                 // Bank B4
+    public byte Layer2ScrollX;              // sssssssb
+    public byte Layer2ScrollY;              // sssssssb
+    public ushort ScrollPointer;        // Optional (which 16x16 blocks are scollable)
+    public ushort SpecialXRayBlocks;    // Optional (pointer to data defining special X-Ray blocks)
+    public ushort MainASMPointer;       // Optional (per frame asm)
+    public ushort PLMPopulation;        // Optional (PLM placement and params)
+    public ushort LibraryBG;            // Optional (operations for loading layer 2)
+    public ushort SetupAsmPointer;      // Optional (per room setup asm)
+
+    public StateHeader(IMemoryAccess rom, ReadOnlySpan<byte> data)
+    {
+        if (data.Length < 26)
+            throw new ArgumentException("Data must be at least 26 bytes long", nameof(data));
+
+        LevelDataPointer = rom.FetchMachineOrder16(0, data);
+        LevelDataBank = data[2];
+        TileSet = data[3];
+        MusicCollection = data[4];
+        MusicTrack = data[5];
+        FXPointer = rom.FetchMachineOrder16(6, data);
+        EnemyPopulationPointer = rom.FetchMachineOrder16(8, data);
+        EnemySet = rom.FetchMachineOrder16(10, data);
+        Layer2ScrollX = data[12];
+        Layer2ScrollY = data[13];
+        ScrollPointer = rom.FetchMachineOrder16(14, data);
+        SpecialXRayBlocks = rom.FetchMachineOrder16(16, data);
+        MainASMPointer = rom.FetchMachineOrder16(18, data);
+        PLMPopulation = rom.FetchMachineOrder16(20, data);
+        LibraryBG = rom.FetchMachineOrder16(22, data);
+        SetupAsmPointer = rom.FetchMachineOrder16(24, data);
+    }
+
+    public uint LevelDataAddress => (uint)(LevelDataPointer | (LevelDataBank << 16));
+}
+
 
 public class SuperMetroidTesting : IUserWindow, IImage
 {
@@ -73,82 +356,6 @@ public class SuperMetroidTesting : IUserWindow, IImage
     {
         _editorInterface = editorInterface;
         _rom = rom;
-    }
-
-    struct RoomHeader
-    {
-        public byte RoomIndex;
-        public byte RoomArea;
-        public byte XPosMiniMap;
-        public byte YPosMiniMap;
-        public byte Width;
-        public byte Height;
-        public byte UpScroll;
-        public byte DownScroll;
-        public byte CREBitSet;
-        public ushort DoorListPointer;      // Bank 8F
-
-        public RoomHeader(IMemoryAccess rom, ReadOnlySpan<byte> data)
-        {
-            if (data.Length < 11)
-                throw new ArgumentException("Data must be at least 11 bytes long", nameof(data));
-
-            RoomIndex = data[0];
-            RoomArea = data[1];
-            XPosMiniMap = data[2];
-            YPosMiniMap = data[3];
-            Width = data[4];
-            Height = data[5];
-            UpScroll = data[6];
-            DownScroll = data[7];
-            CREBitSet = data[8];
-            DoorListPointer = rom.FetchMachineOrder16(9, data);
-        }
-    }
-
-    struct StateHeader
-    {
-        public ushort LevelDataPointer;
-        public byte LevelDataBank;
-        public byte TileSet;
-        public byte MusicCollection;
-        public byte MusicTrack;
-        public ushort FXPointer;                // Bank 83
-        public ushort EnemyPopulationPointer;   // Bank A1
-        public ushort EnemySet;                 // Bank B4
-        public byte Layer2ScrollX;              // sssssssb
-        public byte Layer2ScrollY;              // sssssssb
-        public ushort ScrollPointer;        // Optional (which 16x16 blocks are scollable)
-        public ushort SpecialXRayBlocks;    // Optional (pointer to data defining special X-Ray blocks)
-        public ushort MainASMPointer;       // Optional (per frame asm)
-        public ushort PLMPopulation;        // Optional (PLM placement and params)
-        public ushort LibraryBG;            // Optional (operations for loading layer 2)
-        public ushort SetupAsmPointer;      // Optional (per room setup asm)
-
-        public StateHeader(IMemoryAccess rom, ReadOnlySpan<byte> data)
-        {
-            if (data.Length < 26)
-                throw new ArgumentException("Data must be at least 26 bytes long", nameof(data));
-
-            LevelDataPointer = rom.FetchMachineOrder16(0, data);
-            LevelDataBank = data[2];
-            TileSet = data[3];
-            MusicCollection = data[4];
-            MusicTrack = data[5];
-            FXPointer = rom.FetchMachineOrder16(6, data);
-            EnemyPopulationPointer = rom.FetchMachineOrder16(8, data);
-            EnemySet = rom.FetchMachineOrder16(10, data);
-            Layer2ScrollX = data[12];
-            Layer2ScrollY = data[13];
-            ScrollPointer = rom.FetchMachineOrder16(14, data);
-            SpecialXRayBlocks = rom.FetchMachineOrder16(16, data);
-            MainASMPointer = rom.FetchMachineOrder16(18, data);
-            PLMPopulation = rom.FetchMachineOrder16(20, data);
-            LibraryBG = rom.FetchMachineOrder16(22, data);
-            SetupAsmPointer = rom.FetchMachineOrder16(24, data);
-        }
-
-        public uint LevelDataAddress => (uint)(LevelDataPointer | (LevelDataBank << 16));
     }
 
     public ReadOnlySpan<Pixel> GetImageData(float seconds)
@@ -183,35 +390,35 @@ public class SuperMetroidTesting : IUserWindow, IImage
         var vram = new SuperMetroidVRam(_rom, tileset);
 
         var pixels = new Pixel[Width * Height];
-/*
-        for (int i = 0; i < vram.TileCount; i++)
-        {
-            var tx = i % 64;
-            var ty = i / 64;
-            var rasteriseTile = vram.Tile(i);
-
-            for (int y = 0; y < 8; y++)
-            {
-                for (int x = 0; x < 8; x++)
+        /*
+                for (int i = 0; i < vram.TileCount; i++)
                 {
-                    var colourIndex = rasteriseTile[y * 8 + x];
-                    var pixelIndex = (ty * 8 + y) * Width + (tx * 8 + x);
-                    //                    if (pixelIndex < pixels.Length)
+                    var tx = i % 64;
+                    var ty = i / 64;
+                    var rasteriseTile = vram.Tile(i);
+
+                    for (int y = 0; y < 8; y++)
                     {
-                        pixels[pixelIndex] = new Pixel((byte)(colourIndex * 8), (byte)(colourIndex * 8), (byte)(colourIndex * 8));
+                        for (int x = 0; x < 8; x++)
+                        {
+                            var colourIndex = rasteriseTile[y * 8 + x];
+                            var pixelIndex = (ty * 8 + y) * Width + (tx * 8 + x);
+                            //                    if (pixelIndex < pixels.Length)
+                            {
+                                pixels[pixelIndex] = new Pixel((byte)(colourIndex * 8), (byte)(colourIndex * 8), (byte)(colourIndex * 8));
+                            }
+                        }
                     }
                 }
-            }
-        }
 
-        for (int a = 0; a < 512; a++)
-        {
-            var tile = vram.Map16[a];
-            if (vram.Map16.Has(a))
-            {
-                SuperMetroidRenderHelpers.DrawGfxTile(a % 32, a / 32 + 256 / 16, tile, false, false, vram, ref pixels, Width, Height, vram.Palette);
-            }
-        }*/
+                for (int a = 0; a < 512; a++)
+                {
+                    var tile = vram.Map16[a];
+                    if (vram.Map16.Has(a))
+                    {
+                        SuperMetroidRenderHelpers.DrawGfxTile(a % 32, a / 32 + 256 / 16, tile, false, false, vram, ref pixels, Width, Height, vram.Palette);
+                    }
+                }*/
 
         // Lets unpack the level data using our newly working tiles
         var layer1Size = _rom.FetchMachineOrder16(0, decompressedData);
@@ -220,12 +427,12 @@ public class SuperMetroidTesting : IUserWindow, IImage
         var btsData = decompressedData.AsSpan(2 + numBlocks * 2, numBlocks);
         var layer2Data = decompressedData.AsSpan(2 + numBlocks * 3, numBlocks * 2); // TODO make sure we have layer 2 data first :)
 
-        var mapWidth = roomHeader.Width*16;
-        var mapHeight = roomHeader.Height*16;
+        var mapWidth = roomHeader.Width * 16;
+        var mapHeight = roomHeader.Height * 16;
 
-        for (int y=0;y<mapHeight;y++)
+        for (int y = 0; y < mapHeight; y++)
         {
-            for (int x=0;x<mapWidth;x++)
+            for (int x = 0; x < mapWidth; x++)
             {
                 var blockIndex = y * mapWidth + x;
                 if (blockIndex < numBlocks)
@@ -234,9 +441,23 @@ public class SuperMetroidTesting : IUserWindow, IImage
                     var bts = btsData[blockIndex];
                     var layer2Block = layer2Data.Slice(blockIndex * 2, 2);
 
+
+                    // Layer2
+                    var layer2DataWord = _rom.FetchMachineOrder16(0, layer2Block);
+                    var layer2Type = layer2DataWord >> 12; // Tile type
+                    var layer2YFlip = (layer2DataWord >> 11) & 0x01; // Y Flip
+                    var layer2XFlip = (layer2DataWord >> 10) & 0x01; // X Flip
+                    var layer2TileIndex = layer2DataWord & 0x3FF; // Tile index
+
+                    if (vram.Map16.Has(layer2TileIndex))
+                    {
+                        var tile = vram.Map16[layer2TileIndex];
+                        SuperMetroidRenderHelpers.DrawGfxTile(x, y, tile, layer2XFlip == 1, layer2YFlip == 1, vram, ref pixels, Width, Height, vram.Palette);
+                    }
+
                     // Get the tile index from the block data
                     var layer1Data = _rom.FetchMachineOrder16(0, block);
-                    var type= layer1Data>> 12; // Tile index
+                    var type = layer1Data >> 12; // Tile type
                     var yFlip = (layer1Data >> 11) & 0x01; // Y Flip
                     var xFlip = (layer1Data >> 10) & 0x01; // Y Flip
                     var tileIndex = layer1Data & 0x3FF; // Tile index
