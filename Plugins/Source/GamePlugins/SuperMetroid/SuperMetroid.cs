@@ -59,13 +59,13 @@ public class SuperMetroidTesting : IUserWindow, IImage
     private readonly IEditor _editorInterface;
     private readonly IMemoryAccess _rom;
 
-    public uint Width => 512;
+    public uint Width => 256 * 8;
 
-    public uint Height => 512;
+    public uint Height => 256 * 6;
 
-    public float ScaleX => 2.0f;
+    public float ScaleX => 1.0f;
 
-    public float ScaleY => 2.0f;
+    public float ScaleY => 1.0f;
 
     public float UpdateInterval => 1 / 30.0f;
 
@@ -170,6 +170,7 @@ public class SuperMetroidTesting : IUserWindow, IImage
         var stateHeader = new StateHeader(_rom, roomProperties[13..]);
 
         var levelDataAddress = stateHeader.LevelDataAddress;
+        var tileset = stateHeader.TileSet;
         var levelRomLocation = addressTranslation.ToImage(levelDataAddress);
 
         var levelData = _rom.ReadBytes(ReadKind.Rom, levelRomLocation, 32768); // Read 32KB of level data
@@ -179,12 +180,13 @@ public class SuperMetroidTesting : IUserWindow, IImage
         // Decompress the level data
         var decompSize = RetroEditorPlugin_SuperMetroid.LC_LZ5.Decompress(ref decompressedData, levelData, out var bytesRead);
 
-        var vram = new SuperMetroidVRam(_rom);
+        var vram = new SuperMetroidVRam(_rom, tileset);
 
         var pixels = new Pixel[Width * Height];
+/*
         for (int i = 0; i < vram.TileCount; i++)
         {
-            var tx = i % 64; 
+            var tx = i % 64;
             var ty = i / 64;
             var rasteriseTile = vram.Tile(i);
 
@@ -194,13 +196,60 @@ public class SuperMetroidTesting : IUserWindow, IImage
                 {
                     var colourIndex = rasteriseTile[y * 8 + x];
                     var pixelIndex = (ty * 8 + y) * Width + (tx * 8 + x);
-//                    if (pixelIndex < pixels.Length)
+                    //                    if (pixelIndex < pixels.Length)
                     {
                         pixels[pixelIndex] = new Pixel((byte)(colourIndex * 8), (byte)(colourIndex * 8), (byte)(colourIndex * 8));
                     }
                 }
             }
         }
+
+        for (int a = 0; a < 512; a++)
+        {
+            var tile = vram.Map16[a];
+            if (vram.Map16.Has(a))
+            {
+                SuperMetroidRenderHelpers.DrawGfxTile(a % 32, a / 32 + 256 / 16, tile, false, false, vram, ref pixels, Width, Height, vram.Palette);
+            }
+        }*/
+
+        // Lets unpack the level data using our newly working tiles
+        var layer1Size = _rom.FetchMachineOrder16(0, decompressedData);
+        var numBlocks = layer1Size / 2;
+        var blockData = decompressedData.AsSpan(2, numBlocks * 2);
+        var btsData = decompressedData.AsSpan(2 + numBlocks * 2, numBlocks);
+        var layer2Data = decompressedData.AsSpan(2 + numBlocks * 3, numBlocks * 2); // TODO make sure we have layer 2 data first :)
+
+        var mapWidth = roomHeader.Width*16;
+        var mapHeight = roomHeader.Height*16;
+
+        for (int y=0;y<mapHeight;y++)
+        {
+            for (int x=0;x<mapWidth;x++)
+            {
+                var blockIndex = y * mapWidth + x;
+                if (blockIndex < numBlocks)
+                {
+                    var block = blockData.Slice(blockIndex * 2, 2);
+                    var bts = btsData[blockIndex];
+                    var layer2Block = layer2Data.Slice(blockIndex * 2, 2);
+
+                    // Get the tile index from the block data
+                    var layer1Data = _rom.FetchMachineOrder16(0, block);
+                    var type= layer1Data>> 12; // Tile index
+                    var yFlip = (layer1Data >> 11) & 0x01; // Y Flip
+                    var xFlip = (layer1Data >> 10) & 0x01; // Y Flip
+                    var tileIndex = layer1Data & 0x3FF; // Tile index
+
+                    if (vram.Map16.Has(tileIndex))
+                    {
+                        var tile = vram.Map16[tileIndex];
+                        SuperMetroidRenderHelpers.DrawGfxTile(x, y, tile, xFlip == 1, yFlip == 1, vram, ref pixels, Width, Height, vram.Palette);
+                    }
+                }
+            }
+        }
+
         return pixels;
     }
 
@@ -224,15 +273,20 @@ public class SuperMetroidVRam
 
     public uint TileCount => (uint)tileCache.Length;
 
+    public SuperMetroidMap16 Map16 => _map16;
+    public SuperMetroidPalette Palette => _palette;
+
     private IMemoryAccess _rom;
     private RetroEditorPlugin_SuperMetroid.AddressTranslation _addressTranslation;
+    private SuperMetroidMap16 _map16 = new SuperMetroidMap16();
+    private SuperMetroidPalette _palette;
 
     private byte[] decomp = new byte[0x10000]; // 64KB buffer for decompression
 
-    private byte[][] tileCache = new byte[65536/32][];
+    private byte[][] tileCache = new byte[65536 / 32][];
 
     // TODO needs information from level for vram layout
-    public SuperMetroidVRam(IMemoryAccess rom)
+    public SuperMetroidVRam(IMemoryAccess rom, byte tileset)
     {
         _rom = rom;
         _addressTranslation = new RetroEditorPlugin_SuperMetroid.LoRom();
@@ -249,25 +303,61 @@ public class SuperMetroidVRam
         var creTileset = _rom.ReadBytes(ReadKind.Rom, creRomLocation, 32768); // Read 32KB of CRE tileset
 
         // Decompress the CRE tileset
-        var creDecompSize = RetroEditorPlugin_SuperMetroid.LC_LZ5.Decompress(ref decomp, creTileset, out var creBytesRead);
+        var creDecompSize = RetroEditorPlugin_SuperMetroid.LC_LZ5.Decompress(ref decomp, creTileset, out _);
 
-        var totalCRE = (uint)(creBytesRead / 32);
+        var totalCRE = (uint)(creDecompSize / 32);
 
         RasteriseDecomp(0x280, 0, totalCRE, SNESTileKind.Tile_4bpp);
 
+        // Fetch tileset table data
+        var tilesetTableAddress = 0x8FE6A2u;
+        var tilesetTableRomLocation = _addressTranslation.ToImage(tilesetTableAddress);
+
+        // Table is 3*3 bytes per entry, there are entries for 0x00-0x1C
+        var tilesetOffset = tileset * 3u * 3u;
+        var tilesetEntry = _rom.ReadBytes(ReadKind.Rom, tilesetTableRomLocation + tilesetOffset, 3 * 3);
+
+        var tileTableWord = _rom.FetchMachineOrder16(0, tilesetEntry);
+        var tileTableBank = tilesetEntry[2];
+        var tileTableAddress = (uint)(tileTableWord | (tileTableBank << 16));
+        var tilesWord = _rom.FetchMachineOrder16(3, tilesetEntry);
+        var TilesBank = tilesetEntry[5];
+        var tilesAddress = (uint)(tilesWord | (TilesBank << 16));
+        var paletteWord = _rom.FetchMachineOrder16(6, tilesetEntry);
+        var paletteBank = tilesetEntry[8];
+        var paletteAddress = (uint)(paletteWord | (paletteBank << 16));
+
+        var paletteRomLocation = _addressTranslation.ToImage(paletteAddress);
+        _palette = new SuperMetroidPalette(_rom, paletteRomLocation);
+
         // Step 2, fetch SRE tileset
-        var sreRomLocation = 0x1D4629u;
+        var sreRomLocation = _addressTranslation.ToImage(tilesAddress);//   0x1D4629u;
         var sreTileset = _rom.ReadBytes(ReadKind.Rom, sreRomLocation, 32768); // Read 32KB of CRE tileset
 
         // Decompress the CRE tileset
-        var sreDecompSize = RetroEditorPlugin_SuperMetroid.LC_LZ5.Decompress(ref decomp, sreTileset, out var sreBytesRead);
+        var sreDecompSize = RetroEditorPlugin_SuperMetroid.LC_LZ5.Decompress(ref decomp, sreTileset, out _);
 
-        var totalSRE = (uint)(sreBytesRead / 32);
+        var totalSRE = (uint)(sreDecompSize / 32);
 
         // CRE at 2800 (word address) (a tile is 32 bytes (4BBP), so 16 words. So to convert to a tile offset) - 0x2800/16 = 280
 
         RasteriseDecomp(0x000, 0, totalSRE, SNESTileKind.Tile_4bpp);
 
+        var creTile16Address = 0xB9A09Du;
+        var creTile16RomLocation = _addressTranslation.ToImage(creTile16Address);
+        var creTile16Data = _rom.ReadBytes(ReadKind.Rom, creTile16RomLocation, 32768);
+
+        // Decompress the CRE tile16 data
+        var creTile16DecompSize = RetroEditorPlugin_SuperMetroid.LC_LZ5.Decompress(ref decomp, creTile16Data, out _);
+
+        _map16.AddTiles(0, (creTile16DecompSize / 8) - 1, decomp.AsSpan(0, creTile16DecompSize));
+
+        var sreTile16RomLocation = _addressTranslation.ToImage(tileTableAddress);
+        var sreTile16Data = _rom.ReadBytes(ReadKind.Rom, sreTile16RomLocation, 32768);
+
+        var sreTile16DecompSize = RetroEditorPlugin_SuperMetroid.LC_LZ5.Decompress(ref decomp, sreTile16Data, out _);
+
+        _map16.AddTiles(creTile16DecompSize / 8, (creTile16DecompSize / 8) + ((sreTile16DecompSize / 8) - 1), decomp.AsSpan(0, sreTile16DecompSize));
     }
 
     enum SNESTileKind
@@ -352,114 +442,181 @@ public class SuperMetroidVRam
             }
         }
     }
-    public class SuperMetroidPalette
-    {
-        Pixel[,] _palette;
+}
+public class SuperMetroidPalette
+{
+    Pixel[,] _palette;
 
-        Pixel SNESToPixel(ushort c)
+    Pixel SNESToPixel(ushort c)
+    {
+        var r = ((c & 0x1F) << 3) | ((c & 1) != 0 ? 7 : 0);
+        var g = (((c >> 5) & 0x1F) << 3) | ((c & 0x20) != 0 ? 7 : 0);
+        var b = (((c >> 10) & 0x1F) << 3) | ((c & 0x400) != 0 ? 7 : 0);
+        return new Pixel((byte)r, (byte)g, (byte)b, 255);
+    }
+
+    public SuperMetroidPalette(IMemoryAccess rom, uint paletteRomLocation)
+    {
+        _palette = new Pixel[8, 16];
+
+        // Read the palette data from the ROM
+        var paletteComp = rom.ReadBytes(ReadKind.Rom, paletteRomLocation, 32768);
+        var paletteBuffer = new byte[2 * 8 * 16];
+        // Decompress the palette data
+        var paletteDecompSize = RetroEditorPlugin_SuperMetroid.LC_LZ5.Decompress(ref paletteBuffer, paletteComp , out _);
+        if (paletteDecompSize != 256)
         {
-            var r = ((c & 0x1F) << 3) | ((c & 1) != 0 ? 7 : 0);
-            var g = (((c >> 5) & 0x1F) << 3) | ((c & 0x20) != 0 ? 7 : 0);
-            var b = (((c >> 10) & 0x1F) << 3) | ((c & 0x400) != 0 ? 7 : 0);
-            return new Pixel((byte)r, (byte)g, (byte)b, 255);
+            throw new InvalidOperationException($"Palette decompression failed, expected 512 bytes but got {paletteDecompSize} bytes.");
         }
 
-        public SuperMetroidPalette(IMemoryAccess rom)
+        for (int i = 0; i < 8; i++)
         {
-            _palette = new Pixel[16, 16];  // Perhaps we should have platform colour constructors e.g. SNESToPixel, etc?
-
-            // For now greyscale
-            for (int i = 0; i < 16; i++)
+            for (int j = 0; j < 16; j++)
             {
-                for (int j=0;j<16;j++)
+                var index = i * 16 + j;
+                if (index < paletteBuffer.Length / 2)
                 {
-                    _palette[i, j] = SNESToPixel((ushort)(i * 0x1111 + j * 0x0001)); // Greyscale
+                    var colourValue = (ushort)(paletteBuffer[index * 2] | (paletteBuffer[index * 2 + 1] << 8));
+                    _palette[i, j] = SNESToPixel(colourValue);
+                }
+                else
+                {
+                    _palette[i, j] = new Pixel(0, 0, 0, 255); // Default to black if out of range
                 }
             }
-
         }
+    }
 
-        public Pixel this[int palette, int colour]
+    public Pixel this[int palette, int colour]
+    {
+        get
         {
-            get
+            return _palette[palette, colour];
+        }
+    }
+}
+
+public struct SubTile
+{
+    public int tile;
+    public int palette;
+    public bool flipx;
+    public bool flipy;
+    public bool priority;
+
+    public SubTile(int a, int b)
+    {
+        tile = a + ((b & 3) << 8);
+        palette = (b & 0x1C) >> 2;
+        flipx = (b & 0x40) == 0x40;
+        flipy = (b & 0x80) == 0x80;
+        priority = (b & 0x20) == 0x20;
+    }
+}
+
+public struct Tile16x16
+{
+    public SubTile TL, TR, BL, BR;
+
+    public Tile16x16(ReadOnlySpan<byte> data)
+    {
+        TL = new SubTile(data[0], data[1]);
+        TR = new SubTile(data[2], data[3]);
+        BL = new SubTile(data[4], data[5]);
+        BR = new SubTile(data[6], data[7]);
+    }
+}
+
+// Same as SuperMarioWorld, but tileflipping is overridable, and the tile order is TL,TR,BL,BR as opposed to TL,BL,TR,BR
+public static class SuperMetroidRenderHelpers
+{
+    static void Draw8x8(int tx, int ty, int xo, int yo, SubTile tile, bool flipX, bool flipY, SuperMetroidVRam vram, ref Pixel[] pixels, uint Width, uint Height, SuperMetroidPalette palette)
+    {
+        var tileNum = tile.tile;
+        var gfx = vram.Tile(tileNum);
+        // compute tile position TL
+        var tileX = tileNum % 16;
+        var tileY = tileNum / 16;
+
+        int ox = tx * 16 + 8 * xo;
+        int oy = ty * 16 + 8 * yo;
+        int g = 0;
+
+        var doFlipX = tile.flipx ^ flipX;
+        var doFlipY = tile.flipy ^ flipY;
+
+        for (int y = 0; y < 8; y++)
+        {
+            for (int x = 0; x < 8; x++)
             {
-                return _palette[palette, colour];
-            }
-        }
-    }
-
-    struct SubTile
-    {
-        public int tile;
-        public int palette;
-        public bool flipx;
-        public bool flipy;
-        public bool priority;
-
-        public SubTile(int a, int b)
-        {
-            tile = a + ((b & 3) << 8);
-            palette = (b & 0x1C) >> 2;
-            flipx = (b & 0x40) == 0x40;
-            flipy = (b & 0x80) == 0x80;
-            priority = (b & 0x20) == 0x20;
-        }
-    }
-
-    struct Tile16x16
-    {
-        public SubTile TL, TR, BL, BR;
-
-        public Tile16x16(ReadOnlySpan<byte> data)
-        {
-            TL = new SubTile(data[0], data[1]);
-            BL = new SubTile(data[2], data[3]);
-            TR = new SubTile(data[4], data[5]);
-            BR = new SubTile(data[6], data[7]);
-        }
-    }
-
-
-    static class SuperMetroidRenderHelpers
-    {
-        static void Draw8x8(int tx, int ty, int xo, int yo, SubTile tile, SuperMetroidVRam vram, ref Pixel[] pixels, uint Width, uint Height, SuperMetroidPalette palette)
-        {
-            var tileNum = tile.tile;
-            var gfx = vram.Tile(tileNum);
-            // compute tile position TL
-            var tileX = tileNum % 16;
-            var tileY = tileNum / 16;
-
-            int ox = tx * 16 + 8 * xo;
-            int oy = ty * 16 + 8 * yo;
-            int g = 0;
-            for (int y = 0; y < 8; y++)
-            {
-                for (int x = 0; x < 8; x++)
+                var px = ox + (doFlipX ? 7 - x : x);
+                var py = oy + (doFlipY ? 7 - y : y);
+                if (px >= 0 && px < Width && py >= 0 && py < Height)
                 {
-                    var px = ox + (tile.flipx ? 7 - x : x);
-                    var py = oy + (tile.flipy ? 7 - y : y);
-                    if (px >= 0 && px < Width && py >= 0 && py < Height)
+                    var c = gfx[g++];
+                    if (c != 0)
                     {
-                        var c = gfx[g++];
-                        if (c != 0)
-                        {
-                            pixels[py * Width + px] = palette[tile.palette, c];
-                        }
+                        pixels[py * Width + px] = palette[tile.palette, c];
                     }
                 }
             }
         }
-
-        public static void DrawGfxTile(int tx, int ty, Tile16x16 tile16, SuperMetroidVRam vram, ref Pixel[] pixels, uint Width, uint Height, SuperMetroidPalette palette)
-        {
-            // Just draw the TL tile for now
-            Draw8x8(tx, ty, 0, 0, tile16.TL, vram, ref pixels, Width, Height, palette);
-            Draw8x8(tx, ty, 1, 0, tile16.TR, vram, ref pixels, Width, Height, palette);
-            Draw8x8(tx, ty, 0, 1, tile16.BL, vram, ref pixels, Width, Height, palette);
-            Draw8x8(tx, ty, 1, 1, tile16.BR, vram, ref pixels, Width, Height, palette);
-        }
-
     }
 
+    public static void DrawGfxTile(int tx, int ty, Tile16x16 tile16, bool xFlip, bool yFlip, SuperMetroidVRam vram, ref Pixel[] pixels, uint Width, uint Height, SuperMetroidPalette palette)
+    {
+        if ((!xFlip) && (!yFlip))
+        {
+            // No flipping, draw normally
+            Draw8x8(tx, ty, 0, 0, tile16.TL, xFlip, yFlip, vram, ref pixels, Width, Height, palette);
+            Draw8x8(tx, ty, 1, 0, tile16.TR, xFlip, yFlip, vram, ref pixels, Width, Height, palette);
+            Draw8x8(tx, ty, 0, 1, tile16.BL, xFlip, yFlip, vram, ref pixels, Width, Height, palette);
+            Draw8x8(tx, ty, 1, 1, tile16.BR, xFlip, yFlip, vram, ref pixels, Width, Height, palette);
+        }
+        else if (xFlip && (!yFlip))
+        {
+            // X flip only
+            Draw8x8(tx, ty, 0, 0, tile16.TR, xFlip, yFlip, vram, ref pixels, Width, Height, palette);
+            Draw8x8(tx, ty, 1, 0, tile16.TL, xFlip, yFlip, vram, ref pixels, Width, Height, palette);
+            Draw8x8(tx, ty, 0, 1, tile16.BR, xFlip, yFlip, vram, ref pixels, Width, Height, palette);
+            Draw8x8(tx, ty, 1, 1, tile16.BL, xFlip, yFlip, vram, ref pixels, Width, Height, palette);
+        }
+        else if ((!xFlip) && yFlip)
+        {
+            // Y flip only
+            Draw8x8(tx, ty, 0, 0, tile16.BL, xFlip, yFlip, vram, ref pixels, Width, Height, palette);
+            Draw8x8(tx, ty, 1, 0, tile16.BR, xFlip, yFlip, vram, ref pixels, Width, Height, palette);
+            Draw8x8(tx, ty, 0, 1, tile16.TL, xFlip, yFlip, vram, ref pixels, Width, Height, palette);
+            Draw8x8(tx, ty, 1, 1, tile16.TR, xFlip, yFlip, vram, ref pixels, Width, Height, palette);
+        }
+        else
+        {
+            // Both flips
+            Draw8x8(tx, ty, 0, 0, tile16.BR, xFlip, yFlip, vram, ref pixels, Width, Height, palette);
+            Draw8x8(tx, ty, 1, 0, tile16.BL, xFlip, yFlip, vram, ref pixels, Width, Height, palette);
+            Draw8x8(tx, ty, 0, 1, tile16.TR, xFlip, yFlip, vram, ref pixels, Width, Height, palette);
+            Draw8x8(tx, ty, 1, 1, tile16.TL, xFlip, yFlip, vram, ref pixels, Width, Height, palette);
+        }
+    }
+
+}
+
+public class SuperMetroidMap16
+{
+    public bool Has(int index) => map16ToTile.ContainsKey(index);
+    public Tile16x16 this[int index] => map16ToTile[index];
+    private Dictionary<int, Tile16x16> map16ToTile = new Dictionary<int, Tile16x16>();
+
+    public void AddTiles(int start, int end, ReadOnlySpan<byte> data)
+    {
+        for (int a = start; a <= end; a++)
+        {
+            var Test2D = data.Slice((a - start) * 8, 8);
+            map16ToTile[a] = new Tile16x16(Test2D);
+        }
+    }
+
+    public SuperMetroidMap16()
+    {
+    }
 }
