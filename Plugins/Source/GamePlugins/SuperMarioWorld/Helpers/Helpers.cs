@@ -2,137 +2,12 @@ using System;
 using System.Collections.Generic;
 using RetroEditor.Plugins;
 
+using SuperNintendoEntertainmentSystem.Memory;
+using SuperNintendoEntertainmentSystem.Compression;
+using SuperNintendoEntertainmentSystem.Graphics;
+
 namespace RetroEditorPlugin_SuperMarioWorld
 {
-    // To do - move to editor library
-    interface AddressTranslation
-    {
-        uint ToImage(uint address);
-        uint FromImage(uint address);
-    }
-
-    public class LoRom : AddressTranslation
-    {
-        public uint ToImage(uint address)
-        {
-            uint bank = (address >> 16) & 0xFF;
-            uint rom = address & 0xFFFF;
-
-            if (rom < 0x8000)
-            {
-                throw new System.Exception("Invalid address");
-            }
-            rom -= 0x8000;
-            return bank * 0x8000 + rom;
-        }
-
-        public uint FromImage(uint address)
-        {
-            uint bank = address / 0x8000;
-            uint rom = address % 0x8000;
-            return (bank << 16) | rom;
-        }
-    }
-
-    public static class LC_LZ2
-    {
-        private static void DecompressCode(ref byte[] decompBuffer, ref ReadOnlySpan<byte> data, ref int offset, int l, int c)
-        {
-            var count = l;
-            switch (c)
-            {
-                case 0: // Direct Copy
-                    {
-                        for (int i = 0; i <= count; i++)
-                        {
-                            decompBuffer[offset++] = data[0];
-                            data = data.Slice(1);
-                        }
-                    }
-                    break;
-                case 1: //Byte Fill
-                    {
-                        var value = data[0];
-                        data = data.Slice(1);
-                        for (int i = 0; i <= count; i++)
-                        {
-                            decompBuffer[offset++] = value;
-                        }
-                    }
-                    break;
-                case 2: //Word Fill
-                    {
-                        var v0 = data[0];
-                        var v1 = data[1];
-                        data = data.Slice(2);
-                        bool oddeven = false;
-                        for (int i = 0; i <= count; i++)
-                        {
-                            if (!oddeven)
-                                decompBuffer[offset++] = v0;
-                            else
-                                decompBuffer[offset++] = v1;
-                            oddeven = !oddeven;
-                        }
-                    }
-                    break;
-                case 3: //Increasing Fill
-                    {
-                        var value = data[0];
-                        data = data.Slice(1);
-                        for (int i = 0; i <= count; i++)
-                        {
-                            decompBuffer[offset++] = value++;
-                        }
-                    }
-                    break;
-                case 4: //Repeat
-                    {
-                        var h = data[1];
-                        var L = data[0];
-                        var src = (h << 8) | L;
-                        data = data.Slice(2);
-                        for (int i = 0; i <= count; i++)
-                        {
-                            decompBuffer[offset++] = decompBuffer[src++];
-                        }
-                    }
-                    break;
-                case 7: //LongLength
-                    {
-                        var nc = (l & 0x1C) >> 2;
-                        var nl = (l & 3) << 8;
-                        nl |= data[0];
-                        data = data.Slice(1);
-                        DecompressCode(ref decompBuffer, ref data, ref offset, nl, nc);
-                    }
-                    break;
-
-            }
-
-        }
-
-        public static int Decompress(ref byte[] toDecompressBuffer, ReadOnlySpan<byte> data)
-        {
-            //LC_LZ2
-            var offset = 0;
-
-            while (data.Length > 0)
-            {
-                var b = data[0];
-                if (b == 0xFF)
-                {
-                    break;
-                }
-                data = data.Slice(1);
-                var l = b & 0x1F;
-                var c = (b & 0xE0) >> 5;
-                DecompressCode(ref toDecompressBuffer, ref data, ref offset, l, c);
-            }
-            return offset;
-        }
-    }
-
     public static class SMWAddresses    // Super Mario World Japan 1.0 (headerless)
     {
         public const uint LevelDataLayer1 = 0x05E000;
@@ -271,7 +146,7 @@ namespace RetroEditorPlugin_SuperMarioWorld
         public SuperMarioVRam(IMemoryAccess rom, SMWLevelHeader header)
         {
             _rom = rom;
-            _addressTranslation = new LoRom();
+            _addressTranslation = new LoRom(false,false);
 
             for (int i = 0; i <= 0x33; i++)
             {
@@ -346,7 +221,7 @@ namespace RetroEditorPlugin_SuperMarioWorld
 
             var GFX = new ReadOnlySpan<byte>(decomp);
 
-            LC_LZ2.Decompress(ref decomp, _rom.ReadBytes(ReadKind.Rom, gfxPtr, 32768));  // Overread but should be ok
+            LC_LZ2.Decompress(ref decomp, _rom.ReadBytes(ReadKind.Rom, gfxPtr, 32768), out _);  // Overread but should be ok
 
             return GFX;
         }
@@ -355,7 +230,7 @@ namespace RetroEditorPlugin_SuperMarioWorld
         {
             var gfxPtr = _addressTranslation.ToImage(SMWAddresses.GFX33);
             var GFX = new ReadOnlySpan<byte>(decomp);
-            LC_LZ2.Decompress(ref decomp, _rom.ReadBytes(ReadKind.Rom, gfxPtr, 32768));  // Overread but should be ok
+            LC_LZ2.Decompress(ref decomp, _rom.ReadBytes(ReadKind.Rom, gfxPtr, 32768), out _);  // Overread but should be ok
             var tileSize = 24;
             srcTile += 16 * frame;
             for (int i = 0; i < cnt; i++)
@@ -473,23 +348,15 @@ namespace RetroEditorPlugin_SuperMarioWorld
         Pixel[,] _palette;
         Pixel _backgroundColour;
 
-        Pixel SNESToPixel(ushort c)
-        {
-            var r = ((c & 0x1F) << 3) | ((c & 1) != 0 ? 7 : 0);
-            var g = (((c >> 5) & 0x1F) << 3) | ((c & 0x20) != 0 ? 7 : 0);
-            var b = (((c >> 10) & 0x1F) << 3) | ((c & 0x400) != 0 ? 7 : 0);
-            return new Pixel((byte)r, (byte)g, (byte)b, 255);
-        }
-
         public SuperMarioPalette(IMemoryAccess rom, SMWLevelHeader header)
         {
             _palette = new Pixel[16, 16];  // Perhaps we should have platform colour constructors e.g. SNESToPixel, etc?
-            var addressTranslation = new LoRom();
+            var addressTranslation = new LoRom(false,false);
 
             for (int i = 0; i < 16; i++)
             {
-                _palette[i, 0] = SNESToPixel(0x0000);
-                _palette[i, 1] = SNESToPixel(0x7FDD);
+                _palette[i, 0].FromSNES(0x0000);
+                _palette[i, 1].FromSNES(0x7FDD);
             }
 
             // BG Palette x = $00B0B0 + (#$18 * x). (Palette 0,2 to 0,7 and 1,2 to 1,7)       
@@ -501,17 +368,17 @@ namespace RetroEditorPlugin_SuperMarioWorld
             {
                 var p = i - 2;
                 var c = rom.FetchMachineOrder16(p * 2, bgPalette);
-                _palette[0, i] = SNESToPixel(c);
+                _palette[0, i].FromSNES(c);
                 c = rom.FetchMachineOrder16(0x0C + p * 2, bgPalette);
-                _palette[1, i] = SNESToPixel(c);
+                _palette[1, i].FromSNES(c);
                 c = rom.FetchMachineOrder16(p * 2, fgPalette);
-                _palette[2, i] = SNESToPixel(c);
+                _palette[2, i].FromSNES(c);
                 c = rom.FetchMachineOrder16(0x0C + p * 2, fgPalette);
-                _palette[3, i] = SNESToPixel(c);
+                _palette[3, i].FromSNES(c);
                 c = rom.FetchMachineOrder16(p * 2, spPalette);
-                _palette[14, i] = SNESToPixel(c);
+                _palette[14, i].FromSNES(c);
                 c = rom.FetchMachineOrder16(0x0C + p * 2, spPalette);
-                _palette[14, i] = SNESToPixel(c);
+                _palette[14, i].FromSNES(c);
             }
             for (uint row = 4; row < 14; row++)
             {
@@ -520,7 +387,7 @@ namespace RetroEditorPlugin_SuperMarioWorld
                 {
                     var p = i - 2;
                     var c = rom.FetchMachineOrder16(p * 2, rowPalette);
-                    _palette[row, i] = SNESToPixel(c);
+                    _palette[row, i].FromSNES(c);
                 }
             }
             var palette = rom.ReadBytes(ReadKind.Rom, addressTranslation.ToImage(SMWAddresses.PlayerPaletteTable + 0u/*Mario*/* 0x14u), 0x14);
@@ -528,16 +395,16 @@ namespace RetroEditorPlugin_SuperMarioWorld
             {
                 var p = i - 6;
                 var c = rom.FetchMachineOrder16(p * 2, palette);
-                _palette[8, i] = SNESToPixel(c);
+                _palette[8, i].FromSNES(c);
             }
             var layer3Palette = rom.ReadBytes(ReadKind.Rom, addressTranslation.ToImage(SMWAddresses.Layer3PaletteTable), 0x20);
             for (int i = 8; i < 16; i++)
             {
                 var p = i - 8;
                 var c = rom.FetchMachineOrder16(p * 2, layer3Palette);
-                _palette[0, i] = SNESToPixel(c);
+                _palette[0, i].FromSNES(c);
                 c = rom.FetchMachineOrder16(0x10 + p * 2, layer3Palette);
-                _palette[1, i] = SNESToPixel(c);
+                _palette[1, i].FromSNES(c);
             }
             for (uint row = 2; row < 5; row++)
             {
@@ -546,17 +413,17 @@ namespace RetroEditorPlugin_SuperMarioWorld
                 {
                     var p = i - 9;
                     var c = rom.FetchMachineOrder16(p * 2, rowPalette);
-                    _palette[row, i] = SNESToPixel(c);
+                    _palette[row, i].FromSNES(c);
                 }
             }
             var animatedPalette = rom.ReadBytes(ReadKind.Rom, addressTranslation.ToImage(SMWAddresses.AnimatedPaletteEntryTable), 0x10);
             // For now, just use first colour
             var animCol = rom.FetchMachineOrder16(0, animatedPalette);
-            _palette[6, 4] = SNESToPixel(animCol);
+            _palette[6, 4].FromSNES(animCol);
 
             var bgColour = rom.ReadBytes(ReadKind.Rom, addressTranslation.ToImage(SMWAddresses.BackAreaColourTable + 0x02u * header.BackAreaColour), 2);
             var bgSnesColour = rom.FetchMachineOrder16(0, bgColour);
-            _backgroundColour = SNESToPixel(bgSnesColour);
+            _backgroundColour.FromSNES(bgSnesColour);
         }
 
         public Pixel this[int palette, int colour]

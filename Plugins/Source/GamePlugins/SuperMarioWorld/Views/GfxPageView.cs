@@ -1,6 +1,9 @@
 using System;
 using RetroEditor.Plugins;
 
+using SuperNintendoEntertainmentSystem.Memory;
+using SuperNintendoEntertainmentSystem.Compression;
+
 namespace RetroEditorPlugin_SuperMarioWorld
 {
     public class SuperMarioWorldGFXPageImage : IImage, IUserWindow
@@ -24,7 +27,7 @@ namespace RetroEditorPlugin_SuperMarioWorld
         public SuperMarioWorldGFXPageImage(IEditor editorInterface, IMemoryAccess rom)
         {
             _rom = rom;
-            _addressTranslation = new LoRom();
+            _addressTranslation = new LoRom(false,false);
             _editorInterface = editorInterface;
 
             for (int i = 0; i <= 0x33; i++)
@@ -95,7 +98,7 @@ namespace RetroEditorPlugin_SuperMarioWorld
                 var decomp = new byte[32768];
                 var GFX = new ReadOnlySpan<byte>(decomp);
 
-                var size = LC_LZ2.Decompress(ref decomp, _rom.ReadBytes(ReadKind.Rom, gfxPtr, 32768));  // Overread but should be ok
+                var size = LC_LZ2.Decompress(ref decomp, _rom.ReadBytes(ReadKind.Rom, gfxPtr, 32768),out _);  // Overread but should be ok
                 temp_pageInfo.Name = $"GFX Page {temp_pageSelect.Value:X2} {GFXPageKind[temp_pageSelect.Value]} Decoded Size {size}";
 
                 var rasteriseAs = GFXPageKind[temp_pageSelect.Value];

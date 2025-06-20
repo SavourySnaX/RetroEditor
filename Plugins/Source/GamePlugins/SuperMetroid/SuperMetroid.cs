@@ -5,6 +5,10 @@ using System.Linq;
 using System.Security.Cryptography;
 using RetroEditor.Plugins;
 
+using SuperNintendoEntertainmentSystem.Graphics;
+using SuperNintendoEntertainmentSystem.Memory;
+using SuperNintendoEntertainmentSystem.Compression;
+
 public class SuperMetroid : IRetroPlugin, IMenuProvider
 {
     public static string Name => "Super Metroid";
@@ -115,9 +119,10 @@ public class SuperMetroidRoom : ITilePalette, ITileMap, IUserWindow
 
     class SuperMetroidLayer : ILayerWithFlip
     {
-        public uint Width => (256 * 8) / 16; // 128 tiles wide
+        private uint _width,_height;
+        public uint Width => _width;
 
-        public uint Height => (256 * 6) / 16; // 96 tiles high
+        public uint Height => _height;
 
         private uint[] map;
         private FlipState[] flips;
@@ -137,8 +142,15 @@ public class SuperMetroidRoom : ITilePalette, ITileMap, IUserWindow
             // TODO
         }
 
+        public void SetFlip(uint x, uint y, FlipState state)
+        {
+            // TODO
+        }
+
         public SuperMetroidLayer(IMemoryAccess rom, int w, int h, ReadOnlySpan<byte> mapData)
         {
+            _width = (uint)w;
+            _height = (uint)h;
             map = new uint[w * h];
             flips = new FlipState[w * h];
 
@@ -207,9 +219,9 @@ public class SuperMetroidRoom : ITilePalette, ITileMap, IUserWindow
 
     public SuperMetroidRoom(IMemoryAccess rom)
     {
-        RetroEditorPlugin_SuperMetroid.LoRom addressTranslation = new();
+        LoRom addressTranslation = new(isHeadered: false, bank80: true);
 
-        var roomAddress = 0x793FEu;
+        var roomAddress = 0x7E82Cu; //0x793FEu;
         var snesAddress = addressTranslation.ToImage(roomAddress);
 
         var roomProperties = rom.ReadBytes(ReadKind.Rom, roomAddress, 41);
@@ -231,7 +243,7 @@ public class SuperMetroidRoom : ITilePalette, ITileMap, IUserWindow
         var decompressedData = new byte[0x10000];
 
         // Decompress the level data
-        var decompSize = RetroEditorPlugin_SuperMetroid.LC_LZ5.Decompress(ref decompressedData, levelData, out var bytesRead);
+        var decompSize = LC_LZ5.Decompress(ref decompressedData, levelData, out var bytesRead);
 
         var vram = new SuperMetroidVRam(rom, tileset);
 
@@ -360,7 +372,7 @@ public class SuperMetroidTesting : IUserWindow, IImage
 
     public ReadOnlySpan<Pixel> GetImageData(float seconds)
     {
-        RetroEditorPlugin_SuperMetroid.LoRom addressTranslation = new();
+        LoRom addressTranslation = new(isHeadered: false, bank80: true);
 
         var roomAddress = 0x793FEu;
         var snesAddress = addressTranslation.ToImage(roomAddress);
@@ -385,7 +397,7 @@ public class SuperMetroidTesting : IUserWindow, IImage
         var decompressedData = new byte[0x10000];
 
         // Decompress the level data
-        var decompSize = RetroEditorPlugin_SuperMetroid.LC_LZ5.Decompress(ref decompressedData, levelData, out var bytesRead);
+        var decompSize = LC_LZ5.Decompress(ref decompressedData, levelData, out var bytesRead);
 
         var vram = new SuperMetroidVRam(_rom, tileset);
 
@@ -498,7 +510,7 @@ public class SuperMetroidVRam
     public SuperMetroidPalette Palette => _palette;
 
     private IMemoryAccess _rom;
-    private RetroEditorPlugin_SuperMetroid.AddressTranslation _addressTranslation;
+    private AddressTranslation _addressTranslation;
     private SuperMetroidMap16 _map16 = new SuperMetroidMap16();
     private SuperMetroidPalette _palette;
 
@@ -510,7 +522,7 @@ public class SuperMetroidVRam
     public SuperMetroidVRam(IMemoryAccess rom, byte tileset)
     {
         _rom = rom;
-        _addressTranslation = new RetroEditorPlugin_SuperMetroid.LoRom();
+        _addressTranslation = new LoRom(isHeadered: false, bank80: true);
 
         for (int i = 0; i < tileCache.Length; i++)
         {
@@ -524,7 +536,7 @@ public class SuperMetroidVRam
         var creTileset = _rom.ReadBytes(ReadKind.Rom, creRomLocation, 32768); // Read 32KB of CRE tileset
 
         // Decompress the CRE tileset
-        var creDecompSize = RetroEditorPlugin_SuperMetroid.LC_LZ5.Decompress(ref decomp, creTileset, out _);
+        var creDecompSize = LC_LZ5.Decompress(ref decomp, creTileset, out _);
 
         var totalCRE = (uint)(creDecompSize / 32);
 
@@ -556,7 +568,7 @@ public class SuperMetroidVRam
         var sreTileset = _rom.ReadBytes(ReadKind.Rom, sreRomLocation, 32768); // Read 32KB of CRE tileset
 
         // Decompress the CRE tileset
-        var sreDecompSize = RetroEditorPlugin_SuperMetroid.LC_LZ5.Decompress(ref decomp, sreTileset, out _);
+        var sreDecompSize = LC_LZ5.Decompress(ref decomp, sreTileset, out _);
 
         var totalSRE = (uint)(sreDecompSize / 32);
 
@@ -569,14 +581,14 @@ public class SuperMetroidVRam
         var creTile16Data = _rom.ReadBytes(ReadKind.Rom, creTile16RomLocation, 32768);
 
         // Decompress the CRE tile16 data
-        var creTile16DecompSize = RetroEditorPlugin_SuperMetroid.LC_LZ5.Decompress(ref decomp, creTile16Data, out _);
+        var creTile16DecompSize = LC_LZ5.Decompress(ref decomp, creTile16Data, out _);
 
         _map16.AddTiles(0, (creTile16DecompSize / 8) - 1, decomp.AsSpan(0, creTile16DecompSize));
 
         var sreTile16RomLocation = _addressTranslation.ToImage(tileTableAddress);
         var sreTile16Data = _rom.ReadBytes(ReadKind.Rom, sreTile16RomLocation, 32768);
 
-        var sreTile16DecompSize = RetroEditorPlugin_SuperMetroid.LC_LZ5.Decompress(ref decomp, sreTile16Data, out _);
+        var sreTile16DecompSize = LC_LZ5.Decompress(ref decomp, sreTile16Data, out _);
 
         _map16.AddTiles(creTile16DecompSize / 8, (creTile16DecompSize / 8) + ((sreTile16DecompSize / 8) - 1), decomp.AsSpan(0, sreTile16DecompSize));
     }
@@ -668,14 +680,6 @@ public class SuperMetroidPalette
 {
     Pixel[,] _palette;
 
-    Pixel SNESToPixel(ushort c)
-    {
-        var r = ((c & 0x1F) << 3) | ((c & 1) != 0 ? 7 : 0);
-        var g = (((c >> 5) & 0x1F) << 3) | ((c & 0x20) != 0 ? 7 : 0);
-        var b = (((c >> 10) & 0x1F) << 3) | ((c & 0x400) != 0 ? 7 : 0);
-        return new Pixel((byte)r, (byte)g, (byte)b, 255);
-    }
-
     public SuperMetroidPalette(IMemoryAccess rom, uint paletteRomLocation)
     {
         _palette = new Pixel[8, 16];
@@ -684,7 +688,7 @@ public class SuperMetroidPalette
         var paletteComp = rom.ReadBytes(ReadKind.Rom, paletteRomLocation, 32768);
         var paletteBuffer = new byte[2 * 8 * 16];
         // Decompress the palette data
-        var paletteDecompSize = RetroEditorPlugin_SuperMetroid.LC_LZ5.Decompress(ref paletteBuffer, paletteComp , out _);
+        var paletteDecompSize = LC_LZ5.Decompress(ref paletteBuffer, paletteComp , out _);
         if (paletteDecompSize != 256)
         {
             throw new InvalidOperationException($"Palette decompression failed, expected 512 bytes but got {paletteDecompSize} bytes.");
@@ -698,7 +702,7 @@ public class SuperMetroidPalette
                 if (index < paletteBuffer.Length / 2)
                 {
                     var colourValue = (ushort)(paletteBuffer[index * 2] | (paletteBuffer[index * 2 + 1] << 8));
-                    _palette[i, j] = SNESToPixel(colourValue);
+                    _palette[i, j].FromSNES(colourValue);
                 }
                 else
                 {

@@ -1,6 +1,8 @@
 using System;
 using RetroEditor.Plugins;
 
+using SuperNintendoEntertainmentSystem.Memory;
+
 namespace RetroEditorPlugin_SuperMarioWorld
 {
     public class SuperMarioWorldVramImage : IImage, IUserWindow
@@ -27,7 +29,7 @@ namespace RetroEditorPlugin_SuperMarioWorld
         public SuperMarioWorldVramImage(IEditor editorInterface, IMemoryAccess rom)
         {
             _rom = rom;
-            _addressTranslation = new LoRom();
+            _addressTranslation = new LoRom(false, false);
         }
 
         public void ConfigureWidgets(IMemoryAccess rom, IWidget widget, IPlayerControls playerControls)
