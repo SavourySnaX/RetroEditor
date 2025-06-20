@@ -128,6 +128,7 @@ public class LinkToThePastTesting : IUserWindow, IImage
         //       var gfx3bpp = _rom.ReadBytes(ReadKind.Rom, gfx3bppAddress, length);
 
         // 0-112 COMP 3BPP
+        // 113-114 2BPP sprites
         // 115-126 3BPP sprites
         // 127-217 COMP 3BPP sprites
 
