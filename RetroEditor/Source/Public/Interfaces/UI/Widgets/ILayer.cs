@@ -63,5 +63,13 @@ namespace RetroEditor.Plugins
         /// </summary>
         /// <returns>Flat array of flip states for each tile</returns>
         ReadOnlySpan<FlipState> GetFlipData();
+
+        /// <summary>
+        /// Set the flip state for a tile in the layer
+        /// </summary>
+        /// <param name="x">x offset of modified tile in tiles</param>
+        /// <param name="y">y offset of modified tile in tiles</param>
+        /// <param name="flipState">Flip state to set</param>
+        void SetFlip(uint x, uint y, FlipState flipState);
     }
 }

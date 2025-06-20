@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using RetroEditor.Plugins;
 
+using SuperNintendoEntertainmentSystem.Memory;
+
 namespace RetroEditorPlugin_SuperMarioWorld
 {
     public class SMWObject : IObject
@@ -16,7 +18,7 @@ namespace RetroEditorPlugin_SuperMarioWorld
 
         public string Name => _name;
 
-        public SMWObject(uint x,uint y, uint width, uint height, string name, uint[] mapData)
+        public SMWObject(uint x, uint y, uint width, uint height, string name, uint[] mapData)
         {
             _x = x * 16;
             _y = y * 16;
@@ -132,7 +134,7 @@ namespace RetroEditorPlugin_SuperMarioWorld
         public StandardObject(uint x, uint y, uint width, uint height, string name, ReadOnlySpan<byte> mapData) : base(x, y, width, height, name, null)
         {
             var n = new uint[mapData.Length];
-            for (int a=0;a<mapData.Length;a++)
+            for (int a = 0; a < mapData.Length; a++)
             {
                 n[a] = mapData[a];
             }
@@ -146,7 +148,7 @@ namespace RetroEditorPlugin_SuperMarioWorld
             // Clamp to tile 16x16 grid
             tx = (tx / 16) * 16;
             ty = (ty / 16) * 16;
-            _x = Math.Min(Math.Max(tx, 0u), 16u*16u*32u);
+            _x = Math.Min(Math.Max(tx, 0u), 16u * 16u * 32u);
             _y = Math.Min(Math.Max(ty, 0u), 416u);
         }
     }
@@ -156,8 +158,8 @@ namespace RetroEditorPlugin_SuperMarioWorld
         public SizeXYObject(uint x, uint y, uint width, uint height, string name, uint[] mapData) : base(x, y, width, height, name, mapData)
         {
             // Override mapdata resized based on 9tile
-            var actual = new uint [width*height];
-            for (int a=0;a<width*height;a++)
+            var actual = new uint[width * height];
+            for (int a = 0; a < width * height; a++)
             {
                 actual[a] = mapData[0];
             }
@@ -170,7 +172,7 @@ namespace RetroEditorPlugin_SuperMarioWorld
         public Size9TileObject(uint x, uint y, uint width, uint height, string name, uint[] mapData) : base(x, y, width, height, name, mapData)
         {
             // Override mapdata resized based on 9tile
-            var actual = new uint [width*height];
+            var actual = new uint[width * height];
             var actualIdx = 0;
             uint t0, t1, t2;
             for (int yy = 0; yy < height; yy++)
@@ -216,7 +218,7 @@ namespace RetroEditorPlugin_SuperMarioWorld
         public LevelHelpers(IMemoryAccess rom, IEditor editorInterface)
         {
             _rom = rom;
-            _addressTranslation = new LoRom();
+            _addressTranslation = new LoRom(false,false);
             _editorInterface = editorInterface;
         }
 
@@ -377,7 +379,7 @@ namespace RetroEditorPlugin_SuperMarioWorld
                             _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(EStandardObject)objectNumber} @{xPos:X2},{yPos:X2} - Height {p0:X2} - Width {p1:X2}");
                             break;
                         case EStandardObject.Coins:
-                            objectList.Add(new SizeXYObject(xPos, yPos, p1+1u, p0+1u, "Coins", new uint[] { 0x2B }));
+                            objectList.Add(new SizeXYObject(xPos, yPos, p1 + 1u, p0 + 1u, "Coins", new uint[] { 0x2B }));
                             _editorInterface.Log(LogType.Info, $"{screenOffsetNumber:X2} | {objectNumber:X2} {(EStandardObject)objectNumber} @{xPos:X2},{yPos:X2} - Height {p0:X2} - Width {p1:X2}");
                             break;
                         case EStandardObject.VerticalPipes:
@@ -415,7 +417,7 @@ namespace RetroEditorPlugin_SuperMarioWorld
                         case EStandardObject.MidwayGoalPoint:
                             if (p1 == 1)
                             {
-                                objectList.Add(new Size9TileObject(xPos, yPos, 3u, p0+1u, "MidwayGoalB", new uint[] { 0x39, 0x25, 0x3C, 0x3A, 0x25, 0x3D, 0x3B, 0x25, 0x3E }));
+                                objectList.Add(new Size9TileObject(xPos, yPos, 3u, p0 + 1u, "MidwayGoalB", new uint[] { 0x39, 0x25, 0x3C, 0x3A, 0x25, 0x3D, 0x3B, 0x25, 0x3E }));
                             }
                             else
                             {
@@ -679,7 +681,7 @@ namespace RetroEditorPlugin_SuperMarioWorld
 
         }
 
-        private void TilesetSpecificSetCastle1(ref List<IObject> objectList,EStandardObject objectNumber, uint xPos, uint yPos, uint p0, uint p1, byte t2, SuperMarioVRam vram)
+        private void TilesetSpecificSetCastle1(ref List<IObject> objectList, EStandardObject objectNumber, uint xPos, uint yPos, uint p0, uint p1, byte t2, SuperMarioVRam vram)
         {
             switch (objectNumber)
             {

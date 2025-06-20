@@ -2,11 +2,13 @@ using System;
 using System.Collections.Generic;
 using RetroEditor.Plugins;
 
+using SuperNintendoEntertainmentSystem.Memory;
+
 namespace RetroEditorPlugin_SuperMarioWorld
 {
     public class SuperMarioWorldLevelEditor : IUserWindow
     {
-        public float UpdateInterval => 1/60.0f;
+        public float UpdateInterval => 1 / 60.0f;
 
         private IEditor _editorInterface;
         public SuperMarioWorldLevelEditor(IEditor editorInterface, IMemoryAccess rom)
@@ -35,7 +37,7 @@ namespace RetroEditorPlugin_SuperMarioWorld
         public SMWTile(string name, Tile16x16 map16, SuperMarioPalette palette, SuperMarioVRam vram)
         {
             _name = name;
-            _imageData = new Pixel[16*16];
+            _imageData = new Pixel[16 * 16];
 
             // Rasterise the tiles
             SMWRenderHelpers.DrawGfxTile(0, 0, map16, vram, ref _imageData, 16, 16, palette);
@@ -52,7 +54,7 @@ namespace RetroEditorPlugin_SuperMarioWorld
 
     public class SuperMarioWorldObjectMap : IObjectMap, ITilePalette
     {
-        public uint Width => 16*16*32;
+        public uint Width => 16 * 16 * 32;
 
         public uint Height => 416;
 
@@ -75,7 +77,7 @@ namespace RetroEditorPlugin_SuperMarioWorld
             _tiles = new SMWTile[512];
 
             var levelSelect = 199u;
-            var addressTranslation = new LoRom();
+            var addressTranslation = new LoRom(false, false);
             var smwRom = new SuperMarioWorldRomHelpers(rom, addressTranslation, levelSelect);
             var smwLevelHeader = smwRom.Header;
             var palette = new SuperMarioPalette(rom, smwLevelHeader);
@@ -90,7 +92,7 @@ namespace RetroEditorPlugin_SuperMarioWorld
 
             _palette = new TilePaletteStore(this);
 
-            var levelHelpers = new LevelHelpers(rom,editorInterface);
+            var levelHelpers = new LevelHelpers(rom, editorInterface);
             _objects = levelHelpers.FetchObjectLayer(ref smwRom, smwLevelHeader, vram, smwRom.Layer1Data);
             _dirty = true;
         }

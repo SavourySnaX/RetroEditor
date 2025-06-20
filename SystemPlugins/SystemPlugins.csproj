@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <ProduceReferenceAssembly>true</ProduceReferenceAssembly>
+    <TargetRefPath>$(MSBuildThisFileDirectory)../ReferenceAssemblies/SystemPlugins.dll</TargetRefPath>
+    <warningsAsErrors>true</warningsAsErrors>
+  </PropertyGroup>
+
+
+  <ItemGroup>
+    <ProjectReference Include="..\RetroEditor\RetroEditor.csproj" />
+    <Folder Include="Source\" />
+  </ItemGroup>
+
+</Project>
+

@@ -17,4 +17,5 @@ Plugins/bin/**
 Plugins/obj/**
 Plugins/*.sln
 ReferenceAssemblies/RetroEditor.dll
+ReferenceAssemblies/SystemPlugins.dll
 settings.json

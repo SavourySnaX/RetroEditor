@@ -1,6 +1,8 @@
 using System;
 using RetroEditor.Plugins;
 
+
+using SuperNintendoEntertainmentSystem.Memory;
 using RetroEditorPlugin_SuperMarioWorld;
 
 public class SuperMarioWorldLevelViewImage : IImage, IUserWindow
@@ -28,7 +30,7 @@ public class SuperMarioWorldLevelViewImage : IImage, IUserWindow
     public SuperMarioWorldLevelViewImage(IEditor editorInterface, IMemoryAccess rom)
     {
         _rom = rom;
-        _addressTranslation = new LoRom();
+        _addressTranslation = new LoRom(false,false);
         _editorInterface = editorInterface;
     }
 
