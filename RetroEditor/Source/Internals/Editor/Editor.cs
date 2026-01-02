@@ -313,6 +313,22 @@ internal class Editor : IEditor, IEditorInternal
 
         // SPEED STUFF UP FOR NOW
 
+        // Test dialog
+        var fileDialog = new FileDialog(FileDialog.FileDialogType.Open, "Open File", Directory.GetCurrentDirectory(), new string[] { "*.*" }, (string path) =>
+        {
+            if (path != null)
+            {
+                Log(LogType.Info, "File Dialog", $"Selected file: {path}");
+            }
+            else
+            {
+                Log(LogType.Info, "File Dialog", "Dialog cancelled");
+            }
+        });
+        fileDialog.Initialise();
+        windowManager.AddBlockingPopup(fileDialog, "File Dialog Test");
+
+
         var retro = GetDeveloperMame();
         if (retro != null)
         {

@@ -26,6 +26,9 @@ internal readonly struct Native
 
     [DllImport(Msvcrt, EntryPoint = "vsnprintf", CallingConvention = CallingConvention.Cdecl)]
     public static extern int VsnPrintfWindows(IntPtr buffer, UIntPtr size, IntPtr format, IntPtr args);
+    
+    [DllImport(Msvcrt, EntryPoint = "_vsnprintf", CallingConvention = CallingConvention.Cdecl)]
+    public static extern int VsnPrintfWindowsArm(IntPtr buffer, UIntPtr size, IntPtr format, IntPtr args);
 }
 
 [StructLayout(LayoutKind.Sequential, Pack = 4)]
@@ -151,6 +154,10 @@ internal static unsafe class RayLibLoggingWrapper
         var os = Environment.OSVersion;
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
+            if (RuntimeInformation.OSArchitecture==Architecture.Arm64)
+            {
+                return Native.VsnPrintfWindowsArm(buffer, size, format, args);
+            }
             return Native.VsnPrintfWindows(buffer, size, format, args);
         }
         else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
