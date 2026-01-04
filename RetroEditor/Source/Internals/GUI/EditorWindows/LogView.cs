@@ -1,4 +1,5 @@
 using ImGuiNET;
+using RetroEditor.Source.Internals.GUI;
 
 class LogView : IWindow
 {
@@ -21,7 +22,7 @@ class LogView : IWindow
 
     private void DrawLog(string[] log)
     {
-        if (ImGui.BeginChild("Scrolling", new System.Numerics.Vector2(0, 0), ImGuiChildFlags.None, ImGuiWindowFlags.HorizontalScrollbar))
+        if (AbiSafe_ImGuiWrapper.BeginChild("Scrolling", new System.Numerics.Vector2(0, 0), ImGuiChildFlags.None, ImGuiWindowFlags.HorizontalScrollbar))
         {
             unsafe
             {

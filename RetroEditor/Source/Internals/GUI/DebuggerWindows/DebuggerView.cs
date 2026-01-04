@@ -1,6 +1,7 @@
 
 using System.Numerics;
 using ImGuiNET;
+using RetroEditor.Source.Internals.GUI;
 
 internal class DebuggerView : IWindow
 {
@@ -107,7 +108,7 @@ internal class DebuggerView : IWindow
         ImGui.PushStyleVar(ImGuiStyleVar.ItemSpacing, new Vector2(0,0));
     
         var sizeOfMonoText=ImGui.CalcTextSize("A");
-        ImGui.BeginChild("BLAH", new Vector2(sizeOfMonoText.X*(view.view.W+2), sizeOfMonoText.Y*(view.view.H+2)),0,ImGuiWindowFlags.NoScrollbar);
+        AbiSafe_ImGuiWrapper.BeginChild("BLAH", new Vector2(sizeOfMonoText.X*(view.view.W+2), sizeOfMonoText.Y*(view.view.H+2)),0,ImGuiWindowFlags.NoScrollbar);
 
         var drawList = ImGui.GetWindowDrawList();
         var convCode = new byte[] { 0, 0 };

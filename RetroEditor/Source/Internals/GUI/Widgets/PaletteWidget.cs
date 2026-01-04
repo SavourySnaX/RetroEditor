@@ -2,6 +2,7 @@
 using System.Numerics;
 using ImGuiNET;
 using RetroEditor.Plugins;
+using RetroEditor.Source.Internals.GUI;
 
 internal class PaletteWidget : IWidgetItem, IWidgetUpdateDraw
 {
@@ -30,7 +31,7 @@ internal class PaletteWidget : IWidgetItem, IWidgetUpdateDraw
 
         var size = new Vector2(width * coloursPerRow, height * rows);
         var remainder = availColours == coloursPerRow ? availColours : availColours % coloursPerRow;
-        ImGui.BeginChild($"palette", size, 0, 0);
+        AbiSafe_ImGuiWrapper.BeginChild($"palette", size, 0, 0);
 
         var drawList = ImGui.GetWindowDrawList();
         Vector2 pos = ImGui.GetCursorScreenPos();
@@ -50,10 +51,10 @@ internal class PaletteWidget : IWidgetItem, IWidgetUpdateDraw
                 {
                     _iPalette.SelectedColour = a;
                 }
-                drawList.AddRectFilled(new Vector2(pos.X + xOffs + 4, pos.Y + yOffs + 4), new Vector2(pos.X + xOffs + width - 4, pos.Y + yOffs + height - 4), ImGuiHelper.MakeColour(colour.Red, colour.Green, colour.Blue, colour.Alpha));
+                AbiSafe_ImGuiWrapper.DrawList_AddRectFilled(drawList, new Vector2(pos.X + xOffs + 4, pos.Y + yOffs + 4), new Vector2(pos.X + xOffs + width - 4, pos.Y + yOffs + height - 4), ImGuiHelper.MakeColour(colour.Red, colour.Green, colour.Blue, colour.Alpha));
                 if (_iPalette.SelectedColour == a)
                 {
-                    drawList.AddRect(new Vector2(pos.X + xOffs, pos.Y + yOffs), new Vector2(pos.X + xOffs + width, pos.Y + yOffs + height), ImGuiHelper.MakeColour(255, 255, 255, 255));
+                    AbiSafe_ImGuiWrapper.DrawList_AddRect(drawList, new Vector2(pos.X + xOffs, pos.Y + yOffs), new Vector2(pos.X + xOffs + width, pos.Y + yOffs + height), ImGuiHelper.MakeColour(255, 255, 255, 255));
                 }
                 a++;
                 xOffs += width;

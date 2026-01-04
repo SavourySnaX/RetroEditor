@@ -1,4 +1,3 @@
-
 using Raylib_cs;
 using rlImGui_cs;
 using ImGuiNET;
@@ -314,20 +313,11 @@ internal class Editor : IEditor, IEditorInternal
         // SPEED STUFF UP FOR NOW
 
         // Test dialog
-        var fileDialog = new FileDialog(FileDialog.FileDialogType.Open, "Open File", Directory.GetCurrentDirectory(), new string[] { "*.*" }, (string path) =>
+        OpenFileDialog(FileDialog.FileDialogType.FolderPicker, "Test Dialog", "", new string[] { "*.bin", "*.sfc" }, (string path) =>
         {
-            if (path != null)
-            {
-                Log(LogType.Info, "File Dialog", $"Selected file: {path}");
-            }
-            else
-            {
-                Log(LogType.Info, "File Dialog", "Dialog cancelled");
-            }
+            Log(LogType.Info, "FileDialog", $"Selected file: {path}");
+            return true;
         });
-        fileDialog.Initialise();
-        windowManager.AddBlockingPopup(fileDialog, "File Dialog Test");
-
 
         var retro = GetDeveloperMame();
         if (retro != null)
@@ -410,17 +400,19 @@ internal class Editor : IEditor, IEditorInternal
                 {
                     var window = new NewProjectDialog(this);
                     window.Initialise();
-                    windowManager.AddBlockingPopup(window, "Create New Project");
+                    windowManager.AddWindow(window, "Create New Project", null);
                 }
                 ImGui.Separator();
                 if (ImGui.MenuItem("Open Existing Project"))
                 {
-                    var result = NativeFileDialogSharp.Dialog.FolderPicker();
-
-                    if (result.IsOk)
+                    OpenFileDialog(FileDialog.FileDialogType.FolderPicker, "Select Project Folder", settings.ProjectLocation, new string[] { "*.*" }, (string path) =>
                     {
-                        OpenProject(result.Path);
-                    }
+                        if (path != null)
+                        {
+                            OpenProject(path);
+                        }
+                        return true;
+                    });
                 }
                 if (settings.RecentProjects.Count == 0)
                 {
@@ -458,29 +450,31 @@ internal class Editor : IEditor, IEditorInternal
                     {
                         if (ImGui.MenuItem(active.Name))
                         {
-                            var result = NativeFileDialogSharp.Dialog.FileSave();
-
-                            if (result.IsOk)
+                            OpenFileDialog(FileDialog.FileDialogType.Save, "Export File", "", new string[] { "*.*" }, (string path) =>
                             {
-                                // Before export, we need to restore the original state, and only apply the serialised part
-                                active.PlayableRomPlugin.Reset(false);
+                                if (path != null)
+                                {
+                                    // Before export, we need to restore the original state, and only apply the serialised part
+                                    active.PlayableRomPlugin.Reset(false);
 
-                                ISave? save=null;
-                                try
-                                {
-                                    save = active.RetroPlugin.Export(active.PlayableRomPlugin);
-                                }
-                                catch (Exception e)
-                                {
-                                    Log(LogType.Error, $"Exporting {active.Name}", e.Message);
-                                }
-                                if (save != null)
-                                {
-                                    save.Save(result.Path);
-                                }
+                                    ISave? save = null;
+                                    try
+                                    {
+                                        save = active.RetroPlugin.Export(active.PlayableRomPlugin);
+                                    }
+                                    catch (Exception e)
+                                    {
+                                        Log(LogType.Error, $"Exporting {active.Name}", e.Message);
+                                    }
+                                    if (save != null)
+                                    {
+                                        save.Save(path);
+                                    }
 
-                                active.PlayableRomPlugin.Reset(true);
-                            }
+                                    active.PlayableRomPlugin.Reset(true);
+                                }
+                                return true;
+                            });
                         }
                     }
                     ImGui.EndMenu();
@@ -515,26 +509,28 @@ internal class Editor : IEditor, IEditorInternal
                         {
                             if (ImGui.MenuItem(plugin.Key))
                             {
-                                var result = NativeFileDialogSharp.Dialog.FileOpen();
-                                if (result.IsOk)
+                                OpenFileDialog(FileDialog.FileDialogType.Open, "Select ROM to Load", "", new string[] { "*.*" }, (string path) =>
                                 {
-                                    var instance = GetRomInstance(plugin.Key);
-                                    if (instance != null)
+                                    if (path != null)
                                     {
-                                        var retro = GetLibRetroInstance(instance.LibRetroPluginName, null);
-                                        if (retro != null)
+                                        var instance = GetRomInstance(plugin.Key);
+                                        if (instance != null)
                                         {
-                                            var pluginWindow = new LibRetroPlayerWindow(retro);
-                                            var playableRom = new PlayableRom(this, retro, instance.Endian, instance.RequiresReload, instance.ChecksumCalculation);
-                                            pluginWindow.Initialise();
-                                            retro.LoadGame(result.Path);
-                                            pluginWindow.OtherStuff();
-                                            pluginWindow.InitWindow();
-                                            windowManager.AddWindow(pluginWindow, plugin.Key, null);
+                                            var retro = GetLibRetroInstance(instance.LibRetroPluginName, null);
+                                            if (retro != null)
+                                            {
+                                                var pluginWindow = new LibRetroPlayerWindow(retro);
+                                                var playableRom = new PlayableRom(this, retro, instance.Endian, instance.RequiresReload, instance.ChecksumCalculation);
+                                                pluginWindow.Initialise();
+                                                retro.LoadGame(path);
+                                                pluginWindow.OtherStuff();
+                                                pluginWindow.InitWindow();
+                                                windowManager.AddWindow(pluginWindow, plugin.Key, null);
+                                            }
                                         }
                                     }
-                                }
-
+                                    return true;
+                                });
                             }
                         }
 
@@ -550,22 +546,25 @@ internal class Editor : IEditor, IEditorInternal
                         if (ImGui.MenuItem("Launch"))
                         {
                             // We use Mame for debugging mostly because it means I only needed to modify one of the lib retro plugins
-                            var result = NativeFileDialogSharp.Dialog.FileOpen();
-                            if (result.IsOk)
+                            OpenFileDialog(FileDialog.FileDialogType.Open, "Select ROM to Load", "", new string[] { "*.*" }, (string path) =>
                             {
-                                var retro = GetDeveloperMame();
-                                if (retro != null)
+                                if (path != null)
                                 {
-                                    mameInstance = new LibMameDebugger(retro);
+                                    var retro = GetDeveloperMame();
+                                    if (retro != null)
+                                    {
+                                        mameInstance = new LibMameDebugger(retro);
 
-                                    var pluginWindow = new LibRetroDebuggerWindow(retro,mameInstance);
-                                    pluginWindow.Initialise();
-                                    retro.LoadGame(result.Path);
-                                    pluginWindow.InitWindow();
-                                    windowManager.AddWindow(pluginWindow, "MAME RETRO", null);
+                                        var pluginWindow = new LibRetroDebuggerWindow(retro,mameInstance);
+                                        pluginWindow.Initialise();
+                                        retro.LoadGame(path);
+                                        pluginWindow.InitWindow();
+                                        windowManager.AddWindow(pluginWindow, "MAME RETRO", null);
 
+                                    }
                                 }
-                            }
+                                return true;
+                            });
                         }
                         if (initialMameInstance != null)
                         {
@@ -1172,4 +1171,12 @@ internal class Editor : IEditor, IEditorInternal
             Log(type, "Unknown", message);
         }
     }
+
+    public void OpenFileDialog(FileDialog.FileDialogType type, string title, string defaultPath, string[] filters, Func<string, bool> onSelected)
+    {
+        var fileDialog = new FileDialog(type, title, defaultPath, filters, onSelected);
+        fileDialog.Initialise();
+        windowManager.AddBlockingPopup(fileDialog, "File Dialog");
+    }
+
 }

@@ -1,6 +1,7 @@
 
 using System.Numerics;
 using ImGuiNET;
+using RetroEditor.Source.Internals.GUI;
 
 internal class DebuggerCommand : IWindow
 {
@@ -31,7 +32,7 @@ internal class DebuggerCommand : IWindow
         }
 
 
-        if (ImGui.BeginChild("Scrolling", new System.Numerics.Vector2(0, 0), ImGuiChildFlags.None, ImGuiWindowFlags.HorizontalScrollbar))
+        if (AbiSafe_ImGuiWrapper.BeginChild("Scrolling", new Vector2(0, 0), ImGuiChildFlags.None, ImGuiWindowFlags.HorizontalScrollbar))
         {
             unsafe
             {

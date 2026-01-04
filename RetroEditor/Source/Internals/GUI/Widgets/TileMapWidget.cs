@@ -1,6 +1,7 @@
 using System.Numerics;
 using ImGuiNET;
 using RetroEditor.Plugins;
+using RetroEditor.Source.Internals.GUI;
 
 internal class TileMapWidget : IWidgetItem, IWidgetUpdateDraw
 {
@@ -19,7 +20,7 @@ internal class TileMapWidget : IWidgetItem, IWidgetUpdateDraw
     {
         var drawList = ImGui.GetWindowDrawList();
         var size = new Vector2(_iTileMap.Width * _iTileMap.ScaleX, _iTileMap.Height * _iTileMap.ScaleY);
-        ImGui.BeginChild($"map", size, 0, 0);
+        AbiSafe_ImGuiWrapper.BeginChild($"map", size, 0, 0);
         var pos = ImGui.GetCursorScreenPos();
         var hx = -1;
         var hy = -1;
@@ -71,7 +72,7 @@ internal class TileMapWidget : IWidgetItem, IWidgetUpdateDraw
                     var tiles = palette.TilePalette.FetchTiles();
                     var tileData = tiles[(int)tilenum];
 
-                    drawList.AddImage((nint)bitmaps[(int)tilenum].Id, new Vector2(pos.X + offX, pos.Y + offY), new Vector2(pos.X + offX + tileData.Width * _iTileMap.ScaleX, pos.Y + offY + tileData.Height * _iTileMap.ScaleY));
+                    AbiSafe_ImGuiWrapper.DrawList_AddImage(drawList, (nint)bitmaps[(int)tilenum].Id, new Vector2(pos.X + offX, pos.Y + offY), new Vector2(pos.X + offX + tileData.Width * _iTileMap.ScaleX, pos.Y + offY + tileData.Height * _iTileMap.ScaleY));
                     offX += (int)(palette.LargestWidth * _iTileMap.ScaleX);
                 }
                 offY += (int)(palette.LargestHeight * _iTileMap.ScaleY);

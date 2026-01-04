@@ -1,6 +1,7 @@
 using System.Numerics;
 using ImGuiNET;
 using RetroEditor.Plugins;
+using RetroEditor.Source.Internals.GUI;
 
 internal class ObjectMapWidget : IWidgetItem, IWidgetUpdateDraw
 {
@@ -110,10 +111,10 @@ internal class ObjectMapWidget : IWidgetItem, IWidgetUpdateDraw
     {
         var drawList = ImGui.GetWindowDrawList();
         var size = new Vector2(_objectMap.Width * _objectMap.ScaleX, _objectMap.Height * _objectMap.ScaleY);
-        ImGui.BeginChild($"map", size, 0, 0);
+        AbiSafe_ImGuiWrapper.BeginChild($"map", size, 0, 0);
 
         var pos = ImGui.GetCursorScreenPos();
-        drawList.PushClipRect(pos, pos + size, true);
+        AbiSafe_ImGuiWrapper.DrawList_PushClipRect(drawList, pos, pos + size, true);
         Interaction(logger, size, pos);
         var palette = _objectMap.FetchPalette();
         var bitmaps = palette.Bitmaps;
@@ -132,10 +133,10 @@ internal class ObjectMapWidget : IWidgetItem, IWidgetUpdateDraw
                     var tilenum = mapData[(int)(y * obj.Width + x)];
                     var tileData = tiles[(int)tilenum];
 
-                    drawList.AddImage((nint)bitmaps[(int)tilenum].Id, new Vector2(pos.X + offX, pos.Y + offY), new Vector2(pos.X + offX + tileData.Width * _objectMap.ScaleX, pos.Y + offY + tileData.Height * _objectMap.ScaleY));
+                    AbiSafe_ImGuiWrapper.DrawList_AddImage(drawList, (nint)bitmaps[(int)tilenum].Id, new Vector2(pos.X + offX, pos.Y + offY), new Vector2(pos.X + offX + tileData.Width * _objectMap.ScaleX, pos.Y + offY + tileData.Height * _objectMap.ScaleY));
                     if (currentObject == selectedObject)
                     {
-                        drawList.AddRectFilled(new Vector2(pos.X + offX, pos.Y + offY), new Vector2(pos.X + offX + tileData.Width * _objectMap.ScaleX, pos.Y + offY + tileData.Height * _objectMap.ScaleY), 0x80000000);
+                        AbiSafe_ImGuiWrapper.DrawList_AddRectFilled(drawList, new Vector2(pos.X + offX, pos.Y + offY), new Vector2(pos.X + offX + tileData.Width * _objectMap.ScaleX, pos.Y + offY + tileData.Height * _objectMap.ScaleY), 0x80000000);
                     }
                     offX += (uint)(palette.LargestWidth * _objectMap.ScaleX);
                 }

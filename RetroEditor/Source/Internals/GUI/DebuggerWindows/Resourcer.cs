@@ -1,5 +1,5 @@
 using ImGuiNET;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
+using RetroEditor.Source.Internals.GUI;
 using System.Numerics;
 
 internal class Resourcer : IWindow
@@ -49,7 +49,8 @@ internal class Resourcer : IWindow
 
         foreach (var region in romData.GetRomRanges)
         {
-            drawList.AddRectFilled(
+            AbiSafe_ImGuiWrapper.DrawList_AddRectFilled(
+                drawList,
                 new Vector2(pos.X + region.Value.AddressStart * scale, pos.Y),
                 new Vector2(pos.X + region.Value.AddressEnd * scale, pos.Y + size.Y),
                 config.GetColorU32(region.Value.Colour)
@@ -74,7 +75,7 @@ internal class Resourcer : IWindow
         {
             ImGui.BeginDisabled();
         }
-        if (ImGui.Button("Capture Frame"))
+        if (AbiSafe_ImGuiWrapper.Button("Capture Frame"))
         {
             traceInProgress = true;
             if (File.Exists("trace.log"))
@@ -90,7 +91,7 @@ internal class Resourcer : IWindow
             debugger.QueueCommand("gvblank", (s,id)=>{traceCommandInProgress=false;});
         }
         ImGui.SameLine();
-        if (ImGui.Button("Capture 1 Second"))
+        if (AbiSafe_ImGuiWrapper.Button("Capture 1 Second"))
         {
             traceInProgress = true;
             if (File.Exists("trace.log"))
@@ -107,7 +108,7 @@ internal class Resourcer : IWindow
             debugger.QueueCommand("gtime 1000",(s,id)=>{traceCommandInProgress=false;});
         }
         ImGui.SameLine();
-        if (ImGui.Button("Capture Continuous"))
+        if (AbiSafe_ImGuiWrapper.Button("Capture Continuous"))
         {
             traceInProgress = true;
             if (File.Exists("trace.log"))
@@ -124,7 +125,7 @@ internal class Resourcer : IWindow
             debugger.QueueCommand("gtime 500",(s,id)=>{traceCommandInProgress=false;});
         }
         ImGui.SameLine();
-        if (ImGui.Button("New Trace"))
+        if (AbiSafe_ImGuiWrapper.Button("New Trace"))
         {
             var pc = romData.GetCPUState(debugger, "PC");
             var e = romData.GetCPUState(debugger, "E");
@@ -151,7 +152,7 @@ internal class Resourcer : IWindow
             ImGui.BeginDisabled();
         }
         ImGui.SameLine();
-        if (ImGui.Button("Stop Trace"))
+        if (AbiSafe_ImGuiWrapper.Button("Stop Trace"))
         {
             traceContinue = false;
         }
@@ -291,7 +292,7 @@ internal class Resourcer : IWindow
 
         var rowHeight = ImGui.GetTextLineHeight() + ImGui.GetStyle().ItemSpacing.Y;
         var contentSize = ImGui.GetContentRegionAvail();
-        if (ImGui.BeginChild("Virtual Table", contentSize, ImGuiChildFlags.None, ImGuiWindowFlags.AlwaysVerticalScrollbar))
+        if (AbiSafe_ImGuiWrapper.BeginChild("Virtual Table", contentSize, ImGuiChildFlags.None, ImGuiWindowFlags.AlwaysVerticalScrollbar))
         {
             var scroll = ImGui.GetScrollY();
 
@@ -530,7 +531,7 @@ internal class Resourcer : IWindow
                         bool isSelected = vars.selectedRows.Contains(actualLine);
                         bool isCursor = vars.cursorPosition == actualLine;
 
-                        bool clicked = ImGui.Selectable($"{lData.Address:X8}", isSelected, ImGuiSelectableFlags.SpanAllColumns);//, new Vector2(0, rowHeight));
+                        bool clicked = AbiSafe_ImGuiWrapper.Selectable($"{lData.Address:X8}", isSelected, ImGuiSelectableFlags.SpanAllColumns);//, new Vector2(0, rowHeight));
 
                         // Set row background color based on selection state
                         if (isSelected)
