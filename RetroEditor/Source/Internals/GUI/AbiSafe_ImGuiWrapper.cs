@@ -18,10 +18,14 @@ namespace RetroEditor.Source.Internals.GUI
         static delegate* unmanaged[Cdecl]<byte*, UInt64, byte> igButton;
         static delegate* unmanaged[Cdecl]<nint, UInt64, UInt64, UInt64, UInt64, UInt64, UInt64, UInt64, void> igImage;
         static delegate* unmanaged[Cdecl]<byte*, byte, ImGuiSelectableFlags, UInt64, byte> igSelectable_Bool;
+        static delegate* unmanaged[Cdecl]<ImGuiStyleVar, UInt64, void> igPushStyleVar_Vec2;
+        static delegate* unmanaged[Cdecl]<byte*, int, ImGuiTableFlags, UInt64, float, byte> igBeginTable;
+        static delegate* unmanaged[Cdecl]<UInt64,UInt64,uint> igGetColorU32_Vec4;
         static delegate* unmanaged[Cdecl]<ImDrawList*, nint, UInt64, UInt64, UInt64, UInt64, uint, void> ImDrawList_AddImage;
         static delegate* unmanaged[Cdecl]<ImDrawList*, UInt64, UInt64, uint, float, ImDrawFlags, float, void> ImDrawList_AddRect;
         static delegate* unmanaged[Cdecl]<ImDrawList*, UInt64, UInt64, uint, float, ImDrawFlags, void> ImDrawList_AddRectFilled;
         static delegate* unmanaged[Cdecl]<ImDrawList*, UInt64, UInt64, byte, void> ImDrawList_PushClipRect;
+        static delegate* unmanaged[Cdecl]<ImDrawList*, UInt64, uint, byte*, byte*, void> ImDrawList_AddText;
         static AbiSafe_ImGuiWrapper()
         {
             cimguiHandle = NativeLibrary.Load("cimgui");
@@ -33,16 +37,43 @@ namespace RetroEditor.Source.Internals.GUI
             var method6 = NativeLibrary.GetExport(cimguiHandle, "ImDrawList_AddRectFilled");
             var method7 = NativeLibrary.GetExport(cimguiHandle, "ImDrawList_PushClipRect");
             var method8 = NativeLibrary.GetExport(cimguiHandle, "igSelectable_Bool");
+            var method9 = NativeLibrary.GetExport(cimguiHandle, "igPushStyleVar_Vec2");
+            var method10 = NativeLibrary.GetExport(cimguiHandle, "ImDrawList_AddText_Vec2");
+            var method11 = NativeLibrary.GetExport(cimguiHandle, "igBeginTable");
+            var method12 = NativeLibrary.GetExport(cimguiHandle, "igGetColorU32_Vec4");
 
             // Cache the delegates
             igBeginChild_Str = (delegate* unmanaged[Cdecl]<byte*, UInt64, ImGuiNET.ImGuiChildFlags, ImGuiNET.ImGuiWindowFlags, byte>)method;
             igButton = (delegate* unmanaged[Cdecl]<byte*, UInt64, byte>)method2;
             igImage = (delegate* unmanaged[Cdecl]<nint, UInt64, UInt64, UInt64, UInt64, UInt64, UInt64, UInt64, void>)method3;
+            igSelectable_Bool = (delegate* unmanaged[Cdecl]<byte*, byte, ImGuiSelectableFlags, UInt64, byte>)method8;
+            igPushStyleVar_Vec2 = (delegate* unmanaged[Cdecl]<ImGuiStyleVar, UInt64, void>)method9;
+            igBeginTable = (delegate* unmanaged[Cdecl]<byte*, int, ImGuiTableFlags, UInt64, float, byte>)method11;
+            igGetColorU32_Vec4 = (delegate* unmanaged[Cdecl]<UInt64,UInt64,uint>)method12;
             ImDrawList_AddImage = (delegate* unmanaged[Cdecl]<ImDrawList*, nint, UInt64, UInt64, UInt64, UInt64, uint, void>)method4;
             ImDrawList_AddRect = (delegate* unmanaged[Cdecl]<ImDrawList*, UInt64, UInt64, uint, float, ImDrawFlags, float, void>)method5;
             ImDrawList_AddRectFilled = (delegate* unmanaged[Cdecl]<ImDrawList*, UInt64, UInt64, uint, float, ImDrawFlags, void>)method6;
             ImDrawList_PushClipRect = (delegate* unmanaged[Cdecl]<ImDrawList*, UInt64, UInt64, byte, void>)method7;
-            igSelectable_Bool = (delegate* unmanaged[Cdecl]<byte*, byte, ImGuiSelectableFlags, UInt64, byte>)method8;
+            ImDrawList_AddText = (delegate* unmanaged[Cdecl]<ImDrawList*, UInt64, uint, byte*, byte*, void>)method10;
+        }
+
+        public static uint GetColorU32(Vector4 col)
+        {
+            if (RuntimeInformation.ProcessArchitecture == Architecture.Arm64)
+            {
+                var tArray = stackalloc float[4];
+                tArray[0] = col.X;
+                tArray[1] = col.Y;
+                tArray[2] = col.Z;
+                tArray[3] = col.W;
+                UInt64 combinedColA = *((UInt64*)Unsafe.AsPointer(ref tArray[0]));
+                UInt64 combinedColB = *((UInt64*)Unsafe.AsPointer(ref tArray[2]));
+                return igGetColorU32_Vec4(combinedColA, combinedColB);
+            }
+            else
+            {
+                return ImGuiNET.ImGui.GetColorU32(col);
+            }
         }
 
         public static bool Button(string str_id, Vector2 size = default)
@@ -95,6 +126,32 @@ namespace RetroEditor.Source.Internals.GUI
             }
         }
 
+        public static bool BeginTable(string str_id, int column, ImGuiTableFlags flags = ImGuiTableFlags.None, Vector2 outer_size = default, float inner_width = 0.0f)
+        {
+            if (RuntimeInformation.ProcessArchitecture == Architecture.Arm64)
+            {
+                var len = str_id == null ? 0 : Encoding.UTF8.GetByteCount(str_id);
+                var bytes = stackalloc byte[len + 1];
+                if (str_id != null)
+                {
+                    fixed (char* strPtr = str_id)
+                    {
+                        Encoding.UTF8.GetBytes(strPtr, str_id.Length, bytes, len);
+                    }
+                }
+                var tArray = stackalloc float[2];
+                tArray[0] = outer_size.X;
+                tArray[1] = outer_size.Y;
+                UInt64 combinedSize = *((UInt64*)Unsafe.AsPointer(ref tArray[0]));
+
+                return igBeginTable(bytes, column, flags, combinedSize, inner_width) != 0;
+            }
+            else
+            {
+                return ImGuiNET.ImGui.BeginTable(str_id, column, flags, outer_size, inner_width);
+            }
+        }
+
         public static bool Selectable(string label, bool selected = false, ImGuiSelectableFlags flags = ImGuiSelectableFlags.None, Vector2 size = default)
         {
             if (RuntimeInformation.ProcessArchitecture == Architecture.Arm64)
@@ -108,11 +165,32 @@ namespace RetroEditor.Source.Internals.GUI
                         Encoding.UTF8.GetBytes(strPtr, label.Length, bytes, len);
                     }
                 }
+                var tArray = stackalloc float[2];
+                tArray[0] = size.X;
+                tArray[1] = size.Y;
+                UInt64 combinedSize = *((UInt64*)Unsafe.AsPointer(ref tArray[0]));
+
                 return igSelectable_Bool(bytes, (byte)(selected ? 1 : 0), flags, 0) != 0;
             }
             else
             {
                 return ImGuiNET.ImGui.Selectable(label, selected, flags, size);
+            }
+        }
+
+        public static void PushStyleVar(ImGuiStyleVar idx, Vector2 val)
+        {
+            if (RuntimeInformation.ProcessArchitecture == Architecture.Arm64)
+            {
+                var tArray = stackalloc float[2];
+                tArray[0] = val.X;
+                tArray[1] = val.Y;
+                UInt64 combinedVal = *((UInt64*)Unsafe.AsPointer(ref tArray[0]));
+                igPushStyleVar_Vec2(idx, combinedVal);
+            }
+            else
+            {
+                ImGuiNET.ImGui.PushStyleVar(idx, val);
             }
         }
 
@@ -222,6 +300,33 @@ namespace RetroEditor.Source.Internals.GUI
             else
             {
                 list.PushClipRect(a, b, intersectWithCurrentClipRect);
+            }
+        }
+
+        public static void DrawList_AddText(ImDrawListPtr list, Vector2 pos, uint col, string text)
+        {
+            if (RuntimeInformation.ProcessArchitecture == Architecture.Arm64)
+            {
+                var len = text == null ? 0 : Encoding.UTF8.GetByteCount(text);
+                var bytes = stackalloc byte[len + 1];
+                if (text != null)
+                {
+                    fixed (char* strPtr = text)
+                    {
+                        Encoding.UTF8.GetBytes(strPtr, text.Length, bytes, len);
+                    }
+                }
+
+                var posArray = stackalloc float[2];
+                posArray[0] = pos.X;
+                posArray[1] = pos.Y;
+                UInt64 combinedPos = *((UInt64*)Unsafe.AsPointer(ref posArray[0]));
+
+                ImDrawList_AddText(list, combinedPos, col, bytes, bytes + len);
+            }
+            else
+            {
+                list.AddText(pos, col, text);
             }
         }
 

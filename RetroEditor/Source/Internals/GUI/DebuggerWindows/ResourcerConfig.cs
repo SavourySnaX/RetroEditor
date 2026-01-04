@@ -1,5 +1,6 @@
 using System.Numerics;
 using ImGuiNET;
+using RetroEditor.Source.Internals.GUI;
 
 internal class ResourcerConfig
     {
@@ -21,12 +22,12 @@ internal class ResourcerConfig
 
     public ResourcerConfig()
     {
-        _UnknownColor = ImGui.GetColorU32(new Vector4(0, 0, 0, .5f));
-        _CodeColor = ImGui.GetColorU32(new Vector4(0, 0, 1, .5f));
-        _DataColor = ImGui.GetColorU32(new Vector4(0, 1, 0, .5f));
-        _StringColor = ImGui.GetColorU32(new Vector4(1, 0, 0, .5f));
-        _LabelColor = ImGui.GetColorU32(new Vector4(0, 0, 0.5f, .5f));
-        _CommentColor = ImGui.GetColorU32(new Vector4(0.5f, 0.5f, 0.5f, .5f));
+        _UnknownColor = AbiSafe_ImGuiWrapper.GetColorU32(new Vector4(0, 0, 0, .5f));
+        _CodeColor = AbiSafe_ImGuiWrapper.GetColorU32(new Vector4(0, 0, 1, .5f));
+        _DataColor = AbiSafe_ImGuiWrapper.GetColorU32(new Vector4(0, 1, 0, .5f));
+        _StringColor = AbiSafe_ImGuiWrapper.GetColorU32(new Vector4(1, 0, 0, .5f));
+        _LabelColor = AbiSafe_ImGuiWrapper.GetColorU32(new Vector4(0, 0, 0.5f, .5f));
+        _CommentColor = AbiSafe_ImGuiWrapper.GetColorU32(new Vector4(0.5f, 0.5f, 0.5f, .5f));
     }
 
         public uint GetColorU32(ConfigColour kind)

@@ -104,27 +104,30 @@ internal class DebuggerView : IWindow
             YOff = ImGui.GetCursorPosY();
         }
 
-        ImGui.PushStyleVar(ImGuiStyleVar.FramePadding, new Vector2(0,0));
-        ImGui.PushStyleVar(ImGuiStyleVar.ItemSpacing, new Vector2(0,0));
+        AbiSafe_ImGuiWrapper.PushStyleVar(ImGuiStyleVar.FramePadding, new Vector2(0,0));
+        AbiSafe_ImGuiWrapper.PushStyleVar(ImGuiStyleVar.ItemSpacing, new Vector2(0,0));
     
         var sizeOfMonoText=ImGui.CalcTextSize("A");
         AbiSafe_ImGuiWrapper.BeginChild("BLAH", new Vector2(sizeOfMonoText.X*(view.view.W+2), sizeOfMonoText.Y*(view.view.H+2)),0,ImGuiWindowFlags.NoScrollbar);
 
-        var drawList = ImGui.GetWindowDrawList();
         var convCode = new byte[] { 0, 0 };
         Vector2 pos = ImGui.GetCursorScreenPos();
+        var initialX = pos.X;
         for (int yy=0;yy<view.view.H;yy++)
         {
+            AbiSafe_ImGuiWrapper.BeginChild($"Line{yy}", new Vector2(sizeOfMonoText.X*view.view.W, sizeOfMonoText.Y), 0, ImGuiWindowFlags.NoScrollbar);
+            var drawList = ImGui.GetWindowDrawList();
             for (int xx=0;xx<view.view.W;xx++)
             {
                 var attr=view.state[(yy*view.view.W+xx)*2+1];
                 FetchColourForStyle(attr,out var fg,out var bg);
                 convCode[0]=view.state[(yy*view.view.W+xx)*2];
-                drawList.AddRectFilled(pos, new Vector2(pos.X + sizeOfMonoText.X, pos.Y + sizeOfMonoText.Y), ImGui.GetColorU32(bg));
-                drawList.AddText(pos, ImGui.GetColorU32(fg), System.Text.Encoding.ASCII.GetString(convCode));
+                AbiSafe_ImGuiWrapper.DrawList_AddRectFilled(drawList, pos, new Vector2(pos.X + sizeOfMonoText.X, pos.Y + sizeOfMonoText.Y), AbiSafe_ImGuiWrapper.GetColorU32(bg));
+                AbiSafe_ImGuiWrapper.DrawList_AddText(drawList, pos, AbiSafe_ImGuiWrapper.GetColorU32(fg), System.Text.Encoding.ASCII.GetString(convCode));
                 pos.X += sizeOfMonoText.X;
             }
-            pos.X = ImGui.GetCursorScreenPos().X;
+            ImGui.EndChild();
+            pos.X = initialX;
             pos.Y += sizeOfMonoText.Y;
         }
         
