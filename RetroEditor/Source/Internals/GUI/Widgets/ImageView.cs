@@ -36,7 +36,7 @@ internal class ImageView : IWidgetItem, IWidgetUpdateDraw
             logger.Log(LogType.Error, $"Failed to get image data - {e.Message}");
             return;
         }
-        if (pixels == null)
+        if (pixels.IsEmpty)
         {
             logger.Log(LogType.Error, $"Failed to get image data - GetImageData returned null");
             return;

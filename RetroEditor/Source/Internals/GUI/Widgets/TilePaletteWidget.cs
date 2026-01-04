@@ -1,7 +1,7 @@
 using System.Numerics;
 using ImGuiNET;
-using Raylib_cs;
 using RetroEditor.Plugins;
+using RetroEditor.Source.Internals.GUI;
 
 
 internal class TilePaletteWidget : IWidgetItem, IWidgetUpdateDraw
@@ -32,7 +32,7 @@ internal class TilePaletteWidget : IWidgetItem, IWidgetUpdateDraw
         var remainder = (tiles.Length == tilesPerRow) ? tiles.Length : tiles.Length % tilesPerRow;
 
         var size = new Vector2(width * tilesPerRow + 4 * tilesPerRow, height * rows + 4 * rows);
-        ImGui.BeginChild($"tilepalette", size, 0, 0);
+        AbiSafe_ImGuiWrapper.BeginChild($"tilepalette", size, 0, 0);
 
         var drawList = ImGui.GetWindowDrawList();
         Vector2 pos = ImGui.GetCursorScreenPos();
@@ -49,9 +49,9 @@ internal class TilePaletteWidget : IWidgetItem, IWidgetUpdateDraw
             {
                 if (tilePalette.SelectedTile == a)
                 {
-                    drawList.AddRect(new Vector2(pos.X + xOffs, pos.Y + yOffs), new Vector2(pos.X + xOffs + width + 4, pos.Y + yOffs + height + 4), ImGuiHelper.MakeColour(255, 255, 255, 255));
+                    AbiSafe_ImGuiWrapper.DrawList_AddRect(drawList,new Vector2(pos.X + xOffs, pos.Y + yOffs), new Vector2(pos.X + xOffs + width + 4, pos.Y + yOffs + height + 4), ImGuiHelper.MakeColour(255, 255, 255, 255));
                 }
-                drawList.AddImage((nint)_tilePaletteStore.Bitmaps[a].Id, new Vector2(pos.X + xOffs+2, pos.Y + yOffs+2), new Vector2(pos.X + xOffs + width+2, pos.Y + yOffs + height+2));
+                AbiSafe_ImGuiWrapper.DrawList_AddImage(drawList, (nint)_tilePaletteStore.Bitmaps[a].Id, new Vector2(pos.X + xOffs+2, pos.Y + yOffs+2), new Vector2(pos.X + xOffs + width+2, pos.Y + yOffs + height+2));
                 if (localPos.X >= xOffs && localPos.Y >= yOffs && localPos.X < xOffs + width && localPos.Y < yOffs + height)
                 {
                     ImGui.BeginTooltip();

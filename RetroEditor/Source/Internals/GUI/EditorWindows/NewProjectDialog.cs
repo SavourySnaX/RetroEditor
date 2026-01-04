@@ -1,8 +1,9 @@
 using ImGuiNET;
+using RetroEditor.Source.Internals.GUI;
 
 class NewProjectDialog : IWindow
 {
-    public float UpdateInterval => 9999.0f;
+    public float UpdateInterval => 1/30f;
 
     private string projectName="";
     private string projectLocation="";
@@ -11,7 +12,8 @@ class NewProjectDialog : IWindow
     public string[] availablePluginNames=Array.Empty<string>();
 
     private Editor editor;
-
+    private bool requestFileDialog = false;
+    private bool requestFolderDialog = false;
     public NewProjectDialog(Editor editor)
     {
         this.editor = editor;
@@ -26,14 +28,9 @@ class NewProjectDialog : IWindow
     {
         var disabledCounter = 0;
 
-        if (ImGui.Button("Choose Folder"))
+        if (AbiSafe_ImGuiWrapper.Button("Choose Folder"))
         {
-            var dialogResult = NativeFileDialogSharp.Dialog.FolderPicker(projectLocation);
-            if (dialogResult.IsOk)
-            {
-                projectLocation = dialogResult.Path;
-                // Validate location empty
-            }
+            requestFolderDialog = true;
         }
         ImGui.SameLine();
         if (projectLocation == "")
@@ -66,26 +63,9 @@ class NewProjectDialog : IWindow
         {
         }
 
-        if (ImGui.Button("Choose Game"))
+        if (!(requestFileDialog||requestFolderDialog) && AbiSafe_ImGuiWrapper.Button("Choose Game"))
         {
-            var dialogResult = NativeFileDialogSharp.Dialog.FileOpen(defaultPath: editor.Settings.LastImportedLocation);
-            if (dialogResult.IsOk)
-            {
-                importFile = dialogResult.Path;
-                if (projectName == "")
-                {
-                    projectName = Path.GetFileNameWithoutExtension(importFile);
-                }
-                selectedPlugin = 0;
-                foreach (var plugin in availablePluginNames)
-                {
-                    if (editor.IsPluginSuitable(plugin, importFile))
-                    {
-                        selectedPlugin = Array.IndexOf(availablePluginNames, plugin);
-                        break;
-                    }
-                }
-            }
+            requestFileDialog = true;
         }
         ImGui.SameLine();
         if (importFile == "")
@@ -119,7 +99,7 @@ class NewProjectDialog : IWindow
         }
         ImGui.Separator();
 
-        if (ImGui.Button("Create Project"))
+        if (AbiSafe_ImGuiWrapper.Button("Create Project"))
         {
             editor.Settings.ProjectLocation = projectLocation;
             ImGui.CloseCurrentPopup();
@@ -148,7 +128,44 @@ class NewProjectDialog : IWindow
 
     public void Update(float seconds)
     {
-        // Nothing to do
+        if (requestFileDialog)
+        {
+            requestFileDialog = false;
+            editor.OpenFileDialog(FileDialog.FileDialogType.Open, "Select Game File to Import", editor.Settings.LastImportedLocation, new string[] { "*.*" }, (string path) =>
+            {
+                if (path != null)
+                {
+                    importFile = path;
+                    editor.Settings.LastImportedLocation = Path.GetDirectoryName(importFile) ?? "";
+                    if (projectName == "")
+                    {
+                        projectName = Path.GetFileNameWithoutExtension(importFile);
+                    }
+                    selectedPlugin = 0;
+                    foreach (var plugin in availablePluginNames)
+                    {
+                        if (editor.IsPluginSuitable(plugin, importFile))
+                        {
+                            selectedPlugin = Array.IndexOf(availablePluginNames, plugin);
+                            break;
+                        }
+                    }
+                }
+                return true;
+            });
+        }
+        if (requestFolderDialog)
+        {
+            requestFolderDialog = false;
+            editor.OpenFileDialog(FileDialog.FileDialogType.FolderPicker, "Select Project Location", editor.Settings.ProjectLocation, new string[] { "*.*" }, (string path) =>
+            {
+                if (path != null)
+                {
+                    projectLocation = path;
+                }
+                return true;
+            });
+        }
     }
 
 }

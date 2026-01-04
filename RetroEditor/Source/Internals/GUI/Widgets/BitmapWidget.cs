@@ -2,6 +2,7 @@
 using System.Numerics;
 using ImGuiNET;
 using RetroEditor.Plugins;
+using RetroEditor.Source.Internals.GUI;
 
 internal class BitmapWidget : IWidgetItem, IWidgetUpdateDraw
 {
@@ -25,7 +26,7 @@ internal class BitmapWidget : IWidgetItem, IWidgetUpdateDraw
 
         var drawList = ImGui.GetWindowDrawList();
         var size = new Vector2(_iBitmap.Width * pixelWidth, _iBitmap.Height * pixelHeight);
-        ImGui.BeginChild($"pixels", size, 0, 0);
+        AbiSafe_ImGuiWrapper.BeginChild($"pixels", size, 0, 0);
         var hx = -1;
         var hy = -1;
         var pos = ImGui.GetCursorScreenPos();
@@ -64,13 +65,13 @@ internal class BitmapWidget : IWidgetItem, IWidgetUpdateDraw
                 {
                     if (pixelWidth > 2 && pixelHeight > 2)
                     {
-                        drawList.AddRectFilled(new Vector2(pos.X + xOffs + 1, pos.Y + yOffs + 1), new Vector2(pos.X + xOffs + pixelWidth - 1, pos.Y + yOffs + pixelHeight - 1), ImGuiHelper.MakeColour(colour.Red, colour.Green, colour.Blue, colour.Alpha));
+                        AbiSafe_ImGuiWrapper.DrawList_AddRectFilled(drawList, new Vector2(pos.X + xOffs + 1, pos.Y + yOffs + 1), new Vector2(pos.X + xOffs + pixelWidth - 1, pos.Y + yOffs + pixelHeight - 1), ImGuiHelper.MakeColour(colour.Red, colour.Green, colour.Blue, colour.Alpha));
                     }
-                    drawList.AddRect(new Vector2(pos.X + xOffs, pos.Y + yOffs), new Vector2(pos.X + xOffs + pixelWidth, pos.Y + yOffs + pixelHeight), 0xFFFFFF00 ^ ImGuiHelper.MakeColour(colour.Red, colour.Green, colour.Blue, colour.Alpha));
+                    AbiSafe_ImGuiWrapper.DrawList_AddRect(drawList, new Vector2(pos.X + xOffs, pos.Y + yOffs), new Vector2(pos.X + xOffs + pixelWidth, pos.Y + yOffs + pixelHeight), 0xFFFFFF00 ^ ImGuiHelper.MakeColour(colour.Red, colour.Green, colour.Blue, colour.Alpha));
                 }
                 else
                 {
-                    drawList.AddRectFilled(new Vector2(pos.X + xOffs, pos.Y + yOffs), new Vector2(pos.X + xOffs + pixelWidth, pos.Y + yOffs + pixelHeight), ImGuiHelper.MakeColour(colour.Red, colour.Green, colour.Blue, colour.Alpha));
+                    AbiSafe_ImGuiWrapper.DrawList_AddRectFilled(drawList, new Vector2(pos.X + xOffs, pos.Y + yOffs), new Vector2(pos.X + xOffs + pixelWidth, pos.Y + yOffs + pixelHeight), ImGuiHelper.MakeColour(colour.Red, colour.Green, colour.Blue, colour.Alpha));
                 }
                 xOffs += pixelWidth;
             }

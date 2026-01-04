@@ -17,6 +17,7 @@ using System.Runtime.InteropServices;
 
 using Raylib_cs;
 using ImGuiNET;
+using RetroEditor.Source.Internals.GUI;
 
 namespace rlImGui_cs
 {
@@ -626,17 +627,17 @@ namespace rlImGui_cs
 
         internal static void Image(Texture2D image)
         {
-            ImGui.Image(new IntPtr(image.Id), new Vector2(image.Width, image.Height));
+            AbiSafe_ImGuiWrapper.Image(new IntPtr(image.Id), new Vector2(image.Width, image.Height));
         }
 
         internal static void ImageSize(Texture2D image, int width, int height)
         {
-            ImGui.Image(new IntPtr(image.Id), new Vector2(width, height));
+            AbiSafe_ImGuiWrapper.Image(new IntPtr(image.Id), new Vector2(width, height));
         }
 
         internal static void ImageSize(Texture2D image, Vector2 size)
         {
-            ImGui.Image(new IntPtr(image.Id), size);
+            AbiSafe_ImGuiWrapper.Image(new IntPtr(image.Id), size);
         }
 
         internal static void ImageRect(Texture2D image, int destWidth, int destHeight, Rectangle sourceRect)
@@ -666,7 +667,7 @@ namespace rlImGui_cs
                 uv1.Y = uv0.Y + (float)(sourceRect.Height / image.Height);
             }
 
-            ImGui.Image(new IntPtr(image.Id), new Vector2(destWidth, destHeight), uv0, uv1);
+            AbiSafe_ImGuiWrapper.Image(new IntPtr(image.Id), new Vector2(destWidth, destHeight), uv0, uv1);
         }
 
         internal static void ImageRenderTexture(RenderTexture2D image)
