@@ -284,14 +284,16 @@ internal class Editor : IEditor, IEditorInternal
         }
 
         var config = ConfigFlags.ResizableWindow;
-        if (settings.EnableHighDPI)
+        // High DPI and MSAA settings break some of the UI rendering.. 
+        // for now keep them off
+        /*if (settings.EnableHighDPI)
         {
             config|=ConfigFlags.HighDpiWindow;
         }
         if (settings.EnableMSAA)
         {
             config|=ConfigFlags.Msaa4xHint;
-        }
+        }*/
 
         Raylib.SetConfigFlags(config);
         //Raylib.SetConfigFlags(ConfigFlags.FLAG_VSYNC_HINT);   // Don't wait for VSYNC, we do all synchronisation ourselves
@@ -311,14 +313,7 @@ internal class Editor : IEditor, IEditorInternal
         var args = Environment.GetCommandLineArgs().Skip(1);
 
         // SPEED STUFF UP FOR NOW
-
-        // Test dialog
-        OpenFileDialog(FileDialog.FileDialogType.FolderPicker, "Test Dialog", "", new string[] { "*.bin", "*.sfc" }, (string path) =>
-        {
-            Log(LogType.Info, "FileDialog", $"Selected file: {path}");
-            return true;
-        });
-
+/*
         var retro = GetDeveloperMame();
         if (retro != null)
         {
@@ -338,7 +333,7 @@ internal class Editor : IEditor, IEditorInternal
             OpenWindow(new DebuggerView(mameInstance, LibRetroPlugin.debug_view_type.Disassembly, 100, 25, "curpc"), $"Disassembly 0");
             OpenWindow(new DebuggerView(mameInstance, LibRetroPlugin.debug_view_type.Memory, 80, 25, "0"), $"Memory 0");
         }
-
+*/
         //
 
 

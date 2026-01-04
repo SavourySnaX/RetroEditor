@@ -487,7 +487,7 @@ internal class Resourcer : IWindow
                 }
             }
 
-            if (ImGui.BeginTable("RomDataView", 4, tableFlags))
+            if (AbiSafe_ImGuiWrapper.BeginTable("RomDataView", 4, tableFlags))
             {
                 ImGui.TableSetupColumn("Address", ImGuiTableColumnFlags.WidthFixed, widths[0] - ImGui.GetStyle().ItemSpacing.X * 2);
                 ImGui.TableSetupColumn("Bytes", ImGuiTableColumnFlags.WidthFixed, widths[1] - ImGui.GetStyle().ItemSpacing.X);
