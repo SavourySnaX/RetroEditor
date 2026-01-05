@@ -16,34 +16,41 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: 8.0.x
+        dotnet-version: 10.0.x
     - name: Setup DocFX
       run: dotnet tool install -g docfx      
     - name: Restore
-      run: dotnet restore
+      run: dotnet restore RetroEditor.sln
     - name: Build Debug
-      run: dotnet build -c Debug
+      run: dotnet build -c Debug RetroEditor.sln
     - name: Build Windows X64
-      run: dotnet publish --os win
+      run: dotnet publish -r win-x64 RetroEditor.sln
+    - name: Build Windows Arm64
+      run: dotnet publish -r win-arm64 RetroEditor.sln
     - name: Build Linux X64
-      run: dotnet publish --os linux
+      run: dotnet publish -r linux-x64 RetroEditor.sln
     - name: Build MacOS Arm64
-      run: dotnet publish --runtime osx-arm64
+      run: dotnet publish -r osx-arm64 RetroEditor.sln
     - name: Archive Windows X64
       uses: actions/upload-artifact@v4
       with:
         name: Windows-X64
-        path: bin/Release/net8.0/win-x64/publish
+        path: bin/Release/net10.0/win-x64/publish
+    - name: Archive Windows Arm64
+      uses: actions/upload-artifact@v4
+      with:
+        name: Windows-Arm64
+        path: bin/Release/net10.0/win-arm64/publish
     - name: Archive Linux X64
       uses: actions/upload-artifact@v4
       with:
         name: Linux-X64
-        path: bin/Release/net8.0/linux-x64/publish
+        path: bin/Release/net10.0/linux-x64/publish
     - name: Archive Macos Arm64
       uses: actions/upload-artifact@v4
       with:
         name: MacOS-Arm64
-        path: bin/Release/net8.0/osx-arm64/publish
+        path: bin/Release/net10.0/osx-arm64/publish
     - name: DocFX Build
       run: cd docfx && docfx docfx.json
       continue-on-error: false
