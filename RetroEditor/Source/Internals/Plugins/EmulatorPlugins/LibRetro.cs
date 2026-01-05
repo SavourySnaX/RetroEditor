@@ -1,6 +1,6 @@
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using Raylib_cs;
+using Raylib_cs.BleedingEdge;
 using RetroEditor.Plugins;
 
 internal class LibRetroPlugin : IDisposable
