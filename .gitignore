@@ -5,7 +5,6 @@ RetroEditor/obj/**
 .vscode/**
 .vs/**
 *.swp
-*.sln
 *.ini
 Data/**
 Temp/**
