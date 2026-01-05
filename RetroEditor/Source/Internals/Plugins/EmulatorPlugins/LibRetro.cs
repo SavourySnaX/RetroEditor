@@ -988,30 +988,22 @@ internal class LibRetroPlugin : IDisposable
                     var key = Marshal.PtrToStringAnsi(variable.key);
                     if (key!=null && core_options.ContainsKey(key))
                     {
-                        _editor.Log(LogType.Debug, "LibRetro", $"Get variable: {key} {core_options[key][1]}");
-                        variable.value = Marshal.StringToHGlobalAnsi(core_options[key][1]);
+                        var value = core_options[key][1];
+                        if (key == "mame_media_type")   // hack for mame and consoles, need to make configurable, or autodetect
+                        {
+                            value = "cart";
+                        }
+                        else if (key == "mame_softlists_enable")
+                        {
+                            // Disable softlists, as they override media type
+                            value = "disabled";
+                        }
+                        variable.value = Marshal.StringToHGlobalAnsi(value);
+                        _editor.Log(LogType.Debug, "LibRetro", $"Get variable: {key} {value}");
                         Marshal.StructureToPtr(variable, data, true);
                         return 1;
                     }
-                    _editor.Log(LogType.Debug, "LibRetro", $"Get variable: {key}");
-                    if (key == "mame_media_type")
-                    {
-                        variable.value = Marshal.StringToHGlobalAnsi("cart");
-                        Marshal.StructureToPtr(variable, data, true);
-                        return 1;
-                    }
-                    /*if (key == "mame_autoloadfastforward")
-                    {
-                        variable.value = Marshal.StringToHGlobalAnsi("enabled");
-                        Marshal.StructureToPtr(variable, data, true);
-                        return 1;
-                    }
-                    if (key == "mame_thread_mode")
-                    {
-                        variable.value = Marshal.StringToHGlobalAnsi("enabled");
-                        Marshal.StructureToPtr(variable, data, true);
-                        return 1;
-                    }*/
+                    _editor.Log(LogType.Debug, "LibRetro", $"Get variable (UNKNOWN): {key}");
                     return 1;
                 }
             case EnvironmentCommand.ENVIRONMENT_SET_VARIABLES:
