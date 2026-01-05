@@ -386,6 +386,7 @@ internal class Editor : IEditor, IEditorInternal
 
     private bool DrawUI(float deltaTime)
     {
+        bool shouldClose = false;
         if (ImGui.BeginMainMenuBar())
         {
             if (ImGui.BeginMenu("File"))
@@ -480,7 +481,7 @@ internal class Editor : IEditor, IEditorInternal
                 ImGui.Separator();
                 if (ImGui.MenuItem("Exit"))
                 {
-                    return true;
+                    shouldClose = true;
                 }
                 ImGui.EndMenu();
             }
@@ -672,7 +673,7 @@ internal class Editor : IEditor, IEditorInternal
 
         windowManager.Draw();
 
-        return false;
+        return shouldClose;
     }
 
     private void RenderMenu(MenuData menu)
