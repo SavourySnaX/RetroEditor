@@ -366,8 +366,8 @@ public class LinkToThePastOverworld : IUserWindow, IImage
         tileGFX[5] = variableTiles[2] != 0 ? variableTiles[2] : (byte)0xFFu;
         tileGFX[6] = variableTiles[3] != 0 ? variableTiles[3] : (byte)0xFFu;
 
-        var animatedGfx = 0x5B;
-        var subscreenOverlay = 0x9D;
+        //var animatedGfx = 0x5B;
+        //var subscreenOverlay = 0x9D;
 
 
         var mapPalGrp = _rom.ReadBytes(ReadKind.Rom, overworldMapPaletteGroup + (auxPalette * 4u), 3);
