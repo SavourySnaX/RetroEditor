@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <ItemGroup>
+  <ItemGroup Condition="'$(RetroEditorBuilding)' != 'Yes'">
     <Reference Include="..\ReferenceAssemblies\*.dll" />
   </ItemGroup>
 
