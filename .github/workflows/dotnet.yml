@@ -22,7 +22,9 @@ jobs:
     - name: Restore
       run: dotnet restore RetroEditor.sln
     - name: Build Debug
-      run: dotnet build -c Debug RetroEditor.sln
+      run: dotnet build -c Debug RetroEditor.sln --no-restore
+    - name: Test
+      run: dotnet test RetroEditor.sln --no-build --no-restore --verbosity normal
     - name: Build Windows X64
       run: dotnet publish -r win-x64 RetroEditor.sln
     - name: Build Windows Arm64
