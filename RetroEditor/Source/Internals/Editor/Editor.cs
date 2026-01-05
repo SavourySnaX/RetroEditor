@@ -1,4 +1,5 @@
 using Raylib_cs;
+using Raylib_cs.BleedingEdge;
 using rlImGui_cs;
 using ImGuiNET;
 using System.Security.Cryptography;
@@ -270,7 +271,7 @@ internal class Editor : IEditor, IEditorInternal
     }
 
     private unsafe delegate* unmanaged[Cdecl]<void*, int, sbyte*, sbyte*, void> RayLibLogInstanceDelegate;
-    private unsafe delegate* unmanaged[Cdecl]<int, sbyte*, sbyte*, void> LogWithInstance;
+    private unsafe delegate* unmanaged[Cdecl]<TraceLogLevel, byte*, nint, void> LogWithInstance;
 
     internal void RenderRun()
     {
@@ -279,11 +280,11 @@ internal class Editor : IEditor, IEditorInternal
         {
             // Wrap the log function so we can pass the instance of editor to it
             RayLibLogInstanceDelegate = &RayLibLoggingWrapper.Log;
-            LogWithInstance = (delegate* unmanaged[Cdecl]<int, sbyte*, sbyte*, void>)InstanceTrampoline.InterfaceTrampoline.AllocateTrampoline(GCHandle.ToIntPtr(pin), 3, (nint)RayLibLogInstanceDelegate);
+            LogWithInstance = (delegate* unmanaged[Cdecl]<TraceLogLevel, byte*, nint, void>)InstanceTrampoline.InterfaceTrampoline.AllocateTrampoline(GCHandle.ToIntPtr(pin), 3, (nint)RayLibLogInstanceDelegate);
             Raylib.SetTraceLogCallback(LogWithInstance);
         }
 
-        var config = ConfigFlags.ResizableWindow;
+        var config = ConfigFlags.WindowResizable;
         // High DPI and MSAA settings break some of the UI rendering.. 
         // for now keep them off
         /*if (settings.EnableHighDPI)

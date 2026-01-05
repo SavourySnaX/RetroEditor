@@ -15,7 +15,7 @@
 using System.Numerics;
 using System.Runtime.InteropServices;
 
-using Raylib_cs;
+using Raylib_cs.BleedingEdge;
 using ImGuiNET;
 using RetroEditor.Source.Internals.GUI;
 
@@ -170,7 +170,7 @@ namespace rlImGui_cs
             RaylibKeyMap[KeyboardKey.RightControl] = ImGuiKey.RightCtrl;
             RaylibKeyMap[KeyboardKey.RightAlt] = ImGuiKey.RightAlt;
             RaylibKeyMap[KeyboardKey.RightSuper] = ImGuiKey.RightSuper;
-            RaylibKeyMap[KeyboardKey.KeyboardMenu] = ImGuiKey.Menu;
+            RaylibKeyMap[KeyboardKey.KbMenu] = ImGuiKey.Menu;
             RaylibKeyMap[KeyboardKey.LeftBracket] = ImGuiKey.LeftBracket;
             RaylibKeyMap[KeyboardKey.Backslash] = ImGuiKey.Backslash;
             RaylibKeyMap[KeyboardKey.RightBracket] = ImGuiKey.RightBracket;
@@ -216,7 +216,7 @@ namespace rlImGui_cs
             int width, height, bytesPerPixel;
             io.Fonts.GetTexDataAsRGBA32(out byte* pixels, out width, out height, out bytesPerPixel);
 
-            Raylib_cs.Image image = new Image
+            Image image = new Image
             {
                 Data = pixels,
                 Width = width,
@@ -233,18 +233,18 @@ namespace rlImGui_cs
             io.Fonts.SetTexID(new IntPtr(FontTexture.Id));
         }
 
-        unsafe internal static sbyte* rImGuiGetClipText(IntPtr userData)
+        unsafe internal static byte* rImGuiGetClipText(IntPtr userData)
         {
             return Raylib.GetClipboardText();
         }
 
-        unsafe internal static void rlImGuiSetClipText(IntPtr userData, sbyte* text)
+        unsafe internal static void rlImGuiSetClipText(IntPtr userData, byte* text)
         {
             Raylib.SetClipboardText(text);
         }
 
-        private unsafe delegate sbyte* GetClipTextCallback(IntPtr userData);
-        private unsafe delegate void SetClipTextCallback(IntPtr userData, sbyte* text);
+        private unsafe delegate byte* GetClipTextCallback(IntPtr userData);
+        private unsafe delegate void SetClipTextCallback(IntPtr userData, byte* text);
 
         private static GetClipTextCallback GetClipCallback = null!;
         private static SetClipTextCallback SetClipCallback = null!;
@@ -343,7 +343,7 @@ namespace rlImGui_cs
 
             io.DisplayFramebufferScale = new Vector2(1, 1);
 
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX) || Raylib.IsWindowState(ConfigFlags.HighDpiWindow))
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX) || Raylib.IsWindowState(ConfigFlags.WindowHighDpi))
                     io.DisplayFramebufferScale = Raylib.GetWindowScaleDPI();
 
             io.DeltaTime = dt >= 0 ? dt : Raylib.GetFrameTime();
@@ -425,12 +425,11 @@ namespace rlImGui_cs
             LastSuperPressed = superDown;
 
             // get the pressed keys, they are in event order
-            int keyId = Raylib.GetKeyPressed();
+            var keyId = Raylib.GetKeyPressed();
             while (keyId != 0)
             {
-                KeyboardKey key = (KeyboardKey)keyId;
-                if (RaylibKeyMap.ContainsKey(key))
-                    io.AddKeyEvent(RaylibKeyMap[key], true);
+                if (RaylibKeyMap.ContainsKey(keyId))
+                    io.AddKeyEvent(RaylibKeyMap[keyId], true);
                 keyId = Raylib.GetKeyPressed();
             }
 
@@ -516,7 +515,7 @@ namespace rlImGui_cs
             ImGuiIOPtr io = ImGui.GetIO();
 
             Vector2 scale = new Vector2(1.0f, 1.0f);
-            if (Raylib.IsWindowState(ConfigFlags.HighDpiWindow) || RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            if (Raylib.IsWindowState(ConfigFlags.WindowHighDpi) || RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
                 scale = io.DisplayFramebufferScale;
 
             Rlgl.Scissor(   (int)(x * scale.X),
@@ -543,14 +542,14 @@ namespace rlImGui_cs
             if (texturePtr != IntPtr.Zero)
                 textureId = (uint)texturePtr.ToInt32();
 
-            Rlgl.Begin(DrawMode.Triangles);
+            Rlgl.Begin(RlglEnum.Triangles);
             Rlgl.SetTexture(textureId);
 
             for (int i = 0; i <= (count - 3); i += 3)
             {
                 if (Rlgl.CheckRenderBatchLimit(3))
                 {
-                    Rlgl.Begin(DrawMode.Triangles);
+                    Rlgl.Begin(RlglEnum.Triangles);
                     Rlgl.SetTexture(textureId);
                 }
 
