@@ -285,20 +285,18 @@ internal class Editor : IEditor, IEditorInternal
         }
 
         var config = ConfigFlags.WindowResizable;
-        // High DPI and MSAA settings break some of the UI rendering.. 
-        // for now keep them off
-        /*if (settings.EnableHighDPI)
+        if (settings.EnableHighDPI)
         {
-            config|=ConfigFlags.HighDpiWindow;
+            config|=ConfigFlags.WindowHighDpi;
         }
         if (settings.EnableMSAA)
         {
-            config|=ConfigFlags.Msaa4xHint;
-        }*/
+            config|=ConfigFlags.Msaa4XHint;
+        }
 
         Raylib.SetConfigFlags(config);
         //Raylib.SetConfigFlags(ConfigFlags.FLAG_VSYNC_HINT);   // Don't wait for VSYNC, we do all synchronisation ourselves
-        Raylib.InitWindow(800, 600, $"Retro Editor - レトロゲームの変更の具 - Version {EditorSettings.CurrentVersion}");
+        Raylib.InitWindow(800, 600, $"Retro Editor - レトロゲームの変更の道具 - Version {EditorSettings.CurrentVersion}");
         if (Raylib.IsWindowFullscreen())
         {
             Raylib.ToggleFullscreen();
