@@ -1,7 +1,7 @@
 using Microsoft.CodeAnalysis;
 using RetroEditor.Plugins;
 
-internal class GamePluginLoader
+internal class GamePluginLoader : IGamePluginLoader
 {
     private PluginBuilder _plugin;
     private string _pathToPlugin;
