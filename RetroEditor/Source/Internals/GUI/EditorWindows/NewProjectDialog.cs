@@ -1,4 +1,5 @@
 using ImGuiNET;
+using RetroEditor.Plugins;
 using RetroEditor.Source.Internals.GUI;
 
 class NewProjectDialog : IWindow
@@ -103,8 +104,12 @@ class NewProjectDialog : IWindow
         {
             editor.Settings.ProjectLocation = projectLocation;
             ImGui.CloseCurrentPopup();
-            editor.CreateNewProject(projectName, projectLocation, importFile, availablePluginNames[selectedPlugin]);
-            return true;
+            var playable = editor.CreateNewProject(projectName, projectLocation, importFile, availablePluginNames[selectedPlugin], out var projectSettings);
+            if (playable != null)
+            {
+                return editor.InternalInitialisePlayableRom(playable, projectSettings, true);
+            }
+            editor.Log(LogType.Error, "New Project", "Failed to create new project.");
         }
         if (disabledCounter > 0)
         {

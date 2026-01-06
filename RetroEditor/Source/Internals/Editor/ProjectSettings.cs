@@ -22,6 +22,8 @@ internal sealed class ProjectSettings
         this.serializedSettings = new SerializedSettings(Editor.EditorSettings.CurrentVersion, retroCoreName, retroPluginName, originalRomName);
         this.projectPath = projectPath;
         this.projectName = projectName;
+        Editor.GetOSStrings(out var platform, out var extra, out var extension, out var architecture);
+        this.LibRetroPath = Path.Combine(projectPath, "LibRetro", $"{platform}_{architecture}");
     }
 
     internal void Save(string projectFile)
@@ -49,6 +51,7 @@ internal sealed class ProjectSettings
     public string RetroCoreName => serializedSettings.RetroCoreName;
     public string RetroPluginName => serializedSettings.RetroPluginName;
     public string OriginalRomName => serializedSettings.OriginalRomName;
+    public string LibRetroPath {get; internal set;} 
     internal readonly string projectName;
     internal readonly string projectPath;
 }

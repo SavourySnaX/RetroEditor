@@ -7,6 +7,7 @@ using System.Text.Json;
 using System.Runtime.InteropServices;
 using System.IO.Compression;
 using RetroEditor.Plugins;
+using System.ComponentModel.DataAnnotations;
 
 internal class MenuData : IMenuItem
 {
@@ -43,12 +44,12 @@ internal class UIData
 
 internal struct ActiveProject : IPlayerControls, IMenu
 {
-    public ActiveProject(string name, IRetroPlugin retroPlugin, LibRetroPlugin libRetroPlugin, ISystemPlugin romPlugin, PlayableRom playableRom, ProjectSettings settings, UIData ui)
+    public ActiveProject(string name, PlayableRom playableRom, ProjectSettings settings, UIData ui)
     {
         this.name = name;
-        this.retroPlugin = retroPlugin;
-        this.libRetroPlugin = libRetroPlugin;
-        this.romPlugin = romPlugin;
+        this.retroPlugin = playableRom.retroPlugin;
+        this.libRetroPlugin = playableRom.systemPlugin;
+        this.romPlugin = playableRom.romInterface;
         this.playableRom = playableRom;
         this.settings = settings;
         this.ui = ui;
@@ -165,7 +166,7 @@ internal class Editor : IEditor, IEditorInternal
 
     private ActiveProject? currentActiveProject;
 
-    private Dictionary<Type, GamePluginLoader> pluginToLoader = new Dictionary<Type, GamePluginLoader>();
+    private Dictionary<Type, IGamePluginLoader> pluginToLoader = new Dictionary<Type, IGamePluginLoader>();
 
     private ILogger _log;
 
@@ -229,7 +230,7 @@ internal class Editor : IEditor, IEditorInternal
         _log = logger;
     }
 
-    internal void InitialisePlugins(IEnumerable<GamePluginLoader> plugins, Type[] romPlugins)
+    internal void InitialisePlugins(IEnumerable<IGamePluginLoader> plugins, Type[] romPlugins)
     {
         foreach (var plugin in romPlugins)
         {
@@ -248,7 +249,7 @@ internal class Editor : IEditor, IEditorInternal
 
     }
 
-    private void InitialisePlugin(GamePluginLoader pluginLoader)
+    private void InitialisePlugin(IGamePluginLoader pluginLoader)
     {
         var pluginTypes = pluginLoader.LoadPlugin();
         if (pluginTypes == null)
@@ -262,7 +263,7 @@ internal class Editor : IEditor, IEditorInternal
         }
     }
 
-    private void ClosePlugin(GamePluginLoader pluginLoader)
+    private void ClosePlugin(IGamePluginLoader pluginLoader)
     {
         pluginLoader.UnloadPlugin();
     }
@@ -530,11 +531,11 @@ internal class Editor : IEditor, IEditorInternal
                                         var instance = GetRomInstance(plugin.Key);
                                         if (instance != null)
                                         {
-                                            var retro = GetLibRetroInstance(instance.LibRetroPluginName, null);
+                                            var retro = GetLibRetroInstance(instance.LibRetroPluginName, null, out _);
                                             if (retro != null)
                                             {
                                                 var pluginWindow = new LibRetroPlayerWindow(retro);
-                                                var playableRom = new PlayableRom(this, retro, instance.Endian, instance.RequiresReload, instance.ChecksumCalculation);
+                                                var playableRom = new PlayableRom(this, retro, instance, new DummyRetroPlugin());
                                                 pluginWindow.Initialise();
                                                 retro.LoadGame(path);
                                                 pluginWindow.OtherStuff();
@@ -767,6 +768,7 @@ internal class Editor : IEditor, IEditorInternal
         {
             if (activeProject.Settings.projectPath == projectPath)
             {
+                Log(LogType.Info, "Open Project", $"Project at {projectPath} is already open.");
                 return;
             }
         }
@@ -782,7 +784,17 @@ internal class Editor : IEditor, IEditorInternal
         if (plugin!=null)
         {
             // Next we need to perform the initial import and save state, then we can begin editing (the player window will open)
-            InternalInitialisePlugin(plugin, projectSettings, false);
+            var playable = InternalInitialisePlugin(plugin, projectSettings, out var isNew);
+            if (playable == null)
+            {
+                Log(LogType.Error, "Open Project", $"Failed to initialise plugin {projectSettings.RetroPluginName} for project at {projectPath}.");
+                return;
+            }
+            if (!InternalInitialisePlayableRom(playable, projectSettings, isNew))
+            {
+                Log(LogType.Error, "Open Project", $"Failed to initialise playable ROM for project at {projectPath}.");
+                return;
+            }
         }
     }
 
@@ -800,10 +812,10 @@ internal class Editor : IEditor, IEditorInternal
         pluginWindow.InitWindow();
     }
 
-    private ActiveProject InternalAddDefaultWindowAndProject(ProjectSettings projectSettings, IRetroPlugin plugin, LibRetroPlugin retroPluginInstance, ISystemPlugin romPlugin, PlayableRom playableRom)
+    private ActiveProject InternalAddDefaultWindowAndProject(ProjectSettings projectSettings, PlayableRom playableRom)
     {
         var activeProjectName = projectSettings.projectName + $" [{activeProjects.Count + 1}]";
-        var project = new ActiveProject(activeProjectName, plugin, retroPluginInstance, romPlugin, playableRom, projectSettings, new UIData());
+        var project = new ActiveProject(activeProjectName, playableRom, projectSettings, new UIData());
 
         currentActiveProject=project;
         OpenPlayerWindow(project);
@@ -820,12 +832,11 @@ internal class Editor : IEditor, IEditorInternal
         return project;
     }
 
-    internal bool CreateNewProject(string projectName, string projectLocation, string importFile, string retroPluginName)
+    internal PlayableRom? CreateNewProject(string projectName, string projectLocation, string importFile, string retroPluginName, out ProjectSettings projectSettings)
     {
         // Todo Progress Dialog
         var projectPath = Path.Combine(projectLocation, projectName);
         Directory.CreateDirectory(projectPath);
-        Directory.CreateDirectory(Path.Combine(projectPath, "LibRetro"));
         Directory.CreateDirectory(Path.Combine(projectPath, "Editor"));
         var projectFile = Path.Combine(projectPath, "Editor", projectName + ".json");
 
@@ -836,51 +847,59 @@ internal class Editor : IEditor, IEditorInternal
         var hash = MD5.Create().ComputeHash(hashA.Concat(hashB).Concat(hashC).ToArray());
         var retroCoreName = string.Concat(hash.Select(x => x.ToString("X2")));
 
-        var projectSettings = new ProjectSettings(projectName, projectPath, retroCoreName, retroPluginName, Path.GetFileName(importFile));
+        projectSettings = new ProjectSettings(projectName, projectPath, retroCoreName, retroPluginName, Path.GetFileName(importFile));
         projectSettings.Save(projectFile);
         File.Copy(importFile, GetRomPath(projectSettings), true);
 
+        Directory.CreateDirectory(projectSettings.LibRetroPath);
         var retroPlugin = GetPluginInstance(retroPluginName);
         if (retroPlugin==null)
         {
-            return false;
+            return null;
         }
-        return InternalInitialisePlugin(retroPlugin, projectSettings, true);
+        return InternalInitialisePlugin(retroPlugin, projectSettings, out _);
     }
 
-    private bool InternalInitialisePlugin(IRetroPlugin plugin, ProjectSettings projectSettings, bool firstTime)
+    private PlayableRom? InternalInitialisePlugin(IRetroPlugin plugin, ProjectSettings projectSettings, out bool isNew)
     {
+        isNew=false;
         // Initialise Rom
         var romInterface = GetRomInstance(plugin.RomPluginName);
         if (romInterface==null)
         {
-            return false;
+            return null;
         }
-        var emuPlugin = GetLibRetroInstance(romInterface.LibRetroPluginName, projectSettings); 
+        var emuPlugin = GetLibRetroInstance(romInterface.LibRetroPluginName, projectSettings, out isNew); 
         if (emuPlugin == null)
         {
-            return false;
+            return null;
         }
         if (emuPlugin.Version() != 1)
         {
-            return false;
+            return null;
         }
         emuPlugin.Init();
+        return new PlayableRom(this, emuPlugin, romInterface, plugin);
+    }
 
-        var playableRom = new PlayableRom(this, emuPlugin, romInterface.Endian, romInterface.RequiresReload, romInterface.ChecksumCalculation);
-
+    internal bool InternalInitialisePlayableRom(PlayableRom playableRom, ProjectSettings projectSettings, bool firstTime)
+    {
+        if (playableRom.retroPlugin==null)
+        {
+            return false;
+        }
         if (firstTime)
         {
-            playableRom.Setup(projectSettings, GetRomPath(projectSettings), plugin.RequiresAutoLoad ? plugin.AutoLoadCondition : null);
+            playableRom.Setup(projectSettings, GetRomPath(projectSettings), playableRom.retroPlugin.RequiresAutoLoad ? playableRom.retroPlugin.AutoLoadCondition : null);
         }
         else
         {
             playableRom.Reload(projectSettings);
         }
 
-        var project = InternalAddDefaultWindowAndProject(projectSettings, plugin, emuPlugin, romInterface, playableRom);
+        var project = InternalAddDefaultWindowAndProject(projectSettings, playableRom);
         
-        plugin.SetupGameTemporaryPatches(playableRom);
+        playableRom.retroPlugin.SetupGameTemporaryPatches(playableRom);
 
         playableRom.Reset(true);
 
@@ -895,13 +914,13 @@ internal class Editor : IEditor, IEditorInternal
 
     public void SaveState(byte[] state, ProjectSettings projectSettings)
     {
-        var stateFile = Path.Combine(projectSettings.projectPath, "Editor", $"{projectSettings.RetroCoreName}_state.bin");
+        var stateFile = Path.Combine(projectSettings.LibRetroPath, $"{projectSettings.RetroCoreName}_state.bin");
         File.WriteAllBytes(stateFile, state);
     }
 
     public byte[] LoadState(ProjectSettings projectSettings)
     {
-        var stateFile = Path.Combine(projectSettings.projectPath, "Editor", $"{projectSettings.RetroCoreName}_state.bin");
+        var stateFile = Path.Combine(projectSettings.LibRetroPath, $"{projectSettings.RetroCoreName}_state.bin");
         if (!File.Exists(stateFile))
         {
             return Array.Empty<byte>();
@@ -926,7 +945,7 @@ internal class Editor : IEditor, IEditorInternal
         OSArchitectureNotSupported,
     }
 
-    internal OSSupportedResult GetOSStrings(out string platform, out string extra, out string extension, out string architecture, bool isDeveloperMame)
+    internal static OSSupportedResult GetOSStrings(out string platform, out string extra, out string extension, out string architecture)
     {
         bool supportsWindows = false;
         bool supportsLinux = false;
@@ -973,10 +992,11 @@ internal class Editor : IEditor, IEditorInternal
         return OSSupportedResult.Ok;
     }
 
-    internal LibRetroPlugin? GetLibRetroInstance(string pluginName, ProjectSettings? projectSettings)
+    internal LibRetroPlugin? GetLibRetroInstance(string pluginName, ProjectSettings? projectSettings, out bool isNew)
     {
+        isNew = false;
         var OS=RuntimeInformation.OSDescription;
-        var supported = GetOSStrings(out var platform, out var extra, out var extension, out var architecture, false);
+        var supported = GetOSStrings(out var platform, out var extra, out var extension, out var architecture);
         switch (supported)
         {
             case OSSupportedResult.Ok:
@@ -989,19 +1009,28 @@ internal class Editor : IEditor, IEditorInternal
                 return null;
         }
 
-        var sourcePlugin = Path.Combine(settings.RetroCoreFolder, platform, architecture, $"{pluginName}{extension}");
+        var sourcePluginPath = Path.Combine(settings.RetroCoreFolder, platform, architecture);
+        var sourcePlugin = Path.Combine(sourcePluginPath, $"{pluginName}{extension}");
         string? destinationPlugin;
+        string? destinationPluginPath;
         if (projectSettings == null)
         {
             // Developer mode, we don't have a project folder
+            destinationPluginPath = sourcePluginPath;
             destinationPlugin = sourcePlugin;
         }
         else
         {
-            destinationPlugin = Path.Combine(projectSettings.projectPath, "LibRetro", $"{projectSettings.RetroCoreName}_{platform}_{architecture}{extension}");
+            destinationPluginPath = projectSettings.LibRetroPath;
+            if (!Directory.Exists(destinationPluginPath))
+            {
+                Directory.CreateDirectory(destinationPluginPath);   // in case we are upgrading from an old project that didn't have the subfolders
+            }
+            destinationPlugin = Path.Combine(destinationPluginPath, $"{projectSettings.RetroCoreName}{extension}");
         }
         if (!File.Exists(destinationPlugin))
         {
+            isNew = true;
             if (!File.Exists(sourcePlugin))
             {
                 var task = DownloadLibRetro(platform, extra, architecture, extension, pluginName);
@@ -1015,6 +1044,17 @@ internal class Editor : IEditor, IEditorInternal
             if (destinationPlugin != sourcePlugin)
             {
                 File.Copy(sourcePlugin, destinationPlugin, true);
+                // We also need to copy any extra files (dependencies for dlls)
+                if (File.Exists(Path.Combine(sourcePluginPath, "extras.lst")))
+                {
+                    var lines = File.ReadAllLines(Path.Combine(sourcePluginPath, "extras.lst"));
+                    foreach (var line in lines)
+                    {
+                        var sourceExtra = Path.Combine(sourcePluginPath, line);
+                        var destinationExtra = Path.Combine(destinationPluginPath, line);
+                        File.Copy(sourceExtra, destinationExtra, true);
+                    }
+                }
             }
         }
 
@@ -1032,7 +1072,7 @@ internal class Editor : IEditor, IEditorInternal
     internal LibRetroPlugin? GetDeveloperMame()
     {
         var OS=RuntimeInformation.OSDescription;
-        var supported = GetOSStrings(out var platform, out _, out var extension, out var architecture, true);
+        var supported = GetOSStrings(out var platform, out _, out var extension, out var architecture);
         switch (supported)
         {
             case OSSupportedResult.Ok:
@@ -1072,10 +1112,10 @@ internal class Editor : IEditor, IEditorInternal
         var api_revision = "v1.261.1"; // TODO - link this to the extension api
         var extra = $"_{architecture}";
         var url = $"https://github.com/SavourySnaX/lib_mame_retro_custom_fork/releases/download/{api_revision}/build_{platform}{extra}.zip";
-        var destination = Path.Combine(settings.RetroCoreFolder, "developer", platform, architecture, $"mame_libretro{extension}");
+        var destinationFolder = Path.Combine(settings.RetroCoreFolder, "developer", platform, architecture);
         var itemToGrab = $"mame_libretro{extension}";
         Log(LogType.Info, $"Downloading {url} as local copy not present");
-        return await Download(url, destination, itemToGrab);
+        return await Download(url, destinationFolder, itemToGrab);
     }
 
 
@@ -1085,14 +1125,39 @@ internal class Editor : IEditor, IEditorInternal
         {
             extra = $"{extra}/";
         }
-        var url = $"http://buildbot.libretro.com/nightly/{extra}{platform}/{architecture}/latest/{pluginName}{extension}.zip";
-        var destination = Path.Combine(settings.RetroCoreFolder, platform, architecture, $"{pluginName}{extension}");
+        var destinationFolder = Path.Combine(settings.RetroCoreFolder, platform, architecture);
         var itemToGrab = $"{pluginName}{extension}";
+        var url = $"http://buildbot.libretro.com/nightly/{extra}{platform}/{architecture}/latest/{pluginName}{extension}.zip";
+        if (platform=="windows" && architecture=="arm64")
+        {
+            // At present buildbot does not have arm64 builds for windows
+            // as a workaround, I've published the ones built at https://github.com/talynone/RetroArch/releases/
+            // individually to github location so we can download them from there
+            // annoyingly these will also need copying to project folder too.. which means the project folder structure
+            // should probably be standardised to include platform/architecture folders
+
+            // In addition, there are some extra dependencies needed so we need to validate/download those too.
+            var extraCheck = Path.Combine(destinationFolder, "extras.txt");
+            Task<bool> result= null!;
+            if (!File.Exists(extraCheck))
+            {
+                var extrasUrl = $"http://github.com/SavourySnaX/prebuilt-windows-dependencies/releases/latest/download/extras.zip";
+
+                Log(LogType.Info, $"Downloading {extrasUrl} as local copy not present");
+                result = Download(extrasUrl, destinationFolder);
+                await result;
+                if (result.Result!=true)    // its not the end of the world to do this concurrently
+                {
+                    return false;
+                }
+            }
+            url = $"http://github.com/SavourySnaX/prebuilt-windows-dependencies/releases/latest/download/{pluginName}{extension}.zip";
+        }
         Log(LogType.Info, $"Downloading {url} as local copy not present");
-        return await Download(url, destination, itemToGrab);
+        return await Download(url, destinationFolder, itemToGrab);
     }
 
-    async Task<bool> Download(string url, string destination, string itemToGrab)
+    async Task<bool> Download(string url, string destinationFolder, params string[] itemsToGrab)
     {
         using (var client = new HttpClient())
         {
@@ -1107,21 +1172,20 @@ internal class Editor : IEditor, IEditorInternal
                         ZipArchive archive = new ZipArchive(memoryStream);
                         foreach (var entry in archive.Entries)
                         {
-                            if (entry.Name == itemToGrab)
+                            if (itemsToGrab.Length==0 || itemsToGrab.Contains(entry.Name))
                             {
-                                var destinationFolder = Path.GetDirectoryName(destination);
                                 if (destinationFolder == null)
                                 {
                                     return false;
                                 }
                                 Directory.CreateDirectory(destinationFolder);  // Ensure destination folder exists
-                                using (var fileStream = File.Create(destination))
+                                using (var fileStream = File.Create(Path.Combine(destinationFolder, entry.Name)))
                                 {
                                     entry.Open().CopyTo(fileStream);
-                                    return true;
                                 }
                             }
                         }
+                        return true;
                     }
                 }
             }
