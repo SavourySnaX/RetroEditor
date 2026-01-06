@@ -1,0 +1,987 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Class ZXSpectrum48ImageHelper | RetroEditor </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Class ZXSpectrum48ImageHelper | RetroEditor ">
+      
+      <meta name="description" content="Helper class for rendering a ZX Spectrum 48K screen, this will probably be abstracted out to a more generic class in the future.">
+      <link rel="icon" href="../favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/SavourySnaX/RetroEditor/new/main/apiSpec/new?filename=RetroEditor_Plugins_ZXSpectrum48ImageHelper.md&amp;value=---%0Auid%3A%20RetroEditor.Plugins.ZXSpectrum48ImageHelper%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="ManagedReference">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../logo.svg" alt="RetroEditor">
+            RetroEditor
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="RetroEditor.Plugins.ZXSpectrum48ImageHelper">
+
+
+
+  <h1 id="RetroEditor_Plugins_ZXSpectrum48ImageHelper" data-uid="RetroEditor.Plugins.ZXSpectrum48ImageHelper" class="text-break">
+Class ZXSpectrum48ImageHelper  <a class="header-action link-secondary" title="View source" href="https://github.com/SavourySnaX/RetroEditor/blob/main/RetroEditor/Source/Public/ImageHelpers/ZXSpectrum48ImageHelper.cs/#L11"><i class="bi bi-code-slash"></i></a>
+  </h1>
+
+  <div class="facts text-secondary">
+    <dl><dt>Namespace</dt><dd><a class="xref" href="RetroEditor.html">RetroEditor</a>.<a class="xref" href="RetroEditor.Plugins.html">Plugins</a></dd></dl>
+  <dl><dt>Assembly</dt><dd>RetroEditor.dll</dd></dl>
+  </div>
+
+  <div class="markdown summary"><p>Helper class for rendering a ZX Spectrum 48K screen, this will probably be abstracted out to a more generic class in the future.</p>
+</div>
+  <div class="markdown conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public class ZXSpectrum48ImageHelper</code></pre>
+  </div>
+
+
+
+
+  <dl class="typelist inheritance">
+    <dt>Inheritance</dt>
+    <dd>
+      <div><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object">object</a></div>
+      <div><span class="xref">ZXSpectrum48ImageHelper</span></div>
+    </dd>
+  </dl>
+
+
+
+  <dl class="typelist inheritedMembers">
+    <dt>Inherited Members</dt>
+    <dd>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object)">object.Equals(object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object-system-object)">object.Equals(object, object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.gethashcode">object.GetHashCode()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.gettype">object.GetType()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.memberwiseclone">object.MemberwiseClone()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.referenceequals">object.ReferenceEquals(object, object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.tostring">object.ToString()</a>
+    </div>
+  </dd></dl>
+
+
+
+
+  <h2 id="RetroEditor_Plugins_ZXSpectrum48ImageHelper_remarks">Remarks</h2>
+  <div class="markdown level0 remarks"><p>This is not stored in specutrm screen order, but is a high res bitmap with low res colour.</p>
+</div>
+
+
+  <h2 class="section" id="constructors">Constructors
+</h2>
+
+
+  <a id="RetroEditor_Plugins_ZXSpectrum48ImageHelper__ctor_" data-uid="RetroEditor.Plugins.ZXSpectrum48ImageHelper.#ctor*"></a>
+
+  <h3 id="RetroEditor_Plugins_ZXSpectrum48ImageHelper__ctor_System_UInt32_System_UInt32_" data-uid="RetroEditor.Plugins.ZXSpectrum48ImageHelper.#ctor(System.UInt32,System.UInt32)">
+  ZXSpectrum48ImageHelper(uint, uint)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/SavourySnaX/RetroEditor/blob/main/RetroEditor/Source/Public/ImageHelpers/ZXSpectrum48ImageHelper.cs/#L44"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Create a new ZX Spectrum 48K image helper.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public ZXSpectrum48ImageHelper(uint widthPixels, uint heightPixels)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>widthPixels</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.uint32">uint</a></dt>
+    <dd><p>width of image in pixels</p>
+</dd>
+    <dt><code>heightPixels</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.uint32">uint</a></dt>
+    <dd><p>height of image in pixels</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <h2 class="section" id="methods">Methods
+</h2>
+
+
+  <a id="RetroEditor_Plugins_ZXSpectrum48ImageHelper_Clear_" data-uid="RetroEditor.Plugins.ZXSpectrum48ImageHelper.Clear*"></a>
+
+  <h3 id="RetroEditor_Plugins_ZXSpectrum48ImageHelper_Clear_System_Byte_" data-uid="RetroEditor.Plugins.ZXSpectrum48ImageHelper.Clear(System.Byte)">
+  Clear(byte)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/SavourySnaX/RetroEditor/blob/main/RetroEditor/Source/Public/ImageHelpers/ZXSpectrum48ImageHelper.cs/#L60"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Clear the image to a specific attribute.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void Clear(byte attribute)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>attribute</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.byte">byte</a></dt>
+    <dd><p>attribute byte</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="RetroEditor_Plugins_ZXSpectrum48ImageHelper_ConvertXBitmapPosToYAttribute_" data-uid="RetroEditor.Plugins.ZXSpectrum48ImageHelper.ConvertXBitmapPosToYAttribute*"></a>
+
+  <h3 id="RetroEditor_Plugins_ZXSpectrum48ImageHelper_ConvertXBitmapPosToYAttribute_System_UInt32_" data-uid="RetroEditor.Plugins.ZXSpectrum48ImageHelper.ConvertXBitmapPosToYAttribute(System.UInt32)">
+  ConvertXBitmapPosToYAttribute(uint)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/SavourySnaX/RetroEditor/blob/main/RetroEditor/Source/Public/ImageHelpers/ZXSpectrum48ImageHelper.cs/#L312"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Helper function to convert from a pixel x position to an attribute x position.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public uint ConvertXBitmapPosToYAttribute(uint x)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>x</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.uint32">uint</a></dt>
+    <dd><p>x position in pixels</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.uint32">uint</a></dt>
+    <dd><p>x position in attribute cells</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="RetroEditor_Plugins_ZXSpectrum48ImageHelper_ConvertYBitmapPosToYAttribute_" data-uid="RetroEditor.Plugins.ZXSpectrum48ImageHelper.ConvertYBitmapPosToYAttribute*"></a>
+
+  <h3 id="RetroEditor_Plugins_ZXSpectrum48ImageHelper_ConvertYBitmapPosToYAttribute_System_UInt32_" data-uid="RetroEditor.Plugins.ZXSpectrum48ImageHelper.ConvertYBitmapPosToYAttribute(System.UInt32)">
+  ConvertYBitmapPosToYAttribute(uint)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/SavourySnaX/RetroEditor/blob/main/RetroEditor/Source/Public/ImageHelpers/ZXSpectrum48ImageHelper.cs/#L302"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Helper function to convert from a pixel y position to an attribute y position.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public uint ConvertYBitmapPosToYAttribute(uint y)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>y</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.uint32">uint</a></dt>
+    <dd><p>y position in pixels</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.uint32">uint</a></dt>
+    <dd><p>y position in attribute cells</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="RetroEditor_Plugins_ZXSpectrum48ImageHelper_CopyBitmapFrom_" data-uid="RetroEditor.Plugins.ZXSpectrum48ImageHelper.CopyBitmapFrom*"></a>
+
+  <h3 id="RetroEditor_Plugins_ZXSpectrum48ImageHelper_CopyBitmapFrom_RetroEditor_Plugins_ZXSpectrum48ImageHelper_" data-uid="RetroEditor.Plugins.ZXSpectrum48ImageHelper.CopyBitmapFrom(RetroEditor.Plugins.ZXSpectrum48ImageHelper)">
+  CopyBitmapFrom(ZXSpectrum48ImageHelper)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/SavourySnaX/RetroEditor/blob/main/RetroEditor/Source/Public/ImageHelpers/ZXSpectrum48ImageHelper.cs/#L346"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Copy the contents of specified image to this image.
+At present images should be the same size!</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void CopyBitmapFrom(ZXSpectrum48ImageHelper source)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>source</code> <a class="xref" href="RetroEditor.Plugins.ZXSpectrum48ImageHelper.html">ZXSpectrum48ImageHelper</a></dt>
+    <dd><p>Source image to copy from</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="RetroEditor_Plugins_ZXSpectrum48ImageHelper_Draw8Bits_" data-uid="RetroEditor.Plugins.ZXSpectrum48ImageHelper.Draw8Bits*"></a>
+
+  <h3 id="RetroEditor_Plugins_ZXSpectrum48ImageHelper_Draw8Bits_System_UInt32_System_UInt32_System_Byte_System_Byte_System_Boolean_" data-uid="RetroEditor.Plugins.ZXSpectrum48ImageHelper.Draw8Bits(System.UInt32,System.UInt32,System.Byte,System.Byte,System.Boolean)">
+  Draw8Bits(uint, uint, byte, byte, bool)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/SavourySnaX/RetroEditor/blob/main/RetroEditor/Source/Public/ImageHelpers/ZXSpectrum48ImageHelper.cs/#L247"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Draws a set of 8 pixels horizontally to the screen. Bits set will be ink, bits not set will be paper.
+Attribute will be updated for the 8 pixels drawn.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void Draw8Bits(uint x, uint y, byte bits, byte attribute, bool flipX)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>x</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.uint32">uint</a></dt>
+    <dd><p>x position in pixels</p>
+</dd>
+    <dt><code>y</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.uint32">uint</a></dt>
+    <dd><p>y position in pixels</p>
+</dd>
+    <dt><code>bits</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.byte">byte</a></dt>
+    <dd><p>byte representing 8 pixels</p>
+</dd>
+    <dt><code>attribute</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.byte">byte</a></dt>
+    <dd><p>attribute byte</p>
+</dd>
+    <dt><code>flipX</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd><p>if true bits are drawn from right to left.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="RetroEditor_Plugins_ZXSpectrum48ImageHelper_Draw8BitsInkOnly_" data-uid="RetroEditor.Plugins.ZXSpectrum48ImageHelper.Draw8BitsInkOnly*"></a>
+
+  <h3 id="RetroEditor_Plugins_ZXSpectrum48ImageHelper_Draw8BitsInkOnly_System_UInt32_System_UInt32_System_Byte_System_Byte_System_Boolean_" data-uid="RetroEditor.Plugins.ZXSpectrum48ImageHelper.Draw8BitsInkOnly(System.UInt32,System.UInt32,System.Byte,System.Byte,System.Boolean)">
+  Draw8BitsInkOnly(uint, uint, byte, byte, bool)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/SavourySnaX/RetroEditor/blob/main/RetroEditor/Source/Public/ImageHelpers/ZXSpectrum48ImageHelper.cs/#L274"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Draws a set of 8 pixels horizontally to the screen ignores paper bits.
+Updates ink attribute only</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void Draw8BitsInkOnly(uint x, uint y, byte bits, byte attribute, bool flipX)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>x</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.uint32">uint</a></dt>
+    <dd><p>x position in pixels</p>
+</dd>
+    <dt><code>y</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.uint32">uint</a></dt>
+    <dd><p>y position in pixels</p>
+</dd>
+    <dt><code>bits</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.byte">byte</a></dt>
+    <dd><p>byte representing 8 pixels, only set bits will update the image</p>
+</dd>
+    <dt><code>attribute</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.byte">byte</a></dt>
+    <dd><p>attribute byte (only ink colour used)</p>
+</dd>
+    <dt><code>flipX</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd><p>if true bits are drawn from right to left.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="RetroEditor_Plugins_ZXSpectrum48ImageHelper_Draw8BitsNoAttribute_" data-uid="RetroEditor.Plugins.ZXSpectrum48ImageHelper.Draw8BitsNoAttribute*"></a>
+
+  <h3 id="RetroEditor_Plugins_ZXSpectrum48ImageHelper_Draw8BitsNoAttribute_System_UInt32_System_UInt32_System_Byte_System_Boolean_" data-uid="RetroEditor.Plugins.ZXSpectrum48ImageHelper.Draw8BitsNoAttribute(System.UInt32,System.UInt32,System.Byte,System.Boolean)">
+  Draw8BitsNoAttribute(uint, uint, byte, bool)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/SavourySnaX/RetroEditor/blob/main/RetroEditor/Source/Public/ImageHelpers/ZXSpectrum48ImageHelper.cs/#L189"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Draws a set of 8 pixels horizontally to the screen. Bits set will be ink, bits not set will be paper.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void Draw8BitsNoAttribute(uint x, uint y, byte bits, bool flipX)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>x</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.uint32">uint</a></dt>
+    <dd><p>x position in pixels</p>
+</dd>
+    <dt><code>y</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.uint32">uint</a></dt>
+    <dd><p>y position in pixels</p>
+</dd>
+    <dt><code>bits</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.byte">byte</a></dt>
+    <dd><p>byte representing 8 pixels</p>
+</dd>
+    <dt><code>flipX</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd><p>if true bits are drawn from right to left.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="RetroEditor_Plugins_ZXSpectrum48ImageHelper_Draw8BitsNoAttributeInkOnly_" data-uid="RetroEditor.Plugins.ZXSpectrum48ImageHelper.Draw8BitsNoAttributeInkOnly*"></a>
+
+  <h3 id="RetroEditor_Plugins_ZXSpectrum48ImageHelper_Draw8BitsNoAttributeInkOnly_System_UInt32_System_UInt32_System_Byte_System_Boolean_" data-uid="RetroEditor.Plugins.ZXSpectrum48ImageHelper.Draw8BitsNoAttributeInkOnly(System.UInt32,System.UInt32,System.Byte,System.Boolean)">
+  Draw8BitsNoAttributeInkOnly(uint, uint, byte, bool)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/SavourySnaX/RetroEditor/blob/main/RetroEditor/Source/Public/ImageHelpers/ZXSpectrum48ImageHelper.cs/#L153"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Draws a set of 8 pixels horizontally to the screen ignores paper bits.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void Draw8BitsNoAttributeInkOnly(uint x, uint y, byte bits, bool flipX)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>x</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.uint32">uint</a></dt>
+    <dd><p>x position in pixels</p>
+</dd>
+    <dt><code>y</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.uint32">uint</a></dt>
+    <dd><p>y position in pixels</p>
+</dd>
+    <dt><code>bits</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.byte">byte</a></dt>
+    <dd><p>byte representing 8 pixels, only set bits will update the image</p>
+</dd>
+    <dt><code>flipX</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd><p>if true bits are drawn from right to left.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="RetroEditor_Plugins_ZXSpectrum48ImageHelper_Draw8x8_" data-uid="RetroEditor.Plugins.ZXSpectrum48ImageHelper.Draw8x8*"></a>
+
+  <h3 id="RetroEditor_Plugins_ZXSpectrum48ImageHelper_Draw8x8_System_UInt32_System_UInt32_System_ReadOnlySpan_System_Byte__System_Byte_" data-uid="RetroEditor.Plugins.ZXSpectrum48ImageHelper.Draw8x8(System.UInt32,System.UInt32,System.ReadOnlySpan{System.Byte},System.Byte)">
+  Draw8x8(uint, uint, ReadOnlySpan&lt;byte&gt;, byte)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/SavourySnaX/RetroEditor/blob/main/RetroEditor/Source/Public/ImageHelpers/ZXSpectrum48ImageHelper.cs/#L378"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Draw an 8x8 tile to the screen, this will update the attribute map.
+The tile should be an array of 8 bytes. The first byte represents the first row.. etc.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void Draw8x8(uint x, uint y, ReadOnlySpan&lt;byte&gt; tile, byte attribute)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>x</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.uint32">uint</a></dt>
+    <dd><p>x position to draw tile in pixels</p>
+</dd>
+    <dt><code>y</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.uint32">uint</a></dt>
+    <dd><p>y position to draw tile in pixels</p>
+</dd>
+    <dt><code>tile</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.readonlyspan-1">ReadOnlySpan</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.byte">byte</a>&gt;</dt>
+    <dd><p>array of 8 bytes representing the tile to draw</p>
+</dd>
+    <dt><code>attribute</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.byte">byte</a></dt>
+    <dd><p>attribute byte</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="RetroEditor_Plugins_ZXSpectrum48ImageHelper_Draw8x8InkOnly_" data-uid="RetroEditor.Plugins.ZXSpectrum48ImageHelper.Draw8x8InkOnly*"></a>
+
+  <h3 id="RetroEditor_Plugins_ZXSpectrum48ImageHelper_Draw8x8InkOnly_System_UInt32_System_UInt32_System_ReadOnlySpan_System_Byte__System_Byte_" data-uid="RetroEditor.Plugins.ZXSpectrum48ImageHelper.Draw8x8InkOnly(System.UInt32,System.UInt32,System.ReadOnlySpan{System.Byte},System.Byte)">
+  Draw8x8InkOnly(uint, uint, ReadOnlySpan&lt;byte&gt;, byte)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/SavourySnaX/RetroEditor/blob/main/RetroEditor/Source/Public/ImageHelpers/ZXSpectrum48ImageHelper.cs/#L394"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Draw an 8x8 tile to the screen, ignores paper bits.
+The attribute map will be updated with the ink colour only.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void Draw8x8InkOnly(uint x, uint y, ReadOnlySpan&lt;byte&gt; tile, byte attribute)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>x</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.uint32">uint</a></dt>
+    <dd><p>x position to draw tile in pixels</p>
+</dd>
+    <dt><code>y</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.uint32">uint</a></dt>
+    <dd><p>y position to draw tile in pixels</p>
+</dd>
+    <dt><code>tile</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.readonlyspan-1">ReadOnlySpan</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.byte">byte</a>&gt;</dt>
+    <dd><p>array of 8 bytes representing the tile to draw, only set bits are transferred</p>
+</dd>
+    <dt><code>attribute</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.byte">byte</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="RetroEditor_Plugins_ZXSpectrum48ImageHelper_DrawBit_" data-uid="RetroEditor.Plugins.ZXSpectrum48ImageHelper.DrawBit*"></a>
+
+  <h3 id="RetroEditor_Plugins_ZXSpectrum48ImageHelper_DrawBit_System_UInt32_System_UInt32_System_Boolean_System_Byte_" data-uid="RetroEditor.Plugins.ZXSpectrum48ImageHelper.DrawBit(System.UInt32,System.UInt32,System.Boolean,System.Byte)">
+  DrawBit(uint, uint, bool, byte)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/SavourySnaX/RetroEditor/blob/main/RetroEditor/Source/Public/ImageHelpers/ZXSpectrum48ImageHelper.cs/#L128"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Plot a single pixel onto the screen and update the attribute map.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void DrawBit(uint x, uint y, bool ink, byte attribute)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>x</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.uint32">uint</a></dt>
+    <dd><p>x position in pixels</p>
+</dd>
+    <dt><code>y</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.uint32">uint</a></dt>
+    <dd><p>y position in pixels</p>
+</dd>
+    <dt><code>ink</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd><p>If true plots in ink colour, otherwise paper</p>
+</dd>
+    <dt><code>attribute</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.byte">byte</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="RetroEditor_Plugins_ZXSpectrum48ImageHelper_DrawBitNoAttribute_" data-uid="RetroEditor.Plugins.ZXSpectrum48ImageHelper.DrawBitNoAttribute*"></a>
+
+  <h3 id="RetroEditor_Plugins_ZXSpectrum48ImageHelper_DrawBitNoAttribute_System_UInt32_System_UInt32_System_Boolean_" data-uid="RetroEditor.Plugins.ZXSpectrum48ImageHelper.DrawBitNoAttribute(System.UInt32,System.UInt32,System.Boolean)">
+  DrawBitNoAttribute(uint, uint, bool)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/SavourySnaX/RetroEditor/blob/main/RetroEditor/Source/Public/ImageHelpers/ZXSpectrum48ImageHelper.cs/#L115"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Plot a single pixel onto the screen.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void DrawBitNoAttribute(uint x, uint y, bool ink)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>x</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.uint32">uint</a></dt>
+    <dd><p>x position in pixels</p>
+</dd>
+    <dt><code>y</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.uint32">uint</a></dt>
+    <dd><p>y position in pixels</p>
+</dd>
+    <dt><code>ink</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd><p>If true plots in ink colour, otherwise paper</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="RetroEditor_Plugins_ZXSpectrum48ImageHelper_FlipVertical_" data-uid="RetroEditor.Plugins.ZXSpectrum48ImageHelper.FlipVertical*"></a>
+
+  <h3 id="RetroEditor_Plugins_ZXSpectrum48ImageHelper_FlipVertical" data-uid="RetroEditor.Plugins.ZXSpectrum48ImageHelper.FlipVertical">
+  FlipVertical()
+  <a class="header-action link-secondary" title="View source" href="https://github.com/SavourySnaX/RetroEditor/blob/main/RetroEditor/Source/Public/ImageHelpers/ZXSpectrum48ImageHelper.cs/#L357"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Flip the current image vertically in place. Only affects bitmap.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void FlipVertical()</code></pre>
+  </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="RetroEditor_Plugins_ZXSpectrum48ImageHelper_GetAttribute_" data-uid="RetroEditor.Plugins.ZXSpectrum48ImageHelper.GetAttribute*"></a>
+
+  <h3 id="RetroEditor_Plugins_ZXSpectrum48ImageHelper_GetAttribute_System_UInt32_System_UInt32_" data-uid="RetroEditor.Plugins.ZXSpectrum48ImageHelper.GetAttribute(System.UInt32,System.UInt32)">
+  GetAttribute(uint, uint)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/SavourySnaX/RetroEditor/blob/main/RetroEditor/Source/Public/ImageHelpers/ZXSpectrum48ImageHelper.cs/#L335"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Get the attribute at a specific location.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public byte GetAttribute(uint ax, uint ay)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>ax</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.uint32">uint</a></dt>
+    <dd><p>x position in attribute cells</p>
+</dd>
+    <dt><code>ay</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.uint32">uint</a></dt>
+    <dd><p>y position in attribute cells</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.byte">byte</a></dt>
+    <dd><p>attribute byte</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="RetroEditor_Plugins_ZXSpectrum48ImageHelper_GetBit_" data-uid="RetroEditor.Plugins.ZXSpectrum48ImageHelper.GetBit*"></a>
+
+  <h3 id="RetroEditor_Plugins_ZXSpectrum48ImageHelper_GetBit_System_UInt32_System_UInt32_" data-uid="RetroEditor.Plugins.ZXSpectrum48ImageHelper.GetBit(System.UInt32,System.UInt32)">
+  GetBit(uint, uint)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/SavourySnaX/RetroEditor/blob/main/RetroEditor/Source/Public/ImageHelpers/ZXSpectrum48ImageHelper.cs/#L140"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Get the value of a pixel at a specific location.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public bool GetBit(uint x, uint y)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>x</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.uint32">uint</a></dt>
+    <dd><p>x position in pixels</p>
+</dd>
+    <dt><code>y</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.uint32">uint</a></dt>
+    <dd><p>y position in pixels</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd><p>True if the pixel is ink, false if it is paper</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="RetroEditor_Plugins_ZXSpectrum48ImageHelper_Render_" data-uid="RetroEditor.Plugins.ZXSpectrum48ImageHelper.Render*"></a>
+
+  <h3 id="RetroEditor_Plugins_ZXSpectrum48ImageHelper_Render_System_Single_" data-uid="RetroEditor.Plugins.ZXSpectrum48ImageHelper.Render(System.Single)">
+  Render(float)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/SavourySnaX/RetroEditor/blob/main/RetroEditor/Source/Public/ImageHelpers/ZXSpectrum48ImageHelper.cs/#L71"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Render the image to a pixel array.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public Pixel[] Render(float seconds)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>seconds</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.single">float</a></dt>
+    <dd><p>Used to handle the flash attribute</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="RetroEditor.Plugins.Pixel.html">Pixel</a>[]</dt>
+    <dd><p>a Pixel array representing the spectrum image at the time indicated</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="RetroEditor_Plugins_ZXSpectrum48ImageHelper_SetAttribute_" data-uid="RetroEditor.Plugins.ZXSpectrum48ImageHelper.SetAttribute*"></a>
+
+  <h3 id="RetroEditor_Plugins_ZXSpectrum48ImageHelper_SetAttribute_System_UInt32_System_UInt32_System_Byte_" data-uid="RetroEditor.Plugins.ZXSpectrum48ImageHelper.SetAttribute(System.UInt32,System.UInt32,System.Byte)">
+  SetAttribute(uint, uint, byte)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/SavourySnaX/RetroEditor/blob/main/RetroEditor/Source/Public/ImageHelpers/ZXSpectrum48ImageHelper.cs/#L323"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Set the attribute at a specific location.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void SetAttribute(uint ax, uint ay, byte attribute)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>ax</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.uint32">uint</a></dt>
+    <dd><p>x position in attribute cells</p>
+</dd>
+    <dt><code>ay</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.uint32">uint</a></dt>
+    <dd><p>y position in attribute cells</p>
+</dd>
+    <dt><code>attribute</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.byte">byte</a></dt>
+    <dd><p>attribute byte</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="RetroEditor_Plugins_ZXSpectrum48ImageHelper_Xor8Bits_" data-uid="RetroEditor.Plugins.ZXSpectrum48ImageHelper.Xor8Bits*"></a>
+
+  <h3 id="RetroEditor_Plugins_ZXSpectrum48ImageHelper_Xor8Bits_System_UInt32_System_UInt32_System_Byte_System_Byte_System_Boolean_" data-uid="RetroEditor.Plugins.ZXSpectrum48ImageHelper.Xor8Bits(System.UInt32,System.UInt32,System.Byte,System.Byte,System.Boolean)">
+  Xor8Bits(uint, uint, byte, byte, bool)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/SavourySnaX/RetroEditor/blob/main/RetroEditor/Source/Public/ImageHelpers/ZXSpectrum48ImageHelper.cs/#L290"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Xor a set of 8 pixels horizontally to the screen. Performs an xor between the screen pixel and the bit in the bits byte.
+Attribute will be updated for the 8 pixels touched.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void Xor8Bits(uint x, uint y, byte bits, byte attribute, bool flipX)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>x</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.uint32">uint</a></dt>
+    <dd><p>x position in pixels</p>
+</dd>
+    <dt><code>y</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.uint32">uint</a></dt>
+    <dd><p>y position in pixels</p>
+</dd>
+    <dt><code>bits</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.byte">byte</a></dt>
+    <dd><p>byte representing a set of 8 pixels</p>
+</dd>
+    <dt><code>attribute</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.byte">byte</a></dt>
+    <dd><p>attribute byte</p>
+</dd>
+    <dt><code>flipX</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd><p>if true bits are drawn from right to left.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="RetroEditor_Plugins_ZXSpectrum48ImageHelper_Xor8BitsNoAttribute_" data-uid="RetroEditor.Plugins.ZXSpectrum48ImageHelper.Xor8BitsNoAttribute*"></a>
+
+  <h3 id="RetroEditor_Plugins_ZXSpectrum48ImageHelper_Xor8BitsNoAttribute_System_UInt32_System_UInt32_System_Byte_System_Boolean_" data-uid="RetroEditor.Plugins.ZXSpectrum48ImageHelper.Xor8BitsNoAttribute(System.UInt32,System.UInt32,System.Byte,System.Boolean)">
+  Xor8BitsNoAttribute(uint, uint, byte, bool)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/SavourySnaX/RetroEditor/blob/main/RetroEditor/Source/Public/ImageHelpers/ZXSpectrum48ImageHelper.cs/#L217"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Xor a set of 8 pixels horizontally to the screen. Performs an xor between the screen pixel and the bit in the bits byte.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void Xor8BitsNoAttribute(uint x, uint y, byte bits, bool flipX)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>x</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.uint32">uint</a></dt>
+    <dd><p>x position in pixels</p>
+</dd>
+    <dt><code>y</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.uint32">uint</a></dt>
+    <dd><p>y position in pixels</p>
+</dd>
+    <dt><code>bits</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.byte">byte</a></dt>
+    <dd><p>byte representing a set of 8 pixels</p>
+</dd>
+    <dt><code>flipX</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd><p>if true bits are drawn from right to left.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/SavourySnaX/RetroEditor/blob/main/RetroEditor/Source/Public/ImageHelpers/ZXSpectrum48ImageHelper.cs/#L11" class="edit-link">Edit this page</a>
+        </div>
+
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          <span>Made with <a href="https://dotnet.github.io/docfx">docfx</a></span>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

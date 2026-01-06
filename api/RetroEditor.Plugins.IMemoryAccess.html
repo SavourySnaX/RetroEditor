@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Interface IMemoryAccess | RetroEditor </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Interface IMemoryAccess | RetroEditor ">
+      
+      <meta name="description" content="Interface for accessing memory">
+      <link rel="icon" href="../favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/SavourySnaX/RetroEditor/new/main/apiSpec/new?filename=RetroEditor_Plugins_IMemoryAccess.md&amp;value=---%0Auid%3A%20RetroEditor.Plugins.IMemoryAccess%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="ManagedReference">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../logo.svg" alt="RetroEditor">
+            RetroEditor
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="RetroEditor.Plugins.IMemoryAccess">
+
+
+
+  <h1 id="RetroEditor_Plugins_IMemoryAccess" data-uid="RetroEditor.Plugins.IMemoryAccess" class="text-break">
+Interface IMemoryAccess  <a class="header-action link-secondary" title="View source" href="https://github.com/SavourySnaX/RetroEditor/blob/main/RetroEditor/Source/Public/Interfaces/Plugins/IMemoryAccess.cs/#L60"><i class="bi bi-code-slash"></i></a>
+  </h1>
+
+  <div class="facts text-secondary">
+    <dl><dt>Namespace</dt><dd><a class="xref" href="RetroEditor.html">RetroEditor</a>.<a class="xref" href="RetroEditor.Plugins.html">Plugins</a></dd></dl>
+  <dl><dt>Assembly</dt><dd>RetroEditor.dll</dd></dl>
+  </div>
+
+  <div class="markdown summary"><p>Interface for accessing memory</p>
+</div>
+  <div class="markdown conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public interface IMemoryAccess</code></pre>
+  </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  <h2 class="section" id="properties">Properties
+</h2>
+
+
+  <a id="RetroEditor_Plugins_IMemoryAccess_Endian_" data-uid="RetroEditor.Plugins.IMemoryAccess.Endian*"></a>
+
+  <h3 id="RetroEditor_Plugins_IMemoryAccess_Endian" data-uid="RetroEditor.Plugins.IMemoryAccess.Endian">
+  Endian
+  <a class="header-action link-secondary" title="View source" href="https://github.com/SavourySnaX/RetroEditor/blob/main/RetroEditor/Source/Public/Interfaces/Plugins/IMemoryAccess.cs/#L88"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Memory Endian of the system</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">MemoryEndian Endian { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="RetroEditor.Plugins.MemoryEndian.html">MemoryEndian</a></dt>
+    <dd><p>Endianess of memory</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="RetroEditor_Plugins_IMemoryAccess_RomSize_" data-uid="RetroEditor.Plugins.IMemoryAccess.RomSize*"></a>
+
+  <h3 id="RetroEditor_Plugins_IMemoryAccess_RomSize" data-uid="RetroEditor.Plugins.IMemoryAccess.RomSize">
+  RomSize
+  <a class="header-action link-secondary" title="View source" href="https://github.com/SavourySnaX/RetroEditor/blob/main/RetroEditor/Source/Public/Interfaces/Plugins/IMemoryAccess.cs/#L82"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Size of the loaded rom (only applies to cartridge based systems)</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">int RomSize { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Size of rom in bytes</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <h2 class="section" id="methods">Methods
+</h2>
+
+
+  <a id="RetroEditor_Plugins_IMemoryAccess_FetchMachineOrder16_" data-uid="RetroEditor.Plugins.IMemoryAccess.FetchMachineOrder16*"></a>
+
+  <h3 id="RetroEditor_Plugins_IMemoryAccess_FetchMachineOrder16_System_Int32_System_ReadOnlySpan_System_Byte__" data-uid="RetroEditor.Plugins.IMemoryAccess.FetchMachineOrder16(System.Int32,System.ReadOnlySpan{System.Byte})">
+  FetchMachineOrder16(int, ReadOnlySpan&lt;byte&gt;)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/SavourySnaX/RetroEditor/blob/main/RetroEditor/Source/Public/Interfaces/Plugins/IMemoryAccess.cs/#L96"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Given a byte array and offset, returns a 16 bit value in machine order</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">ushort FetchMachineOrder16(int offset, ReadOnlySpan&lt;byte&gt; bytes)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>offset</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>offset in bytes</p>
+</dd>
+    <dt><code>bytes</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.readonlyspan-1">ReadOnlySpan</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.byte">byte</a>&gt;</dt>
+    <dd><p>array of bytes</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.uint16">ushort</a></dt>
+    <dd><p>16 bit value from requested offset</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="RetroEditor_Plugins_IMemoryAccess_FetchMachineOrder32_" data-uid="RetroEditor.Plugins.IMemoryAccess.FetchMachineOrder32*"></a>
+
+  <h3 id="RetroEditor_Plugins_IMemoryAccess_FetchMachineOrder32_System_Int32_System_ReadOnlySpan_System_Byte__" data-uid="RetroEditor.Plugins.IMemoryAccess.FetchMachineOrder32(System.Int32,System.ReadOnlySpan{System.Byte})">
+  FetchMachineOrder32(int, ReadOnlySpan&lt;byte&gt;)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/SavourySnaX/RetroEditor/blob/main/RetroEditor/Source/Public/Interfaces/Plugins/IMemoryAccess.cs/#L114"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Given a byte array and offset, returns a 32 bit value in machine order</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">uint FetchMachineOrder32(int offset, ReadOnlySpan&lt;byte&gt; bytes)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>offset</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>offset in bytes</p>
+</dd>
+    <dt><code>bytes</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.readonlyspan-1">ReadOnlySpan</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.byte">byte</a>&gt;</dt>
+    <dd><p>array of bytes</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.uint32">uint</a></dt>
+    <dd><p>32 bit value from requested offset</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="RetroEditor_Plugins_IMemoryAccess_FetchOppositeMachineOrder16_" data-uid="RetroEditor.Plugins.IMemoryAccess.FetchOppositeMachineOrder16*"></a>
+
+  <h3 id="RetroEditor_Plugins_IMemoryAccess_FetchOppositeMachineOrder16_System_Int32_System_ReadOnlySpan_System_Byte__" data-uid="RetroEditor.Plugins.IMemoryAccess.FetchOppositeMachineOrder16(System.Int32,System.ReadOnlySpan{System.Byte})">
+  FetchOppositeMachineOrder16(int, ReadOnlySpan&lt;byte&gt;)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/SavourySnaX/RetroEditor/blob/main/RetroEditor/Source/Public/Interfaces/Plugins/IMemoryAccess.cs/#L178"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Given a byte array and offset, returns a 16 bit value in opposite machine order</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">ushort FetchOppositeMachineOrder16(int offset, ReadOnlySpan&lt;byte&gt; bytes)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>offset</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>offset in bytes</p>
+</dd>
+    <dt><code>bytes</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.readonlyspan-1">ReadOnlySpan</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.byte">byte</a>&gt;</dt>
+    <dd><p>array of bytes</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.uint16">ushort</a></dt>
+    <dd><p>16 bit value from requested offset</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="RetroEditor_Plugins_IMemoryAccess_FetchOppositeMachineOrder32_" data-uid="RetroEditor.Plugins.IMemoryAccess.FetchOppositeMachineOrder32*"></a>
+
+  <h3 id="RetroEditor_Plugins_IMemoryAccess_FetchOppositeMachineOrder32_System_Int32_System_ReadOnlySpan_System_Byte__" data-uid="RetroEditor.Plugins.IMemoryAccess.FetchOppositeMachineOrder32(System.Int32,System.ReadOnlySpan{System.Byte})">
+  FetchOppositeMachineOrder32(int, ReadOnlySpan&lt;byte&gt;)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/SavourySnaX/RetroEditor/blob/main/RetroEditor/Source/Public/Interfaces/Plugins/IMemoryAccess.cs/#L196"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Given a byte array and offset, returns a 32 bit value in opposite machine order</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">uint FetchOppositeMachineOrder32(int offset, ReadOnlySpan&lt;byte&gt; bytes)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>offset</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>offset in bytes</p>
+</dd>
+    <dt><code>bytes</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.readonlyspan-1">ReadOnlySpan</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.byte">byte</a>&gt;</dt>
+    <dd><p>array of bytes</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.uint32">uint</a></dt>
+    <dd><p>32 bit value from requested offset</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="RetroEditor_Plugins_IMemoryAccess_ReadBytes_" data-uid="RetroEditor.Plugins.IMemoryAccess.ReadBytes*"></a>
+
+  <h3 id="RetroEditor_Plugins_IMemoryAccess_ReadBytes_RetroEditor_Plugins_ReadKind_System_UInt32_System_UInt32_" data-uid="RetroEditor.Plugins.IMemoryAccess.ReadBytes(RetroEditor.Plugins.ReadKind,System.UInt32,System.UInt32)">
+  ReadBytes(ReadKind, uint, uint)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/SavourySnaX/RetroEditor/blob/main/RetroEditor/Source/Public/Interfaces/Plugins/IMemoryAccess.cs/#L69"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Read a number of bytes from the specified memory area</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">ReadOnlySpan&lt;byte&gt; ReadBytes(ReadKind kind, uint address, uint length)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>kind</code> <a class="xref" href="RetroEditor.Plugins.ReadKind.html">ReadKind</a></dt>
+    <dd><p>Memory kind</p>
+</dd>
+    <dt><code>address</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.uint32">uint</a></dt>
+    <dd><p>Address of first byte</p>
+</dd>
+    <dt><code>length</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.uint32">uint</a></dt>
+    <dd><p>Number of bytes to retrieve</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.readonlyspan-1">ReadOnlySpan</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.byte">byte</a>&gt;</dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="RetroEditor_Plugins_IMemoryAccess_WriteBytes_" data-uid="RetroEditor.Plugins.IMemoryAccess.WriteBytes*"></a>
+
+  <h3 id="RetroEditor_Plugins_IMemoryAccess_WriteBytes_RetroEditor_Plugins_WriteKind_System_UInt32_System_ReadOnlySpan_System_Byte__" data-uid="RetroEditor.Plugins.IMemoryAccess.WriteBytes(RetroEditor.Plugins.WriteKind,System.UInt32,System.ReadOnlySpan{System.Byte})">
+  WriteBytes(WriteKind, uint, ReadOnlySpan&lt;byte&gt;)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/SavourySnaX/RetroEditor/blob/main/RetroEditor/Source/Public/Interfaces/Plugins/IMemoryAccess.cs/#L76"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Write a number of bytes to the specified memory area</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">void WriteBytes(WriteKind kind, uint address, ReadOnlySpan&lt;byte&gt; bytes)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>kind</code> <a class="xref" href="RetroEditor.Plugins.WriteKind.html">WriteKind</a></dt>
+    <dd><p>Memory kind</p>
+</dd>
+    <dt><code>address</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.uint32">uint</a></dt>
+    <dd><p>Address to write to</p>
+</dd>
+    <dt><code>bytes</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.readonlyspan-1">ReadOnlySpan</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.byte">byte</a>&gt;</dt>
+    <dd><p>Bytes to write to address</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="RetroEditor_Plugins_IMemoryAccess_WriteMachineOrder16_" data-uid="RetroEditor.Plugins.IMemoryAccess.WriteMachineOrder16*"></a>
+
+  <h3 id="RetroEditor_Plugins_IMemoryAccess_WriteMachineOrder16_System_Int32_System_Span_System_Byte__System_UInt16_" data-uid="RetroEditor.Plugins.IMemoryAccess.WriteMachineOrder16(System.Int32,System.Span{System.Byte},System.UInt16)">
+  WriteMachineOrder16(int, Span&lt;byte&gt;, ushort)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/SavourySnaX/RetroEditor/blob/main/RetroEditor/Source/Public/Interfaces/Plugins/IMemoryAccess.cs/#L133"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Given a byte array and offset, writes a 16bit value in machine order</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">void WriteMachineOrder16(int offset, Span&lt;byte&gt; bytes, ushort value)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>offset</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>offset in bytes</p>
+</dd>
+    <dt><code>bytes</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.span-1">Span</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.byte">byte</a>&gt;</dt>
+    <dd><p>array of bytes</p>
+</dd>
+    <dt><code>value</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.uint16">ushort</a></dt>
+    <dd><p>value to write</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="RetroEditor_Plugins_IMemoryAccess_WriteMachineOrder32_" data-uid="RetroEditor.Plugins.IMemoryAccess.WriteMachineOrder32*"></a>
+
+  <h3 id="RetroEditor_Plugins_IMemoryAccess_WriteMachineOrder32_System_Int32_System_Span_System_Byte__System_UInt32_" data-uid="RetroEditor.Plugins.IMemoryAccess.WriteMachineOrder32(System.Int32,System.Span{System.Byte},System.UInt32)">
+  WriteMachineOrder32(int, Span&lt;byte&gt;, uint)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/SavourySnaX/RetroEditor/blob/main/RetroEditor/Source/Public/Interfaces/Plugins/IMemoryAccess.cs/#L154"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Given a byte array and offset, writes a 32bit value in machine order</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">void WriteMachineOrder32(int offset, Span&lt;byte&gt; bytes, uint value)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>offset</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>offset in bytes</p>
+</dd>
+    <dt><code>bytes</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.span-1">Span</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.byte">byte</a>&gt;</dt>
+    <dd><p>array of bytes</p>
+</dd>
+    <dt><code>value</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.uint32">uint</a></dt>
+    <dd><p>value to write</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="RetroEditor_Plugins_IMemoryAccess_WriteOppositeMachineOrder16_" data-uid="RetroEditor.Plugins.IMemoryAccess.WriteOppositeMachineOrder16*"></a>
+
+  <h3 id="RetroEditor_Plugins_IMemoryAccess_WriteOppositeMachineOrder16_System_Int32_System_Span_System_Byte__System_UInt16_" data-uid="RetroEditor.Plugins.IMemoryAccess.WriteOppositeMachineOrder16(System.Int32,System.Span{System.Byte},System.UInt16)">
+  WriteOppositeMachineOrder16(int, Span&lt;byte&gt;, ushort)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/SavourySnaX/RetroEditor/blob/main/RetroEditor/Source/Public/Interfaces/Plugins/IMemoryAccess.cs/#L215"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Given a byte array and offset, writes a 16bit value in opposite machine order</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">void WriteOppositeMachineOrder16(int offset, Span&lt;byte&gt; bytes, ushort value)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>offset</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>offset in bytes</p>
+</dd>
+    <dt><code>bytes</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.span-1">Span</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.byte">byte</a>&gt;</dt>
+    <dd><p>array of bytes</p>
+</dd>
+    <dt><code>value</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.uint16">ushort</a></dt>
+    <dd><p>value to write</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="RetroEditor_Plugins_IMemoryAccess_WriteOppositeMachineOrder32_" data-uid="RetroEditor.Plugins.IMemoryAccess.WriteOppositeMachineOrder32*"></a>
+
+  <h3 id="RetroEditor_Plugins_IMemoryAccess_WriteOppositeMachineOrder32_System_Int32_System_Span_System_Byte__System_UInt32_" data-uid="RetroEditor.Plugins.IMemoryAccess.WriteOppositeMachineOrder32(System.Int32,System.Span{System.Byte},System.UInt32)">
+  WriteOppositeMachineOrder32(int, Span&lt;byte&gt;, uint)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/SavourySnaX/RetroEditor/blob/main/RetroEditor/Source/Public/Interfaces/Plugins/IMemoryAccess.cs/#L236"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Given a byte array and offset, writes a 32bit value in opposite machine order</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">void WriteOppositeMachineOrder32(int offset, Span&lt;byte&gt; bytes, uint value)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>offset</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>offset in bytes</p>
+</dd>
+    <dt><code>bytes</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.span-1">Span</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.byte">byte</a>&gt;</dt>
+    <dd><p>array of bytes</p>
+</dd>
+    <dt><code>value</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.uint32">uint</a></dt>
+    <dd><p>value to write</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/SavourySnaX/RetroEditor/blob/main/RetroEditor/Source/Public/Interfaces/Plugins/IMemoryAccess.cs/#L60" class="edit-link">Edit this page</a>
+        </div>
+
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          <span>Made with <a href="https://dotnet.github.io/docfx">docfx</a></span>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>
