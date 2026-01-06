@@ -7,6 +7,7 @@ internal interface IEditorInternal
     public void SaveState(byte[] state, ProjectSettings settings);
     public string GetRomPath(ProjectSettings settings);
     public string GetEditorDataPath(ProjectSettings settings, string name);
+    public Editor.EditorSettings Settings { get; }
 
     public void OpenWindow(IWindow window, string name);
     public void CloseWindow(string name);

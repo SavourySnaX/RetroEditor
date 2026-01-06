@@ -15,6 +15,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SystemPlugins", "SystemPlug
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RetroEditorApplication", "RetroEditorApplication\RetroEditorApplication.csproj", "{661A72FE-CAE1-46CB-B17C-F594F1EE9F5E}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RetroEditor.Integration.Tests", "Tests\RetroEditor.Integration.Tests\RetroEditor.Integration.Tests.csproj", "{859BB352-620D-4CB0-AA5A-5C7FC67C34F5}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -85,12 +87,25 @@ Global
 		{661A72FE-CAE1-46CB-B17C-F594F1EE9F5E}.Release|x64.Build.0 = Release|Any CPU
 		{661A72FE-CAE1-46CB-B17C-F594F1EE9F5E}.Release|x86.ActiveCfg = Release|Any CPU
 		{661A72FE-CAE1-46CB-B17C-F594F1EE9F5E}.Release|x86.Build.0 = Release|Any CPU
+		{859BB352-620D-4CB0-AA5A-5C7FC67C34F5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{859BB352-620D-4CB0-AA5A-5C7FC67C34F5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{859BB352-620D-4CB0-AA5A-5C7FC67C34F5}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{859BB352-620D-4CB0-AA5A-5C7FC67C34F5}.Debug|x64.Build.0 = Debug|Any CPU
+		{859BB352-620D-4CB0-AA5A-5C7FC67C34F5}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{859BB352-620D-4CB0-AA5A-5C7FC67C34F5}.Debug|x86.Build.0 = Debug|Any CPU
+		{859BB352-620D-4CB0-AA5A-5C7FC67C34F5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{859BB352-620D-4CB0-AA5A-5C7FC67C34F5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{859BB352-620D-4CB0-AA5A-5C7FC67C34F5}.Release|x64.ActiveCfg = Release|Any CPU
+		{859BB352-620D-4CB0-AA5A-5C7FC67C34F5}.Release|x64.Build.0 = Release|Any CPU
+		{859BB352-620D-4CB0-AA5A-5C7FC67C34F5}.Release|x86.ActiveCfg = Release|Any CPU
+		{859BB352-620D-4CB0-AA5A-5C7FC67C34F5}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{6BEED94A-7C44-9119-849B-4DEA13F1AE9E} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
+		{859BB352-620D-4CB0-AA5A-5C7FC67C34F5} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {B0472CE5-9D37-4DB3-859F-593F1CA9BE81}
