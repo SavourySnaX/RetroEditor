@@ -8,7 +8,10 @@ permissions:
 
 jobs:
   buildAndTest:
-    runs-on: [windows-11-arm, macos-latest, windows-latest] # ubuntu is covered in buildAndTestAndPackage
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [windows-11-arm, macos-latest, windows-latest] # ubuntu is covered in buildAndTestAndPackage
     steps:
     - uses: actions/checkout@v4
     - name: Setup .NET
