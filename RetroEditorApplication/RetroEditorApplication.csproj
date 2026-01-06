@@ -10,9 +10,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Content Include="..\Plugins\Source\GamePlugins\**" CopyToPublishDirectory="PreserveNewest" />
-    <Content Include="..\Plugins\Source\RomPlugins\**" CopyToPublishDirectory="PreserveNewest" />
-    <Content Include="..\Plugins\Plugins.csproj" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="..\Plugins\Source\GamePlugins\**" LinkBase="Plugins\Source\GamePlugins" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="..\Plugins\Source\RomPlugins\**" LinkBase="Plugins\Source\RomPlugins" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="..\Plugins\Plugins.csproj" LinkBase="Plugins" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>
