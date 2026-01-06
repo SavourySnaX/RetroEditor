@@ -37,22 +37,22 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: Windows-X64
-        path: bin/Release/net10.0/win-x64/publish
+        path: RetroEditorApplication/bin/Release/net10.0/win-x64/publish
     - name: Archive Windows Arm64
       uses: actions/upload-artifact@v4
       with:
         name: Windows-Arm64
-        path: bin/Release/net10.0/win-arm64/publish
+        path: RetroEditorApplication/bin/Release/net10.0/win-arm64/publish
     - name: Archive Linux X64
       uses: actions/upload-artifact@v4
       with:
         name: Linux-X64
-        path: bin/Release/net10.0/linux-x64/publish
+        path: RetroEditorApplication/bin/Release/net10.0/linux-x64/publish
     - name: Archive Macos Arm64
       uses: actions/upload-artifact@v4
       with:
         name: MacOS-Arm64
-        path: bin/Release/net10.0/osx-arm64/publish
+        path: RetroEditorApplication/bin/Release/net10.0/osx-arm64/publish
     - name: DocFX Build
       run: cd docfx && docfx docfx.json
       continue-on-error: false
