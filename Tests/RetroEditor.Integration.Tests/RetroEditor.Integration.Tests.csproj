@@ -12,6 +12,7 @@
     <PackageReference Include="xunit" Version="2.9.3" />
     <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
     <ProjectReference Include="..\..\RetroEditor\RetroEditor.csproj" />
+    <ProjectReference Include="..\..\Plugins\Plugins.csproj" />
   </ItemGroup>
 
   <ItemGroup>
