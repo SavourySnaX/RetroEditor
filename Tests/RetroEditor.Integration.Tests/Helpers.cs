@@ -1,9 +1,25 @@
 using System.Runtime.CompilerServices;
+using RetroEditor.Plugins;
+using Xunit.Abstractions;
 
 namespace RetroEditor.Integration.Tests;
 
 static class Helpers
 {
+    internal class TestLogger : ILogger
+    {
+        private readonly ITestOutputHelper _testOutputHelper;
+        public TestLogger(ITestOutputHelper testOutputHelper)
+        {
+            _testOutputHelper = testOutputHelper;
+        }
+
+        public void Add(LogType type, string logSource, string message)
+        {
+            _testOutputHelper.WriteLine($"[{type}] <{logSource}> - {message}");
+        }
+    }
+
     public static string GenerateTemporarySnesRom(string basePath = "")
     {
         var tempDirectory = System.IO.Path.GetTempPath();

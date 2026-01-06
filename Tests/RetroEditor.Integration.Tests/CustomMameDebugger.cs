@@ -10,19 +10,6 @@ public class CustomMameDebugger
     {
         TestOutputHelper = testOutputHelper;
     }
-    internal class TestLogger : ILogger
-    {
-        private readonly ITestOutputHelper _testOutputHelper;
-        public TestLogger(ITestOutputHelper testOutputHelper)
-        {
-            _testOutputHelper = testOutputHelper;
-        }
-
-        public void Add(LogType type, string logSource, string message)
-        {
-            _testOutputHelper.WriteLine($"[{type}] <{logSource}> - {message}");
-        }
-    }
 
     internal class MameSnesWrapper
     {
@@ -60,7 +47,7 @@ public class CustomMameDebugger
         LibMameDebugger? mameInstance = null;
         try
         {
-            var editor = new Editor(settings, new TestLogger(TestOutputHelper));
+            var editor = new Editor(settings, new Helpers.TestLogger(TestOutputHelper));
             retro = editor.GetDeveloperMame();
             Assert.NotNull(retro);
             Assert.Equal(1u, retro!.Version());
