@@ -3,8 +3,6 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.5.2.0
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RetroEditorApplication", "RetroEditorApplication.csproj", "{68506D1F-4508-3007-17A4-FC14A9D3F7A2}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Plugins", "Plugins\Plugins.csproj", "{20FE0F71-BEBC-DA11-601B-F6D834C8EA50}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RetroEditor", "RetroEditor\RetroEditor.csproj", "{04DD7F1D-D26B-2BC2-CF35-D7695F9B3E70}"
@@ -14,6 +12,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RetroEditor.Tests", "Tests\RetroEditor.Tests\RetroEditor.Tests.csproj", "{6BEED94A-7C44-9119-849B-4DEA13F1AE9E}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SystemPlugins", "SystemPlugins\SystemPlugins.csproj", "{180BB92E-DFBF-4D6E-9FA1-903EF7FD751F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RetroEditorApplication", "RetroEditorApplication\RetroEditorApplication.csproj", "{661A72FE-CAE1-46CB-B17C-F594F1EE9F5E}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -25,18 +25,6 @@ Global
 		Release|x86 = Release|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{68506D1F-4508-3007-17A4-FC14A9D3F7A2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{68506D1F-4508-3007-17A4-FC14A9D3F7A2}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{68506D1F-4508-3007-17A4-FC14A9D3F7A2}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{68506D1F-4508-3007-17A4-FC14A9D3F7A2}.Debug|x64.Build.0 = Debug|Any CPU
-		{68506D1F-4508-3007-17A4-FC14A9D3F7A2}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{68506D1F-4508-3007-17A4-FC14A9D3F7A2}.Debug|x86.Build.0 = Debug|Any CPU
-		{68506D1F-4508-3007-17A4-FC14A9D3F7A2}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{68506D1F-4508-3007-17A4-FC14A9D3F7A2}.Release|Any CPU.Build.0 = Release|Any CPU
-		{68506D1F-4508-3007-17A4-FC14A9D3F7A2}.Release|x64.ActiveCfg = Release|Any CPU
-		{68506D1F-4508-3007-17A4-FC14A9D3F7A2}.Release|x64.Build.0 = Release|Any CPU
-		{68506D1F-4508-3007-17A4-FC14A9D3F7A2}.Release|x86.ActiveCfg = Release|Any CPU
-		{68506D1F-4508-3007-17A4-FC14A9D3F7A2}.Release|x86.Build.0 = Release|Any CPU
 		{20FE0F71-BEBC-DA11-601B-F6D834C8EA50}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{20FE0F71-BEBC-DA11-601B-F6D834C8EA50}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{20FE0F71-BEBC-DA11-601B-F6D834C8EA50}.Debug|x64.ActiveCfg = Debug|Any CPU
@@ -85,6 +73,18 @@ Global
 		{180BB92E-DFBF-4D6E-9FA1-903EF7FD751F}.Release|x64.Build.0 = Release|Any CPU
 		{180BB92E-DFBF-4D6E-9FA1-903EF7FD751F}.Release|x86.ActiveCfg = Release|Any CPU
 		{180BB92E-DFBF-4D6E-9FA1-903EF7FD751F}.Release|x86.Build.0 = Release|Any CPU
+		{661A72FE-CAE1-46CB-B17C-F594F1EE9F5E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{661A72FE-CAE1-46CB-B17C-F594F1EE9F5E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{661A72FE-CAE1-46CB-B17C-F594F1EE9F5E}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{661A72FE-CAE1-46CB-B17C-F594F1EE9F5E}.Debug|x64.Build.0 = Debug|Any CPU
+		{661A72FE-CAE1-46CB-B17C-F594F1EE9F5E}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{661A72FE-CAE1-46CB-B17C-F594F1EE9F5E}.Debug|x86.Build.0 = Debug|Any CPU
+		{661A72FE-CAE1-46CB-B17C-F594F1EE9F5E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{661A72FE-CAE1-46CB-B17C-F594F1EE9F5E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{661A72FE-CAE1-46CB-B17C-F594F1EE9F5E}.Release|x64.ActiveCfg = Release|Any CPU
+		{661A72FE-CAE1-46CB-B17C-F594F1EE9F5E}.Release|x64.Build.0 = Release|Any CPU
+		{661A72FE-CAE1-46CB-B17C-F594F1EE9F5E}.Release|x86.ActiveCfg = Release|Any CPU
+		{661A72FE-CAE1-46CB-B17C-F594F1EE9F5E}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
