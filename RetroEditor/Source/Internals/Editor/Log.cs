@@ -1,7 +1,12 @@
 
 using RetroEditor.Plugins;
 
-internal class Log
+internal interface ILogger
+{
+    void Add(LogType type, string logSource, string message);
+}
+
+internal class Log : ILogger
 {
     private class LogEntry
     {

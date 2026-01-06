@@ -268,8 +268,7 @@ internal class LibRetroPlugin : IDisposable
         videoRefreshCallback = VideoRefreshCallback;
 
         audioHelper = new RayLibAudioHelper();
-        temporaryPath = Path.Combine(Directory.GetCurrentDirectory(), "Temp");
-        Directory.CreateDirectory(temporaryPath);
+        temporaryPath = editor.Settings.MameDebuggerDataFolder;
         debuggerTrampoline = IntPtr.Zero;
         debuggerCallback = null;
         loadedPath = "";

@@ -7,10 +7,22 @@ permissions:
   contents: write
 
 jobs:
-  build:
+  buildAndTest:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [windows-11-arm, macos-latest, windows-latest] # ubuntu is covered in buildAndTestAndPackage
+    steps:
+    - uses: actions/checkout@v4
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 10.0.x
+    - name: Test
+      run: dotnet test RetroEditor.sln --verbosity normal
 
+  buildAndTestAndPackage:
     runs-on: ubuntu-latest
-
     steps:
     - uses: actions/checkout@v4
     - name: Setup .NET
@@ -37,22 +49,22 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: Windows-X64
-        path: bin/Release/net10.0/win-x64/publish
+        path: RetroEditorApplication/bin/Release/net10.0/win-x64/publish
     - name: Archive Windows Arm64
       uses: actions/upload-artifact@v4
       with:
         name: Windows-Arm64
-        path: bin/Release/net10.0/win-arm64/publish
+        path: RetroEditorApplication/bin/Release/net10.0/win-arm64/publish
     - name: Archive Linux X64
       uses: actions/upload-artifact@v4
       with:
         name: Linux-X64
-        path: bin/Release/net10.0/linux-x64/publish
+        path: RetroEditorApplication/bin/Release/net10.0/linux-x64/publish
     - name: Archive Macos Arm64
       uses: actions/upload-artifact@v4
       with:
         name: MacOS-Arm64
-        path: bin/Release/net10.0/osx-arm64/publish
+        path: RetroEditorApplication/bin/Release/net10.0/osx-arm64/publish
     - name: DocFX Build
       run: cd docfx && docfx docfx.json
       continue-on-error: false

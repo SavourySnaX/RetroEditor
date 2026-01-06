@@ -120,7 +120,7 @@ internal class Editor : IEditor, IEditorInternal
     private Dictionary<string, Type> romPlugins;
     private Dictionary<string, Type> plugins;
     private List<ActiveProject> activeProjects;   // Needs to become active projects, since we now allow multiple of the same plugin
-    private WindowManager windowManager;
+    internal WindowManager windowManager;
 
     internal class EditorSettings
     {
@@ -130,6 +130,7 @@ internal class Editor : IEditor, IEditorInternal
         public string ProjectLocation { get; set;}
         public string LastImportedLocation { get; set;}
         public string RetroCoreFolder { get; set;}
+        public string MameDebuggerDataFolder { get; set; }
         public string LogFolder { get; set; }
         public List<string> RecentProjects { get; set;}
         public string Version { get; set; }
@@ -145,6 +146,7 @@ internal class Editor : IEditor, IEditorInternal
             ProjectLocation = Path.Combine(Directory.GetCurrentDirectory(), "Projects");
             RetroCoreFolder = Path.Combine(Directory.GetCurrentDirectory(), "Data");
             LogFolder = Path.Combine(Directory.GetCurrentDirectory(), "Logs");
+            MameDebuggerDataFolder = Path.Combine(Directory.GetCurrentDirectory(), "Temp");
             LastImportedLocation = "";
             RecentProjects = new List<string>();
             DeveloperMode = false;
@@ -155,7 +157,7 @@ internal class Editor : IEditor, IEditorInternal
 
     private EditorSettings settings;
 
-    internal EditorSettings Settings => settings;
+    public EditorSettings Settings => settings;
 
     internal IEnumerable<string> Plugins => plugins.Keys;
 
@@ -165,7 +167,7 @@ internal class Editor : IEditor, IEditorInternal
 
     private Dictionary<Type, GamePluginLoader> pluginToLoader = new Dictionary<Type, GamePluginLoader>();
 
-    private Log _log;
+    private ILogger _log;
 
 
     internal Editor()
@@ -174,15 +176,18 @@ internal class Editor : IEditor, IEditorInternal
 
         windowManager = new WindowManager(this);
 
-        settings = new EditorSettings();
-
-        if (File.Exists("settings.json"))
+        if (settings == null)
         {
-            var json = File.ReadAllText("settings.json");
-            var tempSettings = JsonSerializer.Deserialize<EditorSettings>(json);
-            if (tempSettings != null)
+            settings = new EditorSettings();
+
+            if (File.Exists("settings.json"))
             {
-                settings = tempSettings;
+                var json = File.ReadAllText("settings.json");
+                var tempSettings = JsonSerializer.Deserialize<EditorSettings>(json);
+                if (tempSettings != null)
+                {
+                    settings = tempSettings;
+                }
             }
         }
 
@@ -201,13 +206,27 @@ internal class Editor : IEditor, IEditorInternal
             Directory.CreateDirectory(settings.LogFolder);
         }
 
-        _log = new Log(Path.Combine(settings.LogFolder, "editor.log"));
+        if (!Directory.Exists(settings.MameDebuggerDataFolder))
+        {
+            Directory.CreateDirectory(settings.MameDebuggerDataFolder);
+        }
+
+        if (_log == null)
+        {
+            _log = new Log(Path.Combine(settings.LogFolder, "editor.log"));
+        }
 
         this.romPlugins = new Dictionary<string, Type>();
 
         this.plugins = new Dictionary<string, Type>();
         currentActiveProject=null;
         mameInstance = null;
+    }
+
+    internal Editor(EditorSettings editorSettings, ILogger logger) : this()
+    {
+        settings = editorSettings;
+        _log = logger;
     }
 
     internal void InitialisePlugins(IEnumerable<GamePluginLoader> plugins, Type[] romPlugins)
@@ -248,7 +267,7 @@ internal class Editor : IEditor, IEditorInternal
         pluginLoader.UnloadPlugin();
     }
 
-    public Log AccessLog => _log;
+    public Log AccessLog => _log as Log ?? throw new Exception("AccessLog is intended for logview only!");
 
     public void Log(LogType type, string logSource, string message)
     {

@@ -26,9 +26,6 @@ namespace RetroEditor.Tests
             romDataParser.AddCodeRange(disassembler, 9, 11);
             
             Assert.True(romDataParser.GetRomRanges.Count == 1, "Code range count should be 1.");
-
-
-
         }
     }
 }
