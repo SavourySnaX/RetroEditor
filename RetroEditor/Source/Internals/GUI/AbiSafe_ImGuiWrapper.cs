@@ -22,6 +22,7 @@ namespace RetroEditor.Source.Internals.GUI
         static delegate* unmanaged[Cdecl]<byte*, int, ImGuiTableFlags, UInt64, float, byte> igBeginTable;
         static delegate* unmanaged[Cdecl]<UInt64,UInt64,uint> igGetColorU32_Vec4;
         static delegate* unmanaged[Cdecl]<UInt64, ImGuiCond, void> igSetNextWindowSize;
+        static delegate* unmanaged[Cdecl]<byte*, ImGuiViewport*, ImGuiDir, float, ImGuiWindowFlags, byte> igBeginViewportSideBar;
         static delegate* unmanaged[Cdecl]<ImDrawList*, nint, UInt64, UInt64, UInt64, UInt64, uint, void> ImDrawList_AddImage;
         static delegate* unmanaged[Cdecl]<ImDrawList*, UInt64, UInt64, uint, float, ImDrawFlags, float, void> ImDrawList_AddRect;
         static delegate* unmanaged[Cdecl]<ImDrawList*, UInt64, UInt64, uint, float, ImDrawFlags, void> ImDrawList_AddRectFilled;
@@ -43,6 +44,7 @@ namespace RetroEditor.Source.Internals.GUI
             var method11 = NativeLibrary.GetExport(cimguiHandle, "igBeginTable");
             var method12 = NativeLibrary.GetExport(cimguiHandle, "igGetColorU32_Vec4");
             var method13 = NativeLibrary.GetExport(cimguiHandle, "igSetNextWindowSize");
+            var method14 = NativeLibrary.GetExport(cimguiHandle, "igBeginViewportSideBar");
 
             // Cache the delegates
             igBeginChild_Str = (delegate* unmanaged[Cdecl]<byte*, UInt64, ImGuiNET.ImGuiChildFlags, ImGuiNET.ImGuiWindowFlags, byte>)method;
@@ -53,6 +55,7 @@ namespace RetroEditor.Source.Internals.GUI
             igBeginTable = (delegate* unmanaged[Cdecl]<byte*, int, ImGuiTableFlags, UInt64, float, byte>)method11;
             igSetNextWindowSize = (delegate* unmanaged[Cdecl]<UInt64, ImGuiCond, void>)method13;
             igGetColorU32_Vec4 = (delegate* unmanaged[Cdecl]<UInt64,UInt64,uint>)method12;
+            igBeginViewportSideBar = (delegate* unmanaged[Cdecl]<byte*, ImGuiViewport*, ImGuiDir, float, ImGuiWindowFlags, byte>)method14;
             ImDrawList_AddImage = (delegate* unmanaged[Cdecl]<ImDrawList*, nint, UInt64, UInt64, UInt64, UInt64, uint, void>)method4;
             ImDrawList_AddRect = (delegate* unmanaged[Cdecl]<ImDrawList*, UInt64, UInt64, uint, float, ImDrawFlags, float, void>)method5;
             ImDrawList_AddRectFilled = (delegate* unmanaged[Cdecl]<ImDrawList*, UInt64, UInt64, uint, float, ImDrawFlags, void>)method6;
@@ -77,6 +80,21 @@ namespace RetroEditor.Source.Internals.GUI
             {
                 return ImGuiNET.ImGui.GetColorU32(col);
             }
+        }
+
+        public static bool BeginViewportSideBar(string name, ImGuiViewportPtr viewport, ImGuiDir dir, float size, ImGuiWindowFlags flags)
+        {
+            // Not emulated, because this function is not exposed in .net bindings
+            var len = name == null ? 0 : Encoding.UTF8.GetByteCount(name);
+            var bytes = stackalloc byte[len + 1];
+            if (name != null)
+            {
+                fixed (char* strPtr = name)
+                {
+                    Encoding.UTF8.GetBytes(strPtr, name.Length, bytes, len);
+                }
+            }
+            return igBeginViewportSideBar(bytes, viewport, dir, size, flags) != 0;
         }
 
         public static void SetNextWindowSize(Vector2 size, ImGuiCond cond)
