@@ -1,4 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <!-- Injected during publish -->
+  </PropertyGroup>
 
   <ItemGroup Condition="'$(RetroEditorBuilding)' != 'Yes'">
     <Reference Include="..\ReferenceAssemblies\*.dll" />
@@ -10,4 +13,3 @@
   </ItemGroup>
 
 </Project>
-

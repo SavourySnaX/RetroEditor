@@ -12,7 +12,7 @@
   <ItemGroup>
     <Content Include="..\Plugins\Source\GamePlugins\**" LinkBase="Plugins\Source\GamePlugins" CopyToPublishDirectory="PreserveNewest" />
     <Content Include="..\Plugins\Source\RomPlugins\**" LinkBase="Plugins\Source\RomPlugins" CopyToPublishDirectory="PreserveNewest" />
-    <Content Include="..\Plugins\Plugins.csproj" LinkBase="Plugins" CopyToPublishDirectory="PreserveNewest" />
+    <!-- DONT COPY - THIS IS DONE VIA TRANSFORM BELOW <Content Include="..\Plugins\Plugins.csproj" LinkBase="Plugins" CopyToPublishDirectory="PreserveNewest" /> -->
   </ItemGroup>
 
   <ItemGroup>
@@ -20,10 +20,11 @@
     <ProjectReference Include="..\Plugins\Plugins.csproj" Condition="'$(Configuration)'=='Debug'" /> <!-- Verify no compile issues when running in debugger, but avoid publishing with the plugins built -->
   </ItemGroup>
 
-  <Target Name="CopyReferenceAssemblies" AfterTargets="Publish">
-    <ItemGroup>
-      <SourceFiles Include="..\ReferenceAssemblies\*.dll" />
-    </ItemGroup>
-    <Copy SourceFiles="@(SourceFiles)" DestinationFolder="$(PublishDir)\ReferenceAssemblies\" SkipUnchangedFiles="true" />
+  <Target Name="TransformCopiedProject" AfterTargets="Publish">
+    <TransformProject
+        InputProject="..\Plugins\Plugins.csproj"
+        OutputProject="$(PublishDir)Plugins\Plugins.csproj"
+        TargetFramework="$(TargetFramework)" />
   </Target>
+
 </Project>
