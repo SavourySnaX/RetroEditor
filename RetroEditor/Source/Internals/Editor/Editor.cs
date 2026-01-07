@@ -8,6 +8,7 @@ using System.Runtime.InteropServices;
 using System.IO.Compression;
 using RetroEditor.Plugins;
 using RetroEditor.Source.Internals.GUI;
+using System.Diagnostics;
 
 internal class MenuData : IMenuItem
 {
@@ -302,6 +303,7 @@ internal class Editor : IEditor, IEditorInternal
     private unsafe delegate* unmanaged[Cdecl]<void*, int, sbyte*, sbyte*, void> RayLibLogInstanceDelegate;
     private unsafe delegate* unmanaged[Cdecl]<TraceLogLevel, byte*, nint, void> LogWithInstance;
 
+    int fps = 0;
     internal void RenderRun()
     {
         var pin = GCHandle.Alloc(this);
@@ -385,12 +387,17 @@ internal class Editor : IEditor, IEditorInternal
 
             rlImGui.Begin();
 
+            ImGui.DockSpaceOverViewport();
+
+            NewStatusBar();
+
             var quit= DrawUI(deltaTime);
 
             rlImGui.End();
 
             Raylib.EndDrawing();
             deltaTime = Raylib.GetFrameTime();
+            fps = (int)(1.0f / deltaTime);
 
             if (quit)
             {
@@ -413,6 +420,40 @@ internal class Editor : IEditor, IEditorInternal
             Raylib.SetTraceLogCallback(null);
         }
         pin.Free();
+    }
+
+    Task<long> memoryMeasureTask = Task.FromResult(0L);
+    long memoryUsageMb;
+    int fpsTotal=0;
+    private void NewStatusBar()
+    {
+        var viewport = ImGui.GetMainViewport();
+        var window_flags = ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoSavedSettings | ImGuiWindowFlags.MenuBar;
+        var height = ImGui.GetFrameHeight();
+
+        if (AbiSafe_ImGuiWrapper.BeginViewportSideBar("##MainStatusBar", viewport, ImGuiDir.Down, height, window_flags))
+        {
+            if (memoryMeasureTask.IsCompleted)
+            {
+                memoryUsageMb = memoryMeasureTask.Result / (1024 * 1024);
+                memoryMeasureTask = Task.Run(() =>
+                {
+                    Task.Delay(1000).Wait();
+                    fpsTotal = fps;
+                    return Process.GetCurrentProcess().WorkingSet64;
+                });
+            }
+            if (ImGui.BeginMenuBar())
+            {
+                ImGui.Text($"Memory Usage: {memoryUsageMb} MB");
+                ImGui.SameLine();
+                ImGui.Text("|");
+                ImGui.SameLine();
+                ImGui.Text($"Approx FPS : {fpsTotal}");
+                ImGui.EndMenuBar();
+            }
+        }
+        ImGui.End();
     }
 
     private bool DrawUI(float deltaTime)
@@ -545,13 +586,13 @@ internal class Editor : IEditor, IEditorInternal
                                             var retro = GetLibRetroInstance(instance.LibRetroPluginName, null, out _);
                                             if (retro != null)
                                             {
-                                                var pluginWindow = new LibRetroPlayerWindow(retro);
+                                                var pluginWindow = new LibRetroPlayerWindow(retro, true);
                                                 var playableRom = new PlayableRom(this, retro, instance, new DummyRetroPlugin());
                                                 pluginWindow.Initialise();
                                                 retro.LoadGame(path);
                                                 pluginWindow.OtherStuff();
                                                 pluginWindow.InitWindow();
-                                                windowManager.AddWindow(pluginWindow, plugin.Key, null);
+                                                windowManager.AddWindow(pluginWindow, $"{plugin.Key} - {Path.GetFileName(path)} - {Path.GetFileName(retro.DllName)}", null);
                                             }
                                         }
                                     }
@@ -880,7 +921,7 @@ internal class Editor : IEditor, IEditorInternal
         {
             return null;
         }
-        var emuPlugin = GetLibRetroInstance(romInterface.LibRetroPluginName, projectSettings, out isNew); 
+        var emuPlugin = GetLibRetroInstance(romInterface.LibRetroPluginName, projectSettings, out isNew);
         if (emuPlugin == null)
         {
             return null;
@@ -899,7 +940,7 @@ internal class Editor : IEditor, IEditorInternal
         {
             return false;
         }
-        if (firstTime)
+        if (true || firstTime)  // BUG- problems with fuse reloads so for now always do setup
         {
             playableRom.Setup(projectSettings, GetRomPath(projectSettings), playableRom.retroPlugin.RequiresAutoLoad ? playableRom.retroPlugin.AutoLoadCondition : null);
         }
@@ -1026,9 +1067,13 @@ internal class Editor : IEditor, IEditorInternal
         string? destinationPluginPath;
         if (projectSettings == null)
         {
-            // Developer mode, we don't have a project folder
-            destinationPluginPath = sourcePluginPath;
-            destinationPlugin = sourcePlugin;
+            // Developer mode, we don't have a project folder - instead
+            //we use the temp folder, and generate a unique random name to avoid clashes
+            var likelyUniqueName = DateTime.Now.Ticks.ToString("X16");
+            destinationPluginPath = Path.Combine(settings.TempFolder, likelyUniqueName);
+            Directory.CreateDirectory(destinationPluginPath);
+            
+            destinationPlugin = Path.Combine(destinationPluginPath, $"{likelyUniqueName}{extension}");
         }
         else
         {

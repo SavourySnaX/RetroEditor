@@ -12,6 +12,11 @@ namespace RetroEditor.Plugins
         static abstract string Name { get; }
 
         /// <summary>
+        /// Name of the plugin (allows retrieval without knowing the type)
+        /// </summary>
+        string PluginName => this.GetType().InvokeMember("Name", System.Reflection.BindingFlags.Static|System.Reflection.BindingFlags.GetProperty, null, null, null) as string?? "Unknown";
+
+        /// <summary>
         /// Name of the rom plugin required for this game
         /// </summary>
         string RomPluginName { get; }

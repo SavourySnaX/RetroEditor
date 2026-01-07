@@ -219,6 +219,7 @@ internal class LibRetroPlugin : IDisposable
     public const int RetroKeyArrayCount = 512;
     private IEditorInternal _editor;
     private GCHandle _pinnedEditor;
+    internal string DllName { get; private set; }
 
     public LibRetroPlugin(IEditorInternal editor, string path)
     {
@@ -229,6 +230,7 @@ internal class LibRetroPlugin : IDisposable
         {
             path = pathOverride;
         }
+        DllName = Path.GetFileNameWithoutExtension(path);
         nativeGameInfo = Marshal.AllocHGlobal(Marshal.SizeOf<retro_game_info_ext>());   // we need to own this memory, dispose will free
         keyArray = new bool[RetroKeyArrayCount];
         keyMap = new int[RetroKeyArrayCount];

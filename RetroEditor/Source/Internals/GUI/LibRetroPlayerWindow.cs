@@ -13,10 +13,12 @@ internal class LibRetroPlayerWindow : IWindow
     float scale = 2.0f;
 
     uint frameWidth, frameHeight;
+    bool closeAndDisposeOnClose;
 
-    public LibRetroPlayerWindow(LibRetroPlugin plugin)
+    public LibRetroPlayerWindow(LibRetroPlugin plugin, bool closeAndDisposeOnClose = false)
     {
         this.plugin = plugin;
+        this.closeAndDisposeOnClose = closeAndDisposeOnClose;
     }
 
     public bool Initialise()
@@ -108,6 +110,11 @@ internal class LibRetroPlayerWindow : IWindow
 
     public void Close()
     {
+        if (closeAndDisposeOnClose)
+        {
+            plugin.Close();
+            plugin.Dispose();
+        }
     }
 
 }
