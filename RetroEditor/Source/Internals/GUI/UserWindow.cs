@@ -12,6 +12,7 @@ internal class UserWindow : IWindow
     internal IUserWindow UserWindowInterface => _userWindow;
 
     public float UpdateInterval => _userWindow.UpdateInterval;
+    public bool MinimumSize => false;
 
     public void Close()
     {

@@ -6,6 +6,7 @@ using RetroEditor.Source.Internals.GUI;
 internal class DebuggerView : IWindow
 {
     public float UpdateInterval => 1.0f/30;
+    public bool MinimumSize => false;
 
     int sourceIndex =0;
     string expressionStore = "";

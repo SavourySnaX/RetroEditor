@@ -5,6 +5,8 @@ class FileDialog : IWindow
 {
     public float UpdateInterval => 9999.0f;
 
+    public bool MinimumSize => true;
+
     public enum FileDialogType
     {
         Open,

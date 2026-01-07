@@ -5,6 +5,7 @@ using System.Numerics;
 internal class Resourcer : IWindow
 {
     public float UpdateInterval => 1 / 60.0f;
+    public bool MinimumSize => false;
     
     LibMameDebugger debugger;
     RomDataParser romData;

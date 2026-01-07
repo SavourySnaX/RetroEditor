@@ -4,6 +4,7 @@ using rlImGui_cs;
 
 internal class LibRetroPlayerWindow : IWindow
 {
+    public bool MinimumSize => false;
     Texture2D bitmap;
 
     LibRetroPlugin plugin;
