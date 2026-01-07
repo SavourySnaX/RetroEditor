@@ -1030,7 +1030,14 @@ internal class LibRetroPlugin : IDisposable
                                 Array.Copy(valueOptions, 0, storeData, 1, valueOptions.Length);
                                 storeData[0] = valueDisplayName;
 
-                                core_options.Add(key, storeData);
+                                if (core_options.ContainsKey(key))
+                                {
+                                    core_options[key] = storeData;
+                                }
+                                else
+                                {
+                                    core_options.Add(key, storeData);
+                                }
                             }
                             else
                             {
