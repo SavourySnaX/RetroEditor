@@ -1,4 +1,5 @@
 
+using System.Collections.Concurrent;
 using RetroEditor.Plugins;
 
 internal interface ILogger
@@ -33,12 +34,20 @@ internal class Log : ILogger
     private Dictionary<string, List<LogEntry>> _logPerSource = new Dictionary<string, List<LogEntry>>();
     private string _logPath;
 
+    private ConcurrentQueue<string> logWriteQueue = new ConcurrentQueue<string>();
+    private Task taskWriter;
     public Log(string path)
     {
         _logPath = path;
+        taskWriter = Task.CompletedTask;
+        if (File.Exists(_logPath))
+        {
+            File.Delete(_logPath);
+        }
         Clear();
     }
 
+    // Can be called from multiple threads
     public void Add(LogType type, string logSource, string message)
     {
 #if !DEBUG
@@ -57,26 +66,51 @@ internal class Log : ILogger
                 _log.Add(logEntry);
                 _logPerSource.TryAdd(logSource, new List<LogEntry>());
                 _logPerSource[logSource].Add(logEntry);
-                Console.WriteLine(entry);
-                File.AppendAllTextAsync(_logPath, $"{entry}\n");
+
+                logWriteQueue.Enqueue(entry);
             }
+            KickWriter();
+        }
+    }
+
+    void KickWriter()
+    {
+        if (taskWriter.IsCompleted)
+        {
+            taskWriter = Task.Run(async () =>
+            {
+                while (logWriteQueue.TryDequeue(out var logLine))
+                {
+                    await File.AppendAllTextAsync(_logPath, logLine + Environment.NewLine);
+                }
+            });
         }
     }
 
     public void Clear()
     {
-        File.WriteAllTextAsync(_logPath, "");
-        _log.Clear();
+        logWriteQueue.Enqueue("_LOG CLEARED_");
+        lock(_log)
+        {
+            _log.Clear();
+            KickWriter();
+        }
     }
 
     public int Count()
     {
-        return _log.Count;
+        lock(_log)
+        {
+            return _log.Count;
+        }
     }
 
     internal ReadOnlySpan<char> Entry(int index)
     {
-        return _log[index].ToString().AsSpan();
+        lock(_log)
+        {
+            return _log[index].ToString().AsSpan();
+        }
     }
 
     internal IEnumerable<string> Sources()
