@@ -329,6 +329,8 @@ internal class Editor : IEditor, IEditorInternal
 
         Raylib.InitAudioDevice();
 
+        Raylib.SetExitKey(KeyboardKey.Null); // Disable exit key to allow proper shutdown
+
         var args = Environment.GetCommandLineArgs().Skip(1);
 
         // SPEED STUFF UP FOR NOW
