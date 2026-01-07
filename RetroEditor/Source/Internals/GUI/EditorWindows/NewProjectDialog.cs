@@ -5,6 +5,7 @@ using RetroEditor.Source.Internals.GUI;
 class NewProjectDialog : IWindow
 {
     public float UpdateInterval => 1/30f;
+    public bool MinimumSize => false;
 
     private string projectName="";
     private string projectLocation="";

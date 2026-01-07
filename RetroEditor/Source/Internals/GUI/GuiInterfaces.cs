@@ -21,6 +21,12 @@ public interface IWindow
     float UpdateInterval { get; }
 
     /// <summary>
+    /// Set a minimum size for this window workaround for windows that have 
+    /// problems with their initial size.
+    /// </summary>
+    bool MinimumSize { get; }
+
+    /// <summary>
     /// Draw the window
     /// </summary>
     /// <returns>true if the window should close</returns>

@@ -4,7 +4,7 @@ using RetroEditor.Source.Internals.GUI;
 class LogView : IWindow
 {
     public float UpdateInterval => 0.5f;
-
+    public bool MinimumSize => true;
     private IEditorInternal editor;
 
     private string[] cachedLog = Array.Empty<string>();

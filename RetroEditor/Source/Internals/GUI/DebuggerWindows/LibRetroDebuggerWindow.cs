@@ -6,6 +6,7 @@ using rlImGui_cs;
 
 internal class LibRetroDebuggerWindow : IWindow
 {
+    public bool MinimumSize => false;
     Texture2D bitmap;
 
     LibRetroPlugin plugin;
