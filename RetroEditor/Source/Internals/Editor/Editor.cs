@@ -7,7 +7,7 @@ using System.Text.Json;
 using System.Runtime.InteropServices;
 using System.IO.Compression;
 using RetroEditor.Plugins;
-using System.ComponentModel.DataAnnotations;
+using RetroEditor.Source.Internals.GUI;
 
 internal class MenuData : IMenuItem
 {
@@ -132,6 +132,7 @@ internal class Editor : IEditor, IEditorInternal
         public string LastImportedLocation { get; set;}
         public string RetroCoreFolder { get; set;}
         public string MameDebuggerDataFolder { get; set; }
+        public string TempFolder { get; set; }
         public string LogFolder { get; set; }
         public List<string> RecentProjects { get; set;}
         public string Version { get; set; }
@@ -147,7 +148,8 @@ internal class Editor : IEditor, IEditorInternal
             ProjectLocation = Path.Combine(Directory.GetCurrentDirectory(), "Projects");
             RetroCoreFolder = Path.Combine(Directory.GetCurrentDirectory(), "Data");
             LogFolder = Path.Combine(Directory.GetCurrentDirectory(), "Logs");
-            MameDebuggerDataFolder = Path.Combine(Directory.GetCurrentDirectory(), "Temp");
+            MameDebuggerDataFolder = Path.Combine(Directory.GetCurrentDirectory(), "Mame");
+            TempFolder = Path.Combine(RetroCoreFolder, "Temp");
             LastImportedLocation = "";
             RecentProjects = new List<string>();
             DeveloperMode = false;
@@ -211,6 +213,13 @@ internal class Editor : IEditor, IEditorInternal
         {
             Directory.CreateDirectory(settings.MameDebuggerDataFolder);
         }
+
+        // Clear out temp folder on startup
+        if (Directory.Exists(settings.TempFolder))
+        {
+            Directory.Delete(settings.TempFolder, true);
+        }
+        Directory.CreateDirectory(settings.TempFolder);
 
         if (_log == null)
         {
