@@ -1,0 +1,13 @@
+<Project>
+  <UsingTask
+      Condition="'$(MSBuildProjectName)' != 'TransformProject'"
+      TaskName="TransformProject"
+      AssemblyFile="$(MSBuildThisFileDirectory)BuildTasks/bin/$(Configuration)/netstandard2.0/TransformProject.dll" />
+
+  <Target Name="BuildTransformTask" BeforeTargets="PrepareForBuild" Condition="'$(MSBuildProjectName)' != 'TransformProject'">
+    <MSBuild Projects="$(MSBuildThisFileDirectory)BuildTasks/TransformProject.csproj"
+             Targets="Build"
+             Properties="Configuration=$(Configuration)" />
+  </Target>
+
+</Project>
