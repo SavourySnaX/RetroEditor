@@ -9,6 +9,7 @@ RetroEditor/obj/**
 *.ini
 Data/**
 Temp/**
+Mame/**
 Logs/**
 Projects/**
 Properties/**
