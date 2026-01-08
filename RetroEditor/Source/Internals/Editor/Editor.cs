@@ -440,7 +440,7 @@ internal class Editor : IEditor, IEditorInternal
                 {
                     Task.Delay(1000).Wait();
                     fpsTotal = fps;
-                    return Process.GetCurrentProcess().WorkingSet64;
+                    return Environment.WorkingSet;
                 });
             }
             if (ImGui.BeginMenuBar())
