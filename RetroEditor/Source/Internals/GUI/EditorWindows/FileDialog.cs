@@ -1,5 +1,4 @@
-using ImGuiNET;
-using RetroEditor.Source.Internals.GUI;
+using MyMGui;
 
 class FileDialog : IWindow
 {
@@ -76,68 +75,64 @@ class FileDialog : IWindow
         {
             numEntries = currentDirectories.Length + 1;
             ImGui.SameLine();
-            if (AbiSafe_ImGuiWrapper.Button("Select Folder"))
+            if (ImGui.Button("Select Folder"))
             {
                 shouldClose = onSelected.Invoke(defaultPath);
             }
         }
 
-        if (AbiSafe_ImGuiWrapper.BeginChild("Scrolling", new System.Numerics.Vector2(0, 0), ImGuiChildFlags.None, ImGuiWindowFlags.HorizontalScrollbar))
+        if (ImGui.BeginChild("Scrolling", default, ImGuiChildFlags.None, ImGuiWindowFlags.HorizontalScrollbar))
         {
-            unsafe
+            using var clipper = new ListClipper(numEntries, -1.0f);
+            clipper.Begin();
+            bool changed = false;
+            while (!changed && clipper.Step())
             {
-                var clipper = ImGuiNative.ImGuiListClipper_ImGuiListClipper();
-                ImGuiNative.ImGuiListClipper_Begin(clipper, numEntries, -1.0f);
-                bool changed = false;
-                while (ImGuiNative.ImGuiListClipper_Step(clipper) != 0)
+                for (int i = clipper.DisplayStart; i < clipper.DisplayEnd; i++)
                 {
-                    if (changed) break;
-                    for (int i = clipper->DisplayStart; i < clipper->DisplayEnd; i++)
+                    if (i == 0)
                     {
-                        if (i == 0)
+                        ImGui.Selectable("[DIR] ..");
+                        if (ImGui.IsItemClicked())
                         {
-                            AbiSafe_ImGuiWrapper.Selectable("[DIR] ..");
-                            if (ImGui.IsItemClicked())
+                            if (Path.GetPathRoot(defaultPath) != defaultPath)
                             {
-                                if (Path.GetPathRoot(defaultPath) != defaultPath)
-                                {
-                                    UpdatePath(Path.GetDirectoryName(defaultPath) ?? "");
-                                    changed = true;
-                                    break;
-                                }
-                            }
-                        }
-                        else if (i-1 < currentDirectories.Length)
-                        {
-                            var dir = currentDirectories[i - 1];
-                            AbiSafe_ImGuiWrapper.Selectable($"[DIR] {Path.GetFileName(dir)}");
-                            if (ImGui.IsItemClicked())
-                            {
-                                UpdatePath(dir);
+                                UpdatePath(Path.GetDirectoryName(defaultPath) ?? "");
                                 changed = true;
                                 break;
                             }
                         }
-                        else
+                    }
+                    else if (i - 1 < currentDirectories.Length)
+                    {
+                        var dir = currentDirectories[i - 1];
+                        ImGui.Selectable($"[DIR] {Path.GetFileName(dir)}");
+                        if (ImGui.IsItemClicked())
                         {
-                            var file = currentFiles[i - 1 - currentDirectories.Length];
-                            AbiSafe_ImGuiWrapper.Selectable(Path.GetFileName(file));
-                            if (ImGui.IsItemClicked())
-                            {
-                                shouldClose = onSelected.Invoke(file);
-                            }
+                            UpdatePath(dir);
+                            changed = true;
+                            break;
+                        }
+                    }
+                    else
+                    {
+                        var file = currentFiles[i - 1 - currentDirectories.Length];
+                        ImGui.Selectable(Path.GetFileName(file));
+                        if (ImGui.IsItemClicked())
+                        {
+                            shouldClose = onSelected.Invoke(file);
                         }
                     }
                 }
-                ImGuiNative.ImGuiListClipper_End(clipper);
-                ImGuiNative.ImGuiListClipper_destroy(clipper);
             }
-            if (ImGui.GetScrollY() >= ImGui.GetScrollMaxY())
-            {
-                ImGui.SetScrollHereY(1.0f);
-            }
+            clipper.End();
+        }
+        if (ImGui.GetScrollY() >= ImGui.GetScrollMaxY())
+        {
+            ImGui.SetScrollHereY(1.0f);
         }
         ImGui.EndChild();
+
         return shouldClose;
     }
 

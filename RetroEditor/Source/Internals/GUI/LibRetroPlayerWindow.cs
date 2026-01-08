@@ -1,5 +1,5 @@
-using ImGuiNET;
 using Raylib_cs.BleedingEdge;
+using MyMGui;
 using rlImGui_cs;
 
 internal class LibRetroPlayerWindow : IWindow
@@ -78,7 +78,6 @@ internal class LibRetroPlayerWindow : IWindow
         }
 
         rlImGui.ImageRect(bitmap, (int)(aVInfo.geometry.baseWidth * scale), (int)(aVInfo.geometry.baseHeight * scale), new Rectangle(0,0,frameWidth,frameHeight));
-
         if (ImGui.IsWindowFocused())
         {
             // JSW keys
@@ -104,7 +103,6 @@ internal class LibRetroPlayerWindow : IWindow
             plugin.UpdateKey(KeyboardKey.M, ImGui.IsKeyDown(ImGuiKey.M));
             plugin.UpdateKey(KeyboardKey.N, ImGui.IsKeyDown(ImGuiKey.N));
         }
-
         return false;
     }
 

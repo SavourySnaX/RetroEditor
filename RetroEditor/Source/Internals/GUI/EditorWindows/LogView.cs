@@ -1,5 +1,4 @@
-using ImGuiNET;
-using RetroEditor.Source.Internals.GUI;
+using MyMGui;
 
 class LogView : IWindow
 {
@@ -22,22 +21,18 @@ class LogView : IWindow
 
     private void DrawLog(string[] log)
     {
-        if (AbiSafe_ImGuiWrapper.BeginChild("Scrolling", new System.Numerics.Vector2(0, 0), ImGuiChildFlags.None, ImGuiWindowFlags.HorizontalScrollbar))
+        if (ImGui.BeginChild("Scrolling", new System.Numerics.Vector2(0, 0), ImGuiChildFlags.None, ImGuiWindowFlags.HorizontalScrollbar))
         {
-            unsafe
+            var clipper = new ListClipper(log.Length, -1.0f);
+            clipper.Begin();
+            while (clipper.Step())
             {
-                var clipper = ImGuiNative.ImGuiListClipper_ImGuiListClipper();
-                ImGuiNative.ImGuiListClipper_Begin(clipper, log.Length, -1.0f);
-                while (ImGuiNative.ImGuiListClipper_Step(clipper) != 0)
+                for (int i = clipper.DisplayStart; i < clipper.DisplayEnd; i++)
                 {
-                    for (int i = clipper->DisplayStart; i < clipper->DisplayEnd; i++)
-                    {
-                        ImGui.TextUnformatted(log[i]);
-                    }
+                    ImGui.Text(log[i]);
                 }
-                ImGuiNative.ImGuiListClipper_End(clipper);
-                ImGuiNative.ImGuiListClipper_destroy(clipper);
             }
+            clipper.End();
             if (ImGui.GetScrollY() >= ImGui.GetScrollMaxY())
             {
                 ImGui.SetScrollHereY(1.0f);

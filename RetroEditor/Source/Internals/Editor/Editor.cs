@@ -1,14 +1,12 @@
 using Raylib_cs;
 using Raylib_cs.BleedingEdge;
 using rlImGui_cs;
-using ImGuiNET;
 using System.Security.Cryptography;
 using System.Text.Json;
 using System.Runtime.InteropServices;
 using System.IO.Compression;
 using RetroEditor.Plugins;
-using RetroEditor.Source.Internals.GUI;
-using System.Diagnostics;
+using MyMGui;
 
 internal class MenuData : IMenuItem
 {
@@ -316,7 +314,7 @@ internal class Editor : IEditor, IEditorInternal
         }
 
         var config = ConfigFlags.WindowResizable;
-        if (settings.EnableHighDPI)
+        if (settings.EnableHighDPI || RuntimeInformation.IsOSPlatform(OSPlatform.OSX) )
         {
             config|=ConfigFlags.WindowHighDpi;
         }
@@ -336,6 +334,7 @@ internal class Editor : IEditor, IEditorInternal
         {
             Raylib.MaximizeWindow();
         }
+
         rlImGui.Setup(darkTheme: true, enableDocking: true);
 
         Raylib.InitAudioDevice();
@@ -415,6 +414,8 @@ internal class Editor : IEditor, IEditorInternal
         var json = JsonSerializer.Serialize<EditorSettings>(settings, new JsonSerializerOptions { WriteIndented = true });
         File.WriteAllText("settings.json", json);
 
+        rlImGui.Shutdown();
+
         unsafe
         {
             Raylib.SetTraceLogCallback(null);
@@ -431,7 +432,7 @@ internal class Editor : IEditor, IEditorInternal
         var window_flags = ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoSavedSettings | ImGuiWindowFlags.MenuBar;
         var height = ImGui.GetFrameHeight();
 
-        if (AbiSafe_ImGuiWrapper.BeginViewportSideBar("##MainStatusBar", viewport, ImGuiDir.Down, height, window_flags))
+        if (ImGui.BeginViewportSideBar("##MainStatusBar", viewport, ImGuiDir.Down, height, window_flags))
         {
             if (memoryMeasureTask.IsCompleted)
             {
@@ -447,7 +448,7 @@ internal class Editor : IEditor, IEditorInternal
             {
                 ImGui.Text($"Memory Usage: {memoryUsageMb} MB");
                 ImGui.SameLine();
-                ImGui.Text("|");
+                ImGui.Separator();
                 ImGui.SameLine();
                 ImGui.Text($"Approx FPS : {fpsTotal}");
                 ImGui.EndMenuBar();
@@ -646,7 +647,7 @@ internal class Editor : IEditor, IEditorInternal
                         {
                             if (!windowManager.IsOpen("MAME RETRO"))
                             {
-                                // TODO
+                                // Need to reopen the debugger player window
                             }
                         }
                         if (mameInstance == null)
@@ -886,7 +887,7 @@ internal class Editor : IEditor, IEditorInternal
 
     internal PlayableRom? CreateNewProject(string projectName, string projectLocation, string importFile, string retroPluginName, out ProjectSettings projectSettings)
     {
-        // Todo Progress Dialog
+        // FUTURE Progress Dialog
         var projectPath = Path.Combine(projectLocation, projectName);
         Directory.CreateDirectory(projectPath);
         Directory.CreateDirectory(Path.Combine(projectPath, "Editor"));
@@ -1165,7 +1166,7 @@ internal class Editor : IEditor, IEditorInternal
 
     async Task<bool> DownloadDeveloperMame(string platform, string architecture, string extension)
     {
-        var api_revision = "v1.261.1"; // TODO - link this to the extension api
+        var api_revision = "v1.261.1"; // FUTURE - link this to the extension api
         var extra = $"_{architecture}";
         var url = $"https://github.com/SavourySnaX/lib_mame_retro_custom_fork/releases/download/{api_revision}/build_{platform}{extra}.zip";
         var destinationFolder = Path.Combine(settings.RetroCoreFolder, "developer", platform, architecture);

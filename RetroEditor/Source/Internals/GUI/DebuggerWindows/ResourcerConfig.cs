@@ -1,6 +1,5 @@
 using System.Numerics;
-using ImGuiNET;
-using RetroEditor.Source.Internals.GUI;
+using MyMGui;
 
 internal class ResourcerConfig
     {
@@ -13,24 +12,24 @@ internal class ResourcerConfig
             Comment,
             Unknown
         }
-        private uint _UnknownColor;
-        private uint _CodeColor;
-        private uint _DataColor;
-        private uint _StringColor;
-        private uint _LabelColor;
-        private uint _CommentColor;
+        private ImCol _UnknownColor;
+        private ImCol _CodeColor;
+        private ImCol _DataColor;
+        private ImCol _StringColor;
+        private ImCol _LabelColor;
+        private ImCol _CommentColor;
 
     public ResourcerConfig()
     {
-        _UnknownColor = AbiSafe_ImGuiWrapper.GetColorU32(new Vector4(0, 0, 0, .5f));
-        _CodeColor = AbiSafe_ImGuiWrapper.GetColorU32(new Vector4(0, 0, 1, .5f));
-        _DataColor = AbiSafe_ImGuiWrapper.GetColorU32(new Vector4(0, 1, 0, .5f));
-        _StringColor = AbiSafe_ImGuiWrapper.GetColorU32(new Vector4(1, 0, 0, .5f));
-        _LabelColor = AbiSafe_ImGuiWrapper.GetColorU32(new Vector4(0, 0, 0.5f, .5f));
-        _CommentColor = AbiSafe_ImGuiWrapper.GetColorU32(new Vector4(0.5f, 0.5f, 0.5f, .5f));
+        _UnknownColor = ImGui.ColorConvert(new Vector4(0, 0, 0, .5f));
+        _CodeColor = ImGui.ColorConvert(new Vector4(0, 0, 1, .5f));
+        _DataColor = ImGui.ColorConvert(new Vector4(0, 1, 0, .5f));
+        _StringColor = ImGui.ColorConvert(new Vector4(1, 0, 0, .5f));
+        _LabelColor = ImGui.ColorConvert(new Vector4(0, 0, 0.5f, .5f));
+        _CommentColor = ImGui.ColorConvert(new Vector4(0.5f, 0.5f, 0.5f, .5f));
     }
 
-        public uint GetColorU32(ConfigColour kind)
+        public ImCol GetColorU32(ConfigColour kind)
         {
             return kind switch
             {

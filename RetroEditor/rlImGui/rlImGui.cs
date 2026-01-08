@@ -16,18 +16,18 @@ using System.Numerics;
 using System.Runtime.InteropServices;
 
 using Raylib_cs.BleedingEdge;
-using ImGuiNET;
-using RetroEditor.Source.Internals.GUI;
+using MyMGui;
+using System.Runtime.CompilerServices;
 
 namespace rlImGui_cs
 {
     internal static class rlImGui
     {
-        internal static IntPtr ImGuiContext = IntPtr.Zero;
+        internal static ImGuiContextPtr ImGuiContext = default!;
 
         private static ImGuiMouseCursor CurrentMouseCursor = ImGuiMouseCursor.COUNT;
         private static Dictionary<ImGuiMouseCursor, MouseCursor> MouseCursorMap = new Dictionary<ImGuiMouseCursor, MouseCursor>();
-        private static Texture2D FontTexture;
+        private static Dictionary<uint, Texture2D> imGuiTextureMap = new Dictionary<uint, Texture2D>();
 
         static Dictionary<KeyboardKey, ImGuiKey> RaylibKeyMap = new Dictionary<KeyboardKey, ImGuiKey>();
 
@@ -37,6 +37,7 @@ namespace rlImGui_cs
         internal static bool LastShiftPressed = false;
         internal static bool LastAltPressed = false;
         internal static bool LastSuperPressed = false;
+        internal static bool windowIsHighDPI = false;
 
         internal static bool rlImGuiIsControlDown() { return Raylib.IsKeyDown(KeyboardKey.RightControl) || Raylib.IsKeyDown(KeyboardKey.LeftControl); }
         internal static bool rlImGuiIsShiftDown() { return Raylib.IsKeyDown(KeyboardKey.RightShift) || Raylib.IsKeyDown(KeyboardKey.LeftShift); }
@@ -44,11 +45,11 @@ namespace rlImGui_cs
         internal static bool rlImGuiIsSuperDown() { return Raylib.IsKeyDown(KeyboardKey.RightSuper) || Raylib.IsKeyDown(KeyboardKey.LeftSuper); }
 
         internal delegate void SetupUserFontsCallback(ImGuiIOPtr imGuiIo);
-
         internal static SetupUserFontsCallback? SetupUserFonts = null;
 
         internal static void Setup(bool darkTheme = true, bool enableDocking = false)
         {
+            windowIsHighDPI = Raylib.IsWindowState(ConfigFlags.WindowHighDpi) || RuntimeInformation.IsOSPlatform(OSPlatform.OSX);
             BeginInitImGui();
 
             if (darkTheme)
@@ -57,9 +58,11 @@ namespace rlImGui_cs
                 ImGui.StyleColorsLight();
 
             if (enableDocking)
-                ImGui.GetIO().ConfigFlags |= ImGuiConfigFlags.DockingEnable;
+                ImGui.GetIO().ConfigFlags |= ImGuiConfigFlags.DockingEnable | ImGuiConfigFlags.ViewportsEnable;
 
             ImGui.GetIO().ConfigWindowsMoveFromTitleBarOnly = true;
+            ImGui.GetIO().ConfigDpiScaleFonts = true;
+            ImGui.GetIO().ConfigDpiScaleViewports = true;
 
             EndInitImGui();
         }
@@ -73,8 +76,6 @@ namespace rlImGui_cs
             LastShiftPressed = false;
             LastAltPressed = false;
             LastSuperPressed = false;
-
-            FontTexture.Id = 0;
 
             SetupKeymap();
 
@@ -208,54 +209,33 @@ namespace rlImGui_cs
             MouseCursorMap[ImGuiMouseCursor.NotAllowed] = MouseCursor.NotAllowed;
         }
 
-        internal static unsafe void ReloadFonts()
-        {
-            ImGui.SetCurrentContext(ImGuiContext);
-            ImGuiIOPtr io = ImGui.GetIO();
-
-            int width, height, bytesPerPixel;
-            io.Fonts.GetTexDataAsRGBA32(out byte* pixels, out width, out height, out bytesPerPixel);
-
-            Image image = new Image
-            {
-                Data = pixels,
-                Width = width,
-                Height = height,
-                Mipmaps = 1,
-                Format = PixelFormat.UncompressedR8G8B8A8,
-            };
-
-            if (Raylib.IsTextureValid(FontTexture))
-                Raylib.UnloadTexture(FontTexture);
-
-            FontTexture = Raylib.LoadTextureFromImage(image);
-
-            io.Fonts.SetTexID(new IntPtr(FontTexture.Id));
-        }
-
-        unsafe internal static byte* rImGuiGetClipText(IntPtr userData)
+        [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
+        unsafe internal static byte* rlImGuiGetClipText(ImGuiContextPtr userData)
         {
             return Raylib.GetClipboardText();
         }
 
-        unsafe internal static void rlImGuiSetClipText(IntPtr userData, byte* text)
+        [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
+        unsafe internal static void rlImGuiSetClipText(ImGuiContextPtr userData, byte* text)
         {
             Raylib.SetClipboardText(text);
         }
 
-        private unsafe delegate byte* GetClipTextCallback(IntPtr userData);
-        private unsafe delegate void SetClipTextCallback(IntPtr userData, byte* text);
+        [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
+        unsafe internal static float rlImGuiGetWindowDpiScale(ImGuiViewportPtr viewport)
+        {
+            return Raylib.GetWindowScaleDPI().X;
+        }
 
-        private static GetClipTextCallback GetClipCallback = null!;
-        private static SetClipTextCallback SetClipCallback = null!;
         internal static void EndInitImGui()
         {
             SetupMouseCursors();
 
             ImGui.SetCurrentContext(ImGuiContext);
 
-            var fonts = ImGui.GetIO().Fonts;
             ImGui.GetIO().Fonts.AddFontDefault();
+#if TODO_FAWESOME
+            var fonts = ImGui.GetIO().Fonts;
 
             // remove this part if you don't want font awesome
             unsafe
@@ -292,6 +272,8 @@ namespace rlImGui_cs
 
                 ImGuiNative.ImFontConfig_destroy(icons_config);
             }
+#endif
+
 
             ImGuiIOPtr io = ImGui.GetIO();
 
@@ -300,31 +282,32 @@ namespace rlImGui_cs
             if (SetupUserFonts != null)
                 SetupUserFonts(io);
 
-            io.BackendFlags |= ImGuiBackendFlags.HasMouseCursors | ImGuiBackendFlags.HasSetMousePos | ImGuiBackendFlags.HasGamepad;
+            io.BackendFlags |= ImGuiBackendFlags.HasMouseCursors | ImGuiBackendFlags.HasSetMousePos | ImGuiBackendFlags.HasGamepad |
+                              ImGuiBackendFlags.RendererHasTextures;
 
             io.MousePos.X = 0;
             io.MousePos.Y = 0;
 
-            // copy/paste callbacks
             unsafe
             {
-                SetClipCallback = new SetClipTextCallback(rlImGuiSetClipText);
-                platformIO.Platform_SetClipboardTextFn = Marshal.GetFunctionPointerForDelegate(SetClipCallback);
+                // copy/paste callbacks
+                platformIO.Platform_SetClipboardTextFn = &rlImGuiSetClipText;
 
-                GetClipCallback = new GetClipTextCallback(rImGuiGetClipText);
-                platformIO.Platform_GetClipboardTextFn = Marshal.GetFunctionPointerForDelegate(GetClipCallback);
+                platformIO.Platform_GetClipboardTextFn = &rlImGuiGetClipText;
+
+                platformIO.Platform_ClipboardUserData = (void*)0;
+
+                // dpi
+                platformIO.Platform_GetWindowDpiScale = &rlImGuiGetWindowDpiScale;
             }
-
-            platformIO.Platform_ClipboardUserData = IntPtr.Zero;
-            ReloadFonts();
         }
 
         private static void SetMouseEvent(ImGuiIOPtr io, MouseButton rayMouse, ImGuiMouseButton imGuiMouse)
         {
             if (Raylib.IsMouseButtonPressed(rayMouse))
-                io.AddMouseButtonEvent((int)imGuiMouse, true);
+                io.AddMouseButtonEvent(imGuiMouse, true);
             else if (Raylib.IsMouseButtonReleased(rayMouse))
-                io.AddMouseButtonEvent((int)imGuiMouse, false);
+                io.AddMouseButtonEvent(imGuiMouse, false);
         }
 
         private static void NewFrame(float dt = -1)
@@ -334,16 +317,16 @@ namespace rlImGui_cs
             if (Raylib.IsWindowFullscreen())
             {
                 int monitor = Raylib.GetCurrentMonitor();
-                io.DisplaySize = new Vector2(Raylib.GetMonitorWidth(monitor), Raylib.GetMonitorHeight(monitor));
+                io.DisplaySize = new ImVec2(Raylib.GetMonitorWidth(monitor), Raylib.GetMonitorHeight(monitor));
             }
             else
             {
-                io.DisplaySize = new Vector2(Raylib.GetScreenWidth(), Raylib.GetScreenHeight());
+                io.DisplaySize = new ImVec2(Raylib.GetScreenWidth(), Raylib.GetScreenHeight());
             }
 
-            io.DisplayFramebufferScale = new Vector2(1, 1);
+            io.DisplayFramebufferScale = new ImVec2(1, 1);
 
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX) || Raylib.IsWindowState(ConfigFlags.WindowHighDpi))
+            if (windowIsHighDPI)
                     io.DisplayFramebufferScale = Raylib.GetWindowScaleDPI();
 
             io.DeltaTime = dt >= 0 ? dt : Raylib.GetFrameTime();
@@ -401,7 +384,6 @@ namespace rlImGui_cs
             if (focused != LastFrameFocused)
                 io.AddFocusEvent(focused);
             LastFrameFocused = focused;
-
 
             // handle the modifyer key events so that shortcuts work
             bool ctrlDown = rlImGuiIsControlDown();
@@ -481,7 +463,6 @@ namespace rlImGui_cs
             }
         }
 
-
         private static void HandleGamepadButtonEvent(ImGuiIOPtr io, GamepadButton button, ImGuiKey key)
         {
             if (Raylib.IsGamepadButtonPressed(0, button))
@@ -511,11 +492,21 @@ namespace rlImGui_cs
 
         private static void EnableScissor(float x, float y, float width, float height)
         {
+#if false
+            ImGuiIOPtr io = ImGui.GetIO();
+            Rlgl.EnableScissorTest();
+
+            Rlgl.Scissor(   (int)(x),
+                            (int)((io.DisplaySize.Y - (int)(y + height))),
+                            (int)(width),
+                            (int)(height));
+#endif
+
             Rlgl.EnableScissorTest();
             ImGuiIOPtr io = ImGui.GetIO();
 
             Vector2 scale = new Vector2(1.0f, 1.0f);
-            if (Raylib.IsWindowState(ConfigFlags.WindowHighDpi) || RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            if (windowIsHighDPI)
                 scale = io.DisplayFramebufferScale;
 
             Rlgl.Scissor(   (int)(x * scale.X),
@@ -524,23 +515,24 @@ namespace rlImGui_cs
                             (int)(height * scale.Y));
         }
 
-        private static void TriangleVert(ImDrawVertPtr idx_vert)
+
+        private static void TriangleVert(ImDrawVert idx_vert)
         {
-            Vector4 color = ImGui.ColorConvertU32ToFloat4(idx_vert.col);
+            var color = ImGui.ColorConvert(idx_vert.col);
 
             Rlgl.Color4f(color.X, color.Y, color.Z, color.W);
             Rlgl.TexCoord2f(idx_vert.uv.X, idx_vert.uv.Y);
             Rlgl.Vertex2f(idx_vert.pos.X, idx_vert.pos.Y);
         }
 
-        private static void RenderTriangles(uint count, uint indexStart, ImVector<ushort> indexBuffer, ImPtrVector<ImDrawVertPtr> vertBuffer, IntPtr texturePtr)
+        private static void RenderTriangles(uint count, uint indexStart, ref ImVector<ImDrawIdx> indexBuffer,ref ImVector<ImDrawVert> vertBuffer, ref ImTextureRef textureRef)
         {
             if (count < 3)
                 return;
 
-            uint textureId = 0;
-            if (texturePtr != IntPtr.Zero)
-                textureId = (uint)texturePtr.ToInt32();
+            //? Shouldn't this be rendering using triangleindexlist
+
+            uint textureId = (uint)textureRef.GetID().underlying;
 
             Rlgl.Begin(RlglEnum.Triangles);
             Rlgl.SetTexture(textureId);
@@ -553,13 +545,13 @@ namespace rlImGui_cs
                     Rlgl.SetTexture(textureId);
                 }
 
-                ushort indexA = indexBuffer[(int)indexStart + i];
-                ushort indexB = indexBuffer[(int)indexStart + i + 1];
-                ushort indexC = indexBuffer[(int)indexStart + i + 2];
+                ushort indexA = indexBuffer[(int)indexStart + i].underlying;
+                ushort indexB = indexBuffer[(int)indexStart + i + 1].underlying;
+                ushort indexC = indexBuffer[(int)indexStart + i + 2].underlying;
 
-                ImDrawVertPtr vertexA = vertBuffer[indexA];
-                ImDrawVertPtr vertexB = vertBuffer[indexB];
-                ImDrawVertPtr vertexC = vertBuffer[indexC];
+                ImDrawVert vertexA = vertBuffer[indexA];
+                ImDrawVert vertexB = vertBuffer[indexB];
+                ImDrawVert vertexC = vertBuffer[indexC];
 
                 TriangleVert(vertexA);
                 TriangleVert(vertexB);
@@ -568,32 +560,118 @@ namespace rlImGui_cs
             Rlgl.End();
         }
 
-        private delegate void Callback(ImDrawListPtr list, ImDrawCmdPtr cmd);
+        private static unsafe void UpdateTextureData(ImTextureDataPtr tex)
+        {
+            if (tex.Status == ImTextureStatus.WantCreate)
+            {
+                // Create texture based on tex->Width, tex->Height.
+                // - Most backends only support tex->Format == ImTextureFormat_RGBA32.
+                // - Backends for particularly memory constrainted platforms may support tex->Format == ImTextureFormat_Alpha8.
 
+                // Upload all texture pixels
+                // - Read from our CPU-side copy of the texture and copy to your graphics API.
+                // - Use tex->Width, tex->Height, tex->GetPixels(), tex->GetPixelsAt(), tex->GetPitch() as needed.
+
+                // Store your data, and acknowledge creation.
+
+                if (tex.Format != ImTextureFormat.RGBA32)
+                    throw new NotSupportedException("Only RGBA32 texture format is supported in this backend");
+
+                if (tex.GetPitch() != tex.Width * 4)
+                    throw new NotSupportedException("Only tightly packed textures are supported in this backend");
+
+                Image image = new Image
+                {
+                    Data = tex.GetPixels(),
+                    Width = tex.Width,
+                    Height = tex.Height,
+                    Mipmaps = 1,
+                    Format = PixelFormat.UncompressedR8G8B8A8,
+                };
+
+                var texture2D = Raylib.LoadTextureFromImage(image);
+                imGuiTextureMap.Add(texture2D.Id, texture2D);
+
+                tex.SetTexID(new ImTextureID(texture2D.Id));
+                tex.SetStatus(ImTextureStatus.OK);
+            }
+            if (tex.Status == ImTextureStatus.WantUpdates)
+            {
+                // Upload a rectangle of pixels to the existing texture
+                // - We only ever write to textures regions which have never been used before!
+                // - Use tex->TexID or tex->BackendUserData to retrieve your stored data.
+                // - Use tex->UpdateRect.x/y, tex->UpdateRect.w/h to obtain the block position and size.
+                //   - Use tex->Updates[] to obtain individual sub-regions within tex->UpdateRect. Not recommended.
+                // - Read from our CPU-side copy of the texture and copy to your graphics API.
+                // - Use tex->Width, tex->Height, tex->GetPixels(), tex->GetPixelsAt(), tex->GetPitch() as needed.
+                if (tex.Format != ImTextureFormat.RGBA32)
+                    throw new NotSupportedException("Only RGBA32 texture format is supported in this backend");
+
+                if (tex.GetPitch() != tex.Width * 4)
+                    throw new NotSupportedException("Only tightly packed textures are supported in this backend");
+
+                var updateTexture = imGuiTextureMap[(uint)tex.TexID.underlying];
+                Image image = new Image // Just update the entire texture for simplicity
+                {
+                    Data = tex.GetPixels(),
+                    Width = tex.Width,
+                    Height = tex.Height,
+                    Mipmaps = 1,
+                    Format = PixelFormat.UncompressedR8G8B8A8,
+                };
+                Raylib.UpdateTexture(updateTexture, image.Data);
+                // Acknowledge update
+                tex.SetStatus(ImTextureStatus.OK);
+            }
+            if (tex.Status == ImTextureStatus.WantDestroy && tex.UnusedFrames > 0)
+            {
+                // If you use staged rendering and have in-flight renders, changed tex->UnusedFrames > 0 check to higher count as needed e.g. > 2
+
+                // Destroy texture
+                // - Use tex->TexID or tex->BackendUserData to retrieve your stored data.
+                // - Destroy texture in your graphics API.
+
+                // Acknowledge destruction
+                tex.SetTexID(ImGui.ImTextureID_Invalid);
+                tex.SetStatus(ImTextureStatus.Destroyed);
+            }
+        }
         private static void RenderData()
         {
             Rlgl.DrawRenderBatchActive();
             Rlgl.DisableBackfaceCulling();
 
+            // We also need to process textures here now i think?
+
             var data = ImGui.GetDrawData();
+            if (data.HasTextures)
+            {
+                var textures = data.Textures;
+                for (int t = 0; t < textures.Size; t++)
+                {
+                    var texture = textures[t];
+                    if (texture.Status != ImTextureStatus.OK)
+                    {
+                        UpdateTextureData(texture);
+                    }
+                }
+            }
 
             for (int l = 0; l < data.CmdListsCount; l++)
             {
                 ImDrawListPtr commandList = data.CmdLists[l];
-
                 for (int cmdIndex = 0; cmdIndex < commandList.CmdBuffer.Size; cmdIndex++)
                 {
                     var cmd = commandList.CmdBuffer[cmdIndex];
 
                     EnableScissor(cmd.ClipRect.X - data.DisplayPos.X, cmd.ClipRect.Y - data.DisplayPos.Y, cmd.ClipRect.Z - (cmd.ClipRect.X - data.DisplayPos.X), cmd.ClipRect.W - (cmd.ClipRect.Y - data.DisplayPos.Y));
-                    if (cmd.UserCallback != IntPtr.Zero)
+                    if (cmd.HasUserCallback())
                     {
-                        Callback cb = Marshal.GetDelegateForFunctionPointer<Callback>(cmd.UserCallback);
-                        cb(commandList, cmd);
+                        cmd.CallUserCallback(ref cmd);
                         continue;
                     }
 
-                    RenderTriangles(cmd.ElemCount, cmd.IdxOffset, commandList.IdxBuffer, commandList.VtxBuffer, cmd.TextureId);
+                    RenderTriangles(cmd.ElemCount, cmd.IdxOffset, ref commandList.IdxBuffer, ref commandList.VtxBuffer, ref cmd.TexRef);
 
                     Rlgl.DrawRenderBatchActive();
                 }
@@ -612,9 +690,9 @@ namespace rlImGui_cs
 
         internal static void Shutdown()
         {
-            Raylib.UnloadTexture(FontTexture);
             ImGui.DestroyContext();
 
+#if TODO_FAWESOME
             // remove this if you don't want font awesome support
             {
                 if (IconFonts.FontAwesome6.IconFontRanges != IntPtr.Zero)
@@ -622,21 +700,22 @@ namespace rlImGui_cs
 
                 IconFonts.FontAwesome6.IconFontRanges = IntPtr.Zero;
             }
+#endif
         }
 
         internal static void Image(Texture2D image)
         {
-            AbiSafe_ImGuiWrapper.Image(new IntPtr(image.Id), new Vector2(image.Width, image.Height));
+            ImGui.Image(new ImTextureRef(new ImTextureID(image.Id)), new ImVec2(image.Width, image.Height));
         }
 
         internal static void ImageSize(Texture2D image, int width, int height)
         {
-            AbiSafe_ImGuiWrapper.Image(new IntPtr(image.Id), new Vector2(width, height));
+            ImGui.Image(new ImTextureRef(new ImTextureID(image.Id)), new ImVec2(width, height));
         }
 
-        internal static void ImageSize(Texture2D image, Vector2 size)
+        internal static void ImageSize(Texture2D image, ImVec2 size)
         {
-            AbiSafe_ImGuiWrapper.Image(new IntPtr(image.Id), size);
+            ImGui.Image(new ImTextureRef(new ImTextureID(image.Id)), size);
         }
 
         internal static void ImageRect(Texture2D image, int destWidth, int destHeight, Rectangle sourceRect)
@@ -666,7 +745,7 @@ namespace rlImGui_cs
                 uv1.Y = uv0.Y + (float)(sourceRect.Height / image.Height);
             }
 
-            AbiSafe_ImGuiWrapper.Image(new IntPtr(image.Id), new Vector2(destWidth, destHeight), uv0, uv1);
+            ImGui.Image(new ImTextureRef(new ImTextureID(image.Id)), new Vector2(destWidth, destHeight), uv0, uv1);
         }
 
         internal static void ImageRenderTexture(RenderTexture2D image)
@@ -676,6 +755,7 @@ namespace rlImGui_cs
 
         internal static void ImageRenderTextureFit(RenderTexture2D image, bool center = true)
         {
+#if TODO
             Vector2 area = ImGui.GetContentRegionAvail();
 
             float scale = area.X / image.Texture.Width;
@@ -697,6 +777,7 @@ namespace rlImGui_cs
             }
 
             ImageRect(image.Texture, sizeX, sizeY, new Rectangle(0,0, (image.Texture.Width), -(image.Texture.Height) ));
+#endif
         }
 
         internal static bool ImageButton(System.String name, Texture2D image)
@@ -706,7 +787,11 @@ namespace rlImGui_cs
 
         internal static bool ImageButtonSize(System.String name, Texture2D image, Vector2 size)
         {
+#if TODO
             return ImGui.ImageButton(name, new IntPtr(image.Id), size);
+#else
+            return false;
+#endif
         }
 
     }

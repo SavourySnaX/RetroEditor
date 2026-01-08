@@ -1,5 +1,4 @@
-using ImGuiNET;
-using RetroEditor.Source.Internals.GUI;
+using MyMGui;
 using System.Numerics;
 
 internal class Resourcer : IWindow
@@ -50,8 +49,7 @@ internal class Resourcer : IWindow
 
         foreach (var region in romData.GetRomRanges)
         {
-            AbiSafe_ImGuiWrapper.DrawList_AddRectFilled(
-                drawList,
+            drawList.AddRectFilled(
                 new Vector2(pos.X + region.Value.AddressStart * scale, pos.Y),
                 new Vector2(pos.X + region.Value.AddressEnd * scale, pos.Y + size.Y),
                 config.GetColorU32(region.Value.Colour)
@@ -59,6 +57,7 @@ internal class Resourcer : IWindow
         }
 
         ImGui.SetCursorPosY(ImGui.GetCursorPosY() + MEMORY_MAP_HEIGHT);
+        ImGui.Dummy();
     }
 
     bool traceCommandInProgress=false;
@@ -76,7 +75,7 @@ internal class Resourcer : IWindow
         {
             ImGui.BeginDisabled();
         }
-        if (AbiSafe_ImGuiWrapper.Button("Capture Frame"))
+        if (ImGui.Button("Capture Frame"))
         {
             traceInProgress = true;
             if (File.Exists("trace.log"))
@@ -92,7 +91,7 @@ internal class Resourcer : IWindow
             debugger.QueueCommand("gvblank", (s,id)=>{traceCommandInProgress=false;});
         }
         ImGui.SameLine();
-        if (AbiSafe_ImGuiWrapper.Button("Capture 1 Second"))
+        if (ImGui.Button("Capture 1 Second"))
         {
             traceInProgress = true;
             if (File.Exists("trace.log"))
@@ -109,7 +108,7 @@ internal class Resourcer : IWindow
             debugger.QueueCommand("gtime 1000",(s,id)=>{traceCommandInProgress=false;});
         }
         ImGui.SameLine();
-        if (AbiSafe_ImGuiWrapper.Button("Capture Continuous"))
+        if (ImGui.Button("Capture Continuous"))
         {
             traceInProgress = true;
             if (File.Exists("trace.log"))
@@ -126,7 +125,7 @@ internal class Resourcer : IWindow
             debugger.QueueCommand("gtime 500",(s,id)=>{traceCommandInProgress=false;});
         }
         ImGui.SameLine();
-        if (AbiSafe_ImGuiWrapper.Button("New Trace"))
+        if (ImGui.Button("New Trace"))
         {
             var pc = romData.GetCPUState(debugger, "PC");
             var e = romData.GetCPUState(debugger, "E");
@@ -153,7 +152,7 @@ internal class Resourcer : IWindow
             ImGui.BeginDisabled();
         }
         ImGui.SameLine();
-        if (AbiSafe_ImGuiWrapper.Button("Stop Trace"))
+        if (ImGui.Button("Stop Trace"))
         {
             traceContinue = false;
         }
@@ -196,57 +195,13 @@ internal class Resourcer : IWindow
             ImGui.EndTabBar();
         }
 
-
         return false;
-    }
-
-    internal unsafe class ImGuiClipper : IDisposable
-    {
-        public ImGuiClipper(int itemsCount, float itemsHeight)
-        {
-            _itemsCount = itemsCount;
-            _itemsHeight = itemsHeight;
-            _clipper = ImGuiNative.ImGuiListClipper_ImGuiListClipper();
-        }
-
-        public void Begin()
-        {
-            ImGuiNative.ImGuiListClipper_Begin(_clipper, _itemsCount, _itemsHeight);
-        }
-
-        public bool Step()
-        {
-            return ImGuiNative.ImGuiListClipper_Step(_clipper) != 0;
-        }
-
-        public void End()
-        {
-            ImGuiNative.ImGuiListClipper_End(_clipper);
-        }
-
-        public void Dispose()
-        {
-            ImGuiNative.ImGuiListClipper_destroy(_clipper);
-        }
-
-        public int DisplayStart => _clipper->DisplayStart;
-        public int DisplayEnd => _clipper->DisplayEnd;
-
-        private int _itemsCount;
-        private float _itemsHeight;
-        private ImGuiListClipper* _clipper;
     }
 
     bool InputU64ScalarWrapped(string label, ref UInt64 value)
     {
-        unsafe
-        {
-            fixed (UInt64* pValue = &value)
-            {
-                ImGui.InputScalar(label, ImGuiDataType.U64, (nint)pValue, 0, 0, "%X", ImGuiInputTextFlags.CharsHexadecimal);
-                return ImGui.IsItemDeactivated();
-            }
-        }
+        ImGui.InputScalar(label,ImGuiDataType.U64, ref value, "%X", ImGuiInputTextFlags.CharsHexadecimal);
+        return ImGui.IsItemDeactivated();
     }
 
     private class ScrollViewVars
@@ -293,8 +248,9 @@ internal class Resourcer : IWindow
 
         var rowHeight = ImGui.GetTextLineHeight() + ImGui.GetStyle().ItemSpacing.Y;
         var contentSize = ImGui.GetContentRegionAvail();
-        if (AbiSafe_ImGuiWrapper.BeginChild("Virtual Table", contentSize, ImGuiChildFlags.None, ImGuiWindowFlags.AlwaysVerticalScrollbar))
+        if (ImGui.BeginChild("Virtual Table", contentSize, ImGuiChildFlags.None, ImGuiWindowFlags.AlwaysVerticalScrollbar))
         {
+
             var scroll = ImGui.GetScrollY();
 
             bool moved = false;
@@ -488,14 +444,16 @@ internal class Resourcer : IWindow
                 }
             }
 
-            if (AbiSafe_ImGuiWrapper.BeginTable("RomDataView", 4, tableFlags))
-            {
-                ImGui.TableSetupColumn("Address", ImGuiTableColumnFlags.WidthFixed, widths[0] - ImGui.GetStyle().ItemSpacing.X * 2);
-                ImGui.TableSetupColumn("Bytes", ImGuiTableColumnFlags.WidthFixed, widths[1] - ImGui.GetStyle().ItemSpacing.X);
-                ImGui.TableSetupColumn("Details", ImGuiTableColumnFlags.WidthFixed, widths[2] - ImGui.GetStyle().ItemSpacing.X);
-                ImGui.TableSetupColumn("Comments", ImGuiTableColumnFlags.WidthFixed, widths[3] - ImGui.GetStyle().ItemSpacing.X);
+            var itemSpacing = ImGui.GetStyle().ItemSpacing.X;
 
-                using var clipper = new ImGuiClipper((int)romDataSize, rowHeight);
+            if (ImGui.BeginTable("RomDataView", 4, tableFlags))
+            {
+                ImGui.TableSetupColumn("Address", ImGuiTableColumnFlags.WidthFixed, widths[0] - itemSpacing * 2);
+                ImGui.TableSetupColumn("Bytes", ImGuiTableColumnFlags.WidthFixed, widths[1] - itemSpacing);
+                ImGui.TableSetupColumn("Details", ImGuiTableColumnFlags.WidthFixed, widths[2] - itemSpacing);
+                ImGui.TableSetupColumn("Comments", ImGuiTableColumnFlags.WidthFixed, widths[3] - itemSpacing);
+
+                using var clipper = new ListClipper((int)romDataSize, rowHeight);
                 clipper.Begin();
                 while (clipper.Step())
                 {
@@ -532,7 +490,7 @@ internal class Resourcer : IWindow
                         bool isSelected = vars.selectedRows.Contains(actualLine);
                         bool isCursor = vars.cursorPosition == actualLine;
 
-                        bool clicked = AbiSafe_ImGuiWrapper.Selectable($"{lData.Address:X8}", isSelected, ImGuiSelectableFlags.SpanAllColumns);//, new Vector2(0, rowHeight));
+                        bool clicked = ImGui.Selectable($"{lData.Address:X8}", isSelected, ImGuiSelectableFlags.SpanAllColumns);//, new Vector2(0, rowHeight));
 
                         // Set row background color based on selection state
                         if (isSelected)

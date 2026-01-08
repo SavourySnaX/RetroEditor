@@ -1,7 +1,5 @@
-using System.Numerics;
-using ImGuiNET;
+using MyMGui;
 using RetroEditor.Plugins;
-using RetroEditor.Source.Internals.GUI;
 
 
 internal class TilePaletteWidget : IWidgetItem, IWidgetUpdateDraw
@@ -31,50 +29,50 @@ internal class TilePaletteWidget : IWidgetItem, IWidgetUpdateDraw
         var rows = (tiles.Length + tilesPerRow - 1) / tilesPerRow;
         var remainder = (tiles.Length == tilesPerRow) ? tiles.Length : tiles.Length % tilesPerRow;
 
-        var size = new Vector2(width * tilesPerRow + 4 * tilesPerRow, height * rows + 4 * rows);
-        AbiSafe_ImGuiWrapper.BeginChild($"tilepalette", size, 0, 0);
-
-        var drawList = ImGui.GetWindowDrawList();
-        Vector2 pos = ImGui.GetCursorScreenPos();
-        var mousePos = ImGui.GetMousePos();
-        var localPos = mousePos - pos;
-
-        int a = 0;
-        uint yOffs = 0;
-        for (int y = 0; y < rows; y++)
+        var size = new ImVec2(width * tilesPerRow + 4 * tilesPerRow, height * rows + 4 * rows);
+        if (ImGui.BeginChild($"tilepalette", size, 0, 0))
         {
-            uint xOffs = 0;
-            var numTiles = (y == rows - 1) ? remainder : tilesPerRow;
-            for (int x = 0; x < numTiles; x++)
+            var drawList = ImGui.GetWindowDrawList();
+            ImVec2 pos = ImGui.GetCursorScreenPos();
+            var mousePos = ImGui.GetMousePos();
+            var localPos = mousePos - pos;
+
+            int a = 0;
+            uint yOffs = 0;
+            for (int y = 0; y < rows; y++)
             {
-                if (tilePalette.SelectedTile == a)
+                uint xOffs = 0;
+                var numTiles = (y == rows - 1) ? remainder : tilesPerRow;
+                for (int x = 0; x < numTiles; x++)
                 {
-                    AbiSafe_ImGuiWrapper.DrawList_AddRect(drawList,new Vector2(pos.X + xOffs, pos.Y + yOffs), new Vector2(pos.X + xOffs + width + 4, pos.Y + yOffs + height + 4), ImGuiHelper.MakeColour(255, 255, 255, 255));
-                }
-                AbiSafe_ImGuiWrapper.DrawList_AddImage(drawList, (nint)_tilePaletteStore.Bitmaps[a].Id, new Vector2(pos.X + xOffs+2, pos.Y + yOffs+2), new Vector2(pos.X + xOffs + width+2, pos.Y + yOffs + height+2));
-                if (localPos.X >= xOffs && localPos.Y >= yOffs && localPos.X < xOffs + width && localPos.Y < yOffs + height)
-                {
-                    ImGui.BeginTooltip();
-                    ImGui.Text(tiles[a].Name);
-                    ImGui.EndTooltip();
-                    if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+                    if (tilePalette.SelectedTile == a)
                     {
-                        if (tilePalette.SelectedTile == a)
+                        drawList.AddRect(new ImVec2(pos.X + xOffs, pos.Y + yOffs), new ImVec2(pos.X + xOffs + width + 4, pos.Y + yOffs + height + 4), ImGuiHelper.MakeColour(255, 255, 255, 255));
+                    }
+                    drawList.AddImage(new ImTextureRef(new ImTextureID(_tilePaletteStore.Bitmaps[a].Id)), new ImVec2(pos.X + xOffs + 2, pos.Y + yOffs + 2), new ImVec2(pos.X + xOffs + width + 2, pos.Y + yOffs + height + 2));
+                    if (localPos.X >= xOffs && localPos.Y >= yOffs && localPos.X < xOffs + width && localPos.Y < yOffs + height)
+                    {
+                        ImGui.BeginTooltip();
+                        ImGui.Text(tiles[a].Name);
+                        ImGui.EndTooltip();
+                        if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
                         {
-                            tilePalette.SelectedTile = -1;
-                        }
-                        else
-                        {
-                            tilePalette.SelectedTile = a;
+                            if (tilePalette.SelectedTile == a)
+                            {
+                                tilePalette.SelectedTile = -1;
+                            }
+                            else
+                            {
+                                tilePalette.SelectedTile = a;
+                            }
                         }
                     }
+                    a++;
+                    xOffs += width + 4;
                 }
-                a++;
-                xOffs += width + 4;
+                yOffs += height + 4;
             }
-            yOffs += height + 4;
         }
-
         ImGui.EndChild();
     }
 }

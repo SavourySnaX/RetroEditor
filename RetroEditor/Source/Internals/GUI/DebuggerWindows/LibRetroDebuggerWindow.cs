@@ -1,8 +1,6 @@
-using System.Numerics;
-using System.Runtime.InteropServices;
-using ImGuiNET;
 using Raylib_cs.BleedingEdge;
 using rlImGui_cs;
+using MyMGui;
 
 internal class LibRetroDebuggerWindow : IWindow
 {
@@ -108,7 +106,6 @@ internal class LibRetroDebuggerWindow : IWindow
             plugin.UpdateKey(KeyboardKey.M, ImGui.IsKeyDown(ImGuiKey.M));
             plugin.UpdateKey(KeyboardKey.N, ImGui.IsKeyDown(ImGuiKey.N));
         }
-
         return false;
     }
 

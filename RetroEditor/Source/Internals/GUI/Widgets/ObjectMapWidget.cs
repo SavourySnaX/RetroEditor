@@ -1,7 +1,5 @@
-using System.Numerics;
-using ImGuiNET;
+using MyMGui;
 using RetroEditor.Plugins;
-using RetroEditor.Source.Internals.GUI;
 
 internal class ObjectMapWidget : IWidgetItem, IWidgetUpdateDraw
 {
@@ -23,7 +21,7 @@ internal class ObjectMapWidget : IWidgetItem, IWidgetUpdateDraw
     int dragOffsetX = 0;
     int dragOffsetY = 0;
 
-    public void Interaction(IWidgetLog logger, Vector2 size, Vector2 pos)
+    public void Interaction(IWidgetLog logger, ImVec2 size, ImVec2 pos)
     {
         // Object picker
         var mousePos = ImGui.GetMousePos();
@@ -110,41 +108,42 @@ internal class ObjectMapWidget : IWidgetItem, IWidgetUpdateDraw
     public void Draw(IWidgetLog logger)
     {
         var drawList = ImGui.GetWindowDrawList();
-        var size = new Vector2(_objectMap.Width * _objectMap.ScaleX, _objectMap.Height * _objectMap.ScaleY);
-        AbiSafe_ImGuiWrapper.BeginChild($"map", size, 0, 0);
-
-        var pos = ImGui.GetCursorScreenPos();
-        AbiSafe_ImGuiWrapper.DrawList_PushClipRect(drawList, pos, pos + size, true);
-        Interaction(logger, size, pos);
-        var palette = _objectMap.FetchPalette();
-        var bitmaps = palette.Bitmaps;
-        var tiles = palette.TilePalette.FetchTiles();
-        var currentObject = 0;
-        foreach (var obj in _objectMap.FetchObjects)
+        var size = new ImVec2(_objectMap.Width * _objectMap.ScaleX, _objectMap.Height * _objectMap.ScaleY);
+        if (ImGui.BeginChild($"map", size, 0, 0))
         {
-            var mapData = obj.GetMapData();
-
-            var offY = obj.Y;
-            for (uint y = 0; y < obj.Height; y++)
+            var pos = ImGui.GetCursorScreenPos();
+            drawList.PushClipRect(pos, pos + size, true);
+            Interaction(logger, size, pos);
+            var palette = _objectMap.FetchPalette();
+            var bitmaps = palette.Bitmaps;
+            var tiles = palette.TilePalette.FetchTiles();
+            var currentObject = 0;
+            foreach (var obj in _objectMap.FetchObjects)
             {
-                var offX = obj.X;
-                for (uint x = 0; x < obj.Width; x++)
-                {
-                    var tilenum = mapData[(int)(y * obj.Width + x)];
-                    var tileData = tiles[(int)tilenum];
+                var mapData = obj.GetMapData();
 
-                    AbiSafe_ImGuiWrapper.DrawList_AddImage(drawList, (nint)bitmaps[(int)tilenum].Id, new Vector2(pos.X + offX, pos.Y + offY), new Vector2(pos.X + offX + tileData.Width * _objectMap.ScaleX, pos.Y + offY + tileData.Height * _objectMap.ScaleY));
-                    if (currentObject == selectedObject)
+                var offY = obj.Y;
+                for (uint y = 0; y < obj.Height; y++)
+                {
+                    var offX = obj.X;
+                    for (uint x = 0; x < obj.Width; x++)
                     {
-                        AbiSafe_ImGuiWrapper.DrawList_AddRectFilled(drawList, new Vector2(pos.X + offX, pos.Y + offY), new Vector2(pos.X + offX + tileData.Width * _objectMap.ScaleX, pos.Y + offY + tileData.Height * _objectMap.ScaleY), 0x80000000);
+                        var tilenum = mapData[(int)(y * obj.Width + x)];
+                        var tileData = tiles[(int)tilenum];
+
+                        drawList.AddImage(new ImTextureRef(new ImTextureID(bitmaps[(int)tilenum].Id)), new ImVec2(pos.X + offX, pos.Y + offY), new ImVec2(pos.X + offX + tileData.Width * _objectMap.ScaleX, pos.Y + offY + tileData.Height * _objectMap.ScaleY));
+                        if (currentObject == selectedObject)
+                        {
+                            drawList.AddRectFilled(new ImVec2(pos.X + offX, pos.Y + offY), new ImVec2(pos.X + offX + tileData.Width * _objectMap.ScaleX, pos.Y + offY + tileData.Height * _objectMap.ScaleY), new ImCol(0x80000000));
+                        }
+                        offX += (uint)(palette.LargestWidth * _objectMap.ScaleX);
                     }
-                    offX += (uint)(palette.LargestWidth * _objectMap.ScaleX);
+                    offY += (uint)(palette.LargestHeight * _objectMap.ScaleY);
                 }
-                offY += (uint)(palette.LargestHeight * _objectMap.ScaleY);
+                currentObject++;
             }
-            currentObject++;
+            drawList.PopClipRect();
         }
-        drawList.PopClipRect();
         ImGui.EndChild();
     }
 }
