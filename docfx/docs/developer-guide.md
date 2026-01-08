@@ -24,7 +24,7 @@ and replace the __false__ with __true__, which will enable some extra menu optio
 
 For reverse engineering we will use the builtin libretro_Mame debugger, alongside [Ghidra](https://ghidra-sre.org/) for static analysis and recording discoveries, so please make sure to install it.
 
-The editor will also have created a folder named __Temp__, libretro_Mame requires __gbc_boot.1__ and __gbc_boot.2__ which should both be placed into __Temp/mame/roms/gbcolor/__ folder. I won't link to them here, but they should be easy enough to find online.
+The editor will also have created a folder named __Mame__, libretro_Mame requires __gbc_boot.1__ and __gbc_boot.2__ which should both be placed into __Mame/mame/roms/gbcolor/__ folder. I won't link to them here, but they should be easy enough to find online.
 
 Download the [Manic Miner]() rom and place it into a folder named __gbcolor__ (its location doesn't matter, but the folder name is very important).
 
