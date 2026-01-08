@@ -1,7 +1,4 @@
-
-using System.Numerics;
-using ImGuiNET;
-using RetroEditor.Source.Internals.GUI;
+using MyMGui;
 
 internal class DebuggerCommand : IWindow
 {
@@ -33,22 +30,16 @@ internal class DebuggerCommand : IWindow
             }
         }
 
-
-        if (AbiSafe_ImGuiWrapper.BeginChild("Scrolling", new Vector2(0, 0), ImGuiChildFlags.None, ImGuiWindowFlags.HorizontalScrollbar))
+        if (ImGui.BeginChild("Scrolling", default, ImGuiChildFlags.None, ImGuiWindowFlags.HorizontalScrollbar))
         {
-            unsafe
+            using var clipper = new ListClipper(log.Count, -1.0f);
+            clipper.Begin();
+            while (clipper.Step())
             {
-                var clipper = ImGuiNative.ImGuiListClipper_ImGuiListClipper();
-                ImGuiNative.ImGuiListClipper_Begin(clipper, log.Count, -1.0f);
-                while (ImGuiNative.ImGuiListClipper_Step(clipper) != 0)
+                for (int i = clipper.DisplayStart; i < clipper.DisplayEnd; i++)
                 {
-                    for (int i = clipper->DisplayStart; i < clipper->DisplayEnd; i++)
-                    {
-                        ImGui.TextUnformatted(log[i]);
-                    }
+                    ImGui.Text(log[i]);
                 }
-                ImGuiNative.ImGuiListClipper_End(clipper);
-                ImGuiNative.ImGuiListClipper_destroy(clipper);
             }
             if (ImGui.GetScrollY() >= ImGui.GetScrollMaxY())
             {
@@ -56,7 +47,6 @@ internal class DebuggerCommand : IWindow
             }
         }
         ImGui.EndChild();
-
         return false;
     }
 

@@ -1,9 +1,9 @@
-
+using MyMGui;
 internal static class ImGuiHelper
 {
-    internal static uint MakeColour(byte r, byte g, byte b, byte a)
+    internal static ImCol MakeColour(byte r, byte g, byte b, byte a)
     {
-        return (uint)((r << 24) | (g << 16) | (b << 8) | a);
+        return new ImCol((uint)((r << 24) | (g << 16) | (b << 8) | a));
     }
 
 }

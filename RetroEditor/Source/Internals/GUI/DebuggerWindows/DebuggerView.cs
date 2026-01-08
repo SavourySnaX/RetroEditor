@@ -1,7 +1,5 @@
 
-using System.Numerics;
-using ImGuiNET;
-using RetroEditor.Source.Internals.GUI;
+using MyMGui;
 
 internal class DebuggerView : IWindow
 {
@@ -105,100 +103,101 @@ internal class DebuggerView : IWindow
             YOff = ImGui.GetCursorPosY();
         }
 
-        AbiSafe_ImGuiWrapper.PushStyleVar(ImGuiStyleVar.FramePadding, new Vector2(0,0));
-        AbiSafe_ImGuiWrapper.PushStyleVar(ImGuiStyleVar.ItemSpacing, new Vector2(0,0));
+        ImGui.PushStyleVar(ImGuiStyleVar.FramePadding, new ImVec2(0,0));
+        ImGui.PushStyleVar(ImGuiStyleVar.ItemSpacing, new ImVec2(0,0));
     
         var sizeOfMonoText=ImGui.CalcTextSize("A");
-        AbiSafe_ImGuiWrapper.BeginChild("BLAH", new Vector2(sizeOfMonoText.X*(view.view.W+2), sizeOfMonoText.Y*(view.view.H+2)),0,ImGuiWindowFlags.NoScrollbar);
-
-        var convCode = new byte[] { 0, 0 };
-        Vector2 pos = ImGui.GetCursorScreenPos();
-        var initialX = pos.X;
-        for (int yy=0;yy<view.view.H;yy++)
+        if (ImGui.BeginChild("BLAH", new ImVec2(sizeOfMonoText.X*(view.view.W+2), sizeOfMonoText.Y*(view.view.H+2)),0,ImGuiWindowFlags.NoScrollbar))
         {
-            AbiSafe_ImGuiWrapper.BeginChild($"Line{yy}", new Vector2(sizeOfMonoText.X*view.view.W, sizeOfMonoText.Y), 0, ImGuiWindowFlags.NoScrollbar);
-            var drawList = ImGui.GetWindowDrawList();
-            for (int xx=0;xx<view.view.W;xx++)
+            var convCode = new byte[] { 0, 0 };
+            var pos = ImGui.GetCursorScreenPos();
+            var initialX = pos.X;
+            for (int yy=0;yy<view.view.H;yy++)
             {
-                var attr=view.state[(yy*view.view.W+xx)*2+1];
-                FetchColourForStyle(attr,out var fg,out var bg);
-                convCode[0]=view.state[(yy*view.view.W+xx)*2];
-                AbiSafe_ImGuiWrapper.DrawList_AddRectFilled(drawList, pos, new Vector2(pos.X + sizeOfMonoText.X, pos.Y + sizeOfMonoText.Y), AbiSafe_ImGuiWrapper.GetColorU32(bg));
-                AbiSafe_ImGuiWrapper.DrawList_AddText(drawList, pos, AbiSafe_ImGuiWrapper.GetColorU32(fg), System.Text.Encoding.ASCII.GetString(convCode));
-                pos.X += sizeOfMonoText.X;
+                if (ImGui.BeginChild($"Line{yy}", new ImVec2(sizeOfMonoText.X*view.view.W, sizeOfMonoText.Y), 0, ImGuiWindowFlags.NoScrollbar))
+                {
+                    var drawList = ImGui.GetWindowDrawList();
+                    for (int xx=0;xx<view.view.W;xx++)
+                    {
+                        var attr=view.state[(yy*view.view.W+xx)*2+1];
+                        FetchColourForStyle(attr,out var fg,out var bg);
+                        convCode[0]=view.state[(yy*view.view.W+xx)*2];
+                        drawList.AddRectFilled(pos, new ImVec2(pos.X + sizeOfMonoText.X, pos.Y + sizeOfMonoText.Y), ImGui.ColorConvert(bg));
+                        drawList.AddText(pos, ImGui.ColorConvert(fg), System.Text.Encoding.ASCII.GetString(convCode));
+                        pos.X += sizeOfMonoText.X;
+                    }
+                }
+                ImGui.EndChild();
+                pos.X = initialX;
+                pos.Y += sizeOfMonoText.Y;
             }
-            ImGui.EndChild();
-            pos.X = initialX;
-            pos.Y += sizeOfMonoText.Y;
-        }
         
-        if (ImGui.IsWindowFocused() || ImGui.IsItemActivated())
-        {
-            if (this.view.view.Kind == LibRetroPlugin.debug_view_type.Disassembly)
+            if (ImGui.IsWindowFocused() || ImGui.IsItemActivated())
             {
-                if (ImGui.IsKeyPressed(ImGuiKey.F5))
+                if (this.view.view.Kind == LibRetroPlugin.debug_view_type.Disassembly)
                 {
-                    debugger.SendCommand("go");
-                }
-                if (ImGui.IsKeyPressed(ImGuiKey.F7))
-                {
-                    debugger.SendCommand("s");
-                }
-                if (ImGui.IsKeyPressed(ImGuiKey.F8))
-                {
-                    debugger.SendCommand("o");
-                }
-            }
-            if (this.view.view.Kind == LibRetroPlugin.debug_view_type.Memory || this.view.view.Kind == LibRetroPlugin.debug_view_type.Disassembly)
-            {
-                if (ImGui.IsKeyPressed(ImGuiKey.DownArrow))
-                {
-                    if (ImGui.IsKeyDown(ImGuiKey.LeftShift) || ImGui.IsKeyDown(ImGuiKey.RightShift))
+                    if (ImGui.IsKeyPressed(ImGuiKey.F5))
                     {
-                        debugger.ProcessKey(ref view, LibRetroPlugin.debug_key.DCH_PDOWN);
+                        debugger.SendCommand("go");
                     }
-                    else
+                    if (ImGui.IsKeyPressed(ImGuiKey.F7))
                     {
-                        debugger.ProcessKey(ref view, LibRetroPlugin.debug_key.DCH_DOWN);
+                        debugger.SendCommand("s");
+                    }
+                    if (ImGui.IsKeyPressed(ImGuiKey.F8))
+                    {
+                        debugger.SendCommand("o");
                     }
                 }
-                if (ImGui.IsKeyPressed(ImGuiKey.UpArrow))
+                if (this.view.view.Kind == LibRetroPlugin.debug_view_type.Memory || this.view.view.Kind == LibRetroPlugin.debug_view_type.Disassembly)
                 {
-                    if (ImGui.IsKeyDown(ImGuiKey.LeftShift) || ImGui.IsKeyDown(ImGuiKey.RightShift))
+                    if (ImGui.IsKeyPressed(ImGuiKey.DownArrow))
                     {
-                        debugger.ProcessKey(ref view, LibRetroPlugin.debug_key.DCH_PUP);
+                        if (ImGui.IsKeyDown(ImGuiKey.LeftShift) || ImGui.IsKeyDown(ImGuiKey.RightShift))
+                        {
+                            debugger.ProcessKey(ref view, LibRetroPlugin.debug_key.DCH_PDOWN);
+                        }
+                        else
+                        {
+                            debugger.ProcessKey(ref view, LibRetroPlugin.debug_key.DCH_DOWN);
+                        }
                     }
-                    else
+                    if (ImGui.IsKeyPressed(ImGuiKey.UpArrow))
                     {
-                        debugger.ProcessKey(ref view, LibRetroPlugin.debug_key.DCH_UP);
+                        if (ImGui.IsKeyDown(ImGuiKey.LeftShift) || ImGui.IsKeyDown(ImGuiKey.RightShift))
+                        {
+                            debugger.ProcessKey(ref view, LibRetroPlugin.debug_key.DCH_PUP);
+                        }
+                        else
+                        {
+                            debugger.ProcessKey(ref view, LibRetroPlugin.debug_key.DCH_UP);
+                        }
                     }
-                }
-                if (ImGui.IsKeyPressed(ImGuiKey.LeftArrow))
-                {
-                    if (ImGui.IsKeyDown(ImGuiKey.LeftShift) || ImGui.IsKeyDown(ImGuiKey.RightShift))
+                    if (ImGui.IsKeyPressed(ImGuiKey.LeftArrow))
                     {
-                        debugger.ProcessKey(ref view, LibRetroPlugin.debug_key.DCH_CTRLLEFT);
+                        if (ImGui.IsKeyDown(ImGuiKey.LeftShift) || ImGui.IsKeyDown(ImGuiKey.RightShift))
+                        {
+                            debugger.ProcessKey(ref view, LibRetroPlugin.debug_key.DCH_CTRLLEFT);
+                        }
+                        else
+                        {
+                            debugger.ProcessKey(ref view, LibRetroPlugin.debug_key.DCH_LEFT);
+                        }
                     }
-                    else
+                    if (ImGui.IsKeyPressed(ImGuiKey.RightArrow))
                     {
-                        debugger.ProcessKey(ref view, LibRetroPlugin.debug_key.DCH_LEFT);
-                    }
-                }
-                if (ImGui.IsKeyPressed(ImGuiKey.RightArrow))
-                {
-                    if (ImGui.IsKeyDown(ImGuiKey.LeftShift) || ImGui.IsKeyDown(ImGuiKey.RightShift))
-                    {
-                        debugger.ProcessKey(ref view, LibRetroPlugin.debug_key.DCH_CTRLRIGHT);
-                    }
-                    else
-                    {
-                        debugger.ProcessKey(ref view, LibRetroPlugin.debug_key.DCH_RIGHT);
+                        if (ImGui.IsKeyDown(ImGuiKey.LeftShift) || ImGui.IsKeyDown(ImGuiKey.RightShift))
+                        {
+                            debugger.ProcessKey(ref view, LibRetroPlugin.debug_key.DCH_CTRLRIGHT);
+                        }
+                        else
+                        {
+                            debugger.ProcessKey(ref view, LibRetroPlugin.debug_key.DCH_RIGHT);
+                        }
                     }
                 }
             }
         }
-
-
         ImGui.EndChild();
         ImGui.PopStyleVar(2);
 
@@ -213,7 +212,6 @@ internal class DebuggerView : IWindow
                 view.state = new byte[view.view.W * view.view.H * 2];
             }
         }
-
 
         return false;
     }
@@ -237,42 +235,42 @@ internal class DebuggerView : IWindow
     private LibMameDebugger debugger;
     private LibMameDebugger.DView view;
 
-    private void FetchColourForStyle(byte attr,out Vector4 fg,out Vector4 bg)
+    private void FetchColourForStyle(byte attr,out ImVec4 fg,out ImVec4 bg)
     {
-        bg = new Vector4(1.0f, 1.0f, 1.0f, .9f);
-        fg = new Vector4(0.0f, 0.0f, 0.0f, 1.0f);
+        bg = new ImVec4(1.0f, 1.0f, 1.0f, .9f);
+        fg = new ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
 
         if ((attr & 0x01)==0x01)
         {
-            fg = new Vector4(1.0f, 0.0f, 0.0f, 1.0f);
+            fg = new ImVec4(1.0f, 0.0f, 0.0f, 1.0f);
         }
         if ((attr & 0x02)==0x02)
         {
-            bg = new Vector4(1.0f, 0.5f, .5f, 0.8f);
+            bg = new ImVec4(1.0f, 0.5f, .5f, 0.8f);
         }
         if ((attr & 0x04)==0x04)
         {
-            fg = new Vector4(0.0f, 0.0f, 1.0f, 1.0f);
+            fg = new ImVec4(0.0f, 0.0f, 1.0f, 1.0f);
         }
         if ((attr & 0x08)==0x08)
         {
-            fg = new Vector4(fg.X * 0.5f, fg.Y * 0.5f, fg.Z * 0.5f, 1.0f);
+            fg = new ImVec4(fg.X * 0.5f, fg.Y * 0.5f, fg.Z * 0.5f, 1.0f);
         }
         if ((attr & 0x10)==0x10)
         {
-            bg = new Vector4(0.7f, 0.7f, 0.7f, .9f);
+            bg = new ImVec4(0.7f, 0.7f, 0.7f, .9f);
         }
         if ((attr & 0x20)==0x20)
         {
-            bg = new Vector4(1.0f, 1.0f, 0.0f, .8f);
+            bg = new ImVec4(1.0f, 1.0f, 0.0f, .8f);
         }
         if ((attr & 0x40)==0x40)
         {
-            fg = new Vector4(0.0f, .5f, 0.0f, 1.0f);
+            fg = new ImVec4(0.0f, .5f, 0.0f, 1.0f);
         }
         if ((attr & 0x80)==0x80)
         {
-            bg = new Vector4(0.0f, 1.0f, 1.0f, 0.8f);
+            bg = new ImVec4(0.0f, 1.0f, 1.0f, 0.8f);
         }
     }
 

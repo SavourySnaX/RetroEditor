@@ -1,5 +1,4 @@
-
-using ImGuiNET;
+using MyMGui;
 using RetroEditor.Plugins;
 
 internal class Seperator : IWidgetItem, IWidgetUpdateDraw

@@ -1,5 +1,4 @@
-
-using ImGuiNET;
+using MyMGui;
 using RetroEditor.Plugins;
 
 internal class Slider : IWidgetRanged, IWidgetUpdateDraw
@@ -33,7 +32,7 @@ internal class Slider : IWidgetRanged, IWidgetUpdateDraw
         {
             ImGui.BeginDisabled();
         }
-        var changed = ImGui.SliderInt(_label, ref _value, _min, _max);
+        var changed = ImGui.Slider(_label, ref _value, _min, _max);
         if (!Enabled)
         {
             ImGui.EndDisabled();

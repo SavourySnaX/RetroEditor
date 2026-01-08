@@ -1,7 +1,6 @@
-using ImGuiNET;
 using Raylib_cs.BleedingEdge;
 using RetroEditor.Plugins;
-using RetroEditor.Source.Internals.GUI;
+using MyMGui;
 
 internal class WindowManager : IWidgetLog
 {
@@ -123,7 +122,7 @@ internal class WindowManager : IWidgetLog
         {
             if (window.Window.MinimumSize)
             {
-                AbiSafe_ImGuiWrapper.SetNextWindowSize(windowSize, ImGuiCond.FirstUseEver);
+                ImGui.SetNextWindowSize(windowSize, ImGuiCond.FirstUseEver);
             }
             if (!InternalDraw(window))
             {

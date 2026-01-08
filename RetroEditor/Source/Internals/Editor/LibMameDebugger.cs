@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
-using ImGuiNET;
 using RetroEditor.Plugins;
+using MyMGui;
 
 internal class LibMameDebugger
 {

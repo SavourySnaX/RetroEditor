@@ -1,6 +1,5 @@
-using ImGuiNET;
+using MyMGui;
 using RetroEditor.Plugins;
-using RetroEditor.Source.Internals.GUI;
 
 class NewProjectDialog : IWindow
 {
@@ -30,7 +29,7 @@ class NewProjectDialog : IWindow
     {
         var disabledCounter = 0;
 
-        if (AbiSafe_ImGuiWrapper.Button("Choose Folder"))
+        if (ImGui.Button("Choose Folder"))
         {
             requestFolderDialog = true;
         }
@@ -65,7 +64,7 @@ class NewProjectDialog : IWindow
         {
         }
 
-        if (!(requestFileDialog||requestFolderDialog) && AbiSafe_ImGuiWrapper.Button("Choose Game"))
+        if (!(requestFileDialog||requestFolderDialog) && ImGui.Button("Choose Game"))
         {
             requestFileDialog = true;
         }
@@ -101,7 +100,7 @@ class NewProjectDialog : IWindow
         }
         ImGui.Separator();
 
-        if (AbiSafe_ImGuiWrapper.Button("Create Project"))
+        if (ImGui.Button("Create Project"))
         {
             editor.Settings.ProjectLocation = projectLocation;
             ImGui.CloseCurrentPopup();
