@@ -9,7 +9,7 @@ using Raylib_cs.BleedingEdge;
 
 */
 
-internal class RayLibAudioHelper
+internal class RayLibAudioHelper : IDisposable
 {
     struct AudioShared
     {
@@ -161,4 +161,16 @@ internal class RayLibAudioHelper
         }
     }
 
+    public void Dispose()
+    {
+        SwitchAudio(0, false);
+        unsafe
+        {
+            var audioShared = (AudioShared*)audioSharedData;
+            Marshal.FreeHGlobal((IntPtr)audioShared->audioBuffer);
+        }
+        Marshal.FreeHGlobal(audioSharedData);
+        //Dont currently provide a way to free trampolines - for now they are small enough to leak
+        //InstanceTrampoline.InterfaceTrampoline.FreeTrampoline(trampoline);
+    }
 }

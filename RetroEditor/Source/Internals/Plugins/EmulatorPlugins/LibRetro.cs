@@ -630,6 +630,7 @@ internal class LibRetroPlugin : IDisposable
         NativeLibrary.Free(libraryHandle);
         Marshal.FreeHGlobal(loadedRom);
         _pinnedEditor.Free();
+        audioHelper.Dispose();
     }
 
     private bool disableVideo;
