@@ -6,7 +6,7 @@ using RetroEditor.Source.Internals.GUI;
 internal class DebuggerCommand : IWindow
 {
     public float UpdateInterval => 1.0f;
-    public bool MinimumSize => false;
+    public bool MinimumSize => true;
 
 
     public DebuggerCommand(LibMameDebugger debugger)
