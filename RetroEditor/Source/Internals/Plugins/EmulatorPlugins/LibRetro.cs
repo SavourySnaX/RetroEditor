@@ -1,3 +1,4 @@
+using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Raylib_cs.BleedingEdge;
@@ -236,7 +237,7 @@ internal class LibRetroPlugin : IDisposable
         keyMap = new int[RetroKeyArrayCount];
         InitKeyboardToRetroKeyMap();
         disableVideo = false;
-        frameBuffer = Array.Empty<byte>();
+        frameBufferPtr = IntPtr.Zero;
         frameBufferWidth = 0;
         frameBufferHeight = 0;
         pixelFormat = PixelFormat.RGB1555;
@@ -394,8 +395,7 @@ internal class LibRetroPlugin : IDisposable
         var aVInfo=GetSystemAVInfo();
         frameBufferWidth=width=aVInfo.geometry.maxWidth;
         frameBufferHeight=height=aVInfo.geometry.maxHeight;
-        frameBuffer = new byte[width * height * 4];
-
+        frameBufferPtr = Marshal.AllocHGlobal((int)(width * height * 4));
     }
 
     private void NativeLoadLastGame()
@@ -612,11 +612,14 @@ internal class LibRetroPlugin : IDisposable
         disableVideo = false;
     }
 
-    public byte[] GetFrameBuffer(out uint width, out uint height)
+    public ReadOnlySpan<byte> GetFrameBuffer(out uint width, out uint height)
     {
         width = this.width;
         height = this.height;
-        return frameBuffer;
+        unsafe
+        {
+            return new ReadOnlySpan<byte>((void*)frameBufferPtr, (int)(width * height * 4));
+        }
     }
 
     public void Close()
@@ -629,6 +632,8 @@ internal class LibRetroPlugin : IDisposable
     {
         NativeLibrary.Free(libraryHandle);
         Marshal.FreeHGlobal(loadedRom);
+        Marshal.FreeHGlobal(frameBufferPtr);
+        Marshal.FreeHGlobal(nativeGameInfo);
         _pinnedEditor.Free();
         audioHelper.Dispose();
     }
@@ -638,11 +643,11 @@ internal class LibRetroPlugin : IDisposable
 
     private nint nativeGameInfo;
     private nint loadedRom;
+    private nint frameBufferPtr;
     private UIntPtr loadedRomSize;
 
     private PixelFormat pixelFormat;
     private IntPtr libraryHandle;
-    private byte[] frameBuffer;
     private uint frameBufferWidth, frameBufferHeight;
     private uint width, height; // Last rendered width/height
     private MemoryMap[] memoryMaps;
@@ -1292,58 +1297,139 @@ internal class LibRetroPlugin : IDisposable
         switch (pixelFormat)
         {
             case PixelFormat.RGB565:
-            {
-                unsafe 
                 {
-                    var src = (ushort*)data;
-                    uint frameBufferPos = 0;
-                    var srcNextLine=(pitch.ToUInt32() / 2) - width;
-                    for (int y=0;y<height;y++)
-                    {
-                        for (int x=0;x<width;x++)
-                        {
-                            var pixel = *src++;
-                            var r = (byte)((pixel & 0xF800) >> 11);
-                            var g = (byte)((pixel & 0x07E0) >> 5);
-                            var b = (byte)((pixel & 0x001F) >> 0);
-                            frameBuffer[frameBufferPos++] = (byte)((r << 3) | (r >> 2));
-                            frameBuffer[frameBufferPos++] = (byte)((g << 2) | (g >> 4));
-                            frameBuffer[frameBufferPos++] = (byte)((b << 3) | (b >> 2));
-                            frameBuffer[frameBufferPos++] = 255;
-                        }
-                        src += srcNextLine;
-                        frameBufferPos += frameBufferPitch;
-                    }
+                    CopyRgb565ToRgba(data, width, height, pitch, frameBufferPitch);
+                    break;
                 }
-                break;
-            }
             case PixelFormat.XRGB8888:
-            {
-                unsafe 
                 {
-                    var src = (uint*)data;
-                    uint frameBufferPos = 0;
-                    var srcNextLine=(pitch.ToUInt32() / 4) - width;
-                    for (int y=0;y<height;y++)
-                    {
-                        for (int x=0;x<width;x++)
-                        {
-                            var pixel = *src++;
-                            frameBuffer[frameBufferPos++] = (byte)((pixel & 0x00FF0000) >> 16);
-                            frameBuffer[frameBufferPos++] = (byte)((pixel & 0x0000FF00) >> 8);
-                            frameBuffer[frameBufferPos++] = (byte)((pixel & 0x000000FF) >> 0);
-                            frameBuffer[frameBufferPos++] = 255;
-                        }
-                        src += srcNextLine;
-                        frameBufferPos += frameBufferPitch;
-                    }
+                    CopyXrgb8888ToRgba(data, width, height, pitch, frameBufferPitch);
+                    break;
                 }
-                break;
-            }
             default:
                 throw new Exception($"TODO implement pixel format conversion {pixelFormat}");
         }
     }
+
+    private void CopyXrgb8888ToRgba(nint data, uint width, uint height, nuint pitch, uint frameBufferPitch)
+    {
+        unsafe
+        {
+            var src = (uint*)data;
+            uint frameBufferPos = 0;
+            var srcNextLine = (pitch.ToUInt32() / 4) - width;
+            frameBufferPitch /= 4;
+            var frameBuffer = new Span<uint>((void*)frameBufferPtr, (int)(frameBufferWidth * frameBufferHeight));
+            
+            int vectorSize = Vector<uint>.Count;
+            
+            var MaskR = new Vector<uint>(0x00FF0000);
+            var MaskG = new Vector<uint>(0x0000FF00);
+            var MaskB = new Vector<uint>(0x000000FF);
+            var alphaA = new Vector<uint>(0xFF000000);
+
+            for (int y = 0; y < height; y++)
+            {
+                int x = 0;
+                
+                // Process pixels in vectors
+                for (; x <= width - vectorSize; x += vectorSize)
+                {
+                    var pixels = new Vector<uint>(new ReadOnlySpan<uint>(src + x, vectorSize));
+                    
+                    // Swap R and B channels: XRGB -> XBGR, then OR with alpha
+                    var r = Vector.BitwiseAnd(pixels, MaskR);
+                    var g = Vector.BitwiseAnd(pixels, MaskG);
+                    var b = Vector.BitwiseAnd(pixels, MaskB);
+                    
+                    var result = Vector.BitwiseOr(
+                        Vector.BitwiseOr(r >> 16, g),
+                        Vector.BitwiseOr(b << 16, alphaA)
+                    );
+                    
+                    result.CopyTo(frameBuffer.Slice((int)frameBufferPos, vectorSize));
+                    frameBufferPos += (uint)vectorSize;
+                }
+                
+                // Handle remaining pixels
+                for (; x < width; x++)
+                {
+                    var pixel = src[x];
+                    pixel = ((pixel & 0x00FF0000) >> 16) | (pixel & 0x0000FF00) | ((pixel & 0x000000FF) << 16) | 0xFF000000;
+                    frameBuffer[(int)(frameBufferPos++)] = pixel;
+                }
+                
+                src += width + srcNextLine;
+                frameBufferPos += frameBufferPitch;
+            }
+        }
+    }
+
+    private void CopyRgb565ToRgba(nint data, uint width, uint height, nuint pitch, uint frameBufferPitch)
+    {
+        unsafe
+        {
+            var src = (ushort*)data;
+            uint frameBufferPos = 0;
+            var srcNextLine = (pitch.ToUInt32() / 2) - width;
+            frameBufferPitch /= 4;
+            var frameBuffer = new Span<uint>((void*)frameBufferPtr, (int)(frameBufferWidth * frameBufferHeight));
+            
+            int vectorSize = Vector<ushort>.Count;
+            
+            // Masks for extracting RGB565 components
+            var MaskR = new Vector<ushort>(0xF800);
+            var MaskG = new Vector<ushort>(0x07E0);
+            var MaskB = new Vector<ushort>(0x001F);
+            
+            for (int y = 0; y < height; y++)
+            {
+                int x = 0;
+                
+                // Process pixels in vectors where possible
+                for (; x <= width - vectorSize; x += vectorSize)
+                {
+                    var pixels = new Vector<ushort>(new ReadOnlySpan<ushort>(src + x, vectorSize));
+                    
+                    // Extract RGB565 components
+                    var r5 = Vector.BitwiseAnd(pixels, MaskR) >> 11;
+                    var g6 = Vector.BitwiseAnd(pixels, MaskG) >> 5;
+                    var b5 = Vector.BitwiseAnd(pixels, MaskB);
+                    
+                    // Convert to 8-bit: RGB565 -> RGB888
+                    var r8 = (r5 << 3) | (r5 >> 2);
+                    var g8 = (g6 << 2) | (g6 >> 4);
+                    var b8 = (b5 << 3) | (b5 >> 2);
+                    
+                    // Convert ushort vectors to uint and combine RGBA
+                    for (int i = 0; i < vectorSize; i++)
+                    {
+                        uint rgba = (uint)(r8[i] | (g8[i] << 8) | (b8[i] << 16) | 0xFF000000);
+                        frameBuffer[(int)(frameBufferPos++)] = rgba;
+                    }
+                }
+                
+                // Handle remaining pixels with scalar code
+                for (; x < width; x++)
+                {
+                    var pixel = src[x];
+                    var r = (byte)((pixel & 0xF800) >> 11);
+                    var g = (byte)((pixel & 0x07E0) >> 5);
+                    var b = (byte)((pixel & 0x001F) >> 0);
+
+                    var rb = (byte)((r << 3) | (r >> 2));
+                    var gb = (byte)((g << 2) | (g >> 4));
+                    var bb = (byte)((b << 3) | (b >> 2));
+
+                    frameBuffer[(int)(frameBufferPos++)] = (uint)(rb | (gb << 8) | (bb << 16) | 0xFF000000);
+                }
+                
+                src += width + srcNextLine;
+                frameBufferPos += frameBufferPitch;
+            }
+        }
+    }
+
 
     private void KeyboardCallback(byte down, uint keycode, uint character, ushort key_modifiers)
     {
