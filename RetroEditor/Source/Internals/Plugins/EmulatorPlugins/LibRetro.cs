@@ -1005,7 +1005,7 @@ internal class LibRetroPlugin : IDisposable
                         return 1;
                     }
                     _editor.Log(LogType.Debug, "LibRetro", $"Get variable (UNKNOWN): {key}");
-                    return 1;
+                    return 0;
                 }
             case EnvironmentCommand.ENVIRONMENT_SET_VARIABLES:
                 {
