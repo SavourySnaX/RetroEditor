@@ -11,7 +11,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [windows-11-arm, macos-latest, windows-latest, ubuntu-24.04-arm64] # ubuntu-x64 is covered in buildAndTestAndPackage
+        os: [windows-11-arm, macos-latest, windows-latest, ubuntu-24.04-arm] # ubuntu-x64 is covered in buildAndTestAndPackage
     steps:
     - uses: actions/checkout@v4
     - name: Setup .NET
