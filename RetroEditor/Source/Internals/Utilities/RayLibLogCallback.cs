@@ -80,8 +80,8 @@ internal static unsafe class RayLibLoggingWrapper
             return AppleLogCallback(format, args);
         }
 
-        // Special marshalling is needed on Linux desktop 64 bits.
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) && IntPtr.Size == 8)
+        // Special marshalling is needed on Linux desktop X64.
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) && RuntimeInformation.OSArchitecture == Architecture.X64)
         {
             return LinuxX64LogCallback(format, args);
         }
