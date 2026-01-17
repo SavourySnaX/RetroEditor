@@ -27,4 +27,13 @@
         TargetFramework="$(TargetFramework)" />
   </Target>
 
+  <Target Name="CopyReferenceAssemblies" AfterTargets="ComputeFilesToPublish">
+    <ItemGroup>
+      <FilesToPublish Include="..\ReferenceAssemblies\**" />
+    </ItemGroup>
+    <Copy SourceFiles="@(FilesToPublish)" 
+          DestinationFolder="$(PublishDir)\ReferenceAssemblies\%(RecursiveDir)" 
+          SkipUnchangedFiles="false" />
+  </Target>
+
 </Project>
