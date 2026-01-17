@@ -11,7 +11,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [windows-11-arm, macos-latest, windows-latest, ubuntu-latest-arm64] # ubuntu-x64 is covered in buildAndTestAndPackage
+        os: [windows-11-arm, macos-latest, windows-latest, ubuntu-24.04-arm64] # ubuntu-x64 is covered in buildAndTestAndPackage
     steps:
     - uses: actions/checkout@v4
     - name: Setup .NET
@@ -43,6 +43,8 @@ jobs:
       run: dotnet publish -r win-arm64 RetroEditor.sln
     - name: Build Linux X64
       run: dotnet publish -r linux-x64 RetroEditor.sln
+    - name:  Build Linux Arm64
+      run: dotnet publish -r linux-arm64 RetroEditor.sln
     - name: Build MacOS Arm64
       run: dotnet publish -r osx-arm64 RetroEditor.sln
     - name: Archive Windows X64
@@ -60,6 +62,11 @@ jobs:
       with:
         name: Linux-X64
         path: RetroEditorApplication/bin/Release/net10.0/linux-x64/publish
+    - name: Archive Linux Arm64
+      uses: actions/upload-artifact@v4
+      with:
+        name: Linux-Arm64
+        path: RetroEditorApplication/bin/Release/net10.0/linux-arm64/publish
     - name: Archive Macos Arm64
       uses: actions/upload-artifact@v4
       with:
