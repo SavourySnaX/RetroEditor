@@ -1018,6 +1018,7 @@ internal class Editor : IEditor, IEditorInternal
                 architecture = "arm64";
                 supportsMacos = true;
                 supportsWindows = true;
+                supportsLinux = true;
                 break;
             default:
                 return OSSupportedResult.ArchitectureNotSupported;
@@ -1175,7 +1176,6 @@ internal class Editor : IEditor, IEditorInternal
         return await Download(url, destinationFolder, itemToGrab);
     }
 
-
     async Task<bool> DownloadLibRetro(string platform, string extra, string architecture, string extension, string pluginName)
     {
         if (!string.IsNullOrEmpty(extra))
@@ -1190,8 +1190,6 @@ internal class Editor : IEditor, IEditorInternal
             // At present buildbot does not have arm64 builds for windows
             // as a workaround, I've published the ones built at https://github.com/talynone/RetroArch/releases/
             // individually to github location so we can download them from there
-            // annoyingly these will also need copying to project folder too.. which means the project folder structure
-            // should probably be standardised to include platform/architecture folders
 
             // In addition, there are some extra dependencies needed so we need to validate/download those too.
             var extraCheck = Path.Combine(destinationFolder, "extras.txt");
@@ -1209,6 +1207,30 @@ internal class Editor : IEditor, IEditorInternal
                 }
             }
             url = $"http://github.com/SavourySnaX/prebuilt-windows-dependencies/releases/latest/download/{pluginName}{extension}.zip";
+        }
+        else if (platform=="linux" && architecture=="arm64")
+        {
+            // At present buildbot does not have arm64 builds for linux
+            // as a workaround, I've published the ones built at https://github.com/christianhaitian/retroarch-cores
+            // individually to github location so we can download them from there
+
+            // In addition, there are some extra dependencies needed so we need to validate/download those too.
+            // Unclear if extras is needed for now
+/*            var extraCheck = Path.Combine(destinationFolder, "extras.txt");
+            Task<bool> result= null!;
+            if (!File.Exists(extraCheck))
+            {
+                var extrasUrl = $"http://github.com/SavourySnaX/prebuilt-linux-arm64-dependencies/releases/latest/download/extras.zip";
+
+                Log(LogType.Info, $"Downloading {extrasUrl} as local copy not present");
+                result = Download(extrasUrl, destinationFolder);
+                await result;
+                if (result.Result!=true)    // its not the end of the world to do this concurrently
+                {
+                    return false;
+                }
+            }*/
+            url = $"http://github.com/SavourySnaX/prebuilt-linux-arm64-dependencies/releases/latest/download/{pluginName}{extension}.zip";
         }
         Log(LogType.Info, $"Downloading {url} as local copy not present");
         return await Download(url, destinationFolder, itemToGrab);
