@@ -17,8 +17,6 @@ public class TransformProject : Task
 
     public override bool Execute()
     {
-        System.Diagnostics.Debugger.Launch();
-
         var doc = XDocument.Load(InputProject);
 
         // Remove all ItemGroups
