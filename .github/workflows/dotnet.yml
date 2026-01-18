@@ -87,3 +87,31 @@ jobs:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         publish_dir: docfx/_site
         force_orphan: true
+    - name: Download all artifacts
+      if: github.ref == 'refs/heads/main'
+      uses: actions/download-artifact@v4
+      with:
+        path: ./artifacts
+    - name: Zip artifacts
+      if: github.ref == 'refs/heads/main'
+      run: |
+        cd artifacts
+        for dir in */; do
+          zip -r $dir".zip" "$dir"
+        done
+        mv *.zip ../
+    - name: Create Latest Release
+      if: github.ref == 'refs/heads/main'
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: latest
+        name: Latest Development Build
+        prerelease: true
+        files: |
+          Windows-X64.zip
+          Windows-Arm64.zip
+          Linux-X64.zip
+          Linux-Arm64.zip
+          MacOS-Arm64.zip
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
