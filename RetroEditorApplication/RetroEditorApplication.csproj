@@ -36,4 +36,12 @@
           SkipUnchangedFiles="false" />
   </Target>
 
+  <Target Name="CopySystemPlugins" AfterTargets="ComputeFilesToPublish">
+    <ItemGroup>
+      <FilesToPublish Include="..\Libs\**" />
+    </ItemGroup>
+    <Copy SourceFiles="@(FilesToPublish)" 
+          DestinationFolder="$(PublishDir)\Libs\%(RecursiveDir)" 
+          SkipUnchangedFiles="false" />
+  </Target>
 </Project>

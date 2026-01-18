@@ -6,6 +6,7 @@ internal class GamePluginLoader : IGamePluginLoader
     private PluginBuilder _plugin;
     private string _pathToPlugin;
     private IEditorInternal _editor;
+    private List<string> _additionalAssemblies;
 
     public GamePluginLoader(IEditorInternal editor, string path)
     {
@@ -15,6 +16,12 @@ internal class GamePluginLoader : IGamePluginLoader
         var referenceAssembliesRoot = "ReferenceAssemblies";
         _plugin.AddReferences(referenceAssembliesRoot);
         _pathToPlugin = path;
+        _additionalAssemblies = new List<string>();
+    }
+
+    public void AddAssembly(string assemblyPath)
+    {
+        _additionalAssemblies.Add(assemblyPath);
     }
 
     public List<Type> LoadPlugin()
@@ -42,6 +49,11 @@ internal class GamePluginLoader : IGamePluginLoader
                     _editor.Log(LogType.Info, "Compilation", diagnostic.ToString());
                     break;
             }
+        }
+
+        foreach (var assemblyPath in _additionalAssemblies)
+        {
+            _plugin.LoadAdditionalAssembly(assemblyPath);
         }
 
         var assembly = _plugin.LoadInMemoryPlugin();

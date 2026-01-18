@@ -91,6 +91,11 @@ public class Plugins
             _pluginKind = pluginKind;
         }
 
+        public void AddAssembly(string assemblyPath)
+        {
+            // No-op
+        }
+
         public List<Type> LoadPlugin()
         {
             return new List<Type> { _pluginKind };
