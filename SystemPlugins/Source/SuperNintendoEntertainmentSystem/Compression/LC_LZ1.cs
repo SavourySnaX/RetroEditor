@@ -2,6 +2,9 @@ using System;
 
 namespace SuperNintendoEntertainmentSystem.Compression
 {
+    /// <summary>
+    /// Provides LC-LZ1 compression/decompression utilities for Super Nintendo Entertainment System data.
+    /// </summary>
     public static class LC_LZ1
     {
         private static void DecompressCode(ref byte[] decompBuffer, ref ReadOnlySpan<byte> data, ref int offset, int l, int c)
@@ -79,6 +82,13 @@ namespace SuperNintendoEntertainmentSystem.Compression
             }
         }
 
+        /// <summary>
+        /// Decompresses LC-LZ1 compressed data.
+        /// </summary>
+        /// <param name="toDecompressBuffer">The buffer to store decompressed data.</param>
+        /// <param name="data">The LC-LZ1 compressed data to decompress.</param>
+        /// <param name="bytesRead">The number of bytes read from the compressed data.</param>
+        /// <returns>The total number of bytes written to the decompression buffer.</returns>
         public static int Decompress(ref byte[] toDecompressBuffer, ReadOnlySpan<byte> data, out int bytesRead)
         {
             //LC_LZ1

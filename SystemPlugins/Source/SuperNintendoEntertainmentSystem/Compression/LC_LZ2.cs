@@ -2,6 +2,9 @@ using System;
 
 namespace SuperNintendoEntertainmentSystem.Compression
 {
+    /// <summary>
+    /// Provides decompression functionality for LC_LZ2 compression format used in Super Nintendo Entertainment System.
+    /// </summary>
     public static class LC_LZ2
     {
         private static void DecompressCode(ref byte[] decompBuffer, ref ReadOnlySpan<byte> data, ref int offset, int l, int c)
@@ -80,6 +83,13 @@ namespace SuperNintendoEntertainmentSystem.Compression
 
         }
 
+        /// <summary>
+        /// Decompresses LC_LZ2 compressed data.
+        /// </summary>
+        /// <param name="toDecompressBuffer">The buffer to write decompressed data to.</param>
+        /// <param name="data">The compressed data to decompress.</param>
+        /// <param name="bytesRead">The number of bytes read from the input data.</param>
+        /// <returns>The number of bytes written to the decompression buffer.</returns>
         public static int Decompress(ref byte[] toDecompressBuffer, ReadOnlySpan<byte> data, out int bytesRead)
         {
             //LC_LZ2

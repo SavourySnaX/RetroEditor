@@ -4,8 +4,16 @@
     <ProduceReferenceAssembly>true</ProduceReferenceAssembly>
     <TargetRefPath>$(MSBuildThisFileDirectory)../ReferenceAssemblies/SystemPlugins.dll</TargetRefPath>
     <warningsAsErrors>true</warningsAsErrors>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <warningsAsErrors>true</warningsAsErrors>
   </PropertyGroup>
 
+  <Target Name="Bob" AfterTargets="Build">
+    <Copy SourceFiles="$(TargetPath)" 
+          DestinationFiles="$(MSBuildThisFileDirectory)../Libs/$(TargetFileName)" 
+          SkipUnchangedFiles="false" />
+  </Target>
+   
 
   <ItemGroup>
     <ProjectReference Include="..\RetroEditor\RetroEditor.csproj" />

@@ -37,6 +37,11 @@ internal class PluginBuilder
         _references.Add(MetadataReference.CreateFromFile(referencePath));
     }
 
+    public void LoadAdditionalAssembly(string assemblyPath)
+    {
+        _loadContext.LoadFromAssemblyPath(assemblyPath);
+    }
+
     public void AddReferences(string referencePath)
     {
         foreach (var file in Directory.GetFiles(referencePath, "*.dll"))
