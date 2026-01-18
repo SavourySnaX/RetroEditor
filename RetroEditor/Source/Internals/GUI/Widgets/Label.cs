@@ -1,5 +1,4 @@
-
-//TODO using ImGuiNET;
+using MyMGui;
 using RetroEditor.Plugins;
 
 internal class Label : IWidgetLabel, IWidgetUpdateDraw
@@ -17,6 +16,6 @@ internal class Label : IWidgetLabel, IWidgetUpdateDraw
 
     public void Draw(IWidgetLog logger)
     {
-//TODO        ImGui.Text(Name);
+        ImGui.Text(Name);
     }
 }
