@@ -95,16 +95,15 @@ jobs:
         skip_unpack: true
     - name: Create Latest Release
       if: github.ref == 'refs/heads/main'
-      uses: softprops/action-gh-release@v1
+      uses: "marvinpinto/action-automatic-releases@latest"
       with:
-        tag_name: latest
-        name: Latest Development Build
+        repo_token: "${{ secrets.GITHUB_TOKEN }}"
+        automatic_release_tag: "latest"
         prerelease: true
+        title: "Development Build"
         files: |
           ./artifacts/Windows-X64.zip
           ./artifacts/Windows-Arm64.zip
           ./artifacts/Linux-X64.zip
           ./artifacts/Linux-Arm64.zip
           ./artifacts/MacOS-Arm64.zip
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
