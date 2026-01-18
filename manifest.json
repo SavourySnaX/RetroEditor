@@ -1,0 +1,910 @@
+{
+  "source_base_path": "/home/runner/work/RetroEditor/RetroEditor/docfx",
+  "xrefmap": "xrefmap.yml",
+  "files": [
+    {
+      "type": "Resource",
+      "output": {
+        "resource": {
+          "relative_path": "index.json"
+        }
+      }
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/RetroEditor.Plugins.ChangedEventHandler.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/RetroEditor.Plugins.ChangedEventHandler.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "RetroEditor.Plugins.ChangedEventHandler",
+      "Summary": "<p sourcefile=\"api/RetroEditor.Plugins.ChangedEventHandler.yml\" sourcestartlinenumber=\"1\">Delegate for a changed event. Would be called if a value changes in a widget that supports it</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/RetroEditor.Plugins.Color4B.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/RetroEditor.Plugins.Color4B.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "RetroEditor.Plugins.Color4B",
+      "Summary": "<p sourcefile=\"api/RetroEditor.Plugins.Color4B.yml\" sourcestartlinenumber=\"1\">Represents a color with four components (Red, Green, Blue, Alpha) using byte values</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/RetroEditor.Plugins.FlipState.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/RetroEditor.Plugins.FlipState.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "RetroEditor.Plugins.FlipState",
+      "Summary": "<p sourcefile=\"api/RetroEditor.Plugins.FlipState.yml\" sourcestartlinenumber=\"1\">Flags to indicate the flip state of a tile in a layer</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/RetroEditor.Plugins.IBitmapImage.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/RetroEditor.Plugins.IBitmapImage.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "RetroEditor.Plugins.IBitmapImage",
+      "Summary": "<p sourcefile=\"api/RetroEditor.Plugins.IBitmapImage.yml\" sourcestartlinenumber=\"1\">Interface for a bitmap image - used with the BitmapWidget class</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/RetroEditor.Plugins.IBitmapPalette.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/RetroEditor.Plugins.IBitmapPalette.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "RetroEditor.Plugins.IBitmapPalette",
+      "Summary": "<p sourcefile=\"api/RetroEditor.Plugins.IBitmapPalette.yml\" sourcestartlinenumber=\"1\">Interface for a palette - used with the PaletteWidget class</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/RetroEditor.Plugins.IEditor.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/RetroEditor.Plugins.IEditor.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "RetroEditor.Plugins.IEditor",
+      "Summary": "<p sourcefile=\"api/RetroEditor.Plugins.IEditor.yml\" sourcestartlinenumber=\"1\">Editor interface - used to interact with the editor</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/RetroEditor.Plugins.IImage.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/RetroEditor.Plugins.IImage.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "RetroEditor.Plugins.IImage",
+      "Summary": "<p sourcefile=\"api/RetroEditor.Plugins.IImage.yml\" sourcestartlinenumber=\"1\">Interface for an image - used by the ImageView class</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/RetroEditor.Plugins.ILayer.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/RetroEditor.Plugins.ILayer.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "RetroEditor.Plugins.ILayer",
+      "Summary": "<p sourcefile=\"api/RetroEditor.Plugins.ILayer.yml\" sourcestartlinenumber=\"1\">Interface for a layer in a tile map</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/RetroEditor.Plugins.ILayerWithFlip.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/RetroEditor.Plugins.ILayerWithFlip.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "RetroEditor.Plugins.ILayerWithFlip",
+      "Summary": "<p sourcefile=\"api/RetroEditor.Plugins.ILayerWithFlip.yml\" sourcestartlinenumber=\"1\">Interface for a layer that supports flipping tiles</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/RetroEditor.Plugins.IMemoryAccess.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/RetroEditor.Plugins.IMemoryAccess.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "RetroEditor.Plugins.IMemoryAccess",
+      "Summary": "<p sourcefile=\"api/RetroEditor.Plugins.IMemoryAccess.yml\" sourcestartlinenumber=\"1\">Interface for accessing memory</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/RetroEditor.Plugins.IMenu.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/RetroEditor.Plugins.IMenu.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "RetroEditor.Plugins.IMenu",
+      "Summary": "<p sourcefile=\"api/RetroEditor.Plugins.IMenu.yml\" sourcestartlinenumber=\"1\">Interface for creating menus</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/RetroEditor.Plugins.IMenuItem.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/RetroEditor.Plugins.IMenuItem.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "RetroEditor.Plugins.IMenuItem",
+      "Summary": "<p sourcefile=\"api/RetroEditor.Plugins.IMenuItem.yml\" sourcestartlinenumber=\"1\">Represents a menu item</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/RetroEditor.Plugins.IMenuProvider.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/RetroEditor.Plugins.IMenuProvider.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "RetroEditor.Plugins.IMenuProvider",
+      "Summary": "<p sourcefile=\"api/RetroEditor.Plugins.IMenuProvider.yml\" sourcestartlinenumber=\"1\">Interface for providing menus\nAllows a plugin to provide a set of menus to the editor</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/RetroEditor.Plugins.IObject.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/RetroEditor.Plugins.IObject.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "RetroEditor.Plugins.IObject",
+      "Summary": "<p sourcefile=\"api/RetroEditor.Plugins.IObject.yml\" sourcestartlinenumber=\"1\">Represents an interface for UI widgets that defines basic properties and methods.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/RetroEditor.Plugins.IObjectMap.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/RetroEditor.Plugins.IObjectMap.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "RetroEditor.Plugins.IObjectMap",
+      "Summary": "<p sourcefile=\"api/RetroEditor.Plugins.IObjectMap.yml\" sourcestartlinenumber=\"1\">Interface for an object map - used by the ObjectMapWidget class</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/RetroEditor.Plugins.IPlayerControls.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/RetroEditor.Plugins.IPlayerControls.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "RetroEditor.Plugins.IPlayerControls",
+      "Summary": "<p sourcefile=\"api/RetroEditor.Plugins.IPlayerControls.yml\" sourcestartlinenumber=\"1\">Interface for libretro emulator player</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/RetroEditor.Plugins.IPlayerWindowExtension.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/RetroEditor.Plugins.IPlayerWindowExtension.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "RetroEditor.Plugins.IPlayerWindowExtension",
+      "Summary": "<p sourcefile=\"api/RetroEditor.Plugins.IPlayerWindowExtension.yml\" sourcestartlinenumber=\"1\">Interface to allow a plugin to add widgets to the player window.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/RetroEditor.Plugins.IRender3DWidget.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/RetroEditor.Plugins.IRender3DWidget.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "RetroEditor.Plugins.IRender3DWidget",
+      "Summary": "<p sourcefile=\"api/RetroEditor.Plugins.IRender3DWidget.yml\" sourcestartlinenumber=\"1\">Interface for a 3D widget that renders a 3D scene</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/RetroEditor.Plugins.IRetroPlugin.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/RetroEditor.Plugins.IRetroPlugin.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "RetroEditor.Plugins.IRetroPlugin",
+      "Summary": "<p sourcefile=\"api/RetroEditor.Plugins.IRetroPlugin.yml\" sourcestartlinenumber=\"1\">The primary interface to implement when developing a new plugin</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/RetroEditor.Plugins.ISave.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/RetroEditor.Plugins.ISave.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "RetroEditor.Plugins.ISave",
+      "Summary": "<p sourcefile=\"api/RetroEditor.Plugins.ISave.yml\" sourcestartlinenumber=\"1\">Interface for saving data, intended to be used to generate the final modded game\nAt present only implemented by ZXSpectrumTape</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/RetroEditor.Plugins.ISystemPlugin.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/RetroEditor.Plugins.ISystemPlugin.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "RetroEditor.Plugins.ISystemPlugin",
+      "Summary": "<p sourcefile=\"api/RetroEditor.Plugins.ISystemPlugin.yml\" sourcestartlinenumber=\"1\">Defines a system plugin (e.g. Megadrive, NES, etc)</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/RetroEditor.Plugins.ITile.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/RetroEditor.Plugins.ITile.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "RetroEditor.Plugins.ITile",
+      "Summary": "<p sourcefile=\"api/RetroEditor.Plugins.ITile.yml\" sourcestartlinenumber=\"1\">Interface for a tile - used by the TileMapWidget class</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/RetroEditor.Plugins.ITileMap.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/RetroEditor.Plugins.ITileMap.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "RetroEditor.Plugins.ITileMap",
+      "Summary": "<p sourcefile=\"api/RetroEditor.Plugins.ITileMap.yml\" sourcestartlinenumber=\"1\">Interface for a tile map - used by the TileMapWidget class</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/RetroEditor.Plugins.ITilePalette.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/RetroEditor.Plugins.ITilePalette.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "RetroEditor.Plugins.ITilePalette",
+      "Summary": "<p sourcefile=\"api/RetroEditor.Plugins.ITilePalette.yml\" sourcestartlinenumber=\"1\">Interface for a tile map palette - used by the TileMapWidget class</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/RetroEditor.Plugins.IUserWindow.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/RetroEditor.Plugins.IUserWindow.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "RetroEditor.Plugins.IUserWindow",
+      "Summary": "<p sourcefile=\"api/RetroEditor.Plugins.IUserWindow.yml\" sourcestartlinenumber=\"1\">Interface for a window that can be opened by the user.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/RetroEditor.Plugins.IWidget.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/RetroEditor.Plugins.IWidget.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "RetroEditor.Plugins.IWidget",
+      "Summary": "<p sourcefile=\"api/RetroEditor.Plugins.IWidget.yml\" sourcestartlinenumber=\"1\">Interface for creating widgets</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/RetroEditor.Plugins.IWidgetCheckable.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/RetroEditor.Plugins.IWidgetCheckable.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "RetroEditor.Plugins.IWidgetCheckable",
+      "Summary": "<p sourcefile=\"api/RetroEditor.Plugins.IWidgetCheckable.yml\" sourcestartlinenumber=\"1\">Interface for a widget that can be checked or unchecked</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/RetroEditor.Plugins.IWidgetEnableable.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/RetroEditor.Plugins.IWidgetEnableable.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "RetroEditor.Plugins.IWidgetEnableable",
+      "Summary": "<p sourcefile=\"api/RetroEditor.Plugins.IWidgetEnableable.yml\" sourcestartlinenumber=\"1\">Interface for a widget that can be enabled or disabled</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/RetroEditor.Plugins.IWidgetHandleable.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/RetroEditor.Plugins.IWidgetHandleable.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "RetroEditor.Plugins.IWidgetHandleable",
+      "Summary": "<p sourcefile=\"api/RetroEditor.Plugins.IWidgetHandleable.yml\" sourcestartlinenumber=\"1\">Interface for a widget that can notify of a value change</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/RetroEditor.Plugins.IWidgetItem.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/RetroEditor.Plugins.IWidgetItem.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "RetroEditor.Plugins.IWidgetItem",
+      "Summary": "<p sourcefile=\"api/RetroEditor.Plugins.IWidgetItem.yml\" sourcestartlinenumber=\"1\">Interface for a widget item that can be added to a window</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/RetroEditor.Plugins.IWidgetLabel.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/RetroEditor.Plugins.IWidgetLabel.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "RetroEditor.Plugins.IWidgetLabel",
+      "Summary": "<p sourcefile=\"api/RetroEditor.Plugins.IWidgetLabel.yml\" sourcestartlinenumber=\"1\">Interface for a widget that can display a label</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/RetroEditor.Plugins.IWidgetRanged.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/RetroEditor.Plugins.IWidgetRanged.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "RetroEditor.Plugins.IWidgetRanged",
+      "Summary": "<p sourcefile=\"api/RetroEditor.Plugins.IWidgetRanged.yml\" sourcestartlinenumber=\"1\">Interface for a widget that has a ranged value</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/RetroEditor.Plugins.Line.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/RetroEditor.Plugins.Line.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "RetroEditor.Plugins.Line",
+      "Summary": "<p sourcefile=\"api/RetroEditor.Plugins.Line.yml\" sourcestartlinenumber=\"1\">Represents a line in 3D space defined by two vertices and a color</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/RetroEditor.Plugins.LogType.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/RetroEditor.Plugins.LogType.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "RetroEditor.Plugins.LogType",
+      "Summary": "<p sourcefile=\"api/RetroEditor.Plugins.LogType.yml\" sourcestartlinenumber=\"1\">The type of the Log Message, used to categorize the message.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/RetroEditor.Plugins.MemoryEndian.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/RetroEditor.Plugins.MemoryEndian.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "RetroEditor.Plugins.MemoryEndian",
+      "Summary": "<p sourcefile=\"api/RetroEditor.Plugins.MemoryEndian.yml\" sourcestartlinenumber=\"1\">Endianess of memory - used to determine how to read/write multi-byte values</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/RetroEditor.Plugins.MenuEventHandler.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/RetroEditor.Plugins.MenuEventHandler.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "RetroEditor.Plugins.MenuEventHandler",
+      "Summary": "<p sourcefile=\"api/RetroEditor.Plugins.MenuEventHandler.yml\" sourcestartlinenumber=\"1\">Callback for menu events</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/RetroEditor.Plugins.Pixel.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/RetroEditor.Plugins.Pixel.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "RetroEditor.Plugins.Pixel",
+      "Summary": "<p sourcefile=\"api/RetroEditor.Plugins.Pixel.yml\" sourcestartlinenumber=\"1\">A pixel in an image, 8:8:8:8 RGBA format</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/RetroEditor.Plugins.Point.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/RetroEditor.Plugins.Point.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "RetroEditor.Plugins.Point",
+      "Summary": "<p sourcefile=\"api/RetroEditor.Plugins.Point.yml\" sourcestartlinenumber=\"1\">Represents a point in 3D space with a position and color</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/RetroEditor.Plugins.ReadKind.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/RetroEditor.Plugins.ReadKind.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "RetroEditor.Plugins.ReadKind",
+      "Summary": "<p sourcefile=\"api/RetroEditor.Plugins.ReadKind.yml\" sourcestartlinenumber=\"1\">Memory region to read from</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/RetroEditor.Plugins.Triangle.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/RetroEditor.Plugins.Triangle.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "RetroEditor.Plugins.Triangle",
+      "Summary": "<p sourcefile=\"api/RetroEditor.Plugins.Triangle.yml\" sourcestartlinenumber=\"1\">Represents a triangle in 3D space defined by three vertices</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/RetroEditor.Plugins.Vector3F.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/RetroEditor.Plugins.Vector3F.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "RetroEditor.Plugins.Vector3F",
+      "Summary": "<p sourcefile=\"api/RetroEditor.Plugins.Vector3F.yml\" sourcestartlinenumber=\"1\">Represents a 3D vector with float components</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/RetroEditor.Plugins.WriteKind.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/RetroEditor.Plugins.WriteKind.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "RetroEditor.Plugins.WriteKind",
+      "Summary": "<p sourcefile=\"api/RetroEditor.Plugins.WriteKind.yml\" sourcestartlinenumber=\"1\">Memory region to write to</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/RetroEditor.Plugins.ZXSpectrum48ImageHelper.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/RetroEditor.Plugins.ZXSpectrum48ImageHelper.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "RetroEditor.Plugins.ZXSpectrum48ImageHelper",
+      "Summary": "<p sourcefile=\"api/RetroEditor.Plugins.ZXSpectrum48ImageHelper.yml\" sourcestartlinenumber=\"1\">Helper class for rendering a ZX Spectrum 48K screen, this will probably be abstracted out to a more generic class in the future.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/RetroEditor.Plugins.ZXSpectrumTape.DataBlock.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/RetroEditor.Plugins.ZXSpectrumTape.DataBlock.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "RetroEditor.Plugins.ZXSpectrumTape.DataBlock",
+      "Summary": "<p sourcefile=\"api/RetroEditor.Plugins.ZXSpectrumTape.DataBlock.yml\" sourcestartlinenumber=\"1\">Data Block for a ZX Spectrum Tape, generally follows a header block.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/RetroEditor.Plugins.ZXSpectrumTape.HeaderBlock.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/RetroEditor.Plugins.ZXSpectrumTape.HeaderBlock.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "RetroEditor.Plugins.ZXSpectrumTape.HeaderBlock",
+      "Summary": "<p sourcefile=\"api/RetroEditor.Plugins.ZXSpectrumTape.HeaderBlock.yml\" sourcestartlinenumber=\"1\">Header Block for a ZX Spectrum Tape</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/RetroEditor.Plugins.ZXSpectrumTape.HeaderKind.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/RetroEditor.Plugins.ZXSpectrumTape.HeaderKind.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "RetroEditor.Plugins.ZXSpectrumTape.HeaderKind",
+      "Summary": "<p sourcefile=\"api/RetroEditor.Plugins.ZXSpectrumTape.HeaderKind.yml\" sourcestartlinenumber=\"1\">The kind of header block to create. Maps to the ZX Spectrum Rom Tape Header types.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/RetroEditor.Plugins.ZXSpectrumTape.Tape.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/RetroEditor.Plugins.ZXSpectrumTape.Tape.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "RetroEditor.Plugins.ZXSpectrumTape.Tape",
+      "Summary": "<p sourcefile=\"api/RetroEditor.Plugins.ZXSpectrumTape.Tape.yml\" sourcestartlinenumber=\"1\">Represents a ZX Spectrum Tape image</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/RetroEditor.Plugins.ZXSpectrumTape.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/RetroEditor.Plugins.ZXSpectrumTape.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "RetroEditor.Plugins.ZXSpectrumTape",
+      "Summary": null
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/RetroEditor.Plugins.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/RetroEditor.Plugins.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "RetroEditor.Plugins",
+      "Summary": null
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/SuperNintendoEntertainmentSystem.Compression.LC_LZ1.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/SuperNintendoEntertainmentSystem.Compression.LC_LZ1.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "SuperNintendoEntertainmentSystem.Compression.LC_LZ1",
+      "Summary": "<p sourcefile=\"api/SuperNintendoEntertainmentSystem.Compression.LC_LZ1.yml\" sourcestartlinenumber=\"1\">Provides LC-LZ1 compression/decompression utilities for Super Nintendo Entertainment System data.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/SuperNintendoEntertainmentSystem.Compression.LC_LZ2.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/SuperNintendoEntertainmentSystem.Compression.LC_LZ2.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "SuperNintendoEntertainmentSystem.Compression.LC_LZ2",
+      "Summary": "<p sourcefile=\"api/SuperNintendoEntertainmentSystem.Compression.LC_LZ2.yml\" sourcestartlinenumber=\"1\">Provides decompression functionality for LC_LZ2 compression format used in Super Nintendo Entertainment System.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/SuperNintendoEntertainmentSystem.Compression.LC_LZ5.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/SuperNintendoEntertainmentSystem.Compression.LC_LZ5.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "SuperNintendoEntertainmentSystem.Compression.LC_LZ5",
+      "Summary": "<p sourcefile=\"api/SuperNintendoEntertainmentSystem.Compression.LC_LZ5.yml\" sourcestartlinenumber=\"1\">Provides decompression functionality for LC_LZ5 compression format.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/SuperNintendoEntertainmentSystem.Compression.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/SuperNintendoEntertainmentSystem.Compression.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "SuperNintendoEntertainmentSystem.Compression",
+      "Summary": null
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/SuperNintendoEntertainmentSystem.Graphics.Colour.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/SuperNintendoEntertainmentSystem.Graphics.Colour.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "SuperNintendoEntertainmentSystem.Graphics.Colour",
+      "Summary": "<p sourcefile=\"api/SuperNintendoEntertainmentSystem.Graphics.Colour.yml\" sourcestartlinenumber=\"1\">SNES Colour conversion utilities</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/SuperNintendoEntertainmentSystem.Graphics.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/SuperNintendoEntertainmentSystem.Graphics.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "SuperNintendoEntertainmentSystem.Graphics",
+      "Summary": null
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/SuperNintendoEntertainmentSystem.Memory.AddressTranslation.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/SuperNintendoEntertainmentSystem.Memory.AddressTranslation.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "SuperNintendoEntertainmentSystem.Memory.AddressTranslation",
+      "Summary": "<p sourcefile=\"api/SuperNintendoEntertainmentSystem.Memory.AddressTranslation.yml\" sourcestartlinenumber=\"1\">Provides address translation between CPU addresses and ROM image offsets (interface).</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/SuperNintendoEntertainmentSystem.Memory.LoRom.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/SuperNintendoEntertainmentSystem.Memory.LoRom.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "SuperNintendoEntertainmentSystem.Memory.LoRom",
+      "Summary": "<p sourcefile=\"api/SuperNintendoEntertainmentSystem.Memory.LoRom.yml\" sourcestartlinenumber=\"1\">Provides address translation for SNES LoROM cartridge format.\nHandles conversion between CPU address space and ROM image offsets.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/SuperNintendoEntertainmentSystem.Memory.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/SuperNintendoEntertainmentSystem.Memory.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "SuperNintendoEntertainmentSystem.Memory",
+      "Summary": null
+    },
+    {
+      "type": "Toc",
+      "source_relative_path": "api/toc.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/toc.html"
+        },
+        ".json": {
+          "relative_path": "api/toc.json"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Conceptual",
+      "source_relative_path": "docs/developer-guide.md",
+      "output": {
+        ".html": {
+          "relative_path": "docs/developer-guide.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Toc",
+      "source_relative_path": "docs/toc.yml",
+      "output": {
+        ".html": {
+          "relative_path": "docs/toc.html"
+        },
+        ".json": {
+          "relative_path": "docs/toc.json"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Conceptual",
+      "source_relative_path": "docs/user-guide.md",
+      "output": {
+        ".html": {
+          "relative_path": "docs/user-guide.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Resource",
+      "source_relative_path": "images/screenshot.png",
+      "output": {
+        "resource": {
+          "relative_path": "images/screenshot.png"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Conceptual",
+      "source_relative_path": "index.md",
+      "output": {
+        ".html": {
+          "relative_path": "index.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Toc",
+      "source_relative_path": "toc.yml",
+      "output": {
+        ".html": {
+          "relative_path": "toc.html"
+        },
+        ".json": {
+          "relative_path": "toc.json"
+        }
+      },
+      "version": ""
+    }
+  ],
+  "groups": [
+    {
+      "xrefmap": "xrefmap.yml"
+    }
+  ]
+}
