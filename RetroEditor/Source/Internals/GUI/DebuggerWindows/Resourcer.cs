@@ -408,6 +408,11 @@ internal class Resourcer : IWindow
                             autoState.Push(autoDisassembler.State);
                             automated = true;
                         }
+                        if (ImGui.IsKeyPressed(ImGuiKey._4) && !automated)
+                        {
+                            // Add data region of 4-byte words
+                            romData.AddDataRange(rangeRegion, minAddress, maxAddress, 4);
+                        }
                     }
 
                     if (vars.cursorPosition.HasValue && ImGui.IsKeyPressed(ImGuiKey.Period) && ImGui.IsKeyDown(ImGuiKey.LeftShift))

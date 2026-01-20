@@ -459,6 +459,18 @@ internal class DataRegion : IRegionInfo
         return new LineInfo($"{AddressStart + index:X8}", BytesForSpan(Parent.FetchBytes(AddressStart+index,3)), $"dl {dl:X6}", "");
     }
 
+    LineInfo GetLongLineInfo(ulong index)
+    {
+        UInt32 dl = Parent.GetByte(AddressStart + index+0);
+        dl <<= 8;
+        dl |= Parent.GetByte(AddressStart + index+1);
+        dl <<= 8;
+        dl |= Parent.GetByte(AddressStart + index+2);
+        dl <<= 8;
+        dl |= Parent.GetByte(AddressStart + index+3);
+        return new LineInfo($"{AddressStart + index:X8}", BytesForSpan(Parent.FetchBytes(AddressStart+index,4)), $"dl {dl:X8}", "");
+    }
+
     public override LineInfo GetRegionLineInfo(ulong index)
     {
         if (dataIsKnown)
@@ -471,6 +483,8 @@ internal class DataRegion : IRegionInfo
                     return GetWordLineInfo(index);
                 case 3:
                     return GetTripleLineInfo(index);
+                case 4:
+                    return GetLongLineInfo(index);
                 default:
                     throw new ArgumentException($"Unknown size {size}");
             }
