@@ -723,7 +723,8 @@ internal class RomDataParser : IRomDataParser
 
         for (int i = 0; i < sourceCount; i++)
         {
-            if (sources[i].Contains("Region ':snsslot:cart:rom'"))
+            //if (sources[i].Contains("Region ':snsslot:cart:rom'"))
+            if (sources[i].Contains("Region ':mdslot:cart:rom'"))
             {
                 debugger.SetSource(ref view, i);
                 break;
@@ -1021,6 +1022,10 @@ internal class RomDataParser : IRomDataParser
             // We don't know the size of the rom, so, first off set the address of the view to the biggest possible value
             view.view.Expression = $"${UInt64.MaxValue:X}";
             debugger.SetExpression(ref view);
+            // Some platforms (e.g., Genesis) seem to start in unexpected byte count
+            debugger.SetDataFormat(ref view, LibRetroPlugin.debug_format.DataFormat2ByteHex);
+            debugger.UpdateDView(ref view);
+            debugger.SetDataFormat(ref view, LibRetroPlugin.debug_format.DataFormat1ByteHex);
             debugger.UpdateDView(ref view);
 
             // Now we can get the size of the rom

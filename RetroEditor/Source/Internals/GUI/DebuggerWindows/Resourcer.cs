@@ -2,6 +2,7 @@ using MyMGui;
 using System.Numerics;
 using RetroEditor.Source.Internals.ReverseEngineering.Platform;
 using RetroEditor.Source.Internals.ReverseEngineering.Platform.SNES;
+using RetroEditor.Source.Internals.ReverseEngineering.Platform.Megadrive;
 
 internal class Resourcer : IWindow
 {
@@ -30,7 +31,7 @@ internal class Resourcer : IWindow
     public Resourcer(LibMameDebugger debugger, IPlatformFactory? platformFactory = null)
     {
         this.debugger = debugger;
-        this.platformFactory = platformFactory ?? new SNESPlatformFactory();
+        this.platformFactory = platformFactory ?? new MegadrivePlatformFactory();
         this.disassembler = this.platformFactory.CreateDisassembler();
         this.memoryMapper = this.platformFactory.CreateMemoryMapper();
         this.cpuStateManager = this.platformFactory.CreateCpuStateManager();
