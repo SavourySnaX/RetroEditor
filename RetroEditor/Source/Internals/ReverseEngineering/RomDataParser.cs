@@ -1,7 +1,6 @@
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
-using System.Text.Json.Nodes;
 
 internal enum Regions
 {
@@ -30,6 +29,7 @@ internal interface IRomDataParser
 {
     byte GetByte(UInt64 address);
     ReadOnlySpan<byte> FetchBytes(UInt64 address, UInt64 length);
+    void AddSymbol(ulong value, int size, string symbol);
     
     ISymbolProvider SymbolProvider { get; }
 }
