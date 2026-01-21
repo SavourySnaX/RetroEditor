@@ -344,7 +344,7 @@ internal class Editor : IEditor, IEditorInternal
         var args = Environment.GetCommandLineArgs().Skip(1);
 
         // SPEED STUFF UP FOR NOW
-/*
+
         var retro = GetDeveloperMame();
         if (retro != null)
         {
@@ -352,7 +352,7 @@ internal class Editor : IEditor, IEditorInternal
 
             var pluginWindow = new LibRetroDebuggerWindow(retro,mameInstance);
             pluginWindow.Initialise();
-            retro.LoadGame(Path.Combine(Directory.GetCurrentDirectory(), "..", "snes", "mariow.bin"));
+            retro.LoadGame(Path.Combine(Directory.GetCurrentDirectory(), "..", "genesis", "ps2.bin"));
             pluginWindow.InitWindow();
             windowManager.AddWindow(pluginWindow, "MAME RETRO", null);
             while (!mameInstance.DebuggerViewReady)
@@ -364,7 +364,7 @@ internal class Editor : IEditor, IEditorInternal
             OpenWindow(new DebuggerView(mameInstance, LibRetroPlugin.debug_view_type.Disassembly, 100, 25, "curpc"), $"Disassembly 0");
             OpenWindow(new DebuggerView(mameInstance, LibRetroPlugin.debug_view_type.Memory, 80, 25, "0"), $"Memory 0");
         }
-*/
+
         //
 
 
