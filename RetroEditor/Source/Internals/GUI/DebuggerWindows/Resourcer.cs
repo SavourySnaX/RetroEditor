@@ -149,8 +149,8 @@ internal class Resourcer : IWindow
             // Get current PC from debugger - this needs platform-specific extraction
             var pc = GetCurrentPC();
             
-            romData.AddCodeRange((DisassemblerBase)disassembler, pc, out var _);
-            cartridgeVars.jumpToAddress = memoryMapper.MapCpuToRom(pc, out var _);
+            romData.AddCodeRange((DisassemblerBase)disassembler, pc, out var _, memoryMapper);
+            cartridgeVars.jumpToAddress = memoryMapper.MapCpuToRegion(pc, out var _);
             debugger.SendCommand($"step");
             newTraceCnt = 100;
             newTraceInProgress = true;
@@ -390,7 +390,7 @@ internal class Resourcer : IWindow
                             // Convert to code
                             var cpuState = CreateCpuStateFromFlags();
                             disassembler.State = cpuState;
-                            romData.AddCodeRange((DisassemblerBase)disassembler, minAddress, maxAddress);
+                            romData.AddCodeRange((DisassemblerBase)disassembler, minAddress, maxAddress, memoryMapper);
                             // Update CPU flags from resulting state
                             UpdateCpuFlagsFromState(disassembler.State);
                             clearSelection = true;
@@ -670,7 +670,7 @@ internal class Resourcer : IWindow
                 var state = autoState.Pop();
                 autoDisassembler.State = state;
 
-                var mappedAddress = memoryMapper.MapCpuToRom(autoPC, out var region);
+                var mappedAddress = memoryMapper.MapCpuToRegion(autoPC, out var region);
                 if (region == RetroEditor.Source.Internals.ReverseEngineering.Platform.MemoryRegion.ROM)
                 {
                     var r = romData.GetRomRanges.GetRangeContainingAddress(mappedAddress);
@@ -679,7 +679,7 @@ internal class Resourcer : IWindow
                         // Already disassembled
                         return;
                     }
-                    if (romData.AddCodeRange((DisassemblerBase)autoDisassembler, autoPC, out var instruction))
+                    if (romData.AddCodeRange((DisassemblerBase)autoDisassembler, autoPC, out var instruction, memoryMapper))
                     {
                         if (instruction.Mnemonic == "XCE")
                         {
@@ -743,8 +743,8 @@ internal class Resourcer : IWindow
                 disassembler.State = cpuState;
                 
                 var pc = GetCurrentPC();
-                romData.AddCodeRange((DisassemblerBase)disassembler, pc, out var _);
-                cartridgeVars.jumpToAddress = memoryMapper.MapCpuToRom(pc, out var _);
+                romData.AddCodeRange((DisassemblerBase)disassembler, pc, out var _, memoryMapper);
+                cartridgeVars.jumpToAddress = memoryMapper.MapCpuToRegion(pc, out var _);
                 newTraceCnt--;
                 if (newTraceCnt == 0)
                 {
@@ -834,7 +834,7 @@ internal class Resourcer : IWindow
         disassembler.State = entry.CpuState;
 
         // Add this location as code
-        romData.AddCodeRange((DisassemblerBase)disassembler, entry.Address, out var i);
+        romData.AddCodeRange((DisassemblerBase)disassembler, entry.Address, out var i, memoryMapper);
         if (i.Bytes.Length == 0)
         {
             // No bytes, so no code
@@ -848,7 +848,7 @@ internal class Resourcer : IWindow
         var mem = ((DisassemblerBase)disassembler).FetchMemoryAccesses(i, entry.RegisterState);
         foreach (var addr in mem)
         {
-            var regionAddress = memoryMapper.MapCpuToRom(addr.address, out var memKind);
+            var regionAddress = memoryMapper.MapCpuToRegion(addr.address, out var memKind);
 
             if (memKind == RetroEditor.Source.Internals.ReverseEngineering.Platform.MemoryRegion.ROM)
             {

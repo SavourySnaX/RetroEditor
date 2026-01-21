@@ -31,8 +31,10 @@ internal enum MemoryRegion
 /// </summary>
 internal interface IMemoryMapper
 {
-    UInt64 MapCpuToRom(UInt64 cpuAddress, out MemoryRegion region);
+    UInt64 MapCpuToRegion(UInt64 cpuAddress, out MemoryRegion region);
     UInt64 MapRomToCpu(UInt64 romAddress);
+    UInt64 MapHardwareAddressToCpu(UInt64 linearAddress);
+    UInt64 MapCpuToHardwareAddress(UInt64 address, out MemoryRegion region);
 }
 
 /// <summary>

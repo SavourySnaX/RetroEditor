@@ -17,7 +17,7 @@ internal class MegadriveTraceParser : ITraceParser
             return false;
 
         var parts = line.Split('|');
-        if (parts.Length < 17) // 8 data + 8 address + SR
+        if (parts.Length < 18) // 8 data + 8 address + SR
             return false;
 
         // Parse data registers (D0-D7)
@@ -45,20 +45,15 @@ internal class MegadriveTraceParser : ITraceParser
 
         // Parse address from the remaining part
         // Expected format after SR: "ADDRESS: instruction"
-        var addressPart = parts[16].Split(':');
+        var addressPart = parts[17].Split(':');
         if (addressPart.Length < 2)
             return false;
 
-        var addrStr = addressPart[0].Replace("SR=", "").Trim();
-        // Try to extract address from the last part
-        var lastPart = parts[parts.Length - 1];
-        var addressMatch = lastPart.Split(':');
-        
         UInt64 address = 0;
-        if (addressMatch.Length >= 2)
+        if (addressPart.Length >= 2)
         {
             // Try to parse hex address before the colon
-            var hexAddr = addressMatch[0].Trim();
+            var hexAddr = addressPart[0].Trim();
             if (!UInt64.TryParse(hexAddr, NumberStyles.HexNumber, null, out address))
                 return false;
         }

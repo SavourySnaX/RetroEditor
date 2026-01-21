@@ -5,7 +5,12 @@ namespace RetroEditor.Source.Internals.ReverseEngineering.Platform.Megadrive;
 /// </summary>
 internal class MegadriveMemoryMapper : IMemoryMapper
 {
-    public UInt64 MapCpuToRom(UInt64 cpuAddress, out MemoryRegion region)
+    public ulong MapCpuToHardwareAddress(ulong address, out MemoryRegion region)
+    {
+        return MapCpuToRegion(address, out region);
+    }
+
+    public UInt64 MapCpuToRegion(UInt64 cpuAddress, out MemoryRegion region)
     {
         region = MemoryRegion.ROM;
         
@@ -67,6 +72,11 @@ internal class MegadriveMemoryMapper : IMemoryMapper
         
         region = MemoryRegion.Invalid;
         return 0;
+    }
+
+    public ulong MapHardwareAddressToCpu(ulong linearAddress)
+    {
+        return linearAddress;
     }
 
     public UInt64 MapRomToCpu(UInt64 romAddress)

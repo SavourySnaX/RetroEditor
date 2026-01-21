@@ -1,6 +1,7 @@
 
 using System;
 using System.Linq;
+using RetroEditor.Source.Internals.ReverseEngineering.Platform;
 using Xunit;
 
 namespace RetroEditor.Tests
@@ -8,9 +9,36 @@ namespace RetroEditor.Tests
 
     public class RangeSplittingTests
     {
+        class DummyMapper : IMemoryMapper
+        {
+            public UInt64 MapRomToCpu(UInt64 romAddress)
+            {
+                return romAddress;
+            }
+
+            public UInt64 MapHardwareAddressToCpu(UInt64 linearAddress)
+            {
+                return linearAddress;
+            }
+
+            public ulong MapCpuToRegion(ulong cpuAddress, out Source.Internals.ReverseEngineering.Platform.MemoryRegion region)
+            {
+                region = Source.Internals.ReverseEngineering.Platform.MemoryRegion.ROM;
+                return cpuAddress;
+            }
+
+            public ulong MapCpuToHardwareAddress(ulong address, out Source.Internals.ReverseEngineering.Platform.MemoryRegion region)
+            {
+                region = Source.Internals.ReverseEngineering.Platform.MemoryRegion.ROM;
+                return address;
+            }
+
+        }
+
         [Fact]
         public void TestCodeSplit()
         {
+            var mapper = new DummyMapper();
             var romDataParser = new RomDataParser();
             romDataParser.LoadRomData([0x69, 0x42, 0x12, 0x69, 0x42, 0x12, 0x69, 0x42, 0x12, 0x69, 0x42, 0x12]);
             var disassembler = new SNES65816Disassembler();
@@ -20,10 +48,10 @@ namespace RetroEditor.Tests
             state.Index8Bit = false;
             disassembler.State = state;
             romDataParser.AddUnknownRange(RomDataParser.RangeRegion.Cartridge, 0, 11);
-            romDataParser.AddCodeRange(disassembler, 0, 2);
-            romDataParser.AddCodeRange(disassembler, 3, 5);
-            romDataParser.AddCodeRange(disassembler, 6, 8);
-            romDataParser.AddCodeRange(disassembler, 9, 11);
+            romDataParser.AddCodeRange(disassembler, 0, 2, mapper);
+            romDataParser.AddCodeRange(disassembler, 3, 5, mapper);
+            romDataParser.AddCodeRange(disassembler, 6, 8, mapper);
+            romDataParser.AddCodeRange(disassembler, 9, 11, mapper);
             
             Assert.True(romDataParser.GetRomRanges.Count == 1, "Code range count should be 1.");
         }

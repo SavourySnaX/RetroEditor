@@ -1,6 +1,8 @@
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
+using Microsoft.CodeAnalysis;
+using RetroEditor.Source.Internals.ReverseEngineering.Platform;
 
 internal enum Regions
 {
@@ -683,7 +685,7 @@ internal class CodeRegion : IRegionInfo
     public override LineInfo GetRegionLineInfo(ulong index)
     {
         var I = instructions.ElementAt((int)index);
-        return new LineInfo($"{I.Key:X8}", BytesForLine(I.Value.Address, I.Value.Address+(ulong)I.Value.Bytes.Length), I.Value.InstructionText(Parent.SymbolProvider), $"; {I.Value.cpuState}");
+        return new LineInfo($"{I.Key:X8}", BytesForLine(I.Value.Address, I.Value.Address+(ulong)I.Value.Bytes.Length-1), I.Value.InstructionText(Parent.SymbolProvider), $"; {I.Value.cpuState}");
     }
 
     public Instruction GetInstructionForLine(ulong index)
@@ -793,107 +795,13 @@ internal class RomDataParser : IRomDataParser
         debugger.FreeView(view.view);
     }
 
-    public enum SNESLoRomRegion
-    {
-        ROM,
-        IO,
-        SRAM,
-        RAM,
-    }
-
-    public UInt64 MapRomToCpu(UInt64 linearAddress)
-    {
-        UInt64 bank = (linearAddress >> 15) & 0x7F;
-        UInt64 offset = linearAddress & 0x7FFF;
-
-        if (bank < 0x40)
-        {
-            return (bank << 16) | 0x8000 | offset;
-        }
-        else if (bank < 0x70)
-        {
-            return (bank << 15) | offset;
-        }
-        else
-        {
-            return ((bank - 0x70) << 15) | offset;
-        }
-    }
-
-    public UInt64 MapSnesCpuToLorom(UInt64 address, out SNESLoRomRegion region)
-    {
-        region = SNESLoRomRegion.ROM;
-        var bank = address >> 16;
-        var offset = address & 0xFFFF;
-
-        if (bank == 0x7E || bank == 0x7F)
-        {
-            region = SNESLoRomRegion.RAM;
-            return ((bank - 0x7E) << 16) | offset;
-        }
-        else if (bank == 0xFE || bank == 0xFF)
-        {
-            if (offset < 0x8000)
-            {
-                // SRAM
-                region = SNESLoRomRegion.SRAM;
-                return ((bank - 0xF0) << 15) | offset;
-            }
-            else
-            {
-                // ROM
-                return 0x3F0000 | ((bank - 0xFE) << 15) | (offset & 0x7FFF);
-            }
-        }
-        bank &= 0x7F;
-        if (bank < 0x40)
-        {
-            if (offset < 0x2000)
-            {
-                // Low RAM
-                region = SNESLoRomRegion.RAM;
-                return offset;
-            }
-            else if (offset < 0x8000)
-            {
-                // IO
-                region = SNESLoRomRegion.IO;
-                return offset - 0x2000;
-            }
-            else
-            {
-                // ROM
-                return (bank << 15) | (offset & 0x7FFF);
-            }
-        }
-        else if (bank < 0x70)
-        {
-            // ROM
-            return (bank << 15) | (offset & 0x7FFF);
-        }
-        else
-        {
-            // 70-7D
-            if (offset < 0x8000)
-            {
-                region = SNESLoRomRegion.SRAM;
-                return ((bank - 0x70) << 15) | offset;
-            }
-            else
-            {
-                //ROM
-                return (bank << 15) | (offset & 0x7FFF);
-            }
-        }
-    }
-
-    public void AddCodeRange(DisassemblerBase disassembler, UInt64 minAddress, UInt64 maxAddress)
+    public void AddCodeRange(DisassemblerBase disassembler, UInt64 minAddress, UInt64 maxAddress, IMemoryMapper mapper)
     {
         while (minAddress <= maxAddress)
         {
             // minAddress is linear, need to compute approx PC
-            var pc = MapRomToCpu(minAddress);
-            if (AddCodeRange(disassembler, pc, out var i))
+            var pc = mapper.MapRomToCpu(minAddress);
+            if (AddCodeRange(disassembler, pc, out var i, mapper))
             {
                 pc += (UInt64)i.Bytes.Length;
                 if (i.IsBasicBlockTerminator)
@@ -912,12 +820,12 @@ internal class RomDataParser : IRomDataParser
         }
     }
 
-    public bool AddCodeRange(DisassemblerBase disassembler, UInt64 pc, out Instruction instruction)
+    public bool AddCodeRange(DisassemblerBase disassembler, UInt64 pc, out Instruction instruction, IMemoryMapper mapper)
     {
         bool done = false;
         UInt64 length = 0;
-        UInt64 address = MapSnesCpuToLorom(pc, out var region);
-        if (region != RomDataParser.SNESLoRomRegion.ROM)
+        UInt64 address = mapper.MapCpuToHardwareAddress(pc, out var region);
+        if (region != RetroEditor.Source.Internals.ReverseEngineering.Platform.MemoryRegion.ROM)
         {
             // Not a valid LoROM address - code probably in ram
             //Console.WriteLine($"Invalid LoROM address: {address:X8} in region {region} {pc:X6}");
