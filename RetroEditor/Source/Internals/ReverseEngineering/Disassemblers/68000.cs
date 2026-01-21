@@ -1,7 +1,5 @@
 using System.Text.Json;
-
-namespace RetroEditor.Plugins;
-
+using RetroEditor.Plugins;
 /// <summary>
 /// Represents the addressing modes supported by the 68000 CPU
 /// </summary>

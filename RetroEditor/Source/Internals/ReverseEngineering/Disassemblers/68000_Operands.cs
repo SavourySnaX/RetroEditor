@@ -1,9 +1,5 @@
 // Operand classes for the 68000 disassembler
 
-using RetroEditor.Plugins;
-
-namespace RetroEditor.Plugins;
-
 internal class OM68000_DataRegister : IOperand
 {
     public OM68000_DataRegister(int register) : base(true, true, (ulong)register) { }

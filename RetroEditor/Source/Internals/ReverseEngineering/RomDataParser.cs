@@ -405,10 +405,12 @@ internal class UnknownRegion : IRegionInfo
 
     public override void RegionSave(Dictionary<string, object> dict)
     {
+        dict["DataIsKnown"] = dataIsKnown;
     }
 
     public override IRegionInfo RegionLoad(Dictionary<string, object> dict)
     {
+        dataIsKnown = ((JsonElement)dict["DataIsKnown"]).GetBoolean();
         return this;
     }
 }
@@ -443,32 +445,38 @@ internal class DataRegion : IRegionInfo
 
     LineInfo GetWordLineInfo(ulong index)
     {
-        UInt16 dw = Parent.GetByte(AddressStart + index+0);
+        var index2 = index * 2;
+        var address = AddressStart + index2;
+        UInt16 dw = Parent.GetByte(address + 0);
         dw <<= 8;
-        dw |= Parent.GetByte(AddressStart + index+1);
-        return new LineInfo($"{AddressStart + index:X8}", BytesForSpan(Parent.FetchBytes(AddressStart+index,2)), $"dw {dw:X4}", "");
+        dw |= Parent.GetByte(address + 1);
+        return new LineInfo($"{address:X8}", BytesForSpan(Parent.FetchBytes(address,2)), $"dw {dw:X4}", "");
     }
 
     LineInfo GetTripleLineInfo(ulong index)
     {
-        UInt32 dl = Parent.GetByte(AddressStart + index+0);
+        var index3 = index * 3;
+        var address = AddressStart + index3;
+        UInt32 dl = Parent.GetByte(address + 0);
         dl <<= 8;
-        dl |= Parent.GetByte(AddressStart + index+1);
+        dl |= Parent.GetByte(address + 1);
         dl <<= 8;
-        dl |= Parent.GetByte(AddressStart + index+2);
-        return new LineInfo($"{AddressStart + index:X8}", BytesForSpan(Parent.FetchBytes(AddressStart+index,3)), $"dl {dl:X6}", "");
+        dl |= Parent.GetByte(address + 2);
+        return new LineInfo($"{address:X8}", BytesForSpan(Parent.FetchBytes(address,3)), $"dl {dl:X6}", "");
     }
 
     LineInfo GetLongLineInfo(ulong index)
     {
-        UInt32 dl = Parent.GetByte(AddressStart + index+0);
+        var index4 = index * 4;
+        var address = AddressStart + index4;
+        UInt32 dl = Parent.GetByte(address + 0);
         dl <<= 8;
-        dl |= Parent.GetByte(AddressStart + index+1);
+        dl |= Parent.GetByte(address + 1);
         dl <<= 8;
-        dl |= Parent.GetByte(AddressStart + index+2);
+        dl |= Parent.GetByte(address + 2);
         dl <<= 8;
-        dl |= Parent.GetByte(AddressStart + index+3);
-        return new LineInfo($"{AddressStart + index:X8}", BytesForSpan(Parent.FetchBytes(AddressStart+index,4)), $"dl {dl:X8}", "");
+        dl |= Parent.GetByte(address + 3);
+        return new LineInfo($"{address:X8}", BytesForSpan(Parent.FetchBytes(address,4)), $"dl {dl:X8}", "");
     }
 
     public override LineInfo GetRegionLineInfo(ulong index)
@@ -507,10 +515,14 @@ internal class DataRegion : IRegionInfo
 
     public override void RegionSave(Dictionary<string, object> dict)
     {
+        dict["DataIsKnown"] = dataIsKnown;
+        dict["Size"] = size;
     }
 
     public override IRegionInfo RegionLoad(Dictionary<string, object> dict)
     {
+        size=((JsonElement)dict["Size"]).GetUInt64();
+        dataIsKnown = ((JsonElement)dict["DataIsKnown"]).GetBoolean();
         return this;
     }
 
@@ -536,6 +548,11 @@ internal class StringRegion : IRegionInfo
     }
 
     public override ulong GetRegionLineCount() => (AddressEnd - AddressStart + 16) / 16;
+
+    public override bool IsSame(IRange otherRange)
+    {
+        return false;   // Don't combine string regions
+    }
 
     public override void Combining(IRegionInfo other) { }
     public override IRegionInfo Split(ulong start, ulong end) => new StringRegion(start, end, dataIsKnown, Parent);
@@ -587,10 +604,12 @@ internal class StringRegion : IRegionInfo
 
     public override void RegionSave(Dictionary<string, object> dict)
     {
+        dict["DataIsKnown"] = dataIsKnown;
     }
 
     public override IRegionInfo RegionLoad(Dictionary<string, object> dict)
     {
+        dataIsKnown = ((JsonElement)dict["DataIsKnown"]).GetBoolean();
         return this;
     }
 }
@@ -664,7 +683,7 @@ internal class CodeRegion : IRegionInfo
     public override LineInfo GetRegionLineInfo(ulong index)
     {
         var I = instructions.ElementAt((int)index);
-        return new LineInfo($"{I.Key:X8}", BytesForSpan(I.Value.Bytes), I.Value.InstructionText(Parent.SymbolProvider), $"; {I.Value.cpuState}");
+        return new LineInfo($"{I.Key:X8}", BytesForLine(I.Value.Address, I.Value.Address+(ulong)I.Value.Bytes.Length), I.Value.InstructionText(Parent.SymbolProvider), $"; {I.Value.cpuState}");
     }
 
     public Instruction GetInstructionForLine(ulong index)

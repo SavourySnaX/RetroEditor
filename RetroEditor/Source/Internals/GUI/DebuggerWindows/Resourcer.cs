@@ -408,10 +408,25 @@ internal class Resourcer : IWindow
                             autoState.Push(autoDisassembler.State);
                             automated = true;
                         }
+                        if (ImGui.IsKeyPressed(ImGuiKey._1) && !automated)
+                        {
+                            // Add data region of 1-byte 
+                            romData.AddDataRange(rangeRegion, minAddress, minAddress+1, 1);
+                        }
+                        if (ImGui.IsKeyPressed(ImGuiKey._2) && !automated)
+                        {
+                            // Add data region of 2-byte words
+                            romData.AddDataRange(rangeRegion, minAddress, minAddress+1, 2);
+                        }
+                        if (ImGui.IsKeyPressed(ImGuiKey._3) && !automated)
+                        {
+                            // Add data region of 3-byte words
+                            romData.AddDataRange(rangeRegion, minAddress, minAddress+2, 3);
+                        }
                         if (ImGui.IsKeyPressed(ImGuiKey._4) && !automated)
                         {
                             // Add data region of 4-byte words
-                            romData.AddDataRange(rangeRegion, minAddress, maxAddress, 4);
+                            romData.AddDataRange(rangeRegion, minAddress, minAddress+3, 4);
                         }
                     }
 
@@ -705,10 +720,11 @@ internal class Resourcer : IWindow
             }
             else
             {
+                //TODO platform specific initial annotations
+                //romData.AddStringRange(RomDataParser.RangeRegion.Cartridge, 0x7FC0, 0x7FD4); // LoRom ASCII Title in header
                 romData.AddUnknownRange(RomDataParser.RangeRegion.Cartridge, romData.GetMinAddress, romData.GetMaxAddress);
-                romData.AddUnknownRange(RomDataParser.RangeRegion.RAM, 0, 128*1024-1);
+                romData.AddUnknownRange(RomDataParser.RangeRegion.RAM, 0, 128*1024-1);  // TODO this is platform specific
 
-                romData.AddStringRange(RomDataParser.RangeRegion.Cartridge, 0x7FC0, 0x7FD4); // LoRom ASCII Title in header
                 romData.AddCommentRange(RomDataParser.RangeRegion.Cartridge, ["RetroEditor Resourcer Version 0.1", "", "A WIP Tool for re-sourcing ROMS", "", ""], 0);
                 romData.AddCommentRange(RomDataParser.RangeRegion.RAM, ["RetroEditor Resourcer Version 0.1", "", "A WIP Tool for re-sourcing ROMS", "", ""], 0);
 

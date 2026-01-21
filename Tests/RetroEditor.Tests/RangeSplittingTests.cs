@@ -27,5 +27,32 @@ namespace RetroEditor.Tests
             
             Assert.True(romDataParser.GetRomRanges.Count == 1, "Code range count should be 1.");
         }
+
+        [Fact]
+        public void VerifyDataNextAddress()
+        {
+            var romDataParser = new RomDataParser();
+            romDataParser.LoadRomData(
+                [0x69, 0x42, 0x12, 0x69, 
+                 0x42, 0x12, 0x69, 0x42, 
+                 0x12, 0x69, 0x42, 0x12, 
+                 0x11, 0x22, 0x33, 0x44]);
+            romDataParser.AddUnknownRange(RomDataParser.RangeRegion.Cartridge, 0, (ulong)romDataParser.GetRomData.Length-1);
+            romDataParser.AddDataRange(RomDataParser.RangeRegion.Cartridge, 0, 3, 4);
+            
+            Assert.True(romDataParser.GetRomRanges.Count == 2, "Range count should be 2.");
+            var ranges = romDataParser.GetRomRanges.ToList();
+            Assert.True(ranges[1].Value.AddressStart == 4, "Next address after data range should be 4.");
+
+            romDataParser.AddDataRange(RomDataParser.RangeRegion.Cartridge, 4, 7, 4);
+            Assert.True(romDataParser.GetRomRanges.Count == 2, "Range count should be 2.");
+            ranges = romDataParser.GetRomRanges.ToList();
+            Assert.True(ranges[1].Value.AddressStart == 8, "Next address after data range should be 8.");
+
+            romDataParser.AddDataRange(RomDataParser.RangeRegion.Cartridge, 8, 11, 4);
+            Assert.True(romDataParser.GetRomRanges.Count == 2, "Range count should be 2.");
+            ranges = romDataParser.GetRomRanges.ToList();
+            Assert.True(ranges[1].Value.AddressStart == 12, "Next address after data range should be 12.");
+        }
     }
 }
