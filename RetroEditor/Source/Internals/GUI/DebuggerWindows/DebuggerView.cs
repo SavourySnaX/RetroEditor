@@ -206,6 +206,10 @@ internal class DebuggerView : IWindow
         if (size.Y > 0)
         {
             var expectedSize = (int)Math.Floor(size.Y / sizeOfMonoText.Y) - 2;
+            if (expectedSize<1)
+            {
+                expectedSize = 1;
+            }
             if (view.view.H != expectedSize)
             {
                 view.view.H = expectedSize;

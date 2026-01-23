@@ -226,7 +226,8 @@ internal class Megadrive68000Disassembler : DisassemblerBase
     private DecodeResult DecodeBitManipulationOrMove(ReadOnlySpan<byte> bytes, ulong address, UInt16 opcode)
     {
         // Check for bit manipulation instructions (BTST, BCHG, BCLR, BSET)
-        if ((opcode & 0xF1C0) == 0x0100)
+        // Pattern: 0000DDD1TTMMMRRR where DDD=data reg, TT=op type, MMM/RRR=EA
+        if ((opcode & 0xF100) == 0x0100)
         {
             // Dynamic bit manipulation
             int bitNum = (opcode >> 9) & 7;
@@ -379,9 +380,22 @@ internal class Megadrive68000Disassembler : DisassemblerBase
         if (destEa == null) return DecodeResult.NeedMoreBytes(2 + srcSize);
         
         var operands = new List<IOperand> { srcEa, destEa };
+        
+        // Check if this is MOVEA (destination mode = 001 = address register direct)
+        string mnemonic;
+        if (destMode == 1 && size != SizeCode.Byte)
+        {
+            // MOVEA - only valid for word and long sizes
+            mnemonic = "MOVEA";
+        }
+        else
+        {
+            mnemonic = "MOVE";
+        }
+        
         string suffix = size == SizeCode.Byte ? ".B" : size == SizeCode.Word ? ".W" : ".L";
         
-        return CreateInstruction(address, "MOVE" + suffix, operands, 2 + srcSize + destSize);
+        return CreateInstruction(address, mnemonic + suffix, operands, 2 + srcSize + destSize);
     }
 
     private DecodeResult DecodeMiscellaneous(ReadOnlySpan<byte> bytes, ulong address, UInt16 opcode)
@@ -444,6 +458,22 @@ internal class Megadrive68000Disassembler : DisassemblerBase
             return CreateInstruction(address, isLong ? "EXT.L" : "EXT.W", operands, 2);
         }
         
+        // ILLEGAL - check before TAS since 0x4AFC matches TAS pattern (0x4AFC & 0xFFC0 = 0x4AC0)
+        if (opcode == 0x4AFC)
+        {
+            return CreateSimpleInstruction(address, "ILLEGAL", opcode, 2, isBranch: true, isTerminator: true);
+        }
+        
+        // TAS - check before TST since it's more specific (pattern 0100101011xxxxxx)
+        if ((opcode & 0xFFC0) == 0x4AC0)
+        {
+            var (ea, eaSize) = DecodeEffectiveAddress(bytes.Slice(2), opcode & 0x3F, SizeCode.Byte);
+            if (ea == null) return DecodeResult.NeedMoreBytes(2);
+            
+            var operands = new List<IOperand> { ea };
+            return CreateInstruction(address, "TAS", operands, 2 + eaSize);
+        }
+        
         // TST
         if ((opcode & 0xFF00) == 0x4A00)
         {
@@ -455,16 +485,6 @@ internal class Megadrive68000Disassembler : DisassemblerBase
             var operands = new List<IOperand> { ea };
             
             return CreateInstruction(address, "TST" + suffix, operands, 2 + eaSize);
-        }
-        
-        // TAS
-        if ((opcode & 0xFFC0) == 0x4AC0)
-        {
-            var (ea, eaSize) = DecodeEffectiveAddress(bytes.Slice(2), opcode & 0x3F, SizeCode.Byte);
-            if (ea == null) return DecodeResult.NeedMoreBytes(2);
-            
-            var operands = new List<IOperand> { ea };
-            return CreateInstruction(address, "TAS", operands, 2 + eaSize);
         }
         
         // TRAP
@@ -820,19 +840,7 @@ internal class Megadrive68000Disassembler : DisassemblerBase
             return CreateInstruction(address, "CMPA" + suffix, operands, 2 + eaSize);
         }
         
-        // EOR
-        if ((opcode & 0xF100) == 0xB100)
-        {
-            var (ea, eaSize) = DecodeEffectiveAddress(bytes.Slice(2), opcode & 0x3F, size);
-            if (ea == null) return DecodeResult.NeedMoreBytes(2);
-            
-            var operands = new List<IOperand> { new OM68000_DataRegister(reg), ea };
-            string suffix = size == SizeCode.Byte ? ".B" : size == SizeCode.Word ? ".W" : ".L";
-            
-            return CreateInstruction(address, "EOR" + suffix, operands, 2 + eaSize);
-        }
-        
-        // CMPM
+        // CMPM - check before EOR (pattern 1011XXX1SS001XXX, bits 3-5 = 001)
         if ((opcode & 0xF138) == 0xB108)
         {
             int regY = opcode & 7;
@@ -844,6 +852,18 @@ internal class Megadrive68000Disassembler : DisassemblerBase
             
             string suffix = size == SizeCode.Byte ? ".B" : size == SizeCode.Word ? ".W" : ".L";
             return CreateInstruction(address, "CMPM" + suffix, operands, 2);
+        }
+        
+        // EOR - note: EOR does not support An (address register direct) as destination
+        if ((opcode & 0xF100) == 0xB100)
+        {
+            var (ea, eaSize) = DecodeEffectiveAddress(bytes.Slice(2), opcode & 0x3F, size);
+            if (ea == null) return DecodeResult.NeedMoreBytes(2);
+            
+            var operands = new List<IOperand> { new OM68000_DataRegister(reg), ea };
+            string suffix = size == SizeCode.Byte ? ".B" : size == SizeCode.Word ? ".W" : ".L";
+            
+            return CreateInstruction(address, "EOR" + suffix, operands, 2 + eaSize);
         }
         
         // CMP
