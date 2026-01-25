@@ -366,16 +366,19 @@ internal class Resourcer : IWindow
                         romData.AddUnknownRange(regionName, minAddress, maxAddress);
                         clearSelection = true;
                     }
-                    // Code and data operations only apply to first memory region (typically Cartridge/ROM)
-                    var firstRegionName = romData.GetMemoryRegionNames().FirstOrDefault();
-                    if (regionName == firstRegionName)
+                    
+                    // Get memory region info for this region to check if code operations are allowed
+                    var regionInfo = memoryInformationProvider.GetMemoryRegions().FirstOrDefault(r => r.MameViewName == regionName);
+                    
+                    // Code and data operations only apply to regions with physical data (typically Cartridge/ROM)
+                    if (regionInfo != null && regionInfo.HasPhysicalData)
                     {
                         if (ImGui.IsKeyPressed(ImGuiKey.C))
                         {
                             // Convert to code
                             var cpuState = cpuStateManager.FetchStateFromUI();
                             disassembler.State = cpuState;
-                            romData.AddCodeRange((DisassemblerBase)disassembler, minAddress, maxAddress, memoryMapper);
+                            romData.AddCodeRange((DisassemblerBase)disassembler, minAddress, maxAddress, memoryMapper, regionName);
                             // Update CPU flags from resulting state
                             cpuStateManager.UpdateUIFromState(disassembler.State);
                             clearSelection = true;
@@ -623,32 +626,32 @@ internal class Resourcer : IWindow
                 var mappedAddress = memoryMapper.MapCpuToRegion(autoPC, out var region);
                 if (region == RetroEditor.Source.Internals.ReverseEngineering.Platform.MemoryRegion.ROM)
                 {
-                    var firstRegionName = romData.GetMemoryRegionNames().FirstOrDefault();
-                    if (firstRegionName != null)
+                    var codeRegionName = GetRegionNameForMemoryType(RetroEditor.Source.Internals.ReverseEngineering.Platform.MemoryRegion.ROM);
+                    if (!string.IsNullOrEmpty(codeRegionName))
                     {
-                        var ranges = romData.GetRangeCollection(firstRegionName);
+                        var ranges = romData.GetRangeCollection(codeRegionName);
                         var r = ranges.GetRangeContainingAddress(mappedAddress);
                         if (r != null && r.Value.GetType() == typeof(CodeRegion))
                         {
                             // Already disassembled
                             return;
                         }
-                    }
-                    if (romData.AddCodeRange((DisassemblerBase)autoDisassembler, autoPC, out var instruction, memoryMapper))
-                    {
-                        if (cpuStateManager.InstructionTerminatesAutoDisassembly(instruction))
+                        if (romData.AddCodeRange((DisassemblerBase)autoDisassembler, autoPC, out var instruction, memoryMapper, codeRegionName))
                         {
-                            return;
-                        }
-                        else
-                        {
-                            foreach (var next in instruction.NextAddresses)
+                            if (cpuStateManager.InstructionTerminatesAutoDisassembly(instruction))
                             {
-                                if (!stacked.Contains(next))
+                                return;
+                            }
+                            else
+                            {
+                                foreach (var next in instruction.NextAddresses)
                                 {
-                                    autoStack.Push(next);
-                                    autoState.Push(autoDisassembler.State);
-                                    stacked.Add(next);
+                                    if (!stacked.Contains(next))
+                                    {
+                                        autoStack.Push(next);
+                                        autoState.Push(autoDisassembler.State);
+                                        stacked.Add(next);
+                                    }
                                 }
                             }
                         }
@@ -771,16 +774,17 @@ internal class Resourcer : IWindow
 
     private string GetRegionNameForMemoryType(RetroEditor.Source.Internals.ReverseEngineering.Platform.MemoryRegion memoryRegion)
     {
-        // Map platform MemoryRegion enum to actual region names
-        // This is a simple heuristic: ROM -> first region, RAM -> second region if available
+        // Map platform MemoryRegion enum to actual region names using property-based lookup
         var regions = memoryInformationProvider.GetMemoryRegions().ToList();
         
         switch (memoryRegion)
         {
             case RetroEditor.Source.Internals.ReverseEngineering.Platform.MemoryRegion.ROM:
-                return regions.FirstOrDefault()?.MameViewName ?? string.Empty;
+                // Find first region with physical data (typically ROM/Cartridge)
+                return regions.FirstOrDefault(r => r.HasPhysicalData)?.MameViewName ?? regions.FirstOrDefault()?.MameViewName ?? string.Empty;
             case RetroEditor.Source.Internals.ReverseEngineering.Platform.MemoryRegion.RAM:
-                return regions.Skip(1).FirstOrDefault()?.MameViewName ?? string.Empty;
+                // Find first region without physical data (typically RAM/WRAM)
+                return regions.FirstOrDefault(r => !r.HasPhysicalData)?.MameViewName ?? string.Empty;
             default:
                 return string.Empty;
         }
@@ -792,7 +796,8 @@ internal class Resourcer : IWindow
         disassembler.State = entry.CpuState;
 
         // Add this location as code
-        romData.AddCodeRange((DisassemblerBase)disassembler, entry.Address, out var i, memoryMapper);
+        var codeRegionName = GetRegionNameForMemoryType(RetroEditor.Source.Internals.ReverseEngineering.Platform.MemoryRegion.ROM);
+        romData.AddCodeRange((DisassemblerBase)disassembler, entry.Address, out var i, memoryMapper, codeRegionName);
         if (i.Bytes.Length == 0)
         {
             // No bytes, so no code
@@ -811,7 +816,7 @@ internal class Resourcer : IWindow
             
             if (!string.IsNullOrEmpty(regionName))
             {
-                if (romData.CheckRegionUnknown(regionAddress, regionAddress + addr.size - 1))
+                if (romData.CheckRegionUnknown(regionName, regionAddress, regionAddress + addr.size - 1))
                 {
                     romData.AddDataRange(regionName, regionAddress, regionAddress + addr.size - 1, addr.size);
                 }

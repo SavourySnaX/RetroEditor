@@ -79,6 +79,39 @@ internal interface IHardwareSymbolsProvider
 }
 
 /// <summary>
+/// Provides data access for a specific memory region
+/// Abstracts how data is stored (physical buffer, virtual, sparse, etc.)
+/// </summary>
+internal interface IMemoryRegionDataProvider
+{
+    /// <summary>
+    /// The name of the region this provider serves
+    /// </summary>
+    string RegionName { get; }
+    
+    /// <summary>
+    /// Get a single byte at the specified address within this region
+    /// </summary>
+    byte GetByte(UInt64 address);
+    
+    /// <summary>
+    /// Get a span of bytes starting at address
+    /// </summary>
+    ReadOnlySpan<byte> FetchBytes(UInt64 address, UInt64 length);
+    
+    /// <summary>
+    /// Total size of accessible data in this region
+    /// </summary>
+    UInt64 DataSize { get; }
+    
+    /// <summary>
+    /// Load physical data from MAME debugger for this region
+    /// Only called if IMemoryInformation.HasPhysicalData is true
+    /// </summary>
+    void LoadFromDebugger(LibMameDebugger debugger);
+}
+
+/// <summary>
 /// Interface for providing memory information
 /// </summary>
 internal interface IMemoryInformationProvider
@@ -121,4 +154,16 @@ internal interface IMemoryInformation
     /// Type of content this region typically contains
     /// </summary>
     MemoryRegionType Type => MemoryRegionType.Mixed;
+    
+    /// <summary>
+    /// Expected address range for this region in the debugger/emulator
+    /// Used to establish address space layout and boundaries
+    /// </summary>
+    (UInt64 Start, UInt64 End) AddressRange => (0, UInt64.MaxValue);
+    
+    /// <summary>
+    /// Factory method to create a data provider for this region
+    /// The provider handles all data access and loading for this specific region
+    /// </summary>
+    IMemoryRegionDataProvider CreateDataProvider();
 }

@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using RetroEditor.Source.Internals.ReverseEngineering.Platform;
+using RetroEditor.Source.Internals.ReverseEngineering;
 using Xunit;
 
 namespace RetroEditor.Tests
@@ -40,11 +41,19 @@ namespace RetroEditor.Tests
         {
             public string MameViewName { get; }
             public string DisplayName { get; }
+            public bool HasPhysicalData => true;
+            public (UInt64 Start, UInt64 End) AddressRange { get; }
 
             public DummyMemoryInformation(string name, string displayName = null)
             {
                 MameViewName = name;
                 DisplayName = displayName ?? name;
+                AddressRange = (0, UInt64.MaxValue);
+            }
+
+            public IMemoryRegionDataProvider CreateDataProvider()
+            {
+                return new BufferDataProvider(MameViewName);
             }
         }
 
@@ -62,7 +71,7 @@ namespace RetroEditor.Tests
         {
             var mapper = new DummyMapper();
             var romDataParser = new RomDataParser(new DummyMemoryInformationProvider());
-            romDataParser.LoadRomData([0x69, 0x42, 0x12, 0x69, 0x42, 0x12, 0x69, 0x42, 0x12, 0x69, 0x42, 0x12]);
+            romDataParser.LoadRomData([0x69, 0x42, 0x12, 0x69, 0x42, 0x12, 0x69, 0x42, 0x12, 0x69, 0x42, 0x12], "Cartridge");
             var disassembler = new SNES65816Disassembler();
             var state = (SNES65816State)disassembler.State;
             state.SetEmulationMode(false);
@@ -70,10 +79,10 @@ namespace RetroEditor.Tests
             state.Index8Bit = false;
             disassembler.State = state;
             romDataParser.AddUnknownRange("Cartridge", 0, 11);
-            romDataParser.AddCodeRange(disassembler, 0, 2, mapper);
-            romDataParser.AddCodeRange(disassembler, 3, 5, mapper);
-            romDataParser.AddCodeRange(disassembler, 6, 8, mapper);
-            romDataParser.AddCodeRange(disassembler, 9, 11, mapper);
+            romDataParser.AddCodeRange(disassembler, 0, 2, mapper, "Cartridge");
+            romDataParser.AddCodeRange(disassembler, 3, 5, mapper, "Cartridge");
+            romDataParser.AddCodeRange(disassembler, 6, 8, mapper, "Cartridge");
+            romDataParser.AddCodeRange(disassembler, 9, 11, mapper, "Cartridge");
             
             var ranges = romDataParser.GetRangeCollection("Cartridge");
             Assert.True(ranges.Count == 1, "Code range count should be 1.");
@@ -87,7 +96,7 @@ namespace RetroEditor.Tests
                 [0x69, 0x42, 0x12, 0x69, 
                  0x42, 0x12, 0x69, 0x42, 
                  0x12, 0x69, 0x42, 0x12, 
-                 0x11, 0x22, 0x33, 0x44]);
+                 0x11, 0x22, 0x33, 0x44], "Cartridge");
             romDataParser.AddUnknownRange("Cartridge", 0, (ulong)romDataParser.GetRomData.Length-1);
             romDataParser.AddDataRange("Cartridge", 0, 3, 4);
             

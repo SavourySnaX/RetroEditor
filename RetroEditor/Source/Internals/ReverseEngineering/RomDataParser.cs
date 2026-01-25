@@ -29,8 +29,8 @@ internal struct LineInfo
 
 internal interface IRomDataParser
 {
-    byte GetByte(UInt64 address);
-    ReadOnlySpan<byte> FetchBytes(UInt64 address, UInt64 length);
+    byte GetByte(string regionName, UInt64 address);
+    ReadOnlySpan<byte> FetchBytes(string regionName, UInt64 address, UInt64 length);
     void AddSymbol(ulong value, int size, string symbol);
     
     ISymbolProvider SymbolProvider { get; }
@@ -38,16 +38,18 @@ internal interface IRomDataParser
 
 internal abstract class IRegionInfo : IRange
 {
-    public IRegionInfo(UInt64 start, UInt64 end, IRomDataParser parent, ResourcerConfig.ConfigColour color)
+    public IRegionInfo(UInt64 start, UInt64 end, IRomDataParser parent, ResourcerConfig.ConfigColour color, string regionName)
     {
         AddressStart = start;
         AddressEnd = end;
         Parent = parent;
         Colour = color;
+        RegionName = regionName;
     }
 
     public UInt64 AddressStart { get; protected set; }
     public UInt64 AddressEnd { get; protected set; }
+    public string RegionName { get; protected set; }
 
     public UInt64 LineCount => GetLineCount();
     protected IRomDataParser Parent { get; private set; }
@@ -116,7 +118,7 @@ internal abstract class IRegionInfo : IRange
 
     public string BytesForLine(UInt64 start, UInt64 end)
     {
-        return BytesForSpan(Parent.FetchBytes(start, end - start + 1));
+        return BytesForSpan(Parent.FetchBytes(RegionName, start, end - start + 1));
     }
 
     public List<IRegionInfo> Above = new();
@@ -321,7 +323,8 @@ internal abstract class IRegionInfo : IRange
 internal class MultiLineComment : IRegionInfo
 {
     private string[] lines;
-    public MultiLineComment(string[] lines,IRomDataParser parent) : base(0, 0, parent, ResourcerConfig.ConfigColour.Comment)
+    public MultiLineComment(string[] lines, IRomDataParser parent, string regionName) 
+        : base(0, 0, parent, ResourcerConfig.ConfigColour.Comment, regionName)
     {
         this.lines = lines;
     }
@@ -372,7 +375,8 @@ internal class MultiLineComment : IRegionInfo
 internal class UnknownRegion : IRegionInfo
 {
     private bool dataIsKnown;
-    public UnknownRegion(UInt64 start, UInt64 end, bool hasData, IRomDataParser parent) : base(start, end, parent, ResourcerConfig.ConfigColour.Unknown)
+    public UnknownRegion(UInt64 start, UInt64 end, bool hasData, IRomDataParser parent, string regionName) 
+        : base(start, end, parent, ResourcerConfig.ConfigColour.Unknown, regionName)
     {
         dataIsKnown=hasData;
     }
@@ -380,13 +384,13 @@ internal class UnknownRegion : IRegionInfo
     public override ulong GetRegionLineCount() => AddressEnd - AddressStart + 1;
 
     public override void Combining(IRegionInfo other) { }
-    public override IRegionInfo Split(ulong start, ulong end) => new UnknownRegion(start, end, dataIsKnown, Parent);
+    public override IRegionInfo Split(ulong start, ulong end) => new UnknownRegion(start, end, dataIsKnown, Parent, RegionName);
 
     public override LineInfo GetRegionLineInfo(ulong index)
     {
         if (dataIsKnown)
         {
-            var db = Parent.GetByte(AddressStart + index);
+            var db = Parent.GetByte(RegionName, AddressStart + index);
             return new LineInfo($"{AddressStart + index:X8}", db.ToString("X2"), $"{(Char.IsControl((char)db) ? '.' : (char)db)}", "");
         }
         else
@@ -421,7 +425,8 @@ internal class DataRegion : IRegionInfo
 {
     private bool dataIsKnown;
     private UInt64 size;
-    public DataRegion(UInt64 start, UInt64 end, UInt64 size, bool hasData, IRomDataParser parent) : base(start, end, parent, ResourcerConfig.ConfigColour.Data)
+    public DataRegion(UInt64 start, UInt64 end, UInt64 size, bool hasData, IRomDataParser parent, string regionName) 
+        : base(start, end, parent, ResourcerConfig.ConfigColour.Data, regionName)
     {
         dataIsKnown = hasData;
         this.size = size;
@@ -436,12 +441,12 @@ internal class DataRegion : IRegionInfo
         {
             throw new ArgumentException($"Cannot split a data region of size {size} into {end-start+1}");
         }
-        return new DataRegion(start, end, size, dataIsKnown, Parent);
+        return new DataRegion(start, end, size, dataIsKnown, Parent, RegionName);
     }
 
     LineInfo GetByteLineInfo(ulong index)
     {
-        var db = Parent.GetByte(AddressStart + index);
+        var db = Parent.GetByte(RegionName, AddressStart + index);
         return new LineInfo($"{AddressStart + index:X8}", BytesForLine(AddressStart+index,AddressStart+index+size-1), $"db {db:X2}", "");
     }
 
@@ -449,36 +454,36 @@ internal class DataRegion : IRegionInfo
     {
         var index2 = index * 2;
         var address = AddressStart + index2;
-        UInt16 dw = Parent.GetByte(address + 0);
+        UInt16 dw = Parent.GetByte(RegionName, address + 0);
         dw <<= 8;
-        dw |= Parent.GetByte(address + 1);
-        return new LineInfo($"{address:X8}", BytesForSpan(Parent.FetchBytes(address,2)), $"dw {dw:X4}", "");
+        dw |= Parent.GetByte(RegionName, address + 1);
+        return new LineInfo($"{address:X8}", BytesForSpan(Parent.FetchBytes(RegionName, address,2)), $"dw {dw:X4}", "");
     }
 
     LineInfo GetTripleLineInfo(ulong index)
     {
         var index3 = index * 3;
         var address = AddressStart + index3;
-        UInt32 dl = Parent.GetByte(address + 0);
+        UInt32 dl = Parent.GetByte(RegionName, address + 0);
         dl <<= 8;
-        dl |= Parent.GetByte(address + 1);
+        dl |= Parent.GetByte(RegionName, address + 1);
         dl <<= 8;
-        dl |= Parent.GetByte(address + 2);
-        return new LineInfo($"{address:X8}", BytesForSpan(Parent.FetchBytes(address,3)), $"dl {dl:X6}", "");
+        dl |= Parent.GetByte(RegionName, address + 2);
+        return new LineInfo($"{address:X8}", BytesForSpan(Parent.FetchBytes(RegionName, address,3)), $"dl {dl:X6}", "");
     }
 
     LineInfo GetLongLineInfo(ulong index)
     {
         var index4 = index * 4;
         var address = AddressStart + index4;
-        UInt32 dl = Parent.GetByte(address + 0);
+        UInt32 dl = Parent.GetByte(RegionName, address + 0);
         dl <<= 8;
-        dl |= Parent.GetByte(address + 1);
+        dl |= Parent.GetByte(RegionName, address + 1);
         dl <<= 8;
-        dl |= Parent.GetByte(address + 2);
+        dl |= Parent.GetByte(RegionName, address + 2);
         dl <<= 8;
-        dl |= Parent.GetByte(address + 3);
-        return new LineInfo($"{address:X8}", BytesForSpan(Parent.FetchBytes(address,4)), $"dl {dl:X8}", "");
+        dl |= Parent.GetByte(RegionName, address + 3);
+        return new LineInfo($"{address:X8}", BytesForSpan(Parent.FetchBytes(RegionName, address,4)), $"dl {dl:X8}", "");
     }
 
     public override LineInfo GetRegionLineInfo(ulong index)
@@ -544,7 +549,7 @@ internal class DataRegion : IRegionInfo
 internal class StringRegion : IRegionInfo
 {
     private bool dataIsKnown;
-    public StringRegion(UInt64 start, UInt64 end, bool hasData, IRomDataParser parent) : base(start, end, parent, ResourcerConfig.ConfigColour.String)
+    public StringRegion(UInt64 start, UInt64 end, bool hasData, IRomDataParser parent, string regionName) : base(start, end, parent, ResourcerConfig.ConfigColour.String, regionName)
     {
         dataIsKnown = hasData;
     }
@@ -557,7 +562,7 @@ internal class StringRegion : IRegionInfo
     }
 
     public override void Combining(IRegionInfo other) { }
-    public override IRegionInfo Split(ulong start, ulong end) => new StringRegion(start, end, dataIsKnown, Parent);
+    public override IRegionInfo Split(ulong start, ulong end) => new StringRegion(start, end, dataIsKnown, Parent, RegionName);
 
     public override LineInfo GetRegionLineInfo(ulong index)
     {
@@ -569,7 +574,7 @@ internal class StringRegion : IRegionInfo
                 s.Append($"db \"");
                 for (UInt64 j = AddressStart; j <= AddressEnd; j++)
                 {
-                    var db = Parent.GetByte(j);
+                    var db = Parent.GetByte(RegionName, j);
                     if (Char.IsControl((char)db) || db > 0x7F)
                     {
                         s.Append($"\",${db:X2},\"");
@@ -639,7 +644,7 @@ internal class SymbolProvider : ISymbolProvider
 internal class CodeRegion : IRegionInfo
 {
     protected SortedDictionary<ulong, Instruction> instructions = new();
-    public CodeRegion(UInt64 start, UInt64 end, Instruction instruction, IRomDataParser parent) : base(start, end, parent, ResourcerConfig.ConfigColour.Code)
+    public CodeRegion(UInt64 start, UInt64 end, Instruction instruction, IRomDataParser parent, string regionName) : base(start, end, parent, ResourcerConfig.ConfigColour.Code, regionName)
     {
         instructions.Add(start, instruction);
     }
@@ -664,7 +669,7 @@ internal class CodeRegion : IRegionInfo
     public override IRegionInfo Split(ulong start, ulong end)
     {
         // remove instructions in the range start-end and add them to the new region
-        var newRegion = new CodeRegion(start, end, instructions[start], Parent);
+        var newRegion = new CodeRegion(start, end, instructions[start], Parent, RegionName);
         instructions.Remove(start);
         List<ulong> keysToRemove = new List<ulong>();
         foreach (var i in instructions)
@@ -738,10 +743,8 @@ internal class RomDataParser : IRomDataParser
 {
     private const int BYTES_PER_LINE = 16;
     private Dictionary<string, RangeCollection<IRegionInfo>> memoryRegions = new Dictionary<string, RangeCollection<IRegionInfo>>();
-    private Dictionary<string, byte[]> memoryData = new Dictionary<string, byte[]>();
+    private Dictionary<string, IMemoryRegionDataProvider> regionDataProviders = new Dictionary<string, IMemoryRegionDataProvider>();
     SymbolProvider symbolProvider = new SymbolProvider();
-    private byte[] romData = new byte[0];
-    private int romIndex = 0;
     private UInt64 minAddress, maxAddress;
     private IMemoryInformationProvider memoryInformationProvider;
 
@@ -756,6 +759,7 @@ internal class RomDataParser : IRomDataParser
         foreach (var memInfo in memoryInformationProvider.GetMemoryRegions())
         {
             memoryRegions[memInfo.MameViewName] = new RangeCollection<IRegionInfo>();
+            regionDataProviders[memInfo.MameViewName] = memInfo.CreateDataProvider();
         }
     }
 
@@ -786,13 +790,13 @@ internal class RomDataParser : IRomDataParser
         debugger.FreeView(view.view);
     }
 
-    public void AddCodeRange(DisassemblerBase disassembler, UInt64 minAddress, UInt64 maxAddress, IMemoryMapper mapper)
+    public void AddCodeRange(DisassemblerBase disassembler, UInt64 minAddress, UInt64 maxAddress, IMemoryMapper mapper, string regionName)
     {
         while (minAddress <= maxAddress)
         {
             // minAddress is linear, need to compute approx PC
             var pc = mapper.MapRomToCpu(minAddress);
-            if (AddCodeRange(disassembler, pc, out var i, mapper))
+            if (AddCodeRange(disassembler, pc, out var i, mapper, regionName))
             {
                 pc += (UInt64)i.Bytes.Length;
                 if (i.IsBasicBlockTerminator)
@@ -811,7 +815,7 @@ internal class RomDataParser : IRomDataParser
         }
     }
 
-    public bool AddCodeRange(DisassemblerBase disassembler, UInt64 pc, out Instruction instruction, IMemoryMapper mapper)
+    public bool AddCodeRange(DisassemblerBase disassembler, UInt64 pc, out Instruction instruction, IMemoryMapper mapper, string regionName)
     {
         bool done = false;
         UInt64 length = 0;
@@ -826,7 +830,7 @@ internal class RomDataParser : IRomDataParser
 
         while (!done)
         {
-            var result = disassembler.DecodeNext(FetchBytes(address, length), pc);
+            var result = disassembler.DecodeNext(FetchBytes(regionName, address, length), pc);
             if (!result.Success)
             {
                 if (result.NeedsMoreBytes)
@@ -839,10 +843,6 @@ internal class RomDataParser : IRomDataParser
                     throw new Exception($"Error: {result.ErrorMessage}");
                 }
             }
-            // Find the appropriate memory region for this address
-            var regionName = memoryRegions.Keys.FirstOrDefault();
-            if (regionName == null)
-                throw new Exception("No memory regions configured");
             
             var ranges = memoryRegions[regionName];
             var current = ranges.GetRangeContainingAddress(address, out var lineOff);
@@ -865,7 +865,7 @@ internal class RomDataParser : IRomDataParser
                     }
                     else
                     {
-                        ranges.AddRange(new CodeRegion(address, address + (UInt64)result.BytesConsumed - 1, result.Instruction, this));
+                        ranges.AddRange(new CodeRegion(address, address + (UInt64)result.BytesConsumed - 1, result.Instruction, this, regionName));
                     }
                 }
             }
@@ -876,13 +876,11 @@ internal class RomDataParser : IRomDataParser
         return false;
     }
 
-    public bool CheckRegionUnknown(UInt64 start, UInt64 end)
+    public bool CheckRegionUnknown(string regionName, UInt64 start, UInt64 end)
     {
-        var regionName = memoryRegions.Keys.FirstOrDefault();
-        if (regionName == null)
+        if (!memoryRegions.TryGetValue(regionName, out var ranges))
             return false;
         
-        var ranges = memoryRegions[regionName];
         for (UInt64 i = start; i <= end; i++)
         {
             var range = ranges.GetRangeContainingAddress(i, out _);
@@ -898,7 +896,7 @@ internal class RomDataParser : IRomDataParser
     {
         if (memoryRegions.TryGetValue(regionName, out var collection))
         {
-            collection.AddRange(new DataRegion(start, end, size, hasData, this));
+            collection.AddRange(new DataRegion(start, end, size, hasData, this, regionName));
         }
         else
         {
@@ -910,7 +908,7 @@ internal class RomDataParser : IRomDataParser
     {
         if (memoryRegions.TryGetValue(regionName, out var collection))
         {
-            collection.AddRange(new StringRegion(start, end, hasData, this));
+            collection.AddRange(new StringRegion(start, end, hasData, this, regionName));
         }
         else
         {
@@ -922,7 +920,7 @@ internal class RomDataParser : IRomDataParser
     {
         if (memoryRegions.TryGetValue(regionName, out var collection))
         {
-            collection.AddRange(new UnknownRegion(start, end, hasData, this));
+            collection.AddRange(new UnknownRegion(start, end, hasData, this, regionName));
         }
         else
         {
@@ -948,189 +946,62 @@ internal class RomDataParser : IRomDataParser
     public UInt64 GetMaxAddress => maxAddress;
 
     // Only used by tests
-    internal void LoadRomData(ReadOnlySpan<byte> data)
+    internal void LoadRomData(ReadOnlySpan<byte> data, string regionName)
     {
-        if (romData.Length < data.Length)
+        if (!regionDataProviders.TryGetValue(regionName, out var provider))
+            throw new ArgumentException($"Unknown memory region: {regionName}");
+        
+        if (provider is BufferDataProvider bufferProvider)
         {
-            romData = new byte[data.Length];
+            bufferProvider.LoadBuffer(data);
         }
-        data.CopyTo(romData.AsSpan(0, data.Length));
+        else
+        {
+            throw new InvalidOperationException($"Region {regionName} does not support direct data loading");
+        }
     }
 
     public void Parse(LibMameDebugger debugger)
     {
-        // Initialize ROM view
-        var view = OpenMemView(debugger);
+        // Load data from debugger for all physical memory regions
+        minAddress = UInt64.MaxValue;
+        maxAddress = 0;
 
-        try
+        foreach (var memInfo in memoryInformationProvider.GetMemoryRegions())
         {
-            // We don't know the size of the rom, so, first off set the address of the view to the biggest possible value
-            view.view.Expression = $"${UInt64.MaxValue:X}";
-            debugger.SetExpression(ref view);
-            // Some platforms (e.g., Genesis) seem to start in unexpected byte count
-            debugger.SetDataFormat(ref view, LibMameDebuggerRetroPlugin.debug_format.DataFormat2ByteHex);
-            debugger.UpdateDView(ref view);
-            debugger.SetDataFormat(ref view, LibMameDebuggerRetroPlugin.debug_format.DataFormat1ByteHex);
-            debugger.UpdateDView(ref view);
+            if (memInfo.HasPhysicalData)
+            {
+                var provider = regionDataProviders[memInfo.MameViewName];
+                provider.LoadFromDebugger(debugger);
 
-            // Now we can get the size of the rom
-            var romSize = FindLastAddress(view);
-            romData = new byte[romSize];
+                // Update address bounds
+                var (start, end) = memInfo.AddressRange;
+                minAddress = Math.Min(minAddress, start);
+                maxAddress = Math.Max(maxAddress, end);
+            }
+        }
 
+        // If no physical regions were found, set default bounds
+        if (minAddress == UInt64.MaxValue)
+        {
             minAddress = 0;
-            maxAddress = romSize - 1;
-
-            // Now we know the size of the rom, so, set the address of the view to the start of the rom
-            UInt64 offset = 0;
-            while (offset < romSize)
-            {
-                // Set the view expression to the current offset
-                view.view.Expression = $"${offset:X}";
-                debugger.SetExpression(ref view);
-
-                // Update the view to get the data
-                debugger.UpdateDView(ref view);
-
-                // Parse the data from the view state
-                offset = ParseChunk(view, offset);
-            }
-        }
-        finally
-        {
-            CloseView(debugger, view);
+            maxAddress = 0;
         }
     }
 
-    private UInt64 ParseChunk(LibMameDebugger.DView view, UInt64 firstOffset)
+    public byte[] GetRomData
     {
-        romIndex = (int)firstOffset;
-        UInt64 expectedOffset = firstOffset;
-        int bytesPerLine = view.view.W * 2; // Each character is 2 bytes (char + attribute)
-
-        for (int y = 0; y < view.view.H; y++)
+        get
         {
-            int lineStart = y * bytesPerLine;
-            int x = 0;
-
-            // Skip initial spaces
-            while (x < view.view.W && (char)view.state[lineStart + x * 2] == ' ')
-                x++;
-
-            // Parse address
-            StringBuilder addressStr = new StringBuilder();
-            while (x < view.view.W && (char)view.state[lineStart + x * 2] != ' ')
+            // Return data from first physical region for backward compatibility
+            var firstPhysical = regionDataProviders.FirstOrDefault(x => x.Value is BufferDataProvider);
+            if (firstPhysical.Value is BufferDataProvider bufferProvider && bufferProvider is DebuggerDataProvider debuggerProvider)
             {
-                addressStr.Append((char)view.state[lineStart + x * 2]);
-                x++;
+                return debuggerProvider.GetBuffer();
             }
-            var address = UInt64.Parse(addressStr.ToString(), System.Globalization.NumberStyles.HexNumber);
-            if (address != expectedOffset)
-            {
-                throw new Exception($"Address mismatch at offset {expectedOffset}");
-            }
-            expectedOffset += BYTES_PER_LINE;
-
-            // Skip spaces between address and bytes
-            while (x < view.view.W && (char)view.state[lineStart + x * 2] == ' ')
-                x++;
-
-            // Parse bytes
-            for (int byteCount = 0; byteCount < BYTES_PER_LINE && x < view.view.W - 1; byteCount++)
-            {
-                // Get the two hex chars
-                char highNibble = (char)view.state[lineStart + x * 2];
-                char lowNibble = (char)view.state[lineStart + (x + 1) * 2];
-
-                // Convert hex chars to byte
-                if (char.IsLetterOrDigit(highNibble) && char.IsLetterOrDigit(lowNibble))
-                {
-                    byte value = Convert.ToByte($"{highNibble}{lowNibble}", 16);
-                    romData[romIndex++] = value;
-                }
-                else
-                {
-                    throw new Exception($"Invalid byte at offset {expectedOffset}");
-                }
-
-                x += 3; // Skip the two chars and the space
-            }
+            return new byte[0];
         }
-
-        return expectedOffset;
     }
-
-    private UInt64 FindLastAddress(LibMameDebugger.DView view)
-    {
-        UInt64 lastAddress = 0;
-        int bytesPerLine = view.view.W * 2; // Each character is 2 bytes (char + attribute)
-        int lastValidRow = -1;
-
-        // Find the last valid row
-        for (int y = 0; y < view.view.H; y++)
-        {
-            int lineStart = y * bytesPerLine;
-            int x = 0;
-
-            // Skip initial spaces
-            while (x < view.view.W && (char)view.state[lineStart + x * 2] == ' ')
-                x++;
-
-            // Check if we have a valid address
-            if (x < view.view.W && char.IsLetterOrDigit((char)view.state[lineStart + x * 2]))
-            {
-                StringBuilder addressStr = new StringBuilder();
-                while (x < view.view.W && (char)view.state[lineStart + x * 2] != ' ')
-                {
-                    addressStr.Append((char)view.state[lineStart + x * 2]);
-                    x++;
-                }
-                if (addressStr.Length > 0)
-                {
-                    lastAddress = UInt64.Parse(addressStr.ToString(), System.Globalization.NumberStyles.HexNumber);
-                    lastValidRow = y;
-                }
-            }
-        }
-
-        if (lastValidRow >= 0)
-        {
-            // Count valid bytes in the last row
-            int lineStart = lastValidRow * bytesPerLine;
-            int x = 0;
-
-            // Skip to bytes section
-            while (x < view.view.W && (char)view.state[lineStart + x * 2] != ' ')
-                x++;
-            while (x < view.view.W && (char)view.state[lineStart + x * 2] == ' ')
-                x++;
-
-            // Count valid bytes
-            int validBytes = 0;
-            for (int byteCount = 0; byteCount < BYTES_PER_LINE && x < view.view.W - 1; byteCount++)
-            {
-                char highNibble = (char)view.state[lineStart + x * 2];
-                char lowNibble = (char)view.state[lineStart + (x + 1) * 2];
-
-                if (char.IsLetterOrDigit(highNibble) && char.IsLetterOrDigit(lowNibble))
-                {
-                    validBytes++;
-                }
-                else
-                    break;
-                x += 3; // Skip the two chars and the space
-            }
-
-            // Adjust the last address by the number of valid bytes
-            if (validBytes > 0)
-            {
-                lastAddress += (UInt64)validBytes - 1;        // -1 because the address is inclusive
-            }
-        }
-
-        return lastAddress;
-    }
-
-    public byte[] GetRomData => romData;
 
     public ISymbolProvider SymbolProvider => symbolProvider;
 
@@ -1139,19 +1010,18 @@ internal class RomDataParser : IRomDataParser
         symbolProvider.AddSymbol(value, size, symbol);
     }
 
-    public byte GetByte(UInt64 address)
+    public byte GetByte(string regionName, UInt64 address)
     {
-        if (address >= (UInt64)romData.Length)
-            return 0;
-        return romData[address];
+        if (regionDataProviders.TryGetValue(regionName, out var provider))
+            return provider.GetByte(address);
+        return 0;
     }
 
-    public ReadOnlySpan<byte> FetchBytes(UInt64 address, UInt64 length)
+    public ReadOnlySpan<byte> FetchBytes(string regionName, UInt64 address, UInt64 length)
     {
-        if (address >= (UInt64)romData.Length)
-            return new byte[0];
-        length = Math.Min(length, (UInt64)romData.Length - address);
-        return new ReadOnlySpan<byte>(romData, (int)address, (int)length);
+        if (regionDataProviders.TryGetValue(regionName, out var provider))
+            return provider.FetchBytes(address, length);
+        return new ReadOnlySpan<byte>();
     }
 
     //TODO - doesn't handle mid region insertion....
@@ -1162,7 +1032,7 @@ internal class RomDataParser : IRomDataParser
             Range<IRegionInfo>? region = ranges.GetRangeContainingAddress(start, out _);
             if (region != null)
             {
-                region.Value.Above.Add(new MultiLineComment(value, this));
+                region.Value.Above.Add(new MultiLineComment(value, this, regionName));
             }
             ranges.Recompute();
         }
