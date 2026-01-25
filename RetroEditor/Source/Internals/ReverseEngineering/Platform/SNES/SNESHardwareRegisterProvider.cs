@@ -3,9 +3,9 @@ namespace RetroEditor.Source.Internals.ReverseEngineering.Platform.SNES;
 /// <summary>
 /// SNES hardware register provider
 /// </summary>
-internal class SNESHardwareRegisterProvider : IHardwareRegisterProvider
+internal class SNESHardwareRegisterProvider : IHardwareSymbolsProvider
 {
-    public void InitializeRegisters(IRomDataParser romData)
+    public void InitializeSymbols(IRomDataParser romData)
     {
         // PPU Registers
         romData.AddSymbol(0x2100, 2, "INIDISP");

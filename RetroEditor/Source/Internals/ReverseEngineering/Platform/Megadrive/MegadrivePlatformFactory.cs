@@ -27,8 +27,13 @@ internal class MegadrivePlatformFactory : IPlatformFactory
         return new MegadriveTraceParser();
     }
 
-    public IHardwareRegisterProvider CreateHardwareRegisterProvider()
+    public IHardwareSymbolsProvider CreateHardwareSymbolsProvider()
     {
         return new MegadriveHardwareRegisterProvider();
+    }
+
+    public IMemoryInformationProvider CreateMemoryInformationProvider()
+    {
+        return new MegadriveMemoryInformationProvider();
     }
 }

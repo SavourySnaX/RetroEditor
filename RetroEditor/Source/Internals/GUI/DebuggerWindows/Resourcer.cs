@@ -16,7 +16,8 @@ internal class Resourcer : IWindow
     IMemoryMapper memoryMapper;
     ICpuStateManager cpuStateManager;
     ITraceParser traceParser;
-    IHardwareRegisterProvider hardwareRegisterProvider;
+    IMemoryInformationProvider memoryInformationProvider;
+    IHardwareSymbolsProvider hardwareRegisterProvider;
     string traceFile = "trace.txt";
     bool traceInProgress = false;
     bool newTraceInProgress = false;
@@ -28,18 +29,19 @@ internal class Resourcer : IWindow
 
     private ResourcerConfig config;
 
-    public Resourcer(LibMameDebugger debugger, IPlatformFactory? platformFactory = null)
+    public Resourcer(LibMameDebugger debugger, IPlatformFactory platformFactory)
     {
         this.debugger = debugger;
-        this.platformFactory = platformFactory ?? new MegadrivePlatformFactory();
+        this.platformFactory = platformFactory;
         this.disassembler = this.platformFactory.CreateDisassembler();
         this.memoryMapper = this.platformFactory.CreateMemoryMapper();
         this.cpuStateManager = this.platformFactory.CreateCpuStateManager();
         this.traceParser = this.platformFactory.CreateTraceParser();
-        this.hardwareRegisterProvider = this.platformFactory.CreateHardwareRegisterProvider();
+        this.hardwareRegisterProvider = this.platformFactory.CreateHardwareSymbolsProvider();
+        this.memoryInformationProvider = this.platformFactory.CreateMemoryInformationProvider();
         this.autoDisassembler = this.platformFactory.CreateDisassembler();
 
-        romData = new RomDataParser();
+        romData = new RomDataParser(memoryInformationProvider);
 
         config = new ResourcerConfig();
     }
@@ -81,7 +83,6 @@ internal class Resourcer : IWindow
     bool traceCommandFinished=false;
     bool traceContinue = false;
 
-    bool cpu_emulationMode=true, cpu_8bitAccumulator=true, cpu_8bitIndex=true;
     public bool Draw()
     {
         DrawMemoryMap();
@@ -172,30 +173,15 @@ internal class Resourcer : IWindow
         {
             ImGui.EndDisabled();
         }
-        // CPU-specific UI controls would be rendered by platform-specific components
-        // For now, keep the existing UI but these should be abstracted later
-        ImGui.SameLine();
-        ImGui.Checkbox("EmulationMode", ref cpu_emulationMode);
-        ImGui.SameLine();
-        if (cpu_emulationMode)
-        {
-            ImGui.BeginDisabled();
-        }
-        ImGui.Checkbox("8Bit Accumulator", ref cpu_8bitAccumulator);
-        ImGui.SameLine();
-        ImGui.Checkbox("8Bit Index", ref cpu_8bitIndex);
-        if (cpu_emulationMode)
-        {
-            ImGui.EndDisabled();
-        }
+        cpuStateManager.RenderUI();
         ImGui.SameLine();
         ImGui.BeginDisabled();
         ImGui.Checkbox("Automated", ref automated);
         ImGui.EndDisabled();
 
-
         if (ImGui.BeginTabBar("ResourcerTabs"))
         {
+            // TODO drive via memoryinformation provider
             if (ImGui.BeginTabItem("Cartridge"))
             {
                 ScrollableTableView(romData.GetRomRanges, RomDataParser.RangeRegion.Cartridge, cartridgeVars);
@@ -388,17 +374,17 @@ internal class Resourcer : IWindow
                         if (ImGui.IsKeyPressed(ImGuiKey.C))
                         {
                             // Convert to code
-                            var cpuState = CreateCpuStateFromFlags();
+                            var cpuState = cpuStateManager.FetchStateFromUI();
                             disassembler.State = cpuState;
                             romData.AddCodeRange((DisassemblerBase)disassembler, minAddress, maxAddress, memoryMapper);
                             // Update CPU flags from resulting state
-                            UpdateCpuFlagsFromState(disassembler.State);
+                            cpuStateManager.UpdateUIFromState(disassembler.State);
                             clearSelection = true;
                         }
                         if (ImGui.IsKeyPressed(ImGuiKey.A) && !automated)
                         {
                             // Auto disassemble starting at the first selected address
-                            var cpuState = CreateCpuStateFromFlags();
+                            var cpuState = cpuStateManager.FetchStateFromUI();
                             autoDisassembler.State = cpuState;
                             var autoPC = memoryMapper.MapRomToCpu(minAddress);
                             autoStack.Clear();
@@ -632,30 +618,6 @@ internal class Resourcer : IWindow
         return 0;
     }
 
-    private ICpuState CreateCpuStateFromFlags()
-    {
-        // This creates platform-specific state from UI flags
-        // TODO: This should be abstracted to platform-specific UI components
-        var registers = new Dictionary<string, UInt64>
-        {
-            ["E"] = cpu_emulationMode ? 1UL : 0UL,
-            ["P"] = (cpu_8bitAccumulator ? 0x20UL : 0UL) | (cpu_8bitIndex ? 0x10UL : 0UL)
-        };
-        return cpuStateManager.CreateStateFromRegisters(0, registers);
-    }
-
-    private void UpdateCpuFlagsFromState(ICpuState state)
-    {
-        // This updates UI flags from platform-specific state
-        // TODO: This should be abstracted to platform-specific UI components
-        if (state is SNES65816State snesState)
-        {
-            cpu_emulationMode = snesState.EmulationMode;
-            cpu_8bitAccumulator = snesState.Accumulator8Bit;
-            cpu_8bitIndex = snesState.Index8Bit;
-        }
-    }
-
     public void Update(float seconds)
     {
         if (automated)
@@ -681,7 +643,7 @@ internal class Resourcer : IWindow
                     }
                     if (romData.AddCodeRange((DisassemblerBase)autoDisassembler, autoPC, out var instruction, memoryMapper))
                     {
-                        if (instruction.Mnemonic == "XCE")
+                        if (cpuStateManager.InstructionTerminatesAutoDisassembly(instruction))
                         {
                             return;
                         }
@@ -729,7 +691,7 @@ internal class Resourcer : IWindow
                 romData.AddCommentRange(RomDataParser.RangeRegion.RAM, ["RetroEditor Resourcer Version 0.1", "", "A WIP Tool for re-sourcing ROMS", "", ""], 0);
 
                 // Initialize platform-specific hardware registers
-                hardwareRegisterProvider.InitializeRegisters(romData);
+                hardwareRegisterProvider.InitializeSymbols(romData);
             }
 
             romLoaded = true;

@@ -218,7 +218,7 @@ internal class LibRetroPlugin : IDisposable
     }
 
     public const int RetroKeyArrayCount = 512;
-    private IEditorInternal _editor;
+    protected IEditorInternal _editor;
     private GCHandle _pinnedEditor;
     internal string DllName { get; private set; }
 
@@ -272,8 +272,6 @@ internal class LibRetroPlugin : IDisposable
 
         audioHelper = new RayLibAudioHelper();
         temporaryPath = editor.Settings.MameDebuggerDataFolder;
-        debuggerTrampoline = IntPtr.Zero;
-        debuggerCallback = null;
         loadedPath = "";
         memoryMaps = Array.Empty<MemoryMap>();
 
@@ -287,15 +285,8 @@ internal class LibRetroPlugin : IDisposable
         nativeSetVideoRefresh.Invoke(videoRefreshCallback);
     }
 
-    public void SetDebuggerCallback(DebuggerCallbackDelegate callback)
-    {
-        debuggerCallback = callback;
-        debuggerTrampoline = Marshal.GetFunctionPointerForDelegate(callback);
-    }
-
     private string temporaryPath;
     private RayLibAudioHelper audioHelper;
-
     public uint Version()
     {
         return nativeVersion();
@@ -374,7 +365,7 @@ internal class LibRetroPlugin : IDisposable
 
     private retro_game_info last_loaded_game;
 
-    private void InternalLoad(string path, byte[] data)
+    protected virtual void InternalLoad(string path, byte[] data)
     {
         loadedPath = path;
         loadedRom = Marshal.AllocHGlobal(data.Length);
@@ -578,7 +569,6 @@ internal class LibRetroPlugin : IDisposable
         return result != 0;
     }
 
-
     public void UpdateKey(KeyboardKey key, bool pressed)
     {
         if ((int)key < RetroKeyArrayCount)
@@ -654,7 +644,7 @@ internal class LibRetroPlugin : IDisposable
     private bool[] keyArray;
     private int[] keyMap;
 
-    private Dictionary<string, string[]> core_options;
+    protected Dictionary<string, string[]> core_options;
 
 
     private delegate byte retro_environment_t(uint cmd, IntPtr data);
@@ -664,20 +654,16 @@ internal class LibRetroPlugin : IDisposable
     private delegate short retro_input_state_t(uint port, uint device, uint index, uint id);
     private delegate void retro_video_refresh_t(IntPtr data, uint width, uint height, UIntPtr pitch);
 
-    public delegate nint DebuggerCallbackDelegate(int kind, IntPtr data);
-
     private retro_environment_t environmentCallback;                // Prevent collection of delegate
     private retro_audio_sample_t audioSampleCallback;               // Prevent collection of delegate
     private retro_audio_sample_batch_t audioSampleBatchCallback;    // Prevent collection of delegate
     private retro_input_poll_t inputPollCallback;                   // Prevent collection of delegate  
     private retro_input_state_t inputStateCallback;                 // Prevent collection of delegate
     private retro_video_refresh_t videoRefreshCallback;             // Prevent collection of delegate
-    private DebuggerCallbackDelegate? debuggerCallback;             // Prevent collection of delegate
 
     private unsafe delegate* unmanaged[Cdecl]<UInt64, void*, void> logCallbackDelegate;
     private unsafe delegate* unmanaged[Cdecl]<void*, UInt64, void*, void> logCallbackInstanceDelegate;
     private nint logCallbackTrampoline;
-    private nint debuggerTrampoline;
 
 
     private delegate uint retro_api_version();
@@ -723,7 +709,7 @@ internal class LibRetroPlugin : IDisposable
     private retro_deinit nativeDeinit;
 
 
-    private enum EnvironmentCommand
+    protected enum EnvironmentCommand
     {
         ENVIRONMENT_SET_ROTATION = 1,
         ENVIRONMENT_GET_CAN_DUPE = 3,
@@ -830,7 +816,7 @@ internal class LibRetroPlugin : IDisposable
         public readonly uint num_descriptors;
     }
 
-    private struct retro_variable
+    protected struct retro_variable
     {
         public retro_variable()
         {
@@ -942,27 +928,32 @@ internal class LibRetroPlugin : IDisposable
         var frontendPrivate = (cmd & 0x20000) == 0x20000;
         cmd &= 0xFFFF;
         var command = (EnvironmentCommand)cmd;
+        return EnvironmentCallbackInternal(command, experimental, frontendPrivate, data) ? (byte)1 : (byte)0;
+    }
+
+    protected virtual bool EnvironmentCallbackInternal(EnvironmentCommand command, bool experimental, bool frontendPrivate, IntPtr data)
+    {
         switch (command)
         {
             case EnvironmentCommand.ENVIRONMENT_SET_ROTATION:
                 {
                     Marshal.WriteInt32(data, 0);
-                    return 1;
+                    return true;
                 }
             case EnvironmentCommand.ENVIRONMENT_GET_CAN_DUPE:
                 {
                     Marshal.WriteByte(data, 1);
-                    return 1;
+                    return true;
                 }
             case EnvironmentCommand.ENVIRONMENT_GET_SYSTEM_DIRECTORY:
                 {
                     Marshal.WriteIntPtr(data, Marshal.StringToHGlobalAnsi(temporaryPath));
-                    return 1;
+                    return true;
                 }
             case EnvironmentCommand.ENVIRONMENT_SET_PIXEL_FORMAT:
                 {
                     pixelFormat = (PixelFormat)Marshal.ReadInt32(data);
-                    return 1;
+                    return true;
                 }
             case EnvironmentCommand.ENVIRONMENT_SET_INPUT_DESCRIPTORS:
                 {
@@ -982,12 +973,12 @@ internal class LibRetroPlugin : IDisposable
                         _editor.Log(LogType.Debug, "LibRetro", $"INPUT DESCRIPTOR : {port}, {device}, {index}, {id}, {description}");
                         data += descSize;
                     }
-                    return 1;
+                    return true;
                 }
             case EnvironmentCommand.ENVIRONMENT_SET_KEYBOARD_CALLBACK:
                 {
                     Marshal.StructureToPtr(new retro_keyboard_callback { callback = KeyboardCallback }, data, false);
-                    return 1;
+                    return true;
                 }
             case EnvironmentCommand.ENVIRONMENT_GET_VARIABLE:
                 {
@@ -995,23 +986,14 @@ internal class LibRetroPlugin : IDisposable
                     var key = Marshal.PtrToStringAnsi(variable.key);
                     if (key!=null && core_options.ContainsKey(key))
                     {
-                        var value = core_options[key][1];
-                        if (key == "mame_media_type")   // hack for mame and consoles, need to make configurable, or autodetect
-                        {
-                            value = "cart";
-                        }
-                        else if (key == "mame_softlists_enable")
-                        {
-                            // Disable softlists, as they override media type
-                            value = "disabled";
-                        }
+                        var value = OverrideVariableValue(key, core_options[key][1]);
                         variable.value = Marshal.StringToHGlobalAnsi(value);
                         _editor.Log(LogType.Debug, "LibRetro", $"Get variable: {key} {value}");
                         Marshal.StructureToPtr(variable, data, true);
-                        return 1;
+                        return true;
                     }
                     _editor.Log(LogType.Debug, "LibRetro", $"Get variable (UNKNOWN): {key}");
-                    return 0;
+                    return false;
                 }
             case EnvironmentCommand.ENVIRONMENT_SET_VARIABLES:
                 {
@@ -1058,16 +1040,16 @@ internal class LibRetroPlugin : IDisposable
                         }
                         data += varSize;
                     }
-                    return 1;
+                    return true;
                 }
             case EnvironmentCommand.ENVIRONMENT_GET_VARIABLE_UPDATE:
                 {
-                    return 0;   // no variables updated since last run
+                    return false;   // no variables updated since last run
                 }
             case EnvironmentCommand.ENVIRONMENT_SET_SUPPORT_NO_GAME:
                 {
                     _editor.Log(LogType.Debug, "LibRetro", $"Supports No Game : {Marshal.ReadByte(data)}");
-                    return 1;
+                    return true;
                 }
             case EnvironmentCommand.ENVIRONMENT_GET_LOG_INTERFACE:
                 {
@@ -1083,17 +1065,17 @@ internal class LibRetroPlugin : IDisposable
                         log = logCallbackTrampoline
                     };
                     Marshal.StructureToPtr(logInterface, data, false);
-                    return 1;
+                    return true;
                 }
             case EnvironmentCommand.ENVIRONMENT_GET_CORE_ASSETS_DIRECTORY:
                 {
                     Marshal.WriteIntPtr(data, Marshal.StringToHGlobalAnsi(temporaryPath));
-                    return 1;
+                    return true;
                 }
             case EnvironmentCommand.ENVIRONMENT_GET_SAVE_DIRECTORY:
                 {
                     Marshal.WriteIntPtr(data, Marshal.StringToHGlobalAnsi(temporaryPath));
-                    return 1;
+                    return true;
                 }
             case EnvironmentCommand.ENVIRONMENT_SET_CONTROLLER_INFO:
                 {
@@ -1116,7 +1098,7 @@ internal class LibRetroPlugin : IDisposable
                         data += controllerSize;
                     }
 
-                    return 1;
+                    return true;
                 }
             case EnvironmentCommand.ENVIRONMENT_SET_MEMORY_MAPS:
                 {
@@ -1140,43 +1122,43 @@ internal class LibRetroPlugin : IDisposable
                         };
                         _editor.Log(LogType.Debug, "LibRetro", $"MEMORY MAP : {memoryMaps[a].flags}, {memoryMaps[a].ptr}, {memoryMaps[a].offset}, {memoryMaps[a].start}, {memoryMaps[a].select}, {memoryMaps[a].disconnect}, {memoryMaps[a].len}, {memoryMaps[a].addressSpace}");
                     }
-                    return 1;
+                    return true;
                 }
             case EnvironmentCommand.ENVIRONMENT_SET_GEOMETRY:
                 {
                     var geometry = Marshal.PtrToStructure<retro_game_geometry>(data);
                     _editor.Log(LogType.Debug, "LibRetro", $"GEOMETRY : {geometry.base_width}, {geometry.base_height}, {geometry.max_width}, {geometry.max_height}, {geometry.aspect_ratio}");
-                    return 1;
+                    return true;
                 }
             case EnvironmentCommand.ENVIRONMENT_GET_LED_INTERFACE:
                 {
-                    return 0;   // No LED interface
+                    return false;   // No LED interface
                 }
             case EnvironmentCommand.ENVIRONMENT_GET_AUDIO_VIDEO_ENABLE:
                 {
                     // Just want video for now
                     Marshal.WriteInt32(data, 3);    // bits 3-0 HardAudioDisable|FastSave|AudioDisable|VideoDisable
-                    return 1;
+                    return true;
                 }
             case EnvironmentCommand.ENVIRONMENT_GET_INPUT_BITMASKS:
                 {
                     //var ptr = Marshal.ReadIntPtr(data);
                     //Marshal.WriteByte(ptr, 0);    // No input bitmasks
-                    return 0;
+                    return false;
                 }
             case EnvironmentCommand.ENVIRONMENT_GET_CORE_OPTIONS_VERSION:
                 {
-                    return 0;       //version 0 for now
+                    return false;       //version 0 for now
                 }
             case EnvironmentCommand.ENVIRONMENT_GET_MESSAGE_INTERFACE_VERSION:
                 {
                     Marshal.WriteInt32(data, 1);    // We support version 1
 
-                    return 1;
+                    return true;
                 }
             case EnvironmentCommand.ENVIRONMENT_SET_RETRO_FAST_FORWARDING_OVERRIDE:
                 {
-                    return 0;   // No fast forwarding
+                    return false;   // No fast forwarding
                 }
             case EnvironmentCommand.ENVIRONMENT_GET_GAME_INFO_EXT:
                 {
@@ -1196,22 +1178,21 @@ internal class LibRetroPlugin : IDisposable
                     };
                     Marshal.StructureToPtr(gameInfo, nativeGameInfo, false);
                     Marshal.WriteIntPtr(data, nativeGameInfo);
-                    return 1;
-                }
-            case EnvironmentCommand.ENVIRONMENT_GET_DEBUGGER_INTERFACE:
-                {
-                    Marshal.WriteIntPtr(data, debuggerTrampoline);
-                    return 1;
+                    return true;
                 }
 
             default:
                 {
-                    _editor.Log(LogType.Warning, "LibRetro", $"Unhandled Environment callback :  {cmd} {(experimental ? "Experimental" : "")} {(frontendPrivate ? "Private" : "")}");
+                    _editor.Log(LogType.Warning, "LibRetro", $"Unhandled Environment callback :  {command} {(experimental ? "Experimental" : "")} {(frontendPrivate ? "Private" : "")}");
                 }
-                return 0;
+                return false;
         }
     }
 
+    protected virtual string OverrideVariableValue(string key, string currentValue)
+    {
+        return currentValue;
+    }
 
     private void InputPollCallback()
     {
@@ -1459,175 +1440,4 @@ internal class LibRetroPlugin : IDisposable
     {
         audioHelper.AudioSampleIn(data, frames);
     }
-
-    // Custom debugger extensions, NOT part of the libretro API
-
-    public enum debug_view_type
-    {
-        None = 0,
-        Console = 1,
-        State = 2,
-        Disassembly = 3,
-        Memory = 4,
-        Log = 5,
-        BreakPoints = 6,
-        RegisterPoints = 7
-    } 
-
-
-    public enum debug_key
-    {
-        DCH_UP = 1,        // up arrow
-        DCH_DOWN = 2,        // down arrow
-        DCH_LEFT = 3,        // left arrow
-        DCH_RIGHT = 4,        // right arrow
-        DCH_PUP = 5,        // page up
-        DCH_PDOWN = 6,        // page down
-        DCH_HOME = 7,        // home
-        DCH_CTRLHOME = 8,        // ctrl+home
-        DCH_END = 9,        // end
-        DCH_CTRLEND = 10,       // ctrl+end
-        DCH_CTRLRIGHT = 11,       // ctrl+right
-        DCH_CTRLLEFT = 12       // ctrl+left
-    }
-
-    public enum debug_format
-    {
-        AsmRightColumnNone = 0x0000,
-        AsmRightColumnRawOpcodes = 0x0001,
-        AsmRightColumnEncyptedOpcodes = 0x0002,
-        AsmRightColumnComments = 0x0003,
-        DataFormat1ByteHex = 0x1000,
-        DataFormat2ByteHex = 0x1001,
-        DataFormat4ByteHex = 0x1002,
-        DataFormat8ByteHex = 0x1003,
-        DataFormat1ByteOctal = 0x1004,
-        DataFormat2ByteOctal = 0x1005,
-        DataFormat4ByteOctal = 0x1006,
-        DataFormat8ByteOctal = 0x1007,
-        DataFormat32BitFloat = 0x1008,
-        DataFormat64BitFloat = 0x1009,
-        DataFormat80BitFloat = 0x100A,
-        HexAddress = 0x2000,
-        DecAddress = 0x2001,
-        OctAddress = 0x2002,
-        LogicalAddress = 0x3000,
-        PhysicalAddress = 0x3001,
-    }
-
-    public struct retro_debug_view_t
-    {
-        public nint data;
-        public nint expression;
-        public nint view;
-        public debug_view_type kind;
-        public int x,y;
-        public int w,h;
-    }
-
-    public unsafe struct RetroDebugView
-    {
-        public RetroDebugView(retro_debug_view_t* view)
-        {
-            this.view = view;
-            Expression = "";
-        }
-        internal retro_debug_view_t* view;
-        public string Expression
-        {
-            set
-            {
-                view->expression = Marshal.StringToHGlobalAnsi(value);
-            }
-        }
-        public debug_view_type Kind
-        {
-            get
-            {
-                return view->kind;
-            }
-        }
-        public int X
-        {
-            get
-            {
-                return view->x;
-            }
-            set
-            {
-                view->x = value;
-            }
-        }
-        public int Y
-        {
-            get
-            {
-                return view->y;
-            }
-            set
-            {
-                view->y = value;
-            }
-        }
-        public int W
-        {
-            get
-            {
-                return view->w;
-            }
-            set
-            {
-                view->w = value;
-            }
-        }
-        public int H
-        {
-            get
-            {
-                return view->h;
-            }
-            set
-            {
-                view->h = value;
-            }
-        }
-    }
-
-
-    public unsafe delegate retro_debug_view_t* AllocDebugView(void* data,debug_view_type view);
-    public unsafe delegate void FreeDebugView(void* data,retro_debug_view_t* view);
-    public unsafe delegate byte* UpdateDebugView(void* data, retro_debug_view_t* view);
-    public unsafe delegate void ProcessChar(void* data, retro_debug_view_t* view, int c);
-    public unsafe delegate void UpdateExpression(void* data, retro_debug_view_t* view);
-    public unsafe delegate void DataFormat(void* data, retro_debug_view_t* view, int format);
-    public unsafe delegate int DataSourcesCount(void* data, retro_debug_view_t* view);
-    public unsafe delegate void* DataSourcesName(void* data, retro_debug_view_t* view, int index);
-    public unsafe delegate void DataSourcesSet(void* data, retro_debug_view_t* view, int index);
-    public unsafe delegate byte* RemoteCommandCB(IntPtr data, byte* command);
-
-    public struct DebuggerView
-    {
-        public AllocDebugView allocCb;
-        public FreeDebugView freeCb;
-        public UpdateDebugView viewCb;
-        public ProcessChar processCharCb;
-        public UpdateExpression updateExpressionCb;
-        public DataFormat dataFormatCb;
-        public DataSourcesCount dataSourcesCountCb;
-        public DataSourcesName dataSourcesNameCb;
-        public DataSourcesSet dataSourcesSetCb;
-        public IntPtr data;
-    }
-
-    public struct RemoteCommand
-    {
-        public RemoteCommandCB remoteCommandCB;
-        public IntPtr data;
-    }
-
-    public struct RemoteNotification
-    {
-        public Int32 stopped;
-    }
-
 }

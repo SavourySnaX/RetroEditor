@@ -43,7 +43,7 @@ public class CustomMameDebugger
         wrapper.CreateResources();
         var settings = new Editor.EditorSettings();
         settings.MameDebuggerDataFolder = wrapper.testDirectory;
-        LibRetroPlugin? retro = null;
+        LibMameDebuggerRetroPlugin? retro = null;
         LibMameDebugger? mameInstance = null;
         try
         {

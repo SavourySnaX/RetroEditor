@@ -7,7 +7,7 @@ internal class LibMameDebugger
 {
     public class DView
     {
-        public DView(LibRetroPlugin.RetroDebugView view, int x, int y, int w, int h, string expression)
+        public DView(LibMameDebuggerRetroPlugin.RetroDebugView view, int x, int y, int w, int h, string expression)
         {
             this.view = view;
             this.view.X=x;
@@ -23,16 +23,16 @@ internal class LibMameDebugger
             }
         }
 
-        public LibRetroPlugin.RetroDebugView view;
+        public LibMameDebuggerRetroPlugin.RetroDebugView view;
 
         public byte[] state;
     }
 
 
-    private LibRetroPlugin plugin;
+    private LibMameDebuggerRetroPlugin plugin;
 
-    private LibRetroPlugin.DebuggerView debuggerViewCallbacks;
-    private LibRetroPlugin.RemoteCommand remoteCommandCallback;
+    private LibMameDebuggerRetroPlugin.DebuggerView debuggerViewCallbacks;
+    private LibMameDebuggerRetroPlugin.RemoteCommand remoteCommandCallback;
 
 
     private int stateViewCounter;
@@ -40,7 +40,7 @@ internal class LibMameDebugger
     private int memoryCounter;
 
     public bool IsStopped { get; private set; }
-    public LibMameDebugger(LibRetroPlugin plugin)
+    public LibMameDebugger(LibMameDebuggerRetroPlugin plugin)
     {
         this.stateViewCounter=0;
         this.disasmCounter=0;
@@ -65,41 +65,43 @@ internal class LibMameDebugger
     {
         if (ImGui.MenuItem("CPU State"))
         {
-            editor.OpenWindow(new DebuggerView(this, LibRetroPlugin.debug_view_type.State, 20, 25, ""), $"CPU State {stateViewCounter++}");
+            editor.OpenWindow(new DebuggerView(this, LibMameDebuggerRetroPlugin.debug_view_type.State, 20, 25, ""), $"CPU State {stateViewCounter++}");
         }
         if (ImGui.MenuItem("Disassembly"))
         {
-            editor.OpenWindow(new DebuggerView(this, LibRetroPlugin.debug_view_type.Disassembly, 100, 25, "curpc"), $"Disassembly {disasmCounter++}");
+            editor.OpenWindow(new DebuggerView(this, LibMameDebuggerRetroPlugin.debug_view_type.Disassembly, 100, 25, "curpc"), $"Disassembly {disasmCounter++}");
         }
         if (ImGui.MenuItem("Memory"))
         {
-            editor.OpenWindow(new DebuggerView(this, LibRetroPlugin.debug_view_type.Memory, 80, 25, "0"), $"Memory {memoryCounter++}");
+            editor.OpenWindow(new DebuggerView(this, LibMameDebuggerRetroPlugin.debug_view_type.Memory, 80, 25, "0"), $"Memory {memoryCounter++}");
         }
         if (ImGui.MenuItem("Console"))
         {
             editor.OpenWindow(new DebuggerCommand(this), "Console");
         }
+        ImGui.BeginDisabled(!plugin.HasResourcerSupport);
         if (ImGui.MenuItem("Resourcer"))
         {
-            editor.OpenWindow(new Resourcer(this), "Resourcer");
+            editor.OpenWindow(new Resourcer(this, plugin.GetResourcer()), "Resourcer");
         }
+        ImGui.EndDisabled();
     }
 
-    public LibRetroPlugin.RetroDebugView AllocView(LibRetroPlugin.debug_view_type kind)
+    public LibMameDebuggerRetroPlugin.RetroDebugView AllocView(LibMameDebuggerRetroPlugin.debug_view_type kind)
     {
         if (debuggerViewCallbacks.allocCb == null)
         {
-            return new LibRetroPlugin.RetroDebugView();
+            return new LibMameDebuggerRetroPlugin.RetroDebugView();
         }
         unsafe
         {
             var _this = (void*)debuggerViewCallbacks.data;
             var view = debuggerViewCallbacks.allocCb(_this, kind);
-            return new LibRetroPlugin.RetroDebugView(view);
+            return new LibMameDebuggerRetroPlugin.RetroDebugView(view);
         }
     }
 
-    public void FreeView(LibRetroPlugin.RetroDebugView view)
+    public void FreeView(LibMameDebuggerRetroPlugin.RetroDebugView view)
     {
         if (debuggerViewCallbacks.freeCb == null)
         {
@@ -125,7 +127,7 @@ internal class LibMameDebugger
         }
     }
 
-    public void ProcessKey(ref DView view, LibRetroPlugin.debug_key key)
+    public void ProcessKey(ref DView view, LibMameDebuggerRetroPlugin.debug_key key)
     {
         if (debuggerViewCallbacks.processCharCb == null)
         {
@@ -138,7 +140,7 @@ internal class LibMameDebugger
         }
     }
 
-    public void SetDataFormat(ref DView view, LibRetroPlugin.debug_format format)
+    public void SetDataFormat(ref DView view, LibMameDebuggerRetroPlugin.debug_format format)
     {
         if (debuggerViewCallbacks.dataFormatCb == null)
         {
@@ -263,15 +265,15 @@ internal class LibMameDebugger
         switch (kind)
         {
             case 0:
-                debuggerViewCallbacks = Marshal.PtrToStructure<LibRetroPlugin.DebuggerView>(data);
+                debuggerViewCallbacks = Marshal.PtrToStructure<LibMameDebuggerRetroPlugin.DebuggerView>(data);
                 DebuggerViewReady = true;
                 return 1;
             case 1:
-                remoteCommandCallback = Marshal.PtrToStructure<LibRetroPlugin.RemoteCommand>(data);
+                remoteCommandCallback = Marshal.PtrToStructure<LibMameDebuggerRetroPlugin.RemoteCommand>(data);
                 RemoteCommandReady = true;
                 return 1;
             case 2:
-                var notified = Marshal.PtrToStructure<LibRetroPlugin.RemoteNotification>(data);
+                var notified = Marshal.PtrToStructure<LibMameDebuggerRetroPlugin.RemoteNotification>(data);
                 if (notified.stopped!=0)
                 {
                     IsStopped = true;

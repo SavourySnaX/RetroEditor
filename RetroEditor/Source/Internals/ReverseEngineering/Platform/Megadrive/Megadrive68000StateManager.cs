@@ -1,6 +1,6 @@
 using System.Globalization;
 using System.Text;
-
+using MyMGui;
 using RetroEditor.Plugins;
 
 namespace RetroEditor.Source.Internals.ReverseEngineering.Platform.Megadrive;
@@ -10,6 +10,7 @@ namespace RetroEditor.Source.Internals.ReverseEngineering.Platform.Megadrive;
 /// </summary>
 internal class Megadrive68000StateManager : ICpuStateManager
 {
+    private bool cpu_68000_Supervisor = false;
     public ICpuState ParseDebuggerState(LibMameDebugger debugger)
     {
         var sr = GetCPUState(debugger, "SR");
@@ -33,14 +34,20 @@ internal class Megadrive68000StateManager : ICpuStateManager
         return "\"D0=%08X|D1=%08X|D2=%08X|D3=%08X|D4=%08X|D5=%08X|D6=%08X|D7=%08X|A0=%08X|A1=%08X|A2=%08X|A3=%08X|A4=%08X|A5=%08X|A6=%08X|A7=%08X|SR=%04X|\",d0,d1,d2,d3,d4,d5,d6,d7,a0,a1,a2,a3,a4,a5,a6,a7,sr";
     }
 
-    public ICpuState CreateStateFromRegisters(UInt64 pc, Dictionary<string, UInt64> registers)
+    public ICpuState FetchStateFromUI()
     {
-        var sr = registers.GetValueOrDefault("SR", 0x2700UL);
-        
         return new Megadrive68000State
         {
-            SupervisorMode = (sr & 0x2000) == 0x2000
+            SupervisorMode = cpu_68000_Supervisor
         };
+    }
+
+    public void UpdateUIFromState(ICpuState state)
+    {
+        if (state is Megadrive68000State mdState)
+        {
+            cpu_68000_Supervisor = mdState.SupervisorMode;
+        }
     }
 
     private UInt64 GetCPUState(LibMameDebugger debugger, string register)
@@ -58,7 +65,7 @@ internal class Megadrive68000StateManager : ICpuStateManager
 
     private LibMameDebugger.DView OpenCPUView(LibMameDebugger debugger, string cpuName)
     {
-        var view = new LibMameDebugger.DView(debugger.AllocView(LibRetroPlugin.debug_view_type.State), 0, 0, 32, 32, "");
+        var view = new LibMameDebugger.DView(debugger.AllocView(LibMameDebuggerRetroPlugin.debug_view_type.State), 0, 0, 32, 32, "");
 
         // Find ROM source index
         int sourceCount = debugger.GetSourcesCount(ref view);
@@ -123,5 +130,24 @@ internal class Megadrive68000StateManager : ICpuStateManager
             }
         }
         return 0;
+    }
+    
+    public void RenderUI()
+    {
+        // CPU-specific UI controls would be rendered by platform-specific components
+        // For now, keep the existing UI but these should be abstracted later
+        ImGui.SameLine();
+        ImGui.Checkbox("68000 Supervisor Mode", ref cpu_68000_Supervisor);
+    }
+
+    public bool InstructionTerminatesAutoDisassembly(Instruction instruction)
+    {
+        // On Megadrive/Genesis, entering Supervisor mode typically involves a system call
+        // which should terminate auto-disassembly
+        if (instruction.Mnemonic == "TRAP" || instruction.Mnemonic == "TRAPV")
+        {
+            return true;
+        }
+        return false;
     }
 }

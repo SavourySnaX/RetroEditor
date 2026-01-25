@@ -11,7 +11,8 @@ internal interface IPlatformFactory
     IMemoryMapper CreateMemoryMapper();
     ICpuStateManager CreateCpuStateManager();
     ITraceParser CreateTraceParser();
-    IHardwareRegisterProvider CreateHardwareRegisterProvider();
+    IHardwareSymbolsProvider CreateHardwareSymbolsProvider();
+    IMemoryInformationProvider CreateMemoryInformationProvider();
 }
 
 /// <summary>
@@ -45,7 +46,12 @@ internal interface ICpuStateManager
     ICpuState ParseDebuggerState(LibMameDebugger debugger);
     void UpdateStateFromInstruction(ICpuState state, Instruction instruction);
     string GetTraceFormat();
-    ICpuState CreateStateFromRegisters(UInt64 pc, Dictionary<string, UInt64> registers);
+    void RenderUI();
+    bool InstructionTerminatesAutoDisassembly(Instruction instruction);
+    ICpuState FetchStateFromUI();
+    void UpdateUIFromState(ICpuState state);
+
+
 }
 
 /// <summary>
@@ -68,9 +74,23 @@ internal interface ITraceParser
 }
 
 /// <summary>
-/// Interface for providing platform-specific hardware registers
+/// Interface for providing platform-specific hardware symbols
 /// </summary>
-internal interface IHardwareRegisterProvider
+internal interface IHardwareSymbolsProvider
 {
-    void InitializeRegisters(IRomDataParser romData);
+    void InitializeSymbols(IRomDataParser romData);
+}
+
+/// <summary>
+/// Interface for providing memory information
+/// </summary>
+internal interface IMemoryInformationProvider
+{
+    IEnumerable<IMemoryInformation> GetMemoryRegions();
+}
+
+// a memory region may have code (thus should really return its disassembler interface)
+internal interface IMemoryInformation
+{
+    string MameViewName { get; }
 }

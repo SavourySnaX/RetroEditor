@@ -1,5 +1,6 @@
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using RetroEditor.Source.Internals.ReverseEngineering.Platform;
 using Xunit;
@@ -35,11 +36,20 @@ namespace RetroEditor.Tests
 
         }
 
+        class DummyMemoryInformationProvider : IMemoryInformationProvider
+        {
+            IEnumerable<IMemoryInformation> IMemoryInformationProvider.GetMemoryRegions()
+            {
+                throw new NotImplementedException();
+            }
+
+        }
+
         [Fact]
         public void TestCodeSplit()
         {
             var mapper = new DummyMapper();
-            var romDataParser = new RomDataParser();
+            var romDataParser = new RomDataParser(new DummyMemoryInformationProvider());
             romDataParser.LoadRomData([0x69, 0x42, 0x12, 0x69, 0x42, 0x12, 0x69, 0x42, 0x12, 0x69, 0x42, 0x12]);
             var disassembler = new SNES65816Disassembler();
             var state = (SNES65816State)disassembler.State;
@@ -59,7 +69,7 @@ namespace RetroEditor.Tests
         [Fact]
         public void VerifyDataNextAddress()
         {
-            var romDataParser = new RomDataParser();
+            var romDataParser = new RomDataParser(new DummyMemoryInformationProvider());
             romDataParser.LoadRomData(
                 [0x69, 0x42, 0x12, 0x69, 
                  0x42, 0x12, 0x69, 0x42, 

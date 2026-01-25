@@ -1127,7 +1127,7 @@ internal class Editor : IEditor, IEditorInternal
         }
     }
 
-    internal LibRetroPlugin? GetDeveloperMame()
+    internal LibMameDebuggerRetroPlugin? GetDeveloperMame()
     {
         var OS=RuntimeInformation.OSDescription;
         var supported = GetOSStrings(out var platform, out _, out var extension, out var architecture);
@@ -1156,7 +1156,7 @@ internal class Editor : IEditor, IEditorInternal
 
         try 
         {
-            return new LibRetroPlugin(this, destinationPlugin);
+            return new LibMameDebuggerRetroPlugin(this, destinationPlugin);
         }
         catch (Exception e)
         {

@@ -3,9 +3,9 @@ namespace RetroEditor.Source.Internals.ReverseEngineering.Platform.Megadrive;
 /// <summary>
 /// Megadrive/Genesis hardware register provider
 /// </summary>
-internal class MegadriveHardwareRegisterProvider : IHardwareRegisterProvider
+internal class MegadriveHardwareRegisterProvider : IHardwareSymbolsProvider
 {
-    public void InitializeRegisters(IRomDataParser romData)
+    public void InitializeSymbols(IRomDataParser romData)
     {
         // VDP (Video Display Processor) Registers - Data Port
         romData.AddSymbol(0xC00000, 2, "VDP_DATA");

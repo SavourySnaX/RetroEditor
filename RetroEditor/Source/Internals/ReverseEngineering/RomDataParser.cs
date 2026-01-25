@@ -743,23 +743,26 @@ internal class RomDataParser : IRomDataParser
     private byte[] romData = new byte[0];
     private int romIndex = 0;
     private UInt64 minAddress, maxAddress;
+    private IMemoryInformationProvider memoryInformationProvider;
 
-    public RomDataParser()
+    public RomDataParser(IMemoryInformationProvider memoryInformationProvider)
     {
+        this.memoryInformationProvider = memoryInformationProvider;
     }
 
     private LibMameDebugger.DView OpenMemView(LibMameDebugger debugger)
     {
-        var view = new LibMameDebugger.DView(debugger.AllocView(LibRetroPlugin.debug_view_type.Memory), 0, 0, 256, 256, "");
+        var view = new LibMameDebugger.DView(debugger.AllocView(LibMameDebuggerRetroPlugin.debug_view_type.Memory), 0, 0, 256, 256, "");
 
         // Find ROM source index
         int sourceCount = debugger.GetSourcesCount(ref view);
         var sources = debugger.GetSourcesList(ref view);
 
+        // temporary, as we are going to make the romdataparser region flexible
+        var mameViewName = memoryInformationProvider.GetMemoryRegions().First().MameViewName;
         for (int i = 0; i < sourceCount; i++)
         {
-            //if (sources[i].Contains("Region ':snsslot:cart:rom'"))
-            if (sources[i].Contains("Region ':mdslot:cart:rom'"))
+            if (sources[i].Contains(mameViewName))
             {
                 debugger.SetSource(ref view, i);
                 break;
@@ -771,7 +774,7 @@ internal class RomDataParser : IRomDataParser
 
     private LibMameDebugger.DView OpenCPUView(LibMameDebugger debugger, string cpuName)
     {
-        var view = new LibMameDebugger.DView(debugger.AllocView(LibRetroPlugin.debug_view_type.State), 0, 0, 32, 32, "");
+        var view = new LibMameDebugger.DView(debugger.AllocView(LibMameDebuggerRetroPlugin.debug_view_type.State), 0, 0, 32, 32, "");
 
         // Find ROM source index
         int sourceCount = debugger.GetSourcesCount(ref view);
@@ -964,9 +967,9 @@ internal class RomDataParser : IRomDataParser
             view.view.Expression = $"${UInt64.MaxValue:X}";
             debugger.SetExpression(ref view);
             // Some platforms (e.g., Genesis) seem to start in unexpected byte count
-            debugger.SetDataFormat(ref view, LibRetroPlugin.debug_format.DataFormat2ByteHex);
+            debugger.SetDataFormat(ref view, LibMameDebuggerRetroPlugin.debug_format.DataFormat2ByteHex);
             debugger.UpdateDView(ref view);
-            debugger.SetDataFormat(ref view, LibRetroPlugin.debug_format.DataFormat1ByteHex);
+            debugger.SetDataFormat(ref view, LibMameDebuggerRetroPlugin.debug_format.DataFormat1ByteHex);
             debugger.UpdateDView(ref view);
 
             // Now we can get the size of the rom

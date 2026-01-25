@@ -26,8 +26,13 @@ internal class SNESPlatformFactory : IPlatformFactory
         return new SNESTraceParser();
     }
 
-    public IHardwareRegisterProvider CreateHardwareRegisterProvider()
+    public IHardwareSymbolsProvider CreateHardwareSymbolsProvider()
     {
         return new SNESHardwareRegisterProvider();
+    }
+
+    public IMemoryInformationProvider CreateMemoryInformationProvider()
+    {
+        return new SNESMemoryInformationProvider();
     }
 }
