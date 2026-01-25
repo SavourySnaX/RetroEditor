@@ -105,6 +105,8 @@ internal class Megadrive68000Disassembler : DisassemblerBase
     {
     }
 
+    private byte[] _decodeBuffer = Array.Empty<byte>();
+
     public override string ArchitectureName => "68000";
     public override MemoryEndian Endianness => MemoryEndian.Big;
 
@@ -122,6 +124,9 @@ internal class Megadrive68000Disassembler : DisassemblerBase
             return DecodeResult.NeedMoreBytes(2 - bytes.Length);
 
         var state = (Megadrive68000State)State;
+        
+        // Cache the incoming bytes for constructing Instruction.Bytes later
+        _decodeBuffer = bytes.ToArray();
         
         // Read the first word (big-endian)
         UInt16 opcode = (UInt16)((bytes[0] << 8) | bytes[1]);
@@ -1187,7 +1192,8 @@ internal class Megadrive68000Disassembler : DisassemblerBase
     private DecodeResult CreateSimpleInstruction(ulong address, string mnemonic, UInt16 opcode, int size, bool isBranch = false, bool isTerminator = false)
     {
         var operands = new List<IOperand>();
-        var instruction = new Instruction(address, mnemonic, operands, new byte[] { (byte)(opcode >> 8), (byte)(opcode & 0xFF) }, State);
+        var instructionBytes = SliceBytes(size);
+        var instruction = new Instruction(address, mnemonic, operands, instructionBytes, State);
         instruction.IsBranch = isBranch;
         instruction.IsBasicBlockTerminator = isTerminator;
         
@@ -1201,8 +1207,8 @@ internal class Megadrive68000Disassembler : DisassemblerBase
 
     private DecodeResult CreateInstruction(ulong address, string mnemonic, List<IOperand> operands, int size, bool isBranch = false, bool isTerminator = false, UInt64? nextAddress = null)
     {
-        var bytes = new byte[size];
-        var instruction = new Instruction(address, mnemonic, operands, bytes, State);
+        var instructionBytes = SliceBytes(size);
+        var instruction = new Instruction(address, mnemonic, operands, instructionBytes, State);
         instruction.IsBranch = isBranch;
         instruction.IsBasicBlockTerminator = isTerminator;
         
@@ -1217,6 +1223,14 @@ internal class Megadrive68000Disassembler : DisassemblerBase
         }
         
         return DecodeResult.CreateSuccess(instruction, size);
+    }
+
+    private byte[] SliceBytes(int size)
+    {
+        var result = new byte[size];
+        if (_decodeBuffer.Length >= size)
+            Array.Copy(_decodeBuffer, 0, result, 0, size);
+        return result;
     }
 
     public override List<(UInt64 address, uint size)> FetchMemoryAccesses(Instruction ins, ICpuRegisterState registerState)
