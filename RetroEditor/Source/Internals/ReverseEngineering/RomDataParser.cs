@@ -737,8 +737,8 @@ internal class CodeRegion : IRegionInfo
 internal class RomDataParser : IRomDataParser
 {
     private const int BYTES_PER_LINE = 16;
-    RangeCollection<IRegionInfo> romRanges = new RangeCollection<IRegionInfo>();
-    RangeCollection<IRegionInfo> ramRanges = new RangeCollection<IRegionInfo>();
+    private Dictionary<string, RangeCollection<IRegionInfo>> memoryRegions = new Dictionary<string, RangeCollection<IRegionInfo>>();
+    private Dictionary<string, byte[]> memoryData = new Dictionary<string, byte[]>();
     SymbolProvider symbolProvider = new SymbolProvider();
     private byte[] romData = new byte[0];
     private int romIndex = 0;
@@ -748,6 +748,15 @@ internal class RomDataParser : IRomDataParser
     public RomDataParser(IMemoryInformationProvider memoryInformationProvider)
     {
         this.memoryInformationProvider = memoryInformationProvider;
+        InitializeMemoryRegions();
+    }
+
+    private void InitializeMemoryRegions()
+    {
+        foreach (var memInfo in memoryInformationProvider.GetMemoryRegions())
+        {
+            memoryRegions[memInfo.MameViewName] = new RangeCollection<IRegionInfo>();
+        }
     }
 
     private LibMameDebugger.DView OpenMemView(LibMameDebugger debugger)
@@ -830,7 +839,13 @@ internal class RomDataParser : IRomDataParser
                     throw new Exception($"Error: {result.ErrorMessage}");
                 }
             }
-            var current = romRanges.GetRangeContainingAddress(address, out var lineOff);
+            // Find the appropriate memory region for this address
+            var regionName = memoryRegions.Keys.FirstOrDefault();
+            if (regionName == null)
+                throw new Exception("No memory regions configured");
+            
+            var ranges = memoryRegions[regionName];
+            var current = ranges.GetRangeContainingAddress(address, out var lineOff);
             if (current != null)
             {
                 if (current.Value is CodeRegion cregion)
@@ -850,7 +865,7 @@ internal class RomDataParser : IRomDataParser
                     }
                     else
                     {
-                        romRanges.AddRange(new CodeRegion(address, address + (UInt64)result.BytesConsumed - 1, result.Instruction, this));
+                        ranges.AddRange(new CodeRegion(address, address + (UInt64)result.BytesConsumed - 1, result.Instruction, this));
                     }
                 }
             }
@@ -863,9 +878,14 @@ internal class RomDataParser : IRomDataParser
 
     public bool CheckRegionUnknown(UInt64 start, UInt64 end)
     {
+        var regionName = memoryRegions.Keys.FirstOrDefault();
+        if (regionName == null)
+            return false;
+        
+        var ranges = memoryRegions[regionName];
         for (UInt64 i = start; i <= end; i++)
         {
-            var range = romRanges.GetRangeContainingAddress(i, out _);
+            var range = ranges.GetRangeContainingAddress(i, out _);
             if (!(range!=null && range.Value is UnknownRegion))
             {
                 return false;
@@ -874,54 +894,55 @@ internal class RomDataParser : IRomDataParser
         return true;
     }
 
-    public void AddDataRange(RangeRegion region, UInt64 start, UInt64 end, uint size)
+    public void AddDataRange(string regionName, UInt64 start, UInt64 end, uint size, bool hasData = true)
     {
-        switch (region)
+        if (memoryRegions.TryGetValue(regionName, out var collection))
         {
-            case RangeRegion.Cartridge:
-                romRanges.AddRange(new DataRegion(start, end, size, true, this));
-                break;
-            case RangeRegion.RAM:
-                ramRanges.AddRange(new DataRegion(start, end, size, false, this));
-                break;
+            collection.AddRange(new DataRegion(start, end, size, hasData, this));
+        }
+        else
+        {
+            throw new ArgumentException($"Unknown memory region: {regionName}");
         }
     }
 
-    public void AddStringRange(RangeRegion region, UInt64 start, UInt64 end)
+    public void AddStringRange(string regionName, UInt64 start, UInt64 end, bool hasData = true)
     {
-        switch (region)
+        if (memoryRegions.TryGetValue(regionName, out var collection))
         {
-            case RangeRegion.Cartridge:
-                romRanges.AddRange(new StringRegion(start, end, true, this));
-                break;
-            case RangeRegion.RAM:
-                ramRanges.AddRange(new StringRegion(start, end, false, this));
-                break;
+            collection.AddRange(new StringRegion(start, end, hasData, this));
+        }
+        else
+        {
+            throw new ArgumentException($"Unknown memory region: {regionName}");
         }
     }
 
-    public void AddUnknownRange(RangeRegion region, UInt64 start, UInt64 end)
+    public void AddUnknownRange(string regionName, UInt64 start, UInt64 end, bool hasData = true)
     {
-        switch (region)
+        if (memoryRegions.TryGetValue(regionName, out var collection))
         {
-            case RangeRegion.Cartridge:
-                romRanges.AddRange(new UnknownRegion(start, end, true, this));
-                break;
-            case RangeRegion.RAM:
-                ramRanges.AddRange(new UnknownRegion(start, end, false, this));
-                break;
+            collection.AddRange(new UnknownRegion(start, end, hasData, this));
+        }
+        else
+        {
+            throw new ArgumentException($"Unknown memory region: {regionName}");
         }
     }
 
-    public enum RangeRegion
+    public RangeCollection<IRegionInfo> GetRangeCollection(string regionName)
     {
-        Cartridge,
-        RAM
+        if (memoryRegions.TryGetValue(regionName, out var collection))
+            return collection;
+        throw new ArgumentException($"Unknown memory region: {regionName}");
     }
 
+    public IEnumerable<string> GetMemoryRegionNames() => memoryRegions.Keys;
 
-    public RangeCollection<IRegionInfo> GetRomRanges => romRanges;
-    public RangeCollection<IRegionInfo> GetRamRanges => ramRanges;
+    public IEnumerable<(string Name, RangeCollection<IRegionInfo> Ranges)> GetAllMemoryRegions()
+    {
+        return memoryRegions.Select(kvp => (kvp.Key, kvp.Value));
+    }
 
     public UInt64 GetMinAddress => minAddress;
     public UInt64 GetMaxAddress => maxAddress;
@@ -1134,30 +1155,20 @@ internal class RomDataParser : IRomDataParser
     }
 
     //TODO - doesn't handle mid region insertion....
-    internal void AddCommentRange(RangeRegion rangeRegion, String[] value, UInt64 start)
+    internal void AddCommentRange(string regionName, String[] value, UInt64 start)
     {
-        Range<IRegionInfo>? region = null;
-        switch (rangeRegion)
+        if (memoryRegions.TryGetValue(regionName, out var ranges))
         {
-            case RangeRegion.Cartridge:
-                region = romRanges.GetRangeContainingAddress(start, out _);
-                break;
-            case RangeRegion.RAM:
-                region = ramRanges.GetRangeContainingAddress(start, out _);
-                break;
+            Range<IRegionInfo>? region = ranges.GetRangeContainingAddress(start, out _);
+            if (region != null)
+            {
+                region.Value.Above.Add(new MultiLineComment(value, this));
+            }
+            ranges.Recompute();
         }
-        if (region != null)
+        else
         {
-            region.Value.Above.Add(new MultiLineComment(value, this));
-        }
-        switch (rangeRegion)
-        {
-            case RangeRegion.Cartridge:
-                romRanges.Recompute();
-                break;
-            case RangeRegion.RAM:
-                ramRanges.Recompute();
-                break;
+            throw new ArgumentException($"Unknown memory region: {regionName}");
         }
     }
 
@@ -1168,12 +1179,17 @@ internal class RomDataParser : IRomDataParser
             kvp => $"{kvp.Key.Item1}:{kvp.Key.Item2}",
             kvp => kvp.Value
         );
-        var romRangesDto = romRanges.Select(r => r.Value.Save()).ToList();
-        var ramRangesDto = ramRanges.Select(r => r.Value.Save()).ToList();
+        
+        // Serialize all memory regions
+        var regionsDict = new Dictionary<string, object>();
+        foreach (var (name, collection) in memoryRegions)
+        {
+            regionsDict[name] = collection.Select(r => r.Value.Save()).ToList();
+        }
+        
         var data = new
         {
-            RomRanges = romRangesDto,
-            RamRanges = ramRangesDto,
+            MemoryRegions = regionsDict,
             SymbolProvider = serializableSymbols
         };
         var json = JsonSerializer.Serialize(data, new JsonSerializerOptions { WriteIndented = true });
@@ -1198,27 +1214,41 @@ internal class RomDataParser : IRomDataParser
             }
             symbolProvider.symbols = dict;
         }
-        if (root.TryGetProperty("RomRanges", out var rangesElem))
+        
+        // Load memory regions - support both old and new format
+        if (root.TryGetProperty("MemoryRegions", out var regionsElem))
         {
-            foreach (var rangeElem in rangesElem.EnumerateArray())
+            foreach (var prop in regionsElem.EnumerateObject())
             {
-                var rangeDict = rangeElem.Deserialize<Dictionary<string, object>>();
-                if (rangeDict != null)
+                var regionName = prop.Name;
+                if (!memoryRegions.ContainsKey(regionName))
+                    memoryRegions[regionName] = new RangeCollection<IRegionInfo>();
+                    
+                foreach (var rangeElem in prop.Value.EnumerateArray())
                 {
-                    var range = IRegionInfo.Load(rangeDict, this);
-                    romRanges.AddRange(range);
+                    var rangeDict = rangeElem.Deserialize<Dictionary<string, object>>();
+                    if (rangeDict != null)
+                    {
+                        var range = IRegionInfo.Load(rangeDict, this);
+                        memoryRegions[regionName].AddRange(range);
+                    }
                 }
             }
         }
-        if (root.TryGetProperty("RamRanges", out rangesElem))
+        // Backward compatibility: try loading old RomRanges/RamRanges format
+        else if (root.TryGetProperty("RomRanges", out var romRangesElem))
         {
-            foreach (var rangeElem in rangesElem.EnumerateArray())
+            var firstRegion = memoryRegions.Keys.FirstOrDefault();
+            if (firstRegion != null)
             {
-                var rangeDict = rangeElem.Deserialize<Dictionary<string, object>>();
-                if (rangeDict != null)
+                foreach (var rangeElem in romRangesElem.EnumerateArray())
                 {
-                    var range = IRegionInfo.Load(rangeDict, this);
-                    ramRanges.AddRange(range);
+                    var rangeDict = rangeElem.Deserialize<Dictionary<string, object>>();
+                    if (rangeDict != null)
+                    {
+                        var range = IRegionInfo.Load(rangeDict, this);
+                        memoryRegions[firstRegion].AddRange(range);
+                    }
                 }
             }
         }

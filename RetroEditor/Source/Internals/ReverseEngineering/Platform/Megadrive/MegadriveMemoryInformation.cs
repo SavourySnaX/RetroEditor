@@ -11,4 +11,7 @@ internal class MegadriveMemoryInformationProvider : IMemoryInformationProvider
 internal class MegadriveROMRegion : IMemoryInformation
 {
     public string MameViewName => "Region ':mdslot:cart:rom'";
+    public string DisplayName => "Cartridge ROM";
+    public bool HasPhysicalData => true;
+    public MemoryRegionType Type => MemoryRegionType.Mixed;
 }

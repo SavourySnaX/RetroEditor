@@ -86,8 +86,39 @@ internal interface IMemoryInformationProvider
     IEnumerable<IMemoryInformation> GetMemoryRegions();
 }
 
-// a memory region may have code (thus should really return its disassembler interface)
+/// <summary>
+/// Type of memory region content
+/// </summary>
+internal enum MemoryRegionType
+{
+    Code,     // Contains executable code
+    Data,     // Contains only data
+    Mixed     // Can contain both
+}
+
+/// <summary>
+/// Interface for describing a memory region
+/// </summary>
 internal interface IMemoryInformation
 {
+    /// <summary>
+    /// Name used to identify this region in MAME debugger views
+    /// </summary>
     string MameViewName { get; }
+    
+    /// <summary>
+    /// Human-readable display name for UI (optional, defaults to MameViewName)
+    /// </summary>
+    string DisplayName => MameViewName;
+    
+    /// <summary>
+    /// Whether this region contains physical data (true for ROM) or virtual data (false for RAM)
+    /// Used to determine if data can be read directly
+    /// </summary>
+    bool HasPhysicalData => true;
+    
+    /// <summary>
+    /// Type of content this region typically contains
+    /// </summary>
+    MemoryRegionType Type => MemoryRegionType.Mixed;
 }
