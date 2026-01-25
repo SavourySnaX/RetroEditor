@@ -148,7 +148,7 @@ internal class Resourcer : IWindow
             disassembler.State = cpuState;
             
             // Get current PC from debugger - this needs platform-specific extraction
-            var pc = GetCurrentPC();
+            var pc = cpuStateManager.GetCurrentPC(debugger);
             
             romData.AddCodeRange((DisassemblerBase)disassembler, pc, out var _, memoryMapper);
             cartridgeVars.jumpToAddress = memoryMapper.MapCpuToRegion(pc, out var _);
@@ -607,17 +607,6 @@ internal class Resourcer : IWindow
     Stack<ICpuState> autoState = new ();
     HashSet<UInt64> stacked = new();
 
-    private UInt64 GetCurrentPC()
-    {
-        // This is a temporary method that still uses SNES-specific logic
-        // TODO: Abstract this into the platform factory
-        if (romData is RomDataParser parser)
-        {
-            return parser.GetCPUState(debugger, "PC");
-        }
-        return 0;
-    }
-
     public void Update(float seconds)
     {
         if (automated)
@@ -704,7 +693,7 @@ internal class Resourcer : IWindow
                 var cpuState = cpuStateManager.ParseDebuggerState(debugger);
                 disassembler.State = cpuState;
                 
-                var pc = GetCurrentPC();
+                var pc = cpuStateManager.GetCurrentPC(debugger);
                 romData.AddCodeRange((DisassemblerBase)disassembler, pc, out var _, memoryMapper);
                 cartridgeVars.jumpToAddress = memoryMapper.MapCpuToRegion(pc, out var _);
                 newTraceCnt--;

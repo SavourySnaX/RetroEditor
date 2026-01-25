@@ -75,7 +75,7 @@ internal class SNES65816StateManager : ICpuStateManager
     }
 
 
-    private UInt64 GetCPUState(LibMameDebugger debugger, string register)
+    public UInt64 GetCPUState(LibMameDebugger debugger, string register)
     {
         var view = OpenCPUView(debugger, "maincpu");
         try
@@ -86,6 +86,11 @@ internal class SNES65816StateManager : ICpuStateManager
         {
             CloseView(debugger, view);
         }
+    }
+
+    public UInt64 GetCurrentPC(LibMameDebugger debugger)
+    {
+        return GetCPUState(debugger, "PC");
     }
 
     private LibMameDebugger.DView OpenCPUView(LibMameDebugger debugger, string cpuName)

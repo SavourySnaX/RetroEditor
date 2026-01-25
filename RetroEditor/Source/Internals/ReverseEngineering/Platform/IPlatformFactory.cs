@@ -50,8 +50,8 @@ internal interface ICpuStateManager
     bool InstructionTerminatesAutoDisassembly(Instruction instruction);
     ICpuState FetchStateFromUI();
     void UpdateUIFromState(ICpuState state);
-
-
+    UInt64 GetCPUState(LibMameDebugger debugger, string register);
+    UInt64 GetCurrentPC(LibMameDebugger debugger);
 }
 
 /// <summary>

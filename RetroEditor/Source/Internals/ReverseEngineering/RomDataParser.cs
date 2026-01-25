@@ -1000,68 +1000,6 @@ internal class RomDataParser : IRomDataParser
         }
     }
 
-    public UInt64 GetCPUState(LibMameDebugger debugger, string register)
-    {
-        var view = OpenCPUView(debugger, "main");
-        try
-        {
-            // Update the view to get the data
-            debugger.UpdateDView(ref view);
-
-            return ParseState(view, register);
-        }
-        finally
-        {
-            CloseView(debugger, view);
-        }
-
-    }
-
-    private UInt64 ParseState(LibMameDebugger.DView view, string register)
-    {
-        int bytesPerLine = view.view.W * 2; // Each character is 2 bytes (char + attribute)
-
-        for (int y = 0; y < view.view.H; y++)
-        {
-            int lineStart = y * bytesPerLine;
-            int x = 0;
-
-            // Skip initial spaces
-            while (x < view.view.W && (char)view.state[lineStart + x * 2] == ' ')
-                x++;
-
-            // Verify register name matches
-            StringBuilder registerStr = new StringBuilder();
-            while (x < view.view.W && (char)view.state[lineStart + x * 2] != ' ')
-            {
-                registerStr.Append((char)view.state[lineStart + x * 2]);
-                x++;
-            }
-            if (registerStr.ToString() != register)
-            {
-                continue;
-            }
-            // Skip spaces between name and value
-            while (x < view.view.W && (char)view.state[lineStart + x * 2] == ' ')
-                x++;
-
-            // Fetch Value
-            registerStr.Clear();
-            while (x < view.view.W && (char)view.state[lineStart + x * 2] != ' ')
-            {
-                registerStr.Append((char)view.state[lineStart + x * 2]);
-                x++;
-            }
-            if (registerStr.Length > 0)
-            {
-                return UInt64.Parse(registerStr.ToString(), System.Globalization.NumberStyles.HexNumber);
-            }
-        }
-
-        return 0;
-    }
-
-
     private UInt64 ParseChunk(LibMameDebugger.DView view, UInt64 firstOffset)
     {
         romIndex = (int)firstOffset;

@@ -50,7 +50,7 @@ internal class Megadrive68000StateManager : ICpuStateManager
         }
     }
 
-    private UInt64 GetCPUState(LibMameDebugger debugger, string register)
+    public UInt64 GetCPUState(LibMameDebugger debugger, string register)
     {
         var view = OpenCPUView(debugger, "maincpu");
         try
@@ -61,6 +61,11 @@ internal class Megadrive68000StateManager : ICpuStateManager
         {
             CloseView(debugger, view);
         }
+    }
+
+    public UInt64 GetCurrentPC(LibMameDebugger debugger)
+    {
+        return GetCPUState(debugger, "PC");
     }
 
     private LibMameDebugger.DView OpenCPUView(LibMameDebugger debugger, string cpuName)
