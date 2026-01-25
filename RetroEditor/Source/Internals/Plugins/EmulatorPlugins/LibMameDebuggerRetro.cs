@@ -3,6 +3,7 @@ using RetroEditor.Plugins;
 using RetroEditor.Source.Internals.ReverseEngineering.Platform;
 using RetroEditor.Source.Internals.ReverseEngineering.Platform.Megadrive;
 using RetroEditor.Source.Internals.ReverseEngineering.Platform.SNES;
+using RetroEditor.Source.Internals.ReverseEngineering.Platform.ZXSpectrum;
 
 internal class LibMameDebuggerRetroPlugin : LibRetroPlugin
 {
@@ -52,7 +53,10 @@ internal class LibMameDebuggerRetroPlugin : LibRetroPlugin
     {
         get
         {
-            return (systemName == "snes" || systemName == "genesis" || systemName == "megadriv");
+            return (systemName == "snes" || 
+                systemName == "genesis" || 
+                systemName == "megadriv" ||
+                systemName == "spectrum");
         }
     }
 
@@ -65,6 +69,10 @@ internal class LibMameDebuggerRetroPlugin : LibRetroPlugin
         else if (systemName == "genesis" || systemName == "megadriv")
         {
             return new MegadrivePlatformFactory();
+        }
+        else if (systemName == "spectrum")
+        {
+            return new ZXSpectrumPlatformFactory();
         }
         throw new NotSupportedException("Resourcer not supported for this system");
     }

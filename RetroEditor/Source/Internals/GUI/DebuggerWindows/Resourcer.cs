@@ -730,7 +730,6 @@ internal class Resourcer : IWindow
             }
             else
             {
-                //TODO platform specific initial annotations
                 var regionNames = GetMemoryRegionNames();
                 foreach (var regionName in regionNames)
                 {
