@@ -1,8 +1,6 @@
 using MyMGui;
 using System.Numerics;
 using RetroEditor.Source.Internals.ReverseEngineering.Platform;
-using RetroEditor.Source.Internals.ReverseEngineering.Platform.SNES;
-using RetroEditor.Source.Internals.ReverseEngineering.Platform.Megadrive;
 
 internal class Resourcer : IWindow
 {
@@ -10,7 +8,7 @@ internal class Resourcer : IWindow
     public bool MinimumSize => false;
     
     LibMameDebugger debugger;
-    RomDataParser romData;
+    Dictionary<string, RomDataParser> romDataParsers;
     IPlatformFactory platformFactory;
     IDisassembler disassembler;
     IMemoryMapper memoryMapper;
@@ -39,14 +37,64 @@ internal class Resourcer : IWindow
         this.memoryInformationProvider = this.platformFactory.CreateMemoryInformationProvider();
         this.autoDisassembler = this.platformFactory.CreateDisassembler();
 
-        romData = new RomDataParser(memoryInformationProvider);
+        romDataParsers = new Dictionary<string, RomDataParser>();
+        InitializeRegionParsers();
 
         config = new ResourcerConfig();
     }
 
+    private void InitializeRegionParsers()
+    {
+        // Create a RomDataParser for each memory region
+        foreach (var memInfo in memoryInformationProvider.GetMemoryRegions())
+        {
+            var dataProvider = memInfo.MameViewName switch
+            {
+                "Cart" => new DebuggerDataProvider(memInfo.MameViewName, memInfo.MameViewName) as IMemoryRegionDataProvider,
+                "Work RAM" => new VirtualDataProvider(memInfo.MameViewName, memInfo.AddressRange.End - memInfo.AddressRange.Start) as IMemoryRegionDataProvider,
+                _ => new DebuggerDataProvider(memInfo.MameViewName, memInfo.MameViewName) as IMemoryRegionDataProvider
+            };
+            
+            var parser = new RomDataParser(memInfo.MameViewName, memInfo, dataProvider);
+            romDataParsers[memInfo.MameViewName] = parser;
+        }
+    }
+
+    private IEnumerable<string> GetMemoryRegionNames() => romDataParsers.Keys;
+
+    private IEnumerable<(string RegionName, RangeCollection<IRegionInfo> Ranges)> GetAllMemoryRegions()
+    {
+        foreach (var (regionName, parser) in romDataParsers)
+        {
+            yield return (regionName, parser.GetRanges());
+        }
+    }
+
+    private UInt64 GetMinAddress
+    {
+        get
+        {
+            if (romDataParsers.Count == 0) return 0;
+            return romDataParsers.Values.Min(p => p.GetMinAddress);
+        }
+    }
+
+    private UInt64 GetMaxAddress
+    {
+        get
+        {
+            if (romDataParsers.Count == 0) return 0;
+            return romDataParsers.Values.Max(p => p.GetMaxAddress);
+        }
+    }
+
     public void Close()
     {
-        romData.Save("TEST.JSON");
+        // Save all regions
+        foreach (var (regionName, parser) in romDataParsers)
+        {
+            parser.Save($"TEST_{parser.MemoryInformation.DisplayName}.JSON");
+        }
     }
 
     private void DrawMemoryMap()
@@ -56,15 +104,14 @@ internal class Resourcer : IWindow
         var size = ImGui.GetContentRegionAvail();
         size.Y = MEMORY_MAP_HEIGHT;
 
-
         // Compute the size of the memory map
-        var minAddress = romData.GetMinAddress;
-        var maxAddress = romData.GetMaxAddress;
+        var minAddress = GetMinAddress;
+        var maxAddress = GetMaxAddress;
         var range = maxAddress - minAddress;
         var scale = size.X / range;
 
         // Draw all regions from all memory regions
-        foreach (var (regionName, ranges) in romData.GetAllMemoryRegions())
+        foreach (var (regionName, ranges) in GetAllMemoryRegions())
         {
             foreach (var region in ranges)
             {
@@ -176,7 +223,7 @@ internal class Resourcer : IWindow
                 
                 if (ImGui.BeginTabItem(displayName))
                 {
-                    var ranges = romData.GetRangeCollection(regionName);
+                    var ranges = romDataParsers[regionName].GetRanges();
                     ScrollableTableView(ranges, regionName, GetOrCreateScrollViewVars(regionName));
                     ImGui.EndTabItem();
                 }
@@ -351,19 +398,19 @@ internal class Resourcer : IWindow
                         }
                         if (ImGui.IsKeyPressed(ImGuiKey.Semicolon))
                         {
-                            romData.AddCommentRange(regionName, ["I AM THE VERY MODEL OF A MODERN MAJOR GENERAL", "I'VE INFORMATION ANIMAL VEGETABLE AND MINERAL", "....."], cursorMinAddress);
+                            romDataParsers[regionName].AddCommentRange(["I AM THE VERY MODEL OF A MODERN MAJOR GENERAL", "I'VE INFORMATION ANIMAL VEGETABLE AND MINERAL", "....."], cursorMinAddress);
                         }
                     }
 
                     bool clearSelection = false;
                     if (ImGui.IsKeyPressed(ImGuiKey.S))
                     {
-                        romData.AddStringRange(regionName, minAddress, maxAddress);
+                        romDataParsers[regionName].AddStringRange(minAddress, maxAddress);
                         clearSelection = true;
                     }
                     if (ImGui.IsKeyPressed(ImGuiKey.U))
                     {
-                        romData.AddUnknownRange(regionName, minAddress, maxAddress);
+                        romDataParsers[regionName].AddUnknownRange(minAddress, maxAddress);
                         clearSelection = true;
                     }
                     
@@ -378,7 +425,7 @@ internal class Resourcer : IWindow
                             // Convert to code
                             var cpuState = cpuStateManager.FetchStateFromUI();
                             disassembler.State = cpuState;
-                            romData.AddCodeRange((DisassemblerBase)disassembler, minAddress, maxAddress, memoryMapper, regionName);
+                            romDataParsers[regionName].AddCodeRange((DisassemblerBase)disassembler, minAddress, maxAddress, memoryMapper);
                             // Update CPU flags from resulting state
                             cpuStateManager.UpdateUIFromState(disassembler.State);
                             clearSelection = true;
@@ -399,22 +446,22 @@ internal class Resourcer : IWindow
                         if (ImGui.IsKeyPressed(ImGuiKey._1) && !automated)
                         {
                             // Add data region of 1-byte 
-                            romData.AddDataRange(regionName, minAddress, minAddress+1, 1);
+                            romDataParsers[regionName].AddDataRange(minAddress, minAddress+1, 1);
                         }
                         if (ImGui.IsKeyPressed(ImGuiKey._2) && !automated)
                         {
                             // Add data region of 2-byte words
-                            romData.AddDataRange(regionName, minAddress, minAddress+1, 2);
+                            romDataParsers[regionName].AddDataRange(minAddress, minAddress+1, 2);
                         }
                         if (ImGui.IsKeyPressed(ImGuiKey._3) && !automated)
                         {
                             // Add data region of 3-byte words
-                            romData.AddDataRange(regionName, minAddress, minAddress+2, 3);
+                            romDataParsers[regionName].AddDataRange(minAddress, minAddress+2, 3);
                         }
                         if (ImGui.IsKeyPressed(ImGuiKey._4) && !automated)
                         {
                             // Add data region of 4-byte words
-                            romData.AddDataRange(regionName, minAddress, minAddress+3, 4);
+                            romDataParsers[regionName].AddDataRange(minAddress, minAddress+3, 4);
                         }
                     }
 
@@ -629,14 +676,14 @@ internal class Resourcer : IWindow
                     var codeRegionName = GetRegionNameForMemoryType(RetroEditor.Source.Internals.ReverseEngineering.Platform.MemoryRegion.ROM);
                     if (!string.IsNullOrEmpty(codeRegionName))
                     {
-                        var ranges = romData.GetRangeCollection(codeRegionName);
+                        var ranges = romDataParsers[codeRegionName].GetRanges();
                         var r = ranges.GetRangeContainingAddress(mappedAddress);
                         if (r != null && r.Value.GetType() == typeof(CodeRegion))
                         {
                             // Already disassembled
                             return;
                         }
-                        if (romData.AddCodeRange((DisassemblerBase)autoDisassembler, autoPC, out var instruction, memoryMapper, codeRegionName))
+                        if (romDataParsers[codeRegionName].AddCodeRange((DisassemblerBase)autoDisassembler, autoPC, out var instruction, memoryMapper))
                         {
                             if (cpuStateManager.InstructionTerminatesAutoDisassembly(instruction))
                             {
@@ -669,33 +716,49 @@ internal class Resourcer : IWindow
         if (!romLoaded)
         {
             // Read ROM data in chunks
-            romData.Parse(debugger);
-
+            foreach (var (regionName, parser) in romDataParsers)
+            {
+                parser.Parse(debugger);
+            }
 
             if (File.Exists("TEST.JSON"))
             {
-                romData.Load("TEST.JSON");
+                foreach (var (regionName, parser) in romDataParsers)
+                {
+                    parser.Load($"TEST_{parser.MemoryInformation.DisplayName}.JSON");
+                }
             }
             else
             {
                 //TODO platform specific initial annotations
-                var regionNames = romData.GetMemoryRegionNames().ToList();
-                if (regionNames.Count > 0)
+                var regionNames = GetMemoryRegionNames();
+                foreach (var regionName in regionNames)
                 {
-                    // Initialize first region (typically ROM/Cartridge) with unknown data
-                    romData.AddUnknownRange(regionNames[0], romData.GetMinAddress, romData.GetMaxAddress);
-                    romData.AddCommentRange(regionNames[0], ["RetroEditor Resourcer Version 0.1", "", "A WIP Tool for re-sourcing ROMS", "", ""], 0);
-                    
-                    // Initialize additional regions if available (typically RAM)
-                    if (regionNames.Count > 1)
+                    romDataParsers[regionName].AddCommentRange(["RetroEditor Resourcer Version 0.1", "", "A WIP Tool for re-sourcing ROMS", "", ""], 0);
+                }
+                foreach (var region in romDataParsers.Values)
+                {
+                    if (region.MemoryInformation.HasPhysicalData)
                     {
-                        romData.AddUnknownRange(regionNames[1], 0, 128*1024-1, false);  // TODO this is platform specific
-                        romData.AddCommentRange(regionNames[1], ["RetroEditor Resourcer Version 0.1", "", "A WIP Tool for re-sourcing ROMS", "", ""], 0);
+                        // For ROM regions, add unknown range for entire region
+                        var minAddr = region.GetMinAddress;
+                        var maxAddr = region.GetMaxAddress;
+                        region.AddUnknownRange(minAddr, maxAddr);
+                    }
+                    else
+                    {
+                        // For non-physical regions (RAM), add unknown range for first 128KB
+                        region.AddUnknownRange(0, 128 * 1024 - 1, false); // TODO platform specific
                     }
                 }
 
                 // Initialize platform-specific hardware registers
-                hardwareRegisterProvider.InitializeSymbols(romData);
+                // Pass the first parser (typically ROM/Cartridge) which contains hardware register symbols
+                var cartridgeRegionName = GetMemoryRegionNames().FirstOrDefault();
+                if (!string.IsNullOrEmpty(cartridgeRegionName))
+                {
+                    hardwareRegisterProvider.InitializeSymbols(romDataParsers[cartridgeRegionName]);
+                }
             }
 
             romLoaded = true;
@@ -797,32 +860,35 @@ internal class Resourcer : IWindow
 
         // Add this location as code
         var codeRegionName = GetRegionNameForMemoryType(RetroEditor.Source.Internals.ReverseEngineering.Platform.MemoryRegion.ROM);
-        romData.AddCodeRange((DisassemblerBase)disassembler, entry.Address, out var i, memoryMapper, codeRegionName);
-        if (i.Bytes.Length == 0)
+        if (!string.IsNullOrEmpty(codeRegionName))
         {
-            // No bytes, so no code
-            return;
-        }
-        if (i.IsBranch)
-        {
-            return;
-        }
-
-        var mem = ((DisassemblerBase)disassembler).FetchMemoryAccesses(i, entry.RegisterState);
-        foreach (var addr in mem)
-        {
-            var regionAddress = memoryMapper.MapCpuToRegion(addr.address, out var memKind);
-            var regionName = GetRegionNameForMemoryType(memKind);
-            
-            if (!string.IsNullOrEmpty(regionName))
+            romDataParsers[codeRegionName].AddCodeRange((DisassemblerBase)disassembler, entry.Address, out var i, memoryMapper);
+            if (i.Bytes.Length == 0)
             {
-                if (romData.CheckRegionUnknown(regionName, regionAddress, regionAddress + addr.size - 1))
+                // No bytes, so no code
+                return;
+            }
+            if (i.IsBranch)
+            {
+                return;
+            }
+
+            var mem = ((DisassemblerBase)disassembler).FetchMemoryAccesses(i, entry.RegisterState);
+            foreach (var addr in mem)
+            {
+                var regionAddress = memoryMapper.MapCpuToRegion(addr.address, out var memKind);
+                var regionName = GetRegionNameForMemoryType(memKind);
+                
+                if (!string.IsNullOrEmpty(regionName))
                 {
-                    romData.AddDataRange(regionName, regionAddress, regionAddress + addr.size - 1, addr.size);
-                }
-                else
-                {
-                    Console.WriteLine($"Skipping {addr.address:X8} ({regionAddress:X8}) {addr.size} as it is not unknown");
+                    if (romDataParsers[regionName].CheckRegionUnknown(regionAddress, regionAddress + addr.size - 1))
+                    {
+                        romDataParsers[regionName].AddDataRange(regionAddress, regionAddress + addr.size - 1, addr.size);
+                    }
+                    else
+                    {
+                        Console.WriteLine($"Skipping {addr.address:X8} ({regionAddress:X8}) {addr.size} as it is not unknown");
+                    }
                 }
             }
         }

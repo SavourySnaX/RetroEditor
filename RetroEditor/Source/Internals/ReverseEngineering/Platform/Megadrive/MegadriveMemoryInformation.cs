@@ -25,9 +25,9 @@ internal class MegadriveROMRegion : IMemoryInformation
 
 internal class MegadriveRAMRegion : IMemoryInformation
 {
-    public string MameViewName => "memory/:maincpu/0/:ram";
+    public string MameViewName => "memory/:maincpu/0/:megadrive_ram";
     public string DisplayName => "RAM";
-    public bool HasPhysicalData => false;
+    public bool HasPhysicalData => true;
     public MemoryRegionType Type => MemoryRegionType.Mixed;
     public (UInt64 Start, UInt64 End) AddressRange => (0xFF0000, 0xFFFFFF);
 

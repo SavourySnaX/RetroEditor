@@ -29,8 +29,8 @@ internal struct LineInfo
 
 internal interface IRomDataParser
 {
-    byte GetByte(string regionName, UInt64 address);
-    ReadOnlySpan<byte> FetchBytes(string regionName, UInt64 address, UInt64 length);
+    byte GetByte(UInt64 address);
+    ReadOnlySpan<byte> FetchBytes(UInt64 address, UInt64 length);
     void AddSymbol(ulong value, int size, string symbol);
     
     ISymbolProvider SymbolProvider { get; }
@@ -38,18 +38,16 @@ internal interface IRomDataParser
 
 internal abstract class IRegionInfo : IRange
 {
-    public IRegionInfo(UInt64 start, UInt64 end, IRomDataParser parent, ResourcerConfig.ConfigColour color, string regionName)
+    public IRegionInfo(UInt64 start, UInt64 end, IRomDataParser parent, ResourcerConfig.ConfigColour color)
     {
         AddressStart = start;
         AddressEnd = end;
         Parent = parent;
         Colour = color;
-        RegionName = regionName;
     }
 
     public UInt64 AddressStart { get; protected set; }
     public UInt64 AddressEnd { get; protected set; }
-    public string RegionName { get; protected set; }
 
     public UInt64 LineCount => GetLineCount();
     protected IRomDataParser Parent { get; private set; }
@@ -118,7 +116,7 @@ internal abstract class IRegionInfo : IRange
 
     public string BytesForLine(UInt64 start, UInt64 end)
     {
-        return BytesForSpan(Parent.FetchBytes(RegionName, start, end - start + 1));
+        return BytesForSpan(Parent.FetchBytes(start, end - start + 1));
     }
 
     public List<IRegionInfo> Above = new();
@@ -323,8 +321,8 @@ internal abstract class IRegionInfo : IRange
 internal class MultiLineComment : IRegionInfo
 {
     private string[] lines;
-    public MultiLineComment(string[] lines, IRomDataParser parent, string regionName) 
-        : base(0, 0, parent, ResourcerConfig.ConfigColour.Comment, regionName)
+    public MultiLineComment(string[] lines, IRomDataParser parent) 
+        : base(0, 0, parent, ResourcerConfig.ConfigColour.Comment)
     {
         this.lines = lines;
     }
@@ -375,8 +373,8 @@ internal class MultiLineComment : IRegionInfo
 internal class UnknownRegion : IRegionInfo
 {
     private bool dataIsKnown;
-    public UnknownRegion(UInt64 start, UInt64 end, bool hasData, IRomDataParser parent, string regionName) 
-        : base(start, end, parent, ResourcerConfig.ConfigColour.Unknown, regionName)
+    public UnknownRegion(UInt64 start, UInt64 end, bool hasData, IRomDataParser parent) 
+        : base(start, end, parent, ResourcerConfig.ConfigColour.Unknown)
     {
         dataIsKnown=hasData;
     }
@@ -384,13 +382,13 @@ internal class UnknownRegion : IRegionInfo
     public override ulong GetRegionLineCount() => AddressEnd - AddressStart + 1;
 
     public override void Combining(IRegionInfo other) { }
-    public override IRegionInfo Split(ulong start, ulong end) => new UnknownRegion(start, end, dataIsKnown, Parent, RegionName);
+    public override IRegionInfo Split(ulong start, ulong end) => new UnknownRegion(start, end, dataIsKnown, Parent);
 
     public override LineInfo GetRegionLineInfo(ulong index)
     {
         if (dataIsKnown)
         {
-            var db = Parent.GetByte(RegionName, AddressStart + index);
+            var db = Parent.GetByte(AddressStart + index);
             return new LineInfo($"{AddressStart + index:X8}", db.ToString("X2"), $"{(Char.IsControl((char)db) ? '.' : (char)db)}", "");
         }
         else
@@ -425,8 +423,8 @@ internal class DataRegion : IRegionInfo
 {
     private bool dataIsKnown;
     private UInt64 size;
-    public DataRegion(UInt64 start, UInt64 end, UInt64 size, bool hasData, IRomDataParser parent, string regionName) 
-        : base(start, end, parent, ResourcerConfig.ConfigColour.Data, regionName)
+    public DataRegion(UInt64 start, UInt64 end, UInt64 size, bool hasData, IRomDataParser parent) 
+        : base(start, end, parent, ResourcerConfig.ConfigColour.Data)
     {
         dataIsKnown = hasData;
         this.size = size;
@@ -441,12 +439,12 @@ internal class DataRegion : IRegionInfo
         {
             throw new ArgumentException($"Cannot split a data region of size {size} into {end-start+1}");
         }
-        return new DataRegion(start, end, size, dataIsKnown, Parent, RegionName);
+        return new DataRegion(start, end, size, dataIsKnown, Parent);
     }
 
     LineInfo GetByteLineInfo(ulong index)
     {
-        var db = Parent.GetByte(RegionName, AddressStart + index);
+        var db = Parent.GetByte(AddressStart + index);
         return new LineInfo($"{AddressStart + index:X8}", BytesForLine(AddressStart+index,AddressStart+index+size-1), $"db {db:X2}", "");
     }
 
@@ -454,36 +452,36 @@ internal class DataRegion : IRegionInfo
     {
         var index2 = index * 2;
         var address = AddressStart + index2;
-        UInt16 dw = Parent.GetByte(RegionName, address + 0);
+        UInt16 dw = Parent.GetByte(address + 0);
         dw <<= 8;
-        dw |= Parent.GetByte(RegionName, address + 1);
-        return new LineInfo($"{address:X8}", BytesForSpan(Parent.FetchBytes(RegionName, address,2)), $"dw {dw:X4}", "");
+        dw |= Parent.GetByte(address + 1);
+        return new LineInfo($"{address:X8}", BytesForSpan(Parent.FetchBytes(address,2)), $"dw {dw:X4}", "");
     }
 
     LineInfo GetTripleLineInfo(ulong index)
     {
         var index3 = index * 3;
         var address = AddressStart + index3;
-        UInt32 dl = Parent.GetByte(RegionName, address + 0);
+        UInt32 dl = Parent.GetByte(address + 0);
         dl <<= 8;
-        dl |= Parent.GetByte(RegionName, address + 1);
+        dl |= Parent.GetByte(address + 1);
         dl <<= 8;
-        dl |= Parent.GetByte(RegionName, address + 2);
-        return new LineInfo($"{address:X8}", BytesForSpan(Parent.FetchBytes(RegionName, address,3)), $"dl {dl:X6}", "");
+        dl |= Parent.GetByte(address + 2);
+        return new LineInfo($"{address:X8}", BytesForSpan(Parent.FetchBytes(address,3)), $"dl {dl:X6}", "");
     }
 
     LineInfo GetLongLineInfo(ulong index)
     {
         var index4 = index * 4;
         var address = AddressStart + index4;
-        UInt32 dl = Parent.GetByte(RegionName, address + 0);
+        UInt32 dl = Parent.GetByte(address + 0);
         dl <<= 8;
-        dl |= Parent.GetByte(RegionName, address + 1);
+        dl |= Parent.GetByte(address + 1);
         dl <<= 8;
-        dl |= Parent.GetByte(RegionName, address + 2);
+        dl |= Parent.GetByte(address + 2);
         dl <<= 8;
-        dl |= Parent.GetByte(RegionName, address + 3);
-        return new LineInfo($"{address:X8}", BytesForSpan(Parent.FetchBytes(RegionName, address,4)), $"dl {dl:X8}", "");
+        dl |= Parent.GetByte(address + 3);
+        return new LineInfo($"{address:X8}", BytesForSpan(Parent.FetchBytes(address,4)), $"dl {dl:X8}", "");
     }
 
     public override LineInfo GetRegionLineInfo(ulong index)
@@ -549,7 +547,7 @@ internal class DataRegion : IRegionInfo
 internal class StringRegion : IRegionInfo
 {
     private bool dataIsKnown;
-    public StringRegion(UInt64 start, UInt64 end, bool hasData, IRomDataParser parent, string regionName) : base(start, end, parent, ResourcerConfig.ConfigColour.String, regionName)
+    public StringRegion(UInt64 start, UInt64 end, bool hasData, IRomDataParser parent) : base(start, end, parent, ResourcerConfig.ConfigColour.String)
     {
         dataIsKnown = hasData;
     }
@@ -562,7 +560,7 @@ internal class StringRegion : IRegionInfo
     }
 
     public override void Combining(IRegionInfo other) { }
-    public override IRegionInfo Split(ulong start, ulong end) => new StringRegion(start, end, dataIsKnown, Parent, RegionName);
+    public override IRegionInfo Split(ulong start, ulong end) => new StringRegion(start, end, dataIsKnown, Parent);
 
     public override LineInfo GetRegionLineInfo(ulong index)
     {
@@ -574,7 +572,7 @@ internal class StringRegion : IRegionInfo
                 s.Append($"db \"");
                 for (UInt64 j = AddressStart; j <= AddressEnd; j++)
                 {
-                    var db = Parent.GetByte(RegionName, j);
+                    var db = Parent.GetByte(j);
                     if (Char.IsControl((char)db) || db > 0x7F)
                     {
                         s.Append($"\",${db:X2},\"");
@@ -644,7 +642,7 @@ internal class SymbolProvider : ISymbolProvider
 internal class CodeRegion : IRegionInfo
 {
     protected SortedDictionary<ulong, Instruction> instructions = new();
-    public CodeRegion(UInt64 start, UInt64 end, Instruction instruction, IRomDataParser parent, string regionName) : base(start, end, parent, ResourcerConfig.ConfigColour.Code, regionName)
+    public CodeRegion(UInt64 start, UInt64 end, Instruction instruction, IRomDataParser parent) : base(start, end, parent, ResourcerConfig.ConfigColour.Code)
     {
         instructions.Add(start, instruction);
     }
@@ -669,7 +667,7 @@ internal class CodeRegion : IRegionInfo
     public override IRegionInfo Split(ulong start, ulong end)
     {
         // remove instructions in the range start-end and add them to the new region
-        var newRegion = new CodeRegion(start, end, instructions[start], Parent, RegionName);
+        var newRegion = new CodeRegion(start, end, instructions[start], Parent);
         instructions.Remove(start);
         List<ulong> keysToRemove = new List<ulong>();
         foreach (var i in instructions)
@@ -742,61 +740,33 @@ internal class CodeRegion : IRegionInfo
 internal class RomDataParser : IRomDataParser
 {
     private const int BYTES_PER_LINE = 16;
-    private Dictionary<string, RangeCollection<IRegionInfo>> memoryRegions = new Dictionary<string, RangeCollection<IRegionInfo>>();
-    private Dictionary<string, IMemoryRegionDataProvider> regionDataProviders = new Dictionary<string, IMemoryRegionDataProvider>();
-    SymbolProvider symbolProvider = new SymbolProvider();
+    private RangeCollection<IRegionInfo> ranges;
+    private IMemoryRegionDataProvider dataProvider;
+    private SymbolProvider symbolProvider;
     private UInt64 minAddress, maxAddress;
-    private IMemoryInformationProvider memoryInformationProvider;
+    private string regionName;
+    private IMemoryInformation memoryInfo;
 
-    public RomDataParser(IMemoryInformationProvider memoryInformationProvider)
+    public IMemoryInformation MemoryInformation => memoryInfo;
+    public RomDataParser(string regionName, IMemoryInformation memInfo, IMemoryRegionDataProvider provider)
     {
-        this.memoryInformationProvider = memoryInformationProvider;
-        InitializeMemoryRegions();
+        this.regionName = regionName;
+        this.memoryInfo = memInfo;
+        this.dataProvider = provider;
+        this.ranges = new RangeCollection<IRegionInfo>();
+        this.symbolProvider = new SymbolProvider();
+        var (start, end) = memInfo.AddressRange;
+        this.minAddress = start;
+        this.maxAddress = end;
     }
 
-    private void InitializeMemoryRegions()
-    {
-        foreach (var memInfo in memoryInformationProvider.GetMemoryRegions())
-        {
-            memoryRegions[memInfo.MameViewName] = new RangeCollection<IRegionInfo>();
-            regionDataProviders[memInfo.MameViewName] = memInfo.CreateDataProvider();
-        }
-    }
-
-    private LibMameDebugger.DView OpenMemView(LibMameDebugger debugger)
-    {
-        var view = new LibMameDebugger.DView(debugger.AllocView(LibMameDebuggerRetroPlugin.debug_view_type.Memory), 0, 0, 256, 256, "");
-
-        // Find ROM source index
-        int sourceCount = debugger.GetSourcesCount(ref view);
-        var sources = debugger.GetSourcesList(ref view);
-
-        // temporary, as we are going to make the romdataparser region flexible
-        var mameViewName = memoryInformationProvider.GetMemoryRegions().First().MameViewName;
-        for (int i = 0; i < sourceCount; i++)
-        {
-            if (sources[i].Contains(mameViewName))
-            {
-                debugger.SetSource(ref view, i);
-                break;
-            }
-        }
-
-        return view;
-    }
-
-    private void CloseView(LibMameDebugger debugger, LibMameDebugger.DView view)
-    {
-        debugger.FreeView(view.view);
-    }
-
-    public void AddCodeRange(DisassemblerBase disassembler, UInt64 minAddress, UInt64 maxAddress, IMemoryMapper mapper, string regionName)
+    public void AddCodeRange(DisassemblerBase disassembler, UInt64 minAddress, UInt64 maxAddress, IMemoryMapper mapper)
     {
         while (minAddress <= maxAddress)
         {
             // minAddress is linear, need to compute approx PC
             var pc = mapper.MapRomToCpu(minAddress);
-            if (AddCodeRange(disassembler, pc, out var i, mapper, regionName))
+            if (AddCodeRange(disassembler, pc, out var i, mapper))
             {
                 pc += (UInt64)i.Bytes.Length;
                 if (i.IsBasicBlockTerminator)
@@ -815,7 +785,7 @@ internal class RomDataParser : IRomDataParser
         }
     }
 
-    public bool AddCodeRange(DisassemblerBase disassembler, UInt64 pc, out Instruction instruction, IMemoryMapper mapper, string regionName)
+    public bool AddCodeRange(DisassemblerBase disassembler, UInt64 pc, out Instruction instruction, IMemoryMapper mapper)
     {
         bool done = false;
         UInt64 length = 0;
@@ -830,7 +800,7 @@ internal class RomDataParser : IRomDataParser
 
         while (!done)
         {
-            var result = disassembler.DecodeNext(FetchBytes(regionName, address, length), pc);
+            var result = disassembler.DecodeNext(FetchBytes(address, length), pc);
             if (!result.Success)
             {
                 if (result.NeedsMoreBytes)
@@ -844,7 +814,6 @@ internal class RomDataParser : IRomDataParser
                 }
             }
             
-            var ranges = memoryRegions[regionName];
             var current = ranges.GetRangeContainingAddress(address, out var lineOff);
             if (current != null)
             {
@@ -865,7 +834,7 @@ internal class RomDataParser : IRomDataParser
                     }
                     else
                     {
-                        ranges.AddRange(new CodeRegion(address, address + (UInt64)result.BytesConsumed - 1, result.Instruction, this, regionName));
+                        ranges.AddRange(new CodeRegion(address, address + (UInt64)result.BytesConsumed - 1, result.Instruction, this));
                     }
                 }
             }
@@ -876,11 +845,8 @@ internal class RomDataParser : IRomDataParser
         return false;
     }
 
-    public bool CheckRegionUnknown(string regionName, UInt64 start, UInt64 end)
+    public bool CheckRegionUnknown(UInt64 start, UInt64 end)
     {
-        if (!memoryRegions.TryGetValue(regionName, out var ranges))
-            return false;
-        
         for (UInt64 i = start; i <= end; i++)
         {
             var range = ranges.GetRangeContainingAddress(i, out _);
@@ -892,66 +858,30 @@ internal class RomDataParser : IRomDataParser
         return true;
     }
 
-    public void AddDataRange(string regionName, UInt64 start, UInt64 end, uint size, bool hasData = true)
+    public void AddDataRange(UInt64 start, UInt64 end, uint size, bool hasData = true)
     {
-        if (memoryRegions.TryGetValue(regionName, out var collection))
-        {
-            collection.AddRange(new DataRegion(start, end, size, hasData, this, regionName));
-        }
-        else
-        {
-            throw new ArgumentException($"Unknown memory region: {regionName}");
-        }
+        ranges.AddRange(new DataRegion(start, end, size, hasData, this));
     }
 
-    public void AddStringRange(string regionName, UInt64 start, UInt64 end, bool hasData = true)
+    public void AddStringRange(UInt64 start, UInt64 end, bool hasData = true)
     {
-        if (memoryRegions.TryGetValue(regionName, out var collection))
-        {
-            collection.AddRange(new StringRegion(start, end, hasData, this, regionName));
-        }
-        else
-        {
-            throw new ArgumentException($"Unknown memory region: {regionName}");
-        }
+        ranges.AddRange(new StringRegion(start, end, hasData, this));
     }
 
-    public void AddUnknownRange(string regionName, UInt64 start, UInt64 end, bool hasData = true)
+    public void AddUnknownRange(UInt64 start, UInt64 end, bool hasData = true)
     {
-        if (memoryRegions.TryGetValue(regionName, out var collection))
-        {
-            collection.AddRange(new UnknownRegion(start, end, hasData, this, regionName));
-        }
-        else
-        {
-            throw new ArgumentException($"Unknown memory region: {regionName}");
-        }
+        ranges.AddRange(new UnknownRegion(start, end, hasData, this));
     }
 
-    public RangeCollection<IRegionInfo> GetRangeCollection(string regionName)
-    {
-        if (memoryRegions.TryGetValue(regionName, out var collection))
-            return collection;
-        throw new ArgumentException($"Unknown memory region: {regionName}");
-    }
-
-    public IEnumerable<string> GetMemoryRegionNames() => memoryRegions.Keys;
-
-    public IEnumerable<(string Name, RangeCollection<IRegionInfo> Ranges)> GetAllMemoryRegions()
-    {
-        return memoryRegions.Select(kvp => (kvp.Key, kvp.Value));
-    }
+    public RangeCollection<IRegionInfo> GetRanges() => ranges;
 
     public UInt64 GetMinAddress => minAddress;
     public UInt64 GetMaxAddress => maxAddress;
 
     // Only used by tests
-    internal void LoadRomData(ReadOnlySpan<byte> data, string regionName)
+    internal void LoadRomData(ReadOnlySpan<byte> data)
     {
-        if (!regionDataProviders.TryGetValue(regionName, out var provider))
-            throw new ArgumentException($"Unknown memory region: {regionName}");
-        
-        if (provider is BufferDataProvider bufferProvider)
+        if (dataProvider is BufferDataProvider bufferProvider)
         {
             bufferProvider.LoadBuffer(data);
         }
@@ -963,39 +893,21 @@ internal class RomDataParser : IRomDataParser
 
     public void Parse(LibMameDebugger debugger)
     {
-        // Load data from debugger for all physical memory regions
-        minAddress = UInt64.MaxValue;
-        maxAddress = 0;
-
-        foreach (var memInfo in memoryInformationProvider.GetMemoryRegions())
-        {
-            if (memInfo.HasPhysicalData)
-            {
-                var provider = regionDataProviders[memInfo.MameViewName];
-                provider.LoadFromDebugger(debugger);
-
-                // Update address bounds
-                var (start, end) = memInfo.AddressRange;
-                minAddress = Math.Min(minAddress, start);
-                maxAddress = Math.Max(maxAddress, end);
-            }
-        }
-
-        // If no physical regions were found, set default bounds
-        if (minAddress == UInt64.MaxValue)
-        {
-            minAddress = 0;
-            maxAddress = 0;
-        }
+        // Load data from debugger for this region
+        dataProvider.LoadFromDebugger(debugger);
+        
+        // Set address bounds based on memory info
+        var (start, end) = memoryInfo.AddressRange;
+        minAddress = start;
+        maxAddress = end;
     }
 
     public byte[] GetRomData
     {
         get
         {
-            // Return data from first physical region for backward compatibility
-            var firstPhysical = regionDataProviders.FirstOrDefault(x => x.Value is BufferDataProvider);
-            if (firstPhysical.Value is BufferDataProvider bufferProvider && bufferProvider is DebuggerDataProvider debuggerProvider)
+            // Return data from this region's provider
+            if (dataProvider is BufferDataProvider bufferProvider && bufferProvider is DebuggerDataProvider debuggerProvider)
             {
                 return debuggerProvider.GetBuffer();
             }
@@ -1010,36 +922,25 @@ internal class RomDataParser : IRomDataParser
         symbolProvider.AddSymbol(value, size, symbol);
     }
 
-    public byte GetByte(string regionName, UInt64 address)
+    public byte GetByte(UInt64 address)
     {
-        if (regionDataProviders.TryGetValue(regionName, out var provider))
-            return provider.GetByte(address);
-        return 0;
+        return dataProvider.GetByte(address);
     }
 
-    public ReadOnlySpan<byte> FetchBytes(string regionName, UInt64 address, UInt64 length)
+    public ReadOnlySpan<byte> FetchBytes(UInt64 address, UInt64 length)
     {
-        if (regionDataProviders.TryGetValue(regionName, out var provider))
-            return provider.FetchBytes(address, length);
-        return new ReadOnlySpan<byte>();
+        return dataProvider.FetchBytes(address, length);
     }
 
     //TODO - doesn't handle mid region insertion....
-    internal void AddCommentRange(string regionName, String[] value, UInt64 start)
+    internal void AddCommentRange(String[] value, UInt64 start)
     {
-        if (memoryRegions.TryGetValue(regionName, out var ranges))
+        Range<IRegionInfo>? region = ranges.GetRangeContainingAddress(start, out _);
+        if (region != null)
         {
-            Range<IRegionInfo>? region = ranges.GetRangeContainingAddress(start, out _);
-            if (region != null)
-            {
-                region.Value.Above.Add(new MultiLineComment(value, this, regionName));
-            }
-            ranges.Recompute();
+            region.Value.Above.Add(new MultiLineComment(value, this));
         }
-        else
-        {
-            throw new ArgumentException($"Unknown memory region: {regionName}");
-        }
+        ranges.Recompute();
     }
 
     public void Save(string filePath)
@@ -1050,16 +951,13 @@ internal class RomDataParser : IRomDataParser
             kvp => kvp.Value
         );
         
-        // Serialize all memory regions
-        var regionsDict = new Dictionary<string, object>();
-        foreach (var (name, collection) in memoryRegions)
-        {
-            regionsDict[name] = collection.Select(r => r.Value.Save()).ToList();
-        }
+        // Serialize this region's ranges
+        var regionData = ranges.Select(r => r.Value.Save()).ToList();
         
         var data = new
         {
-            MemoryRegions = regionsDict,
+            RegionName = regionName,
+            Ranges = regionData,
             SymbolProvider = serializableSymbols
         };
         var json = JsonSerializer.Serialize(data, new JsonSerializerOptions { WriteIndented = true });
@@ -1071,6 +969,7 @@ internal class RomDataParser : IRomDataParser
         var json = File.ReadAllText(filePath);
         var doc = JsonDocument.Parse(json);
         var root = doc.RootElement;
+        
         if (root.TryGetProperty("SymbolProvider", out var symbolsElem))
         {
             var dict = new Dictionary<(ulong, int), string>();
@@ -1085,40 +984,50 @@ internal class RomDataParser : IRomDataParser
             symbolProvider.symbols = dict;
         }
         
-        // Load memory regions - support both old and new format
-        if (root.TryGetProperty("MemoryRegions", out var regionsElem))
+        // Load ranges for this region - support both old and new format
+        if (root.TryGetProperty("Ranges", out var rangesElem))
+        {
+            foreach (var rangeElem in rangesElem.EnumerateArray())
+            {
+                var rangeDict = rangeElem.Deserialize<Dictionary<string, object>>();
+                if (rangeDict != null)
+                {
+                    var range = IRegionInfo.Load(rangeDict, this);
+                    ranges.AddRange(range);
+                }
+            }
+        }
+        // Backward compatibility: try loading old format with MemoryRegions dictionary
+        else if (root.TryGetProperty("MemoryRegions", out var regionsElem))
         {
             foreach (var prop in regionsElem.EnumerateObject())
             {
-                var regionName = prop.Name;
-                if (!memoryRegions.ContainsKey(regionName))
-                    memoryRegions[regionName] = new RangeCollection<IRegionInfo>();
-                    
-                foreach (var rangeElem in prop.Value.EnumerateArray())
+                // Load data from matching region name in the saved file
+                if (prop.Name == regionName)
                 {
-                    var rangeDict = rangeElem.Deserialize<Dictionary<string, object>>();
-                    if (rangeDict != null)
+                    foreach (var rangeElem in prop.Value.EnumerateArray())
                     {
-                        var range = IRegionInfo.Load(rangeDict, this);
-                        memoryRegions[regionName].AddRange(range);
+                        var rangeDict = rangeElem.Deserialize<Dictionary<string, object>>();
+                        if (rangeDict != null)
+                        {
+                            var range = IRegionInfo.Load(rangeDict, this);
+                            ranges.AddRange(range);
+                        }
                     }
+                    break;
                 }
             }
         }
         // Backward compatibility: try loading old RomRanges/RamRanges format
         else if (root.TryGetProperty("RomRanges", out var romRangesElem))
         {
-            var firstRegion = memoryRegions.Keys.FirstOrDefault();
-            if (firstRegion != null)
+            foreach (var rangeElem in romRangesElem.EnumerateArray())
             {
-                foreach (var rangeElem in romRangesElem.EnumerateArray())
+                var rangeDict = rangeElem.Deserialize<Dictionary<string, object>>();
+                if (rangeDict != null)
                 {
-                    var rangeDict = rangeElem.Deserialize<Dictionary<string, object>>();
-                    if (rangeDict != null)
-                    {
-                        var range = IRegionInfo.Load(rangeDict, this);
-                        memoryRegions[firstRegion].AddRange(range);
-                    }
+                    var range = IRegionInfo.Load(rangeDict, this);
+                    ranges.AddRange(range);
                 }
             }
         }
