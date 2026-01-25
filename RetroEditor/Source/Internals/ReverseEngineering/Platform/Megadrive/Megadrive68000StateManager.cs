@@ -10,16 +10,7 @@ namespace RetroEditor.Source.Internals.ReverseEngineering.Platform.Megadrive;
 /// </summary>
 internal class Megadrive68000StateManager : ICpuStateManager
 {
-    private bool cpu_68000_Supervisor = false;
-    public ICpuState ParseDebuggerState(LibMameDebugger debugger)
-    {
-        var sr = GetCPUState(debugger, "SR");
-        
-        return new Megadrive68000State
-        {
-            SupervisorMode = (sr & 0x2000) == 0x2000
-        };
-    }
+    private bool cpu_68000_Supervisor = true;
 
     public void UpdateStateFromInstruction(ICpuState state, Instruction instruction)
     {
@@ -48,93 +39,6 @@ internal class Megadrive68000StateManager : ICpuStateManager
         {
             cpu_68000_Supervisor = mdState.SupervisorMode;
         }
-    }
-
-    public UInt64 GetCPUState(LibMameDebugger debugger, string register)
-    {
-        var view = OpenCPUView(debugger, "maincpu");
-        try
-        {
-            return ParseState(view, register);
-        }
-        finally
-        {
-            CloseView(debugger, view);
-        }
-    }
-
-    public UInt64 GetCurrentPC(LibMameDebugger debugger)
-    {
-        return GetCPUState(debugger, "PC");
-    }
-
-    private LibMameDebugger.DView OpenCPUView(LibMameDebugger debugger, string cpuName)
-    {
-        var view = new LibMameDebugger.DView(debugger.AllocView(LibMameDebuggerRetroPlugin.debug_view_type.State), 0, 0, 32, 32, "");
-
-        // Find ROM source index
-        int sourceCount = debugger.GetSourcesCount(ref view);
-        var sources = debugger.GetSourcesList(ref view);
-
-        for (int i = 0; i < sourceCount; i++)
-        {
-            if (sources[i].Contains(cpuName))
-            {
-                debugger.SetSource(ref view, i);
-                break;
-            }
-        }
-
-        return view;
-    }
-
-    private void CloseView(LibMameDebugger debugger, LibMameDebugger.DView view)
-    {
-        debugger.FreeView(view.view);
-    }
-
-    private UInt64 ParseState(LibMameDebugger.DView view, string register)
-    {
-        int bytesPerLine = view.view.W * 2; // Each character is 2 bytes (char + attribute)
-
-        for (int y = 0; y < view.view.H; y++)
-        {
-            int lineStart = y * bytesPerLine;
-            int x = 0;
-
-            // Skip initial spaces
-            while (x < view.view.W && (char)view.state[lineStart + x * 2] == ' ')
-                x++;
-
-            // Verify register name matches
-            StringBuilder registerStr = new StringBuilder();
-            while (x < view.view.W && (char)view.state[lineStart + x * 2] != ' ' && (char)view.state[lineStart + x * 2] != ':')
-            {
-                registerStr.Append((char)view.state[lineStart + x * 2]);
-                x++;
-            }
-            if (registerStr.ToString() != register)
-            {
-                continue;
-            }
-            
-            // Skip spaces and colons between name and value
-            while (x < view.view.W && ((char)view.state[lineStart + x * 2] == ' ' || (char)view.state[lineStart + x * 2] == ':'))
-                x++;
-
-            // Fetch Value
-            registerStr.Clear();
-            while (x < view.view.W && (char)view.state[lineStart + x * 2] != ' ')
-            {
-                registerStr.Append((char)view.state[lineStart + x * 2]);
-                x++;
-            }
-            if (registerStr.Length > 0)
-            {
-                return UInt64.Parse(registerStr.ToString(), NumberStyles.HexNumber);
-            }
-        }
-        return 0;
     }
     
     public void RenderUI()

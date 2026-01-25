@@ -772,27 +772,6 @@ internal class RomDataParser : IRomDataParser
         return view;
     }
 
-    private LibMameDebugger.DView OpenCPUView(LibMameDebugger debugger, string cpuName)
-    {
-        var view = new LibMameDebugger.DView(debugger.AllocView(LibMameDebuggerRetroPlugin.debug_view_type.State), 0, 0, 32, 32, "");
-
-        // Find ROM source index
-        int sourceCount = debugger.GetSourcesCount(ref view);
-        var sources = debugger.GetSourcesList(ref view);
-
-        for (int i = 0; i < sourceCount; i++)
-        {
-            if (sources[i].Contains(cpuName))
-            {
-                debugger.SetSource(ref view, i);
-                break;
-            }
-        }
-
-        return view;
-    }
-
-
     private void CloseView(LibMameDebugger debugger, LibMameDebugger.DView view)
     {
         debugger.FreeView(view.view);
@@ -947,6 +926,7 @@ internal class RomDataParser : IRomDataParser
     public UInt64 GetMinAddress => minAddress;
     public UInt64 GetMaxAddress => maxAddress;
 
+    // Only used by tests
     internal void LoadRomData(ReadOnlySpan<byte> data)
     {
         if (romData.Length < data.Length)

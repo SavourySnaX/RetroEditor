@@ -43,15 +43,12 @@ internal interface IMemoryMapper
 /// </summary>
 internal interface ICpuStateManager
 {
-    ICpuState ParseDebuggerState(LibMameDebugger debugger);
     void UpdateStateFromInstruction(ICpuState state, Instruction instruction);
     string GetTraceFormat();
     void RenderUI();
     bool InstructionTerminatesAutoDisassembly(Instruction instruction);
     ICpuState FetchStateFromUI();
     void UpdateUIFromState(ICpuState state);
-    UInt64 GetCPUState(LibMameDebugger debugger, string register);
-    UInt64 GetCurrentPC(LibMameDebugger debugger);
 }
 
 /// <summary>

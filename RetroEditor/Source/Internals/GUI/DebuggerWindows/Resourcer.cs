@@ -20,8 +20,6 @@ internal class Resourcer : IWindow
     IHardwareSymbolsProvider hardwareRegisterProvider;
     string traceFile = "trace.txt";
     bool traceInProgress = false;
-    bool newTraceInProgress = false;
-    int newTraceCnt=0;
     bool romLoaded = false;
 
     // Memory map data
@@ -87,7 +85,7 @@ internal class Resourcer : IWindow
     {
         DrawMemoryMap();
 
-        var traceDisable = traceInProgress||newTraceInProgress;
+        var traceDisable = traceInProgress;
         if (traceDisable)
         {
             ImGui.BeginDisabled();
@@ -142,20 +140,6 @@ internal class Resourcer : IWindow
             debugger.QueueCommand("gtime 500",(s,id)=>{traceCommandInProgress=false;});
         }
         ImGui.SameLine();
-        if (ImGui.Button("New Trace"))
-        {
-            var cpuState = cpuStateManager.ParseDebuggerState(debugger);
-            disassembler.State = cpuState;
-            
-            // Get current PC from debugger - this needs platform-specific extraction
-            var pc = cpuStateManager.GetCurrentPC(debugger);
-            
-            romData.AddCodeRange((DisassemblerBase)disassembler, pc, out var _, memoryMapper);
-            cartridgeVars.jumpToAddress = memoryMapper.MapCpuToRegion(pc, out var _);
-            debugger.SendCommand($"step");
-            newTraceCnt = 100;
-            newTraceInProgress = true;
-        }
         if (traceDisable)
         {
             ImGui.EndDisabled();
@@ -684,28 +668,6 @@ internal class Resourcer : IWindow
             }
 
             romLoaded = true;
-        }
-
-        if (newTraceInProgress)
-        {
-            if (debugger.IsStopped)
-            {
-                var cpuState = cpuStateManager.ParseDebuggerState(debugger);
-                disassembler.State = cpuState;
-                
-                var pc = cpuStateManager.GetCurrentPC(debugger);
-                romData.AddCodeRange((DisassemblerBase)disassembler, pc, out var _, memoryMapper);
-                cartridgeVars.jumpToAddress = memoryMapper.MapCpuToRegion(pc, out var _);
-                newTraceCnt--;
-                if (newTraceCnt == 0)
-                {
-                    newTraceInProgress = false;
-                }
-                else
-                {
-                    debugger.SendCommand("step");
-                }
-            }
         }
 
         // Handle trace in progress
