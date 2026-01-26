@@ -38,7 +38,7 @@ internal class LibMameDebuggerRetroPlugin : LibRetroPlugin
         // Unfortunately, since different cores accept different file types,
         //we will need to figure out a solution, however for now I'll just
         //assume if the folder contains spectrum, its a snapshot (.sna/.z80)
-        if (path.Contains("spectrum", StringComparison.InvariantCultureIgnoreCase))
+        if (path.Contains("spec", StringComparison.InvariantCultureIgnoreCase))
         {
             mediaType = "snapshot";
         }

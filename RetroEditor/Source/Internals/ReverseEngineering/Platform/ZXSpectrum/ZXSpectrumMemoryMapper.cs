@@ -17,7 +17,7 @@ internal class ZXSpectrumMemoryMapper : IMemoryMapper
         if (cpuAddress < 0x10000)
         {
             region = MemoryRegion.RAM;
-            return cpuAddress - 0x4000;
+            return cpuAddress;
         }
         region = MemoryRegion.Invalid;
         return 0;

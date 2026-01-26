@@ -132,16 +132,16 @@ internal class Z80Disassembler : DisassemblerBase
             
             // DJNZ - branch with displacement
             0x10 => bytes.Length < 2 ? DecodeResult.NeedMoreBytes(2) :
-                Success(new[] { "DJNZ", (sbyte)bytes[1] >= 0 ? $"+{(sbyte)bytes[1]}" : $"{(sbyte)bytes[1]}" }, bytes, address, 2, isBranch: true),
+                Success(new[] { "DJNZ", $"${(address + 2 + (ulong)(long)(sbyte)bytes[1]):X4}" }, bytes, address, 2, isBranch: true),
             
             // JR - unconditional branch
             0x18 => bytes.Length < 2 ? DecodeResult.NeedMoreBytes(2) :
-                Success(new[] { "JR", (sbyte)bytes[1] >= 0 ? $"+{(sbyte)bytes[1]}" : $"{(sbyte)bytes[1]}" }, bytes, address, 2, isBranch: true),
+                Success(new[] { "JR", $"${(address + 2 + (ulong)(long)(sbyte)bytes[1]):X4}" }, bytes, address, 2, isBranch: true),
             
             // JR cc - conditional branch
             0x20 or 0x28 or 0x30 or 0x38 => 
                 bytes.Length < 2 ? DecodeResult.NeedMoreBytes(2) :
-                Success(new[] { "JR", Conditions[(opcode >> 3) & 3], (sbyte)bytes[1] >= 0 ? $"+{(sbyte)bytes[1]}" : $"{(sbyte)bytes[1]}" }, bytes, address, 2, isBranch: true),
+                Success(new[] { "JR", Conditions[(opcode >> 3) & 3], $"${(address + 2 + (ulong)(long)(sbyte)bytes[1]):X4}" }, bytes, address, 2, isBranch: true),
             
             // Register-to-register LD
             >= 0x40 and <= 0x7F when opcode != 0x76 =>

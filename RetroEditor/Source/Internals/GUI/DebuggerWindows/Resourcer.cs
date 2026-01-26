@@ -671,7 +671,7 @@ internal class Resourcer : IWindow
                 autoDisassembler.State = state;
 
                 var mappedAddress = memoryMapper.MapCpuToRegion(autoPC, out var region);
-                if (region == RetroEditor.Source.Internals.ReverseEngineering.Platform.MemoryRegion.ROM)
+                //if (region == RetroEditor.Source.Internals.ReverseEngineering.Platform.MemoryRegion.ROM)
                 {
                     var codeRegionName = GetRegionNameForMemoryType(RetroEditor.Source.Internals.ReverseEngineering.Platform.MemoryRegion.ROM);
                     if (!string.IsNullOrEmpty(codeRegionName))

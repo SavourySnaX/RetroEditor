@@ -790,13 +790,13 @@ internal class RomDataParser : IRomDataParser
         bool done = false;
         UInt64 length = 0;
         UInt64 address = mapper.MapCpuToHardwareAddress(pc, out var region);
-        if (region != RetroEditor.Source.Internals.ReverseEngineering.Platform.MemoryRegion.ROM)
+        /*if (region != RetroEditor.Source.Internals.ReverseEngineering.Platform.MemoryRegion.ROM)
         {
             // Not a valid LoROM address - code probably in ram
             //Console.WriteLine($"Invalid LoROM address: {address:X8} in region {region} {pc:X6}");
             instruction = new();
             return false;
-        }
+        }*/
 
         while (!done)
         {
