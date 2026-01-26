@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using RetroEditor.Plugins;
 
@@ -24,7 +25,8 @@ public class Disassembler_68000_Tests
         int operandCount = 0,
         string[] operandText = null,
         bool isBranch = false,
-        bool isTerminator = false)
+        bool isTerminator = false,
+        List<ulong> nextAddresses = null)
     {
         Assert.IsTrue(result.Success);
         
@@ -46,6 +48,21 @@ public class Disassembler_68000_Tests
         
         Assert.AreEqual(isBranch, instruction.IsBranch);
         Assert.AreEqual(isTerminator, instruction.IsBasicBlockTerminator);
+        
+        if (nextAddresses == null && !(instruction.IsBranch || instruction.IsBasicBlockTerminator))
+        {
+            Assert.AreEqual(1, instruction.NextAddresses.Count);
+            // For regular instructions, we expect fall-through but can't validate exact address in this context
+        }
+
+        if (nextAddresses != null)
+        {
+            Assert.AreEqual(nextAddresses.Count, instruction.NextAddresses.Count);
+            for (int i = 0; i < nextAddresses.Count; i++)
+            {
+                Assert.IsTrue(nextAddresses.Contains(instruction.NextAddresses[i]));
+            }
+        }
     }
     
     // Test basic move instructions
@@ -394,7 +411,7 @@ public class Disassembler_68000_Tests
         // JSR $1234.L
         byte[] bytes = { 0x4E, 0xB9, 0x00, 0x00, 0x12, 0x34 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "JSR", 6, 1, new[] { "$00001234.L" }, isBranch: true, isTerminator: false);
+        AssertInstruction(result, "JSR", 6, 1, new[] { "$00001234.L" }, isBranch: true, isTerminator: true, new List<ulong> { 0x00001234 });
     }
     
     [TestMethod]
@@ -403,7 +420,7 @@ public class Disassembler_68000_Tests
         // JSR 4(PC,D0.W)
         byte[] bytes = { 0x4E, 0xBB, 0x00, 0x04 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "JSR", 4, 1, new[] { "4(PC,D0.W)" }, isBranch: true, isTerminator: false);
+        AssertInstruction(result, "JSR", 4, 1, new[] { "4(PC,D0.W)" }, isBranch: true, isTerminator: true);
     }
     
     [TestMethod]
@@ -412,7 +429,7 @@ public class Disassembler_68000_Tests
         // JSR 10(PC,A1.L)
         byte[] bytes = { 0x4E, 0xBB, 0x98, 0x0A };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "JSR", 4, 1, new[] { "10(PC,A1.L)" }, isBranch: true, isTerminator: false);
+        AssertInstruction(result, "JSR", 4, 1, new[] { "10(PC,A1.L)" }, isBranch: true, isTerminator: true);
     }
     
     [TestMethod]
@@ -431,7 +448,7 @@ public class Disassembler_68000_Tests
         // RTS
         byte[] bytes = { 0x4E, 0x75 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "RTS", 2, 0, null, isBranch: true, isTerminator: true);
+        AssertInstruction(result, "RTS", 2, 0, null, isTerminator: true);
     }
     
     [TestMethod]
@@ -440,7 +457,7 @@ public class Disassembler_68000_Tests
         // RTE
         byte[] bytes = { 0x4E, 0x73 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "RTE", 2, 0, null, isBranch: true, isTerminator: true);
+        AssertInstruction(result, "RTE", 2, 0, null, isTerminator: true);
     }
     
     [TestMethod]
@@ -449,7 +466,7 @@ public class Disassembler_68000_Tests
         // RTR
         byte[] bytes = { 0x4E, 0x77 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "RTR", 2, 0, null, isBranch: true, isTerminator: true);
+        AssertInstruction(result, "RTR", 2, 0, null, isTerminator: true);
     }
     
     // Test shift/rotate instructions
@@ -1203,5 +1220,104 @@ public class Disassembler_68000_Tests
         clonedState.SupervisorMode = false;
         Assert.IsTrue(state.SupervisorMode);  // Original unchanged
         Assert.IsFalse(clonedState.SupervisorMode);
+    }
+    
+    // Next Address Tests
+    [TestMethod]
+    public void Test68000_NextAddresses_RegularInstruction()
+    {
+        // Regular instruction should have fall-through address only
+        var result = _disassembler.DecodeNext(new byte[] { 0x42, 0x40 }, 0x1000);  // CLR.W D0
+        AssertInstruction(result, "CLR.W", 2, 1, new[] { "D0" },
+            nextAddresses: new List<ulong> { 0x1002 });
+    }
+    
+    [TestMethod]
+    public void Test68000_NextAddresses_ConditionalBranch()
+    {
+        // Conditional branch should have both fall-through and target addresses
+        var result = _disassembler.DecodeNext(new byte[] { 0x67, 0x10 }, 0x2000);  // BEQ +16
+        var fallThrough = 0x2000UL + 2;  // Address after instruction
+        var target = 0x2000UL + 2 + 0x10; // Branch target
+        AssertInstruction(result, "BEQ", 2, 1, isBranch: true,
+            nextAddresses: new List<ulong> { fallThrough, target });
+    }
+    
+    [TestMethod]
+    public void Test68000_NextAddresses_ConditionalBranch_Negative()
+    {
+        // Conditional branch with negative offset
+        var result = _disassembler.DecodeNext(new byte[] { 0x65, 0xF0 }, 0x2000);  // BCS -16
+        var fallThrough = 0x2000UL + 2;  // Address after instruction
+        var target = (ulong)((long)(0x2000UL + 2) + unchecked((sbyte)0xF0)); // Branch target (negative)
+        AssertInstruction(result, "BCS", 2, 1, isBranch: true,
+            nextAddresses: new List<ulong> { fallThrough, target });
+    }
+    
+    [TestMethod]
+    public void Test68000_NextAddresses_UnconditionalBranch()
+    {
+        // Unconditional branch should have target address only
+        var result = _disassembler.DecodeNext(new byte[] { 0x60, 0x20 }, 0x3000);  // BRA +32
+        var target = 0x3000UL + 2 + 0x20; // Branch target
+        AssertInstruction(result, "BRA", 2, 1, isBranch: true, isTerminator: true,
+            nextAddresses: new List<ulong> { target });
+    }
+    
+    [TestMethod]
+    public void Test68000_NextAddresses_LongBranch()
+    {
+        // Long branch should have target address only
+        var result = _disassembler.DecodeNext(new byte[] { 0x60, 0x00, 0x10, 0x00 }, 0x4000);  // BRA.L +4096
+        var target = 0x4000UL + 2 + 0x1000; // Branch target
+        AssertInstruction(result, "BRA", 4, 1, isBranch: true, isTerminator: true,
+            nextAddresses: new List<ulong> { target });
+    }
+    
+    [TestMethod]
+    public void Test68000_NextAddresses_Jump()
+    {
+        // Jump should have target address only
+        var result = _disassembler.DecodeNext(new byte[] { 0x4E, 0xF9, 0x00, 0x00, 0x80, 0x00 }, 0x5000);  // JMP $8000
+        AssertInstruction(result, "JMP", 6, 1, isBranch: true, isTerminator: true,
+            nextAddresses: new List<ulong> { 0x8000 });
+    }
+    
+    [TestMethod]
+    public void Test68000_NextAddresses_Call()
+    {
+        // Call should have target address only
+        var result = _disassembler.DecodeNext(new byte[] { 0x4E, 0xB9, 0x00, 0x00, 0x90, 0x00 }, 0x6000);  // JSR $9000
+        AssertInstruction(result, "JSR", 6, 1, isBranch: true, isTerminator: true,
+            nextAddresses: new List<ulong> { 0x9000 });
+    }
+    
+    [TestMethod]
+    public void Test68000_NextAddresses_DBcc()
+    {
+        // DBcc should have both fall-through and target addresses
+        var result = _disassembler.DecodeNext(new byte[] { 0x51, 0xC8, 0x00, 0x10 }, 0x7000);  // DBRA D0,+16
+        var fallThrough = 0x7000UL + 4;  // Address after instruction
+        var target = 0x7000UL + 2 + 0x10; // Branch target
+        AssertInstruction(result, "DBF", 4, 2, isBranch: true, 
+            nextAddresses: new List<ulong> { fallThrough, target });
+    }
+    
+    [TestMethod]
+    public void Test68000_NextAddresses_Return()
+    {
+        // Return should have no next addresses
+        var result = _disassembler.DecodeNext(new byte[] { 0x4E, 0x75 }, 0x8000);  // RTS
+        AssertInstruction(result, "RTS", 2, isTerminator: true,
+            nextAddresses: new List<ulong>());
+    }
+    
+    [TestMethod]
+    public void Test68000_NextAddresses_ReturnFromException()
+    {
+        // RTE should have no next addresses
+        var result = _disassembler.DecodeNext(new byte[] { 0x4E, 0x73 }, 0x9000);  // RTE
+        AssertInstruction(result, "RTE", 2, isTerminator: true,
+            nextAddresses: new List<ulong>());
     }
 }

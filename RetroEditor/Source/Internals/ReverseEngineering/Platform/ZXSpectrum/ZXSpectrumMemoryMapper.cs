@@ -25,10 +25,8 @@ internal class ZXSpectrumMemoryMapper : IMemoryMapper
 
     public UInt64 MapRomToCpu(UInt64 romAddress)
     {
-        // ROM maps directly at 0x0000
-        if (romAddress < 0x4000)
-            return romAddress;
-        return 0; // Out of range for base models
+        // the z80 on the 48k spectrum all memory is mapped linearly
+        return romAddress;
     }
 
     public UInt64 MapHardwareAddressToCpu(UInt64 linearAddress)

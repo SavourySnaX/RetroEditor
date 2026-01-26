@@ -4,11 +4,11 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace RetroEditor.Tests
 {
-    public class DisassemblerTestBase
+    public class Disassembler_65816_Tests
     {
         private readonly SNES65816Disassembler _disassembler;
 
-        protected DisassemblerTestBase()
+        protected Disassembler_65816_Tests()
         {
             _disassembler = new SNES65816Disassembler();
         }
@@ -101,7 +101,7 @@ namespace RetroEditor.Tests
     }
 
     [TestClass]
-    public class DisassemblerTests : DisassemblerTestBase
+    public class DisassemblerTests : Disassembler_65816_Tests
     {
         [TestMethod]
         public void Test65816_ADC_Immediate()
@@ -1515,6 +1515,93 @@ namespace RetroEditor.Tests
                 ),
                 [0x3A]
             );
+        }
+        
+        // Next Address Tests
+        [TestMethod]
+        public void Test65816_NextAddresses_RegularInstruction()
+        {
+            // Regular instruction should have fall-through address only
+            var result = DecodeNext(new byte[] { 0x18 }, 0x1000);  // CLC
+            AssertInstruction(result, "CLC", 1, nextAddresses: new List<ulong> { 0x1001 });
+        }
+        
+        [TestMethod]
+        public void Test65816_NextAddresses_ConditionalBranch()
+        {
+            // Conditional branch should have both fall-through and target addresses
+            var result = DecodeNext(new byte[] { 0x90, 0x10 }, 0x2000);  // BCC +16
+            var fallThrough = 0x2000UL + 2;  // Address after instruction
+            var target = 0x2000UL + 2 + 0x10; // Branch target
+            AssertInstruction(result, "BCC", 2, 1, isBranch: true, 
+                nextAddresses: new List<ulong> { fallThrough, target });
+        }
+        
+        [TestMethod]
+        public void Test65816_NextAddresses_ConditionalBranch_Negative()
+        {
+            // Conditional branch with negative offset
+            var result = DecodeNext(new byte[] { 0xB0, 0xF0 }, 0x2000);  // BCS -16
+            var fallThrough = 0x2000UL + 2;  // Address after instruction
+            var target = (ulong)((long)(0x2000UL + 2) + unchecked((sbyte)0xF0)); // Branch target (negative)
+            AssertInstruction(result, "BCS", 2, 1, isBranch: true, 
+                nextAddresses: new List<ulong> { fallThrough, target });
+        }
+        
+        [TestMethod]
+        public void Test65816_NextAddresses_UnconditionalBranch()
+        {
+            // Unconditional branch should have target address only
+            var result = DecodeNext(new byte[] { 0x80, 0x20 }, 0x3000);  // BRA +32
+            var target = 0x3000UL + 2 + 0x20; // Branch target
+            AssertInstruction(result, "BRA", 2, 1, isBranch: true, isTerminator: true,
+                nextAddresses: new List<ulong> { target });
+        }
+        
+        [TestMethod]
+        public void Test65816_NextAddresses_LongBranch()
+        {
+            // Long branch should have target address only
+            var result = DecodeNext(new byte[] { 0x82, 0x00, 0x10 }, 0x4000);  // BRL +4096
+            var target = 0x4000UL + 3 + 0x1000; // Branch target
+            AssertInstruction(result, "BRL", 3, 1, isBranch: true, isTerminator: true,
+                nextAddresses: new List<ulong> { target });
+        }
+        
+        [TestMethod]
+        public void Test65816_NextAddresses_Jump()
+        {
+            // Jump should have target address only
+            var result = DecodeNext(new byte[] { 0x4C, 0x00, 0x80 }, 0x5000);  // JMP $8000
+            AssertInstruction(result, "JMP", 3, 1, isBranch: true, isTerminator: true,
+                nextAddresses: new List<ulong> { 0x8000 });
+        }
+        
+        [TestMethod]
+        public void Test65816_NextAddresses_Call()
+        {
+            // Call should have target address only
+            var result = DecodeNext(new byte[] { 0x20, 0x00, 0x90 }, 0x6000);  // JSR $9000
+            AssertInstruction(result, "JSR", 3, 1, isBranch: true, isTerminator: true,
+                nextAddresses: new List<ulong> { 0x9000 });
+        }
+        
+        [TestMethod]
+        public void Test65816_NextAddresses_Return()
+        {
+            // Return should have no next addresses
+            var result = DecodeNext(new byte[] { 0x60 }, 0x7000);  // RTS
+            AssertInstruction(result, "RTS", 1, isTerminator: true,
+                nextAddresses: new List<ulong>());
+        }
+        
+        [TestMethod]
+        public void Test65816_NextAddresses_Break()
+        {
+            // Break should have no next addresses
+            var result = DecodeNext(new byte[] { 0x00, 0x00 }, 0x8000);  // BRK
+            AssertInstruction(result, "BRK", 2, 1, isTerminator: true,
+                nextAddresses: new List<ulong>());
         }
 
         [TestMethod]

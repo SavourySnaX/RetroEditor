@@ -547,10 +547,10 @@ internal class Megadrive68000Disassembler : DisassemblerBase
             var operands = new List<IOperand> { new OM68000_Immediate(immediate, SizeCode.Word) };
             return CreateInstruction(address, "STOP", operands, 4);
         }
-        if (opcode == 0x4E73) return CreateSimpleInstruction(address, "RTE", opcode, 2, isBranch: true, isTerminator: true);
-        if (opcode == 0x4E75) return CreateSimpleInstruction(address, "RTS", opcode, 2, isBranch: true, isTerminator: true);
+        if (opcode == 0x4E73) return CreateSimpleInstruction(address, "RTE", opcode, 2, isTerminator: true);
+        if (opcode == 0x4E75) return CreateSimpleInstruction(address, "RTS", opcode, 2, isTerminator: true);
         if (opcode == 0x4E76) return CreateSimpleInstruction(address, "TRAPV", opcode, 2);
-        if (opcode == 0x4E77) return CreateSimpleInstruction(address, "RTR", opcode, 2, isBranch: true, isTerminator: true);
+        if (opcode == 0x4E77) return CreateSimpleInstruction(address, "RTR", opcode, 2, isTerminator: true);
         
         // JSR, JMP
         if ((opcode & 0xFFC0) == 0x4E80)
@@ -559,7 +559,7 @@ internal class Megadrive68000Disassembler : DisassemblerBase
             if (ea == null) return DecodeResult.NeedMoreBytes(2);
             
             var operands = new List<IOperand> { ea };
-            return CreateInstruction(address, "JSR", operands, 2 + eaSize, isBranch: true, isTerminator: false);
+            return CreateInstruction(address, "JSR", operands, 2 + eaSize, isBranch: true, isTerminator: true, nextAddress: operands[0].Value);
         }
         
         if ((opcode & 0xFFC0) == 0x4EC0)
@@ -568,7 +568,7 @@ internal class Megadrive68000Disassembler : DisassemblerBase
             if (ea == null) return DecodeResult.NeedMoreBytes(2);
             
             var operands = new List<IOperand> { ea };
-            return CreateInstruction(address, "JMP", operands, 2 + eaSize, isBranch: true, isTerminator: true);
+            return CreateInstruction(address, "JMP", operands, 2 + eaSize, isBranch: true, isTerminator: true, nextAddress: operands[0].Value);
         }
         
         // MOVEM
