@@ -56,6 +56,19 @@ internal class Z80Disassembler : DisassemblerBase
 
     protected override ICpuState CreateInitialState() => new Z80State { InterruptMode = false };
 
+    /// <summary>
+    /// Converts a register name string to Z80Register enum value
+    /// </summary>
+    // Helper methods for creating common operand types
+    private static Z80SpecialRegisterOperand SR(string name) => new Z80SpecialRegisterOperand(name);
+    private static Z80RegisterOperand R(Z80Register reg) => new Z80RegisterOperand(reg);
+    private static Z80Register16Operand R16(Z80Register16 reg) => new Z80Register16Operand(reg);
+    private static Z80ImmediateOperand Imm(ulong value, int size = 1) => new Z80ImmediateOperand(value, size);
+    private static Z80AddressOperand Addr(ulong address) => new Z80AddressOperand(address);
+    private static Z80IndirectAddressOperand IndAddr(ulong address) => new Z80IndirectAddressOperand(address);
+    private static Z80IndirectOperand Ind(Z80Register16 reg) => new Z80IndirectOperand(reg);
+    private static Z80IndexedOperand Idx(Z80IndexRegister reg, sbyte disp) => new Z80IndexedOperand(reg, disp);
+
     public override DecodeResult DecodeNext(ReadOnlySpan<byte> bytes, ulong address)
     {
         if (bytes.Length < 1)
@@ -67,7 +80,7 @@ internal class Z80Disassembler : DisassemblerBase
         {
             // Single-byte instructions
             0x00 => Success("NOP", bytes, address, 1),
-            0x02 => Success(new[] { "LD", "(BC)", "A" }, bytes, address, 1),
+            0x02 => Success("LD", new List<IOperand> { new Z80IndirectOperand(Z80Register16.BC), new Z80RegisterOperand(Z80Register.A) }, bytes, address, 1),
             0x07 => Success("RLCA", bytes, address, 1),
             0x0F => Success("RRCA", bytes, address, 1),
             0x17 => Success("RLA", bytes, address, 1),
@@ -80,120 +93,124 @@ internal class Z80Disassembler : DisassemblerBase
             
             // 8-bit INC
             0x04 or 0x0C or 0x14 or 0x1C or 0x24 or 0x2C or 0x34 or 0x3C =>
-                Success(new[] { "INC", Registers[(opcode >> 3) & 7] }, bytes, address, 1),
+                Success("INC", (Z80Register)((opcode >> 3) & 7), bytes, address, 1),
             
             // 8-bit DEC
             0x05 or 0x0D or 0x15 or 0x1D or 0x25 or 0x2D or 0x35 or 0x3D =>
-                Success(new[] { "DEC", Registers[(opcode >> 3) & 7] }, bytes, address, 1),
+                Success("DEC", (Z80Register)((opcode >> 3) & 7), bytes, address, 1),
 
             // 8-bit register load immediate  
             0x06 or 0x0E or 0x16 or 0x1E or 0x26 or 0x2E or 0x36 or 0x3E => 
                 bytes.Length < 2 ? DecodeResult.NeedMoreBytes(2) :
-                Success(new[] { "LD", Registers[(opcode >> 3) & 7], $"#{bytes[1]:X2}" }, bytes, address, 2),
+                Success("LD", (Z80Register)((opcode >> 3) & 7), (ulong)bytes[1], bytes, address, 2),
 
             // 16-bit register load immediate
             0x01 or 0x11 or 0x21 or 0x31 =>
                 bytes.Length < 3 ? DecodeResult.NeedMoreBytes(3) :
-                Success(new[] { "LD", Register16[opcode >> 4], $"#{ReadU16(bytes, 1):X4}" }, bytes, address, 3),
+                Success("LD", (Z80Register16)(opcode >> 4), ReadU16(bytes, 1), bytes, address, 3),
                 
             // 16-bit HL memory operations
             0x22 => bytes.Length < 3 ? DecodeResult.NeedMoreBytes(3) :
-                Success(new[] { "LD", $"(${ReadU16(bytes, 1):X4})", "HL" }, bytes, address, 3),
+                Success("LD", new List<IOperand> { new Z80IndirectAddressOperand(ReadU16(bytes, 1)), new Z80Register16Operand(Z80Register16.HL) }, bytes, address, 3),
             0x2A => bytes.Length < 3 ? DecodeResult.NeedMoreBytes(3) :
-                Success(new[] { "LD", "HL", $"(${ReadU16(bytes, 1):X4})" }, bytes, address, 3),
+                Success("LD", new List<IOperand> { new Z80Register16Operand(Z80Register16.HL), new Z80IndirectAddressOperand(ReadU16(bytes, 1)) }, bytes, address, 3),
                 
             // 8-bit A memory operations
             0x32 => bytes.Length < 3 ? DecodeResult.NeedMoreBytes(3) :
-                Success(new[] { "LD", $"(${ReadU16(bytes, 1):X4})", "A" }, bytes, address, 3),
+                Success("LD", new List<IOperand> { new Z80IndirectAddressOperand(ReadU16(bytes, 1)), new Z80RegisterOperand(Z80Register.A) }, bytes, address, 3),
             0x3A => bytes.Length < 3 ? DecodeResult.NeedMoreBytes(3) :
-                Success(new[] { "LD", "A", $"(${ReadU16(bytes, 1):X4})" }, bytes, address, 3),
+                Success("LD", new List<IOperand> { new Z80RegisterOperand(Z80Register.A), new Z80IndirectAddressOperand(ReadU16(bytes, 1)) }, bytes, address, 3),
 
             // Single byte combos
-            0x09 => Success("ADD", "HL", "BC", bytes, address, 1),
-            0x19 => Success("ADD", "HL", "DE", bytes, address, 1),
-            0x29 => Success("ADD", "HL", "HL", bytes, address, 1),
-            0x39 => Success("ADD", "HL", "SP", bytes, address, 1),
+            0x09 => Success("ADD", new List<IOperand> { R16(Z80Register16.HL), R16(Z80Register16.BC) }, bytes, address, 1),
+            0x19 => Success("ADD", new List<IOperand> { R16(Z80Register16.HL), R16(Z80Register16.DE) }, bytes, address, 1),
+            0x29 => Success("ADD", new List<IOperand> { R16(Z80Register16.HL), R16(Z80Register16.HL) }, bytes, address, 1),
+            0x39 => Success("ADD", new List<IOperand> { R16(Z80Register16.HL), R16(Z80Register16.SP) }, bytes, address, 1),
 
             // 16-bit INC/DEC
-            0x03 or 0x13 or 0x23 or 0x33 =>
-                Success(new[] { "INC", Register16[opcode >> 4] }, bytes, address, 1),
-            0x0B or 0x1B or 0x2B or 0x3B =>
-                Success(new[] { "DEC", Register16[opcode >> 4] }, bytes, address, 1),
+            0x03 => Success("INC", new List<IOperand> { R16(Z80Register16.BC) }, bytes, address, 1),
+            0x13 => Success("INC", new List<IOperand> { R16(Z80Register16.DE) }, bytes, address, 1),
+            0x23 => Success("INC", new List<IOperand> { R16(Z80Register16.HL) }, bytes, address, 1),
+            0x33 => Success("INC", new List<IOperand> { R16(Z80Register16.SP) }, bytes, address, 1),
+            0x0B => Success("DEC", new List<IOperand> { R16(Z80Register16.BC) }, bytes, address, 1),
+            0x1B => Success("DEC", new List<IOperand> { R16(Z80Register16.DE) }, bytes, address, 1),
+            0x2B => Success("DEC", new List<IOperand> { R16(Z80Register16.HL) }, bytes, address, 1),
+            0x3B => Success("DEC", new List<IOperand> { R16(Z80Register16.SP) }, bytes, address, 1),
             
-            0x0A => Success(new[] { "LD", "A", "(BC)" }, bytes, address, 1),
-            0x12 => Success(new[] { "LD", "(DE)", "A" }, bytes, address, 1),
-            0x1A => Success(new[] { "LD", "A", "(DE)" }, bytes, address, 1),
+            0x0A => Success("LD", new List<IOperand> { new Z80RegisterOperand(Z80Register.A), new Z80IndirectOperand(Z80Register16.BC) }, bytes, address, 1),
+            0x12 => Success("LD", new List<IOperand> { new Z80IndirectOperand(Z80Register16.DE), new Z80RegisterOperand(Z80Register.A) }, bytes, address, 1),
+            0x1A => Success("LD", new List<IOperand> { new Z80RegisterOperand(Z80Register.A), new Z80IndirectOperand(Z80Register16.DE) }, bytes, address, 1),
 
             // Special control
-            0x08 => Success(new[] { "EX", "AF", "AF'" }, bytes, address, 1),
+            0x08 => Success("EX", new List<IOperand> { new Z80Register16Operand(Z80Register16.BC), new Z80SpecialRegisterOperand("AF'") }, bytes, address, 1),
             0xD9 => Success("EXX", bytes, address, 1),
-            0xE3 => Success(new[] { "EX", "(SP)", "HL" }, bytes, address, 1),
-            0xEB => Success(new[] { "EX", "DE", "HL" }, bytes, address, 1),
+            0xE3 => Success("EX", new List<IOperand> { new Z80SpecialRegisterOperand("(SP)"), new Z80Register16Operand(Z80Register16.HL) }, bytes, address, 1),
+            0xEB => Success("EX", new List<IOperand> { new Z80Register16Operand(Z80Register16.DE), new Z80Register16Operand(Z80Register16.HL) }, bytes, address, 1),
             
             // DJNZ - branch with displacement
             0x10 => bytes.Length < 2 ? DecodeResult.NeedMoreBytes(2) :
-                Success(new[] { "DJNZ", $"${(address + 2 + (ulong)(long)(sbyte)bytes[1]):X4}" }, bytes, address, 2, isBranch: true),
+                Success("DJNZ", new List<IOperand> { new Z80RelativeOperand(address + 2 + (ulong)(long)(sbyte)bytes[1]) }, bytes, address, 2, isBranch: true),
             
             // JR - unconditional branch
             0x18 => bytes.Length < 2 ? DecodeResult.NeedMoreBytes(2) :
-                Success(new[] { "JR", $"${(address + 2 + (ulong)(long)(sbyte)bytes[1]):X4}" }, bytes, address, 2, isBranch: true),
+                Success("JR", new List<IOperand> { new Z80RelativeOperand(address + 2 + (ulong)(long)(sbyte)bytes[1]) }, bytes, address, 2, isBranch: true),
             
             // JR cc - conditional branch
             0x20 or 0x28 or 0x30 or 0x38 => 
                 bytes.Length < 2 ? DecodeResult.NeedMoreBytes(2) :
-                Success(new[] { "JR", Conditions[(opcode >> 3) & 3], $"${(address + 2 + (ulong)(long)(sbyte)bytes[1]):X4}" }, bytes, address, 2, isBranch: true),
+                Success("JR", new List<IOperand> { new Z80ConditionOperand((opcode >> 3) & 3), new Z80RelativeOperand(address + 2 + (ulong)(long)(sbyte)bytes[1]) }, bytes, address, 2, isBranch: true),
             
             // Register-to-register LD
             >= 0x40 and <= 0x7F when opcode != 0x76 =>
-                Success(new[] { "LD", Registers[(opcode >> 3) & 7], Registers[opcode & 7] }, bytes, address, 1),
+                Success("LD", (Z80Register)((opcode >> 3) & 7), (Z80Register)(opcode & 7), bytes, address, 1),
             
             // 8-bit ALU operations (ADD, ADC, SUB, SBC, AND, XOR, OR, CP)
             >= 0x80 and <= 0xBF =>
-                Success(new[] { GetAluMnemonic(opcode), "A", Registers[opcode & 7] }, bytes, address, 1),
+                Success(GetAluMnemonic(opcode), new List<IOperand> { new Z80RegisterOperand(Z80Register.A), new Z80RegisterOperand((Z80Register)(opcode & 7)) }, bytes, address, 1),
 
             // ALU with immediate
             0xC6 or 0xCE or 0xD6 or 0xDE or 0xE6 or 0xEE or 0xF6 or 0xFE =>
                 bytes.Length < 2 ? DecodeResult.NeedMoreBytes(2) :
-                Success(new[] { GetAluMnemonic(opcode), "A", $"#{bytes[1]:X2}" }, bytes, address, 2),
+                Success(GetAluMnemonic(opcode), new List<IOperand> { new Z80RegisterOperand(Z80Register.A), new Z80ImmediateOperand(bytes[1], 1) }, bytes, address, 2),
 
             // Return
             0xC0 or 0xC8 or 0xD0 or 0xD8 or 0xE0 or 0xE8 or 0xF0 or 0xF8 =>
-                Success(new[] { "RET", Conditions[(opcode >> 3) & 7] }, bytes, address, 1, isBranch: true),
+                Success("RET", new List<IOperand> { new Z80ConditionOperand((opcode >> 3) & 7) }, bytes, address, 1, isBranch: true),
             0xC9 => Success("RET", bytes, address, 1, isTerminator: true),
 
             // Jump and call - conditional
             0xC2 or 0xCA or 0xD2 or 0xDA or 0xE2 or 0xEA or 0xF2 or 0xFA =>
                 bytes.Length < 3 ? DecodeResult.NeedMoreBytes(3) :
-                Success(new[] { "JP", Conditions[(opcode >> 3) & 7], $"${ReadU16(bytes, 1):X4}" }, bytes, address, 3, isBranch: true),
+                Success("JP", new List<IOperand> { new Z80ConditionOperand((opcode >> 3) & 7), new Z80AddressOperand(ReadU16(bytes, 1)) }, bytes, address, 3, isBranch: true),
             0xC4 or 0xCC or 0xD4 or 0xDC or 0xE4 or 0xEC or 0xF4 or 0xFC =>
                 bytes.Length < 3 ? DecodeResult.NeedMoreBytes(3) :
-                Success(new[] { "CALL", Conditions[(opcode >> 3) & 7], $"${ReadU16(bytes, 1):X4}" }, bytes, address, 3, isBranch: true),
+                Success("CALL", new List<IOperand> { new Z80ConditionOperand((opcode >> 3) & 7), new Z80AddressOperand(ReadU16(bytes, 1)) }, bytes, address, 3, isBranch: true),
 
             // Jump and call - unconditional
             0xC3 => bytes.Length < 3 ? DecodeResult.NeedMoreBytes(3) :
-                Success(new[] { "JP", $"${ReadU16(bytes, 1):X4}" }, bytes, address, 3, isBranch: true, isTerminator: true),
+                Success("JP", new List<IOperand> { new Z80AddressOperand(ReadU16(bytes, 1)) }, bytes, address, 3, isBranch: true, isTerminator: true),
             0xCD => bytes.Length < 3 ? DecodeResult.NeedMoreBytes(3) :
-                Success(new[] { "CALL", $"${ReadU16(bytes, 1):X4}" }, bytes, address, 3, isBranch: true),
+                Success("CALL", new List<IOperand> { new Z80AddressOperand(ReadU16(bytes, 1)) }, bytes, address, 3, isBranch: true),
 
             // Push/Pop
             0xC1 or 0xD1 or 0xE1 or 0xF1 =>
-                Success(new[] { "POP", Register16[(opcode >> 4) & 3] }, bytes, address, 1),
+                Success("POP", (Z80Register16)((opcode >> 4) & 3), bytes, address, 1),
             0xC5 or 0xD5 or 0xE5 or 0xF5 =>
-                Success(new[] { "PUSH", Register16[(opcode >> 4) & 3] }, bytes, address, 1),
+                Success("PUSH", (Z80Register16)((opcode >> 4) & 3), bytes, address, 1),
 
             // RST - Restart
             0xC7 or 0xCF or 0xD7 or 0xDF or 0xE7 or 0xEF or 0xF7 or 0xFF =>
-                Success(new[] { "RST", $"${(((opcode >> 3) & 7) * 8):X4}" }, bytes, address, 1, isBranch: true, isTerminator: true),    // RST vectors often change return address
+                Success("RST", new List<IOperand> { new Z80AddressOperand((ulong)(((opcode >> 3) & 7) * 8)) }, bytes, address, 1, isBranch: true, isTerminator: true),
 
             // I/O
             0xDB => bytes.Length < 2 ? DecodeResult.NeedMoreBytes(2) :
-                Success(new[] { "IN", "A", $"#{bytes[1]:X2}" }, bytes, address, 2),
+                Success("IN", new List<IOperand> { new Z80RegisterOperand(Z80Register.A), new Z80ImmediateOperand(bytes[1], 1) }, bytes, address, 2),
             0xD3 => bytes.Length < 2 ? DecodeResult.NeedMoreBytes(2) :
-                Success(new[] { "OUT", $"#{bytes[1]:X2}", "A" }, bytes, address, 2),
+                Success("OUT", new List<IOperand> { new Z80ImmediateOperand(bytes[1], 1), new Z80RegisterOperand(Z80Register.A) }, bytes, address, 2),
 
             // Control
             0xF3 => Success("DI", bytes, address, 1),
-            0xF9 => Success(new[] { "LD", "SP", "HL" }, bytes, address, 1),
+            0xF9 => Success("LD", new List<IOperand> { new Z80Register16Operand(Z80Register16.SP), new Z80Register16Operand(Z80Register16.HL) }, bytes, address, 1),
             0xFB => Success("EI", bytes, address, 1),
 
             // CB prefix (bit operations)
@@ -224,11 +241,13 @@ internal class Z80Disassembler : DisassemblerBase
             new[] { "SET", "SET", "SET", "SET", "SET", "SET", "SET", "SET" }
         };
 
-        var mnemonic = mnemonics[x][z >= 8 ? 0 : (y < 3 ? 0 : 1)];
-        if (x == 1 || x == 2 || x == 3)
-            return Success(new[] { mnemonic, y.ToString(), Registers[z] }, bytes, address, 2);
+        var mnemonic = mnemonics[x][y];
+        var targetReg = R((Z80Register)z);
         
-        return Success(new[] { mnemonic, Registers[z] }, bytes, address, 2);
+        if (x == 1 || x == 2 || x == 3)
+            return Success(mnemonic, new List<IOperand> { new Z80LiteralOperand((ulong)y), targetReg }, bytes, address, 2);
+        
+        return Success(mnemonic, new List<IOperand> { targetReg }, bytes, address, 2);
     }
 
     private DecodeResult DecodeED(ReadOnlySpan<byte> bytes, ulong address)
@@ -240,14 +259,14 @@ internal class Z80Disassembler : DisassemblerBase
             // Single byte ED instructions
             0x44 => Success("NEG", bytes, address, 2),
             0x45 => Success("RETN", bytes, address, 2, isBranch: true, isTerminator: true),
-            0x46 => Success(new[] { "IM", "0" }, bytes, address, 2),
-            0x47 => Success(new[] { "LD", "I", "A" }, bytes, address, 2),
+            0x46 => Success("IM", new List<IOperand> { new Z80LiteralOperand(0) }, bytes, address, 2),
+            0x47 => Success("LD", new List<IOperand> { SR("I"), R(Z80Register.A) }, bytes, address, 2),
             0x4D => Success("RETI", bytes, address, 2, isBranch: true, isTerminator: true),
-            0x4F => Success(new[] { "LD", "R", "A" }, bytes, address, 2),
-            0x56 => Success(new[] { "IM", "1" }, bytes, address, 2),
-            0x57 => Success(new[] { "LD", "A", "I" }, bytes, address, 2),
-            0x5E => Success(new[] { "IM", "2" }, bytes, address, 2),
-            0x5F => Success(new[] { "LD", "A", "R" }, bytes, address, 2),
+            0x4F => Success("LD", new List<IOperand> { SR("R"), R(Z80Register.A) }, bytes, address, 2),
+            0x56 => Success("IM", new List<IOperand> { new Z80LiteralOperand(1) }, bytes, address, 2),
+            0x57 => Success("LD", new List<IOperand> { R(Z80Register.A), SR("I") }, bytes, address, 2),
+            0x5E => Success("IM", new List<IOperand> { new Z80LiteralOperand(2) }, bytes, address, 2),
+            0x5F => Success("LD", new List<IOperand> { R(Z80Register.A), SR("R") }, bytes, address, 2),
             0x67 => Success("RRD", bytes, address, 2),
             0x6F => Success("RLD", bytes, address, 2),
             
@@ -269,23 +288,46 @@ internal class Z80Disassembler : DisassemblerBase
             0xBA => Success("INDR", bytes, address, 2, isTerminator: true),
             0xBB => Success("OTDR", bytes, address, 2, isTerminator: true),
             
-            // 16-bit register loads with (nn)
-            0x43 or 0x53 or 0x63 or 0x73 => bytes.Length < 4 ? DecodeResult.NeedMoreBytes(4) :
-                Success(new[] { "LD", $"(${ReadU16(bytes, 2):X4})", Get16BitRegED(secondByte) }, bytes, address, 4),
-            0x4B or 0x5B or 0x6B or 0x7B => bytes.Length < 4 ? DecodeResult.NeedMoreBytes(4) :
-                Success(new[] { "LD", Get16BitRegED(secondByte), $"(${ReadU16(bytes, 2):X4})" }, bytes, address, 4),
+            0x43 => bytes.Length < 4 ? DecodeResult.NeedMoreBytes(4) :
+                Success("LD", new List<IOperand> { IndAddr(ReadU16(bytes, 2)), R16(Z80Register16.BC) }, bytes, address, 4),
+            0x53 => bytes.Length < 4 ? DecodeResult.NeedMoreBytes(4) :
+                Success("LD", new List<IOperand> { IndAddr(ReadU16(bytes, 2)), R16(Z80Register16.DE) }, bytes, address, 4),
+            0x63 => bytes.Length < 4 ? DecodeResult.NeedMoreBytes(4) :
+                Success("LD", new List<IOperand> { IndAddr(ReadU16(bytes, 2)), R16(Z80Register16.HL) }, bytes, address, 4),
+            0x73 => bytes.Length < 4 ? DecodeResult.NeedMoreBytes(4) :
+                Success("LD", new List<IOperand> { IndAddr(ReadU16(bytes, 2)), R16(Z80Register16.SP) }, bytes, address, 4),
+            0x4B => bytes.Length < 4 ? DecodeResult.NeedMoreBytes(4) :
+                Success("LD", new List<IOperand> { R16(Z80Register16.BC), IndAddr(ReadU16(bytes, 2)) }, bytes, address, 4),
+            0x5B => bytes.Length < 4 ? DecodeResult.NeedMoreBytes(4) :
+                Success("LD", new List<IOperand> { R16(Z80Register16.DE), IndAddr(ReadU16(bytes, 2)) }, bytes, address, 4),
+            0x6B => bytes.Length < 4 ? DecodeResult.NeedMoreBytes(4) :
+                Success("LD", new List<IOperand> { R16(Z80Register16.HL), IndAddr(ReadU16(bytes, 2)) }, bytes, address, 4),
+            0x7B => bytes.Length < 4 ? DecodeResult.NeedMoreBytes(4) :
+                Success("LD", new List<IOperand> { R16(Z80Register16.SP), IndAddr(ReadU16(bytes, 2)) }, bytes, address, 4),
             
-            // 16-bit arithmetic with HL
-            0x42 or 0x52 or 0x62 or 0x72 =>
-                Success(new[] { "SBC", "HL", Get16BitRegED(secondByte) }, bytes, address, 2),
-            0x4A or 0x5A or 0x6A or 0x7A =>
-                Success(new[] { "ADC", "HL", Get16BitRegED(secondByte) }, bytes, address, 2),
+            0x42 => Success("SBC", new List<IOperand> { R16(Z80Register16.HL), R16(Z80Register16.BC) }, bytes, address, 2),
+            0x52 => Success("SBC", new List<IOperand> { R16(Z80Register16.HL), R16(Z80Register16.DE) }, bytes, address, 2),
+            0x62 => Success("SBC", new List<IOperand> { R16(Z80Register16.HL), R16(Z80Register16.HL) }, bytes, address, 2),
+            0x72 => Success("SBC", new List<IOperand> { R16(Z80Register16.HL), R16(Z80Register16.SP) }, bytes, address, 2),
+            0x4A => Success("ADC", new List<IOperand> { R16(Z80Register16.HL), R16(Z80Register16.BC) }, bytes, address, 2),
+            0x5A => Success("ADC", new List<IOperand> { R16(Z80Register16.HL), R16(Z80Register16.DE) }, bytes, address, 2),
+            0x6A => Success("ADC", new List<IOperand> { R16(Z80Register16.HL), R16(Z80Register16.HL) }, bytes, address, 2),
+            0x7A => Success("ADC", new List<IOperand> { R16(Z80Register16.HL), R16(Z80Register16.SP) }, bytes, address, 2),
             
-            // IN/OUT instructions
-            >= 0x40 and <= 0x78 when (secondByte & 0x07) == 0x00 =>
-                Success(new[] { "IN", GetRegED((secondByte >> 3) & 7), "(C)" }, bytes, address, 2),
-            >= 0x41 and <= 0x79 when (secondByte & 0x07) == 0x01 =>
-                Success(new[] { "OUT", "(C)", GetRegED((secondByte >> 3) & 7) }, bytes, address, 2),
+            0x40 => Success("IN", new List<IOperand> { R(Z80Register.B), SR("(C)") }, bytes, address, 2),
+            0x48 => Success("IN", new List<IOperand> { R(Z80Register.C), SR("(C)") }, bytes, address, 2),
+            0x50 => Success("IN", new List<IOperand> { R(Z80Register.D), SR("(C)") }, bytes, address, 2),
+            0x58 => Success("IN", new List<IOperand> { R(Z80Register.E), SR("(C)") }, bytes, address, 2),
+            0x60 => Success("IN", new List<IOperand> { R(Z80Register.H), SR("(C)") }, bytes, address, 2),
+            0x68 => Success("IN", new List<IOperand> { R(Z80Register.L), SR("(C)") }, bytes, address, 2),
+            0x78 => Success("IN", new List<IOperand> { R(Z80Register.A), SR("(C)") }, bytes, address, 2),
+            0x41 => Success("OUT", new List<IOperand> { SR("(C)"), R(Z80Register.B) }, bytes, address, 2),
+            0x49 => Success("OUT", new List<IOperand> { SR("(C)"), R(Z80Register.C) }, bytes, address, 2),
+            0x51 => Success("OUT", new List<IOperand> { SR("(C)"), R(Z80Register.D) }, bytes, address, 2),
+            0x59 => Success("OUT", new List<IOperand> { SR("(C)"), R(Z80Register.E) }, bytes, address, 2),
+            0x61 => Success("OUT", new List<IOperand> { SR("(C)"), R(Z80Register.H) }, bytes, address, 2),
+            0x69 => Success("OUT", new List<IOperand> { SR("(C)"), R(Z80Register.L) }, bytes, address, 2),
+            0x79 => Success("OUT", new List<IOperand> { SR("(C)"), R(Z80Register.A) }, bytes, address, 2),
             
             _ => Success("ILLEGAL", bytes, address, 2)
         };
@@ -306,28 +348,6 @@ internal class Z80Disassembler : DisassemblerBase
             _ => "???"
         };
     }
-
-    private string Get16BitRegED(byte opcode)
-    {
-        return ((opcode >> 4) & 3) switch
-        {
-            0 => "BC",
-            1 => "DE",
-            2 => "HL",
-            3 => "SP",
-            _ => "??"
-        };
-    }
-    
-    private string GetRegED(int regIndex)
-    {
-        return regIndex switch
-        {
-            0 => "B", 1 => "C", 2 => "D", 3 => "E",
-            4 => "H", 5 => "L", 6 => "(HL)", 7 => "A",
-            _ => "??"
-        };
-    }
     
     private DecodeResult DecodeDD(ReadOnlySpan<byte> bytes, ulong address)
     {
@@ -336,79 +356,81 @@ internal class Z80Disassembler : DisassemblerBase
         return secondByte switch
         {
             // IX register operations
-            0x09 or 0x19 or 0x29 or 0x39 =>
-                Success(new[] { "ADD", "IX", GetIX16Reg(secondByte >> 4) }, bytes, address, 2),
+            0x09 => Success("ADD", new List<IOperand> { SR("IX"), R16(Z80Register16.BC) }, bytes, address, 2),
+            0x19 => Success("ADD", new List<IOperand> { SR("IX"), R16(Z80Register16.DE) }, bytes, address, 2),
+            0x29 => Success("ADD", new List<IOperand> { SR("IX"), SR("IX") }, bytes, address, 2),
+            0x39 => Success("ADD", new List<IOperand> { SR("IX"), R16(Z80Register16.SP) }, bytes, address, 2),
             0x21 => bytes.Length < 4 ? DecodeResult.NeedMoreBytes(4) :
-                Success(new[] { "LD", "IX", $"#{ReadU16(bytes, 2):X4}" }, bytes, address, 4),
+                Success("LD", new List<IOperand> { SR("IX"), Imm(ReadU16(bytes, 2), 2) }, bytes, address, 4),
             0x22 => bytes.Length < 4 ? DecodeResult.NeedMoreBytes(4) :
-                Success(new[] { "LD", $"(${ReadU16(bytes, 2):X4})", "IX" }, bytes, address, 4),
-            0x23 => Success(new[] { "INC", "IX" }, bytes, address, 2),
-            0x24 => Success(new[] { "INC", "IXH" }, bytes, address, 2),
-            0x25 => Success(new[] { "DEC", "IXH" }, bytes, address, 2),
+                Success("LD", new List<IOperand> { IndAddr(ReadU16(bytes, 2)), SR("IX") }, bytes, address, 4),
+            0x23 => Success("INC", new List<IOperand> { SR("IX") }, bytes, address, 2),
+            0x24 => Success("INC", new List<IOperand> { SR("IXH") }, bytes, address, 2),
+            0x25 => Success("DEC", new List<IOperand> { SR("IXH") }, bytes, address, 2),
             0x26 => bytes.Length < 3 ? DecodeResult.NeedMoreBytes(3) :
-                Success(new[] { "LD", "IXH", $"#{bytes[2]:X2}" }, bytes, address, 3),
+                Success("LD", new List<IOperand> { SR("IXH"), Imm(bytes[2]) }, bytes, address, 3),
             0x2A => bytes.Length < 4 ? DecodeResult.NeedMoreBytes(4) :
-                Success(new[] { "LD", "IX", $"(${ReadU16(bytes, 2):X4})" }, bytes, address, 4),
-            0x2B => Success(new[] { "DEC", "IX" }, bytes, address, 2),
-            0x2C => Success(new[] { "INC", "IXL" }, bytes, address, 2),
-            0x2D => Success(new[] { "DEC", "IXL" }, bytes, address, 2),
+                Success("LD", new List<IOperand> { SR("IX"), IndAddr(ReadU16(bytes, 2)) }, bytes, address, 4),
+            0x2B => Success("DEC", new List<IOperand> { SR("IX") }, bytes, address, 2),
+            0x2C => Success("INC", new List<IOperand> { SR("IXL") }, bytes, address, 2),
+            0x2D => Success("DEC", new List<IOperand> { SR("IXL") }, bytes, address, 2),
             0x2E => bytes.Length < 3 ? DecodeResult.NeedMoreBytes(3) :
-                Success(new[] { "LD", "IXL", $"#{bytes[2]:X2}" }, bytes, address, 3),
-            0xE1 => Success(new[] { "POP", "IX" }, bytes, address, 2),
-            0xE3 => Success(new[] { "EX", "(SP)", "IX" }, bytes, address, 2),
-            0xE5 => Success(new[] { "PUSH", "IX" }, bytes, address, 2),
-            0xE9 => Success(new[] { "JP", "(IX)" }, bytes, address, 2, isBranch: true, isTerminator: true),
-            0xF9 => Success(new[] { "LD", "SP", "IX" }, bytes, address, 2),
+                Success("LD", new List<IOperand> { SR("IXL"), Imm(bytes[2]) }, bytes, address, 3),
+            0xE1 => Success("POP", new List<IOperand> { SR("IX") }, bytes, address, 2),
+            0xE3 => Success("EX", new List<IOperand> { SR("(SP)"), SR("IX") }, bytes, address, 2),
+            0xE5 => Success("PUSH", new List<IOperand> { SR("IX") }, bytes, address, 2),
+            0xE9 => Success("JP", new List<IOperand> { SR("(IX)") }, bytes, address, 2, isBranch: true, isTerminator: true),
+            0xF9 => Success("LD", new List<IOperand> { R16(Z80Register16.SP), SR("IX") }, bytes, address, 2),
             
             // IX+displacement operations
             0x34 or 0x35 => bytes.Length < 3 ? DecodeResult.NeedMoreBytes(3) :
-                Success(new[] { secondByte == 0x34 ? "INC" : "DEC", $"(IX{FormatDisplacement((sbyte)bytes[2])})" }, bytes, address, 3),
+                Success(secondByte == 0x34 ? "INC" : "DEC", new List<IOperand> { Idx(Z80IndexRegister.IX, (sbyte)bytes[2]) }, bytes, address, 3),
             0x36 => bytes.Length < 4 ? DecodeResult.NeedMoreBytes(4) :
-                Success(new[] { "LD", $"(IX{FormatDisplacement((sbyte)bytes[2])})", $"#{bytes[3]:X2}" }, bytes, address, 4),
+                Success("LD", new List<IOperand> { Idx(Z80IndexRegister.IX, (sbyte)bytes[2]), Imm(bytes[3]) }, bytes, address, 4),
             
-            // LD operations with IXH/IXL (0x44-0x45, 0x4C-0x4D, 0x54-0x55, 0x5C-0x5D, 0x60-0x6F, 0x7C-0x7D)
-            0x44 => Success(new[] { "LD", "B", "IXH" }, bytes, address, 2),
-            0x45 => Success(new[] { "LD", "B", "IXL" }, bytes, address, 2),
-            0x4C => Success(new[] { "LD", "C", "IXH" }, bytes, address, 2),
-            0x4D => Success(new[] { "LD", "C", "IXL" }, bytes, address, 2),
-            0x54 => Success(new[] { "LD", "D", "IXH" }, bytes, address, 2),
-            0x55 => Success(new[] { "LD", "D", "IXL" }, bytes, address, 2),
-            0x5C => Success(new[] { "LD", "E", "IXH" }, bytes, address, 2),
-            0x5D => Success(new[] { "LD", "E", "IXL" }, bytes, address, 2),
-            0x60 => Success(new[] { "LD", "IXH", "B" }, bytes, address, 2),
-            0x61 => Success(new[] { "LD", "IXH", "C" }, bytes, address, 2),
-            0x62 => Success(new[] { "LD", "IXH", "D" }, bytes, address, 2),
-            0x63 => Success(new[] { "LD", "IXH", "E" }, bytes, address, 2),
-            0x64 => Success(new[] { "LD", "IXH", "IXH" }, bytes, address, 2),
-            0x65 => Success(new[] { "LD", "IXH", "IXL" }, bytes, address, 2),
-            0x67 => Success(new[] { "LD", "IXH", "A" }, bytes, address, 2),
-            0x68 => Success(new[] { "LD", "IXL", "B" }, bytes, address, 2),
-            0x69 => Success(new[] { "LD", "IXL", "C" }, bytes, address, 2),
-            0x6A => Success(new[] { "LD", "IXL", "D" }, bytes, address, 2),
-            0x6B => Success(new[] { "LD", "IXL", "E" }, bytes, address, 2),
-            0x6C => Success(new[] { "LD", "IXL", "IXH" }, bytes, address, 2),
-            0x6D => Success(new[] { "LD", "IXL", "IXL" }, bytes, address, 2),
-            0x6F => Success(new[] { "LD", "IXL", "A" }, bytes, address, 2),
-            0x7C => Success(new[] { "LD", "A", "IXH" }, bytes, address, 2),
-            0x7D => Success(new[] { "LD", "A", "IXL" }, bytes, address, 2),
+            // LD operations with IXH/IXL
+            0x44 => Success("LD", new List<IOperand> { R(Z80Register.B), SR("IXH") }, bytes, address, 2),
+            0x45 => Success("LD", new List<IOperand> { R(Z80Register.B), SR("IXL") }, bytes, address, 2),
+            0x4C => Success("LD", new List<IOperand> { R(Z80Register.C), SR("IXH") }, bytes, address, 2),
+            0x4D => Success("LD", new List<IOperand> { R(Z80Register.C), SR("IXL") }, bytes, address, 2),
+            0x54 => Success("LD", new List<IOperand> { R(Z80Register.D), SR("IXH") }, bytes, address, 2),
+            0x55 => Success("LD", new List<IOperand> { R(Z80Register.D), SR("IXL") }, bytes, address, 2),
+            0x5C => Success("LD", new List<IOperand> { R(Z80Register.E), SR("IXH") }, bytes, address, 2),
+            0x5D => Success("LD", new List<IOperand> { R(Z80Register.E), SR("IXL") }, bytes, address, 2),
+            0x60 => Success("LD", new List<IOperand> { SR("IXH"), R(Z80Register.B) }, bytes, address, 2),
+            0x61 => Success("LD", new List<IOperand> { SR("IXH"), R(Z80Register.C) }, bytes, address, 2),
+            0x62 => Success("LD", new List<IOperand> { SR("IXH"), R(Z80Register.D) }, bytes, address, 2),
+            0x63 => Success("LD", new List<IOperand> { SR("IXH"), R(Z80Register.E) }, bytes, address, 2),
+            0x64 => Success("LD", new List<IOperand> { SR("IXH"), SR("IXH") }, bytes, address, 2),
+            0x65 => Success("LD", new List<IOperand> { SR("IXH"), SR("IXL") }, bytes, address, 2),
+            0x67 => Success("LD", new List<IOperand> { SR("IXH"), R(Z80Register.A) }, bytes, address, 2),
+            0x68 => Success("LD", new List<IOperand> { SR("IXL"), R(Z80Register.B) }, bytes, address, 2),
+            0x69 => Success("LD", new List<IOperand> { SR("IXL"), R(Z80Register.C) }, bytes, address, 2),
+            0x6A => Success("LD", new List<IOperand> { SR("IXL"), R(Z80Register.D) }, bytes, address, 2),
+            0x6B => Success("LD", new List<IOperand> { SR("IXL"), R(Z80Register.E) }, bytes, address, 2),
+            0x6C => Success("LD", new List<IOperand> { SR("IXL"), SR("IXH") }, bytes, address, 2),
+            0x6D => Success("LD", new List<IOperand> { SR("IXL"), SR("IXL") }, bytes, address, 2),
+            0x6F => Success("LD", new List<IOperand> { SR("IXL"), R(Z80Register.A) }, bytes, address, 2),
+            0x7C => Success("LD", new List<IOperand> { R(Z80Register.A), SR("IXH") }, bytes, address, 2),
+            0x7D => Success("LD", new List<IOperand> { R(Z80Register.A), SR("IXL") }, bytes, address, 2),
             
             // ALU operations with IXH/IXL
-            0x84 => Success(new[] { "ADD", "A", "IXH" }, bytes, address, 2),
-            0x85 => Success(new[] { "ADD", "A", "IXL" }, bytes, address, 2),
-            0x8C => Success(new[] { "ADC", "A", "IXH" }, bytes, address, 2),
-            0x8D => Success(new[] { "ADC", "A", "IXL" }, bytes, address, 2),
-            0x94 => Success(new[] { "SUB", "A", "IXH" }, bytes, address, 2),
-            0x95 => Success(new[] { "SUB", "A", "IXL" }, bytes, address, 2),
-            0x9C => Success(new[] { "SBC", "A", "IXH" }, bytes, address, 2),
-            0x9D => Success(new[] { "SBC", "A", "IXL" }, bytes, address, 2),
-            0xA4 => Success(new[] { "AND", "A", "IXH" }, bytes, address, 2),
-            0xA5 => Success(new[] { "AND", "A", "IXL" }, bytes, address, 2),
-            0xAC => Success(new[] { "XOR", "A", "IXH" }, bytes, address, 2),
-            0xAD => Success(new[] { "XOR", "A", "IXL" }, bytes, address, 2),
-            0xB4 => Success(new[] { "OR", "A", "IXH" }, bytes, address, 2),
-            0xB5 => Success(new[] { "OR", "A", "IXL" }, bytes, address, 2),
-            0xBC => Success(new[] { "CP", "A", "IXH" }, bytes, address, 2),
-            0xBD => Success(new[] { "CP", "A", "IXL" }, bytes, address, 2),
+            0x84 => Success("ADD", new List<IOperand> { R(Z80Register.A), SR("IXH") }, bytes, address, 2),
+            0x85 => Success("ADD", new List<IOperand> { R(Z80Register.A), SR("IXL") }, bytes, address, 2),
+            0x8C => Success("ADC", new List<IOperand> { R(Z80Register.A), SR("IXH") }, bytes, address, 2),
+            0x8D => Success("ADC", new List<IOperand> { R(Z80Register.A), SR("IXL") }, bytes, address, 2),
+            0x94 => Success("SUB", new List<IOperand> { R(Z80Register.A), SR("IXH") }, bytes, address, 2),
+            0x95 => Success("SUB", new List<IOperand> { R(Z80Register.A), SR("IXL") }, bytes, address, 2),
+            0x9C => Success("SBC", new List<IOperand> { R(Z80Register.A), SR("IXH") }, bytes, address, 2),
+            0x9D => Success("SBC", new List<IOperand> { R(Z80Register.A), SR("IXL") }, bytes, address, 2),
+            0xA4 => Success("AND", new List<IOperand> { R(Z80Register.A), SR("IXH") }, bytes, address, 2),
+            0xA5 => Success("AND", new List<IOperand> { R(Z80Register.A), SR("IXL") }, bytes, address, 2),
+            0xAC => Success("XOR", new List<IOperand> { R(Z80Register.A), SR("IXH") }, bytes, address, 2),
+            0xAD => Success("XOR", new List<IOperand> { R(Z80Register.A), SR("IXL") }, bytes, address, 2),
+            0xB4 => Success("OR", new List<IOperand> { R(Z80Register.A), SR("IXH") }, bytes, address, 2),
+            0xB5 => Success("OR", new List<IOperand> { R(Z80Register.A), SR("IXL") }, bytes, address, 2),
+            0xBC => Success("CP", new List<IOperand> { R(Z80Register.A), SR("IXH") }, bytes, address, 2),
+            0xBD => Success("CP", new List<IOperand> { R(Z80Register.A), SR("IXL") }, bytes, address, 2),
             >= 0x46 and <= 0x7E when secondByte != 0x76 => bytes.Length < 3 ? DecodeResult.NeedMoreBytes(3) :
                 DecodeIXDisplacementLD(bytes, address, secondByte),
                 
@@ -430,79 +452,83 @@ internal class Z80Disassembler : DisassemblerBase
         return secondByte switch
         {
             // IY register operations  
-            0x09 or 0x19 or 0x29 or 0x39 =>
-                Success(new[] { "ADD", "IY", GetIY16Reg(secondByte >> 4) }, bytes, address, 2),
+            0x09 => Success("ADD", new List<IOperand> { SR("IY"), R16(Z80Register16.BC) }, bytes, address, 2),
+            0x19 => Success("ADD", new List<IOperand> { SR("IY"), R16(Z80Register16.DE) }, bytes, address, 2),
+            0x29 => Success("ADD", new List<IOperand> { SR("IY"), SR("IY") }, bytes, address, 2),
+            0x39 => Success("ADD", new List<IOperand> { SR("IY"), R16(Z80Register16.SP) }, bytes, address, 2),
             0x21 => bytes.Length < 4 ? DecodeResult.NeedMoreBytes(4) :
-                Success(new[] { "LD", "IY", $"#{ReadU16(bytes, 2):X4}" }, bytes, address, 4),
+                Success("LD", new List<IOperand> { SR("IY"), Imm(ReadU16(bytes, 2), 2) }, bytes, address, 4),
             0x22 => bytes.Length < 4 ? DecodeResult.NeedMoreBytes(4) :
-                Success(new[] { "LD", $"(${ReadU16(bytes, 2):X4})", "IY" }, bytes, address, 4),
-            0x23 => Success(new[] { "INC", "IY" }, bytes, address, 2),
-            0x24 => Success(new[] { "INC", "IYH" }, bytes, address, 2),
-            0x25 => Success(new[] { "DEC", "IYH" }, bytes, address, 2),
+                Success("LD", new List<IOperand> { IndAddr(ReadU16(bytes, 2)), SR("IY") }, bytes, address, 4),
+            0x23 => Success("INC", new List<IOperand> { SR("IY") }, bytes, address, 2),
+            0x24 => Success("INC", new List<IOperand> { SR("IYH") }, bytes, address, 2),
+            0x25 => Success("DEC", new List<IOperand> { SR("IYH") }, bytes, address, 2),
             0x26 => bytes.Length < 3 ? DecodeResult.NeedMoreBytes(3) :
-                Success(new[] { "LD", "IYH", $"#{bytes[2]:X2}" }, bytes, address, 3),
+                Success("LD", new List<IOperand> { SR("IYH"), Imm(bytes[2], 1) }, bytes, address, 3),
             0x2A => bytes.Length < 4 ? DecodeResult.NeedMoreBytes(4) :
-                Success(new[] { "LD", "IY", $"(${ReadU16(bytes, 2):X4})" }, bytes, address, 4),
-            0x2B => Success(new[] { "DEC", "IY" }, bytes, address, 2),
-            0x2C => Success(new[] { "INC", "IYL" }, bytes, address, 2),
-            0x2D => Success(new[] { "DEC", "IYL" }, bytes, address, 2),
+                Success("LD", new List<IOperand> { SR("IY"), IndAddr(ReadU16(bytes, 2)) }, bytes, address, 4),
+            0x2B => Success("DEC", new List<IOperand> { SR("IY") }, bytes, address, 2),
+            0x2C => Success("INC", new List<IOperand> { SR("IYL") }, bytes, address, 2),
+            0x2D => Success("DEC", new List<IOperand> { SR("IYL") }, bytes, address, 2),
             0x2E => bytes.Length < 3 ? DecodeResult.NeedMoreBytes(3) :
-                Success(new[] { "LD", "IYL", $"#{bytes[2]:X2}" }, bytes, address, 3),
-            0xE1 => Success(new[] { "POP", "IY" }, bytes, address, 2),
-            0xE3 => Success(new[] { "EX", "(SP)", "IY" }, bytes, address, 2),
-            0xE5 => Success(new[] { "PUSH", "IY" }, bytes, address, 2),
-            0xE9 => Success(new[] { "JP", "(IY)" }, bytes, address, 2, isBranch: true, isTerminator: true),
-            0xF9 => Success(new[] { "LD", "SP", "IY" }, bytes, address, 2),
+                Success("LD", new List<IOperand> { SR("IYL"), Imm(bytes[2], 1) }, bytes, address, 3),
+            0xE1 => Success("POP", new List<IOperand> { SR("IY") }, bytes, address, 2),
+            0xE3 => Success("EX", new List<IOperand> { SR("(SP)"), SR("IY") }, bytes, address, 2),
+            0xE5 => Success("PUSH", new List<IOperand> { SR("IY") }, bytes, address, 2),
+            0xE9 => Success("JP", new List<IOperand> { SR("(IY)") }, bytes, address, 2, isBranch: true, isTerminator: true),
+            0xF9 => Success("LD", new List<IOperand> { R16(Z80Register16.SP), SR("IY") }, bytes, address, 2),
             
             // IY+displacement operations
-            0x34 or 0x35 => bytes.Length < 3 ? DecodeResult.NeedMoreBytes(3) :
-                Success(new[] { secondByte == 0x34 ? "INC" : "DEC", $"(IY{FormatDisplacement((sbyte)bytes[2])})" }, bytes, address, 3),
+            0x34 => bytes.Length < 3 ? DecodeResult.NeedMoreBytes(3) :
+                Success("INC", new List<IOperand> { Idx(Z80IndexRegister.IY, (sbyte)bytes[2]) }, bytes, address, 3),
+            0x35 => bytes.Length < 3 ? DecodeResult.NeedMoreBytes(3) :
+                Success("DEC", new List<IOperand> { Idx(Z80IndexRegister.IY, (sbyte)bytes[2]) }, bytes, address, 3),
             0x36 => bytes.Length < 4 ? DecodeResult.NeedMoreBytes(4) :
-                Success(new[] { "LD", $"(IY{FormatDisplacement((sbyte)bytes[2])})", $"#{bytes[3]:X2}" }, bytes, address, 4),
+                Success("LD", new List<IOperand> { Idx(Z80IndexRegister.IY, (sbyte)bytes[2]), Imm(bytes[3], 1) }, bytes, address, 4),
             
             // LD operations with IYH/IYL
-            0x44 => Success(new[] { "LD", "B", "IYH" }, bytes, address, 2),
-            0x45 => Success(new[] { "LD", "B", "IYL" }, bytes, address, 2),
-            0x4C => Success(new[] { "LD", "C", "IYH" }, bytes, address, 2),
-            0x4D => Success(new[] { "LD", "C", "IYL" }, bytes, address, 2),
-            0x54 => Success(new[] { "LD", "D", "IYH" }, bytes, address, 2),
-            0x55 => Success(new[] { "LD", "D", "IYL" }, bytes, address, 2),
-            0x5C => Success(new[] { "LD", "E", "IYH" }, bytes, address, 2),
-            0x5D => Success(new[] { "LD", "E", "IYL" }, bytes, address, 2),
-            0x60 => Success(new[] { "LD", "IYH", "B" }, bytes, address, 2),
-            0x61 => Success(new[] { "LD", "IYH", "C" }, bytes, address, 2),
-            0x62 => Success(new[] { "LD", "IYH", "D" }, bytes, address, 2),
-            0x63 => Success(new[] { "LD", "IYH", "E" }, bytes, address, 2),
-            0x64 => Success(new[] { "LD", "IYH", "IYH" }, bytes, address, 2),
-            0x65 => Success(new[] { "LD", "IYH", "IYL" }, bytes, address, 2),
-            0x67 => Success(new[] { "LD", "IYH", "A" }, bytes, address, 2),
-            0x68 => Success(new[] { "LD", "IYL", "B" }, bytes, address, 2),
-            0x69 => Success(new[] { "LD", "IYL", "C" }, bytes, address, 2),
-            0x6A => Success(new[] { "LD", "IYL", "D" }, bytes, address, 2),
-            0x6B => Success(new[] { "LD", "IYL", "E" }, bytes, address, 2),
-            0x6C => Success(new[] { "LD", "IYL", "IYH" }, bytes, address, 2),
-            0x6D => Success(new[] { "LD", "IYL", "IYL" }, bytes, address, 2),
-            0x6F => Success(new[] { "LD", "IYL", "A" }, bytes, address, 2),
-            0x7C => Success(new[] { "LD", "A", "IYH" }, bytes, address, 2),
-            0x7D => Success(new[] { "LD", "A", "IYL" }, bytes, address, 2),
+            0x44 => Success("LD", new List<IOperand> { R(Z80Register.B), SR("IYH") }, bytes, address, 2),
+            0x45 => Success("LD", new List<IOperand> { R(Z80Register.B), SR("IYL") }, bytes, address, 2),
+            0x4C => Success("LD", new List<IOperand> { R(Z80Register.C), SR("IYH") }, bytes, address, 2),
+            0x4D => Success("LD", new List<IOperand> { R(Z80Register.C), SR("IYL") }, bytes, address, 2),
+            0x54 => Success("LD", new List<IOperand> { R(Z80Register.D), SR("IYH") }, bytes, address, 2),
+            0x55 => Success("LD", new List<IOperand> { R(Z80Register.D), SR("IYL") }, bytes, address, 2),
+            0x5C => Success("LD", new List<IOperand> { R(Z80Register.E), SR("IYH") }, bytes, address, 2),
+            0x5D => Success("LD", new List<IOperand> { R(Z80Register.E), SR("IYL") }, bytes, address, 2),
+            0x60 => Success("LD", new List<IOperand> { SR("IYH"), R(Z80Register.B) }, bytes, address, 2),
+            0x61 => Success("LD", new List<IOperand> { SR("IYH"), R(Z80Register.C) }, bytes, address, 2),
+            0x62 => Success("LD", new List<IOperand> { SR("IYH"), R(Z80Register.D) }, bytes, address, 2),
+            0x63 => Success("LD", new List<IOperand> { SR("IYH"), R(Z80Register.E) }, bytes, address, 2),
+            0x64 => Success("LD", new List<IOperand> { SR("IYH"), SR("IYH") }, bytes, address, 2),
+            0x65 => Success("LD", new List<IOperand> { SR("IYH"), SR("IYL") }, bytes, address, 2),
+            0x67 => Success("LD", new List<IOperand> { SR("IYH"), R(Z80Register.A) }, bytes, address, 2),
+            0x68 => Success("LD", new List<IOperand> { SR("IYL"), R(Z80Register.B) }, bytes, address, 2),
+            0x69 => Success("LD", new List<IOperand> { SR("IYL"), R(Z80Register.C) }, bytes, address, 2),
+            0x6A => Success("LD", new List<IOperand> { SR("IYL"), R(Z80Register.D) }, bytes, address, 2),
+            0x6B => Success("LD", new List<IOperand> { SR("IYL"), R(Z80Register.E) }, bytes, address, 2),
+            0x6C => Success("LD", new List<IOperand> { SR("IYL"), SR("IYH") }, bytes, address, 2),
+            0x6D => Success("LD", new List<IOperand> { SR("IYL"), SR("IYL") }, bytes, address, 2),
+            0x6F => Success("LD", new List<IOperand> { SR("IYL"), R(Z80Register.A) }, bytes, address, 2),
+            0x7C => Success("LD", new List<IOperand> { R(Z80Register.A), SR("IYH") }, bytes, address, 2),
+            0x7D => Success("LD", new List<IOperand> { R(Z80Register.A), SR("IYL") }, bytes, address, 2),
             
             // ALU operations with IYH/IYL
-            0x84 => Success(new[] { "ADD", "A", "IYH" }, bytes, address, 2),
-            0x85 => Success(new[] { "ADD", "A", "IYL" }, bytes, address, 2),
-            0x8C => Success(new[] { "ADC", "A", "IYH" }, bytes, address, 2),
-            0x8D => Success(new[] { "ADC", "A", "IYL" }, bytes, address, 2),
-            0x94 => Success(new[] { "SUB", "A", "IYH" }, bytes, address, 2),
-            0x95 => Success(new[] { "SUB", "A", "IYL" }, bytes, address, 2),
-            0x9C => Success(new[] { "SBC", "A", "IYH" }, bytes, address, 2),
-            0x9D => Success(new[] { "SBC", "A", "IYL" }, bytes, address, 2),
-            0xA4 => Success(new[] { "AND", "A", "IYH" }, bytes, address, 2),
-            0xA5 => Success(new[] { "AND", "A", "IYL" }, bytes, address, 2),
-            0xAC => Success(new[] { "XOR", "A", "IYH" }, bytes, address, 2),
-            0xAD => Success(new[] { "XOR", "A", "IYL" }, bytes, address, 2),
-            0xB4 => Success(new[] { "OR", "A", "IYH" }, bytes, address, 2),
-            0xB5 => Success(new[] { "OR", "A", "IYL" }, bytes, address, 2),
-            0xBC => Success(new[] { "CP", "A", "IYH" }, bytes, address, 2),
-            0xBD => Success(new[] { "CP", "A", "IYL" }, bytes, address, 2),
+            0x84 => Success("ADD", new List<IOperand> { R(Z80Register.A), SR("IYH") }, bytes, address, 2),
+            0x85 => Success("ADD", new List<IOperand> { R(Z80Register.A), SR("IYL") }, bytes, address, 2),
+            0x8C => Success("ADC", new List<IOperand> { R(Z80Register.A), SR("IYH") }, bytes, address, 2),
+            0x8D => Success("ADC", new List<IOperand> { R(Z80Register.A), SR("IYL") }, bytes, address, 2),
+            0x94 => Success("SUB", new List<IOperand> { R(Z80Register.A), SR("IYH") }, bytes, address, 2),
+            0x95 => Success("SUB", new List<IOperand> { R(Z80Register.A), SR("IYL") }, bytes, address, 2),
+            0x9C => Success("SBC", new List<IOperand> { R(Z80Register.A), SR("IYH") }, bytes, address, 2),
+            0x9D => Success("SBC", new List<IOperand> { R(Z80Register.A), SR("IYL") }, bytes, address, 2),
+            0xA4 => Success("AND", new List<IOperand> { R(Z80Register.A), SR("IYH") }, bytes, address, 2),
+            0xA5 => Success("AND", new List<IOperand> { R(Z80Register.A), SR("IYL") }, bytes, address, 2),
+            0xAC => Success("XOR", new List<IOperand> { R(Z80Register.A), SR("IYH") }, bytes, address, 2),
+            0xAD => Success("XOR", new List<IOperand> { R(Z80Register.A), SR("IYL") }, bytes, address, 2),
+            0xB4 => Success("OR", new List<IOperand> { R(Z80Register.A), SR("IYH") }, bytes, address, 2),
+            0xB5 => Success("OR", new List<IOperand> { R(Z80Register.A), SR("IYL") }, bytes, address, 2),
+            0xBC => Success("CP", new List<IOperand> { R(Z80Register.A), SR("IYH") }, bytes, address, 2),
+            0xBD => Success("CP", new List<IOperand> { R(Z80Register.A), SR("IYL") }, bytes, address, 2),
             >= 0x46 and <= 0x7E when secondByte != 0x76 => bytes.Length < 3 ? DecodeResult.NeedMoreBytes(3) :
                 DecodeIYDisplacementLD(bytes, address, secondByte),
                 
@@ -522,15 +548,15 @@ internal class Z80Disassembler : DisassemblerBase
         var displacement = (sbyte)bytes[2];
         var opcode = bytes[3];
         var operation = GetCBOperation(opcode);
-        var target = $"(IX{FormatDisplacement(displacement)})";
+        var target = Idx(Z80IndexRegister.IX, displacement);
         
-        if (operation.StartsWith("BIT") || operation.StartsWith("SET") || operation.StartsWith("RES"))
+        if (operation == "BIT" || operation == "SET" || operation == "RES")
         {
             var bitNum = (opcode >> 3) & 7;
-            return Success(new[] { operation.Split(' ')[0], bitNum.ToString(), target }, bytes, address, 4);
+            return Success(operation, new List<IOperand> { new Z80LiteralOperand((ulong)bitNum), target }, bytes, address, 4);
         }
         
-        return Success(new[] { operation, target }, bytes, address, 4);
+        return Success(operation, new List<IOperand> { target }, bytes, address, 4);
     }
     
     private DecodeResult DecodeIYCB(ReadOnlySpan<byte> bytes, ulong address)
@@ -538,15 +564,15 @@ internal class Z80Disassembler : DisassemblerBase
         var displacement = (sbyte)bytes[2];
         var opcode = bytes[3];
         var operation = GetCBOperation(opcode);
-        var target = $"(IY{FormatDisplacement(displacement)})";
+        var target = Idx(Z80IndexRegister.IY, displacement);
         
-        if (operation.StartsWith("BIT") || operation.StartsWith("SET") || operation.StartsWith("RES"))
+        if (operation == "BIT" || operation == "SET" || operation == "RES")
         {
             var bitNum = (opcode >> 3) & 7;
-            return Success(new[] { operation.Split(' ')[0], bitNum.ToString(), target }, bytes, address, 4);
+            return Success(operation, new List<IOperand> { new Z80LiteralOperand((ulong)bitNum), target }, bytes, address, 4);
         }
         
-        return Success(new[] { operation, target }, bytes, address, 4);
+        return Success(operation, new List<IOperand> { target }, bytes, address, 4);
     }
     
     private string GetCBOperation(byte opcode)
@@ -563,32 +589,6 @@ internal class Z80Disassembler : DisassemblerBase
             _ => "???"
         };
     }
-    
-    private string GetIX16Reg(int regIndex)
-    {
-        return regIndex switch
-        {
-            0 => "BC", 1 => "DE", 2 => "IX", 3 => "SP",
-            _ => "??"
-        };
-    }
-    
-    private string GetIY16Reg(int regIndex)
-    {
-        return regIndex switch
-        {
-            0 => "BC", 1 => "DE", 2 => "IY", 3 => "SP",
-            _ => "??"
-        };
-    }
-    
-    private string FormatDisplacement(sbyte displacement)
-    {
-        if (displacement >= 0)
-            return $"+${displacement:X2}";
-        else
-            return $"-${(-displacement):X2}";
-    }
 
     private UInt16 ReadU16(ReadOnlySpan<byte> bytes, int offset)
     {
@@ -598,15 +598,15 @@ internal class Z80Disassembler : DisassemblerBase
     private DecodeResult DecodeIXDisplacementLD(ReadOnlySpan<byte> bytes, ulong address, byte opcode)
     {
         var displacement = (sbyte)bytes[2];
-        var indexedOperand = $"(IX{FormatDisplacement(displacement)})";
+        var indexedOperand = Idx(Z80IndexRegister.IX, displacement);
         
-        var srcReg = Registers[opcode & 7];
-        var dstReg = Registers[(opcode >> 3) & 7];
+        var srcReg = R((Z80Register)(opcode & 7));
+        var dstReg = R((Z80Register)((opcode >> 3) & 7));
         
         if ((opcode & 7) == 6) // Source is (HL) -> (IX+d)
-            return Success(new[] { "LD", dstReg, indexedOperand }, bytes, address, 3);
+            return Success("LD", new List<IOperand> { dstReg, indexedOperand }, bytes, address, 3);
         else if (((opcode >> 3) & 7) == 6) // Dest is (HL) -> (IX+d)
-            return Success(new[] { "LD", indexedOperand, srcReg }, bytes, address, 3);
+            return Success("LD", new List<IOperand> { indexedOperand, srcReg }, bytes, address, 3);
         else
             return Success("ILLEGAL", bytes, address, 2);
     }
@@ -614,15 +614,15 @@ internal class Z80Disassembler : DisassemblerBase
     private DecodeResult DecodeIYDisplacementLD(ReadOnlySpan<byte> bytes, ulong address, byte opcode)
     {
         var displacement = (sbyte)bytes[2];
-        var indexedOperand = $"(IY{FormatDisplacement(displacement)})";
+        var indexedOperand = Idx(Z80IndexRegister.IY, displacement);
         
-        var srcReg = Registers[opcode & 7];
-        var dstReg = Registers[(opcode >> 3) & 7];
+        var srcReg = R((Z80Register)(opcode & 7));
+        var dstReg = R((Z80Register)((opcode >> 3) & 7));
         
         if ((opcode & 7) == 6) // Source is (HL) -> (IY+d)
-            return Success(new[] { "LD", dstReg, indexedOperand }, bytes, address, 3);
+            return Success("LD", new List<IOperand> { dstReg, indexedOperand }, bytes, address, 3);
         else if (((opcode >> 3) & 7) == 6) // Dest is (HL) -> (IY+d)
-            return Success(new[] { "LD", indexedOperand, srcReg }, bytes, address, 3);
+            return Success("LD", new List<IOperand> { indexedOperand, srcReg }, bytes, address, 3);
         else
             return Success("ILLEGAL", bytes, address, 2);
     }
@@ -630,19 +630,19 @@ internal class Z80Disassembler : DisassemblerBase
     private DecodeResult DecodeIXDisplacementALU(ReadOnlySpan<byte> bytes, ulong address, byte opcode)
     {
         var displacement = (sbyte)bytes[2];
-        var indexedOperand = $"(IX{FormatDisplacement(displacement)})";
+        var indexedOperand = Idx(Z80IndexRegister.IX, displacement);
         var aluOp = GetAluMnemonic(opcode);
         
-        return Success(new[] { aluOp, "A", indexedOperand }, bytes, address, 3);
+        return Success(aluOp, new List<IOperand> { R(Z80Register.A), indexedOperand }, bytes, address, 3);
     }
     
     private DecodeResult DecodeIYDisplacementALU(ReadOnlySpan<byte> bytes, ulong address, byte opcode)
     {
         var displacement = (sbyte)bytes[2];
-        var indexedOperand = $"(IY{FormatDisplacement(displacement)})";
+        var indexedOperand = Idx(Z80IndexRegister.IY, displacement);
         var aluOp = GetAluMnemonic(opcode);
         
-        return Success(new[] { aluOp, "A", indexedOperand }, bytes, address, 3);
+        return Success(aluOp, new List<IOperand> { R(Z80Register.A), indexedOperand }, bytes, address, 3);
     }
 
     private DecodeResult Success(string mnemonic, ReadOnlySpan<byte> bytes, ulong address, int size, bool isBranch = false, bool isTerminator = false)
@@ -658,64 +658,13 @@ internal class Z80Disassembler : DisassemblerBase
         return DecodeResult.CreateSuccess(instruction, size);
     }
 
-    private DecodeResult Success(string[] operands, ReadOnlySpan<byte> bytes, ulong address, int size, bool isBranch = false, bool isTerminator = false)
+    /// <summary>
+    /// Success with mnemonic and operand list
+    /// </summary>
+    private DecodeResult Success(string mnemonic, List<IOperand> operands, ReadOnlySpan<byte> bytes, ulong address, int size, bool isBranch = false, bool isTerminator = false)
     {
-        var ops = new List<IOperand>();
-        for (int i = 1; i < operands.Length; i++)
-        {
-            var operand = operands[i];
-            if (operand.StartsWith("#"))
-            {
-                // Immediate value
-                var valueStr = operand[1..];
-                if (ulong.TryParse(valueStr, System.Globalization.NumberStyles.HexNumber, null, out var value))
-                    ops.Add(new Z80ImmediateOperand(value, valueStr.Length <= 2 ? 1 : 2));
-                else
-                    ops.Add(new Z80RegisterOperand(operand));
-            }
-            else if (operand.StartsWith("$"))
-            {
-                // Address
-                var valueStr = operand[1..];
-                if (ulong.TryParse(valueStr, System.Globalization.NumberStyles.HexNumber, null, out var value))
-                    ops.Add(new Z80AddressOperand(value));
-                else
-                    ops.Add(new Z80RegisterOperand(operand));
-            }
-            else if (operand.StartsWith("(") && operand.EndsWith(")"))
-            {
-                // Indirect or indexed operand
-                var inner = operand[1..^1];
-                if (inner.Contains("+") || inner.Contains("-"))
-                {
-                    // Indexed operand like (IX+$10)
-                    ops.Add(new Z80RegisterOperand(operand));
-                }
-                else if (inner.StartsWith("$"))
-                {
-                    // Address indirect like ($1234)
-                    ops.Add(new Z80RegisterOperand(operand));
-                }
-                else
-                {
-                    // Register indirect like (HL)
-                    ops.Add(new Z80IndirectOperand(inner));
-                }
-            }
-            else if (operand.StartsWith("+") || operand.StartsWith("-"))
-            {
-                // Displacement
-                ops.Add(new Z80DisplacementOperand(operand));
-            }
-            else
-            {
-                // Register or literal
-                ops.Add(new Z80RegisterOperand(operand));
-            }
-        }
-        
         var instructionBytes = SliceBytes(bytes, size);
-        var instruction = new Instruction(address, operands[0], ops, instructionBytes, State.Clone());
+        var instruction = new Instruction(address, mnemonic, operands, instructionBytes, State.Clone());
         instruction.IsBranch = isBranch;
         instruction.IsBasicBlockTerminator = isTerminator;
         
@@ -725,13 +674,49 @@ internal class Z80Disassembler : DisassemblerBase
         return DecodeResult.CreateSuccess(instruction, size);
     }
 
-    private DecodeResult Success(string mnemonic, string op1, string op2, ReadOnlySpan<byte> bytes, ulong address, int size)
+    /// <summary>
+    /// Success with mnemonic and single register operand
+    /// </summary>
+    private DecodeResult Success(string mnemonic, Z80Register register, ReadOnlySpan<byte> bytes, ulong address, int size)
     {
-        var instructionBytes = SliceBytes(bytes, size);
-        var ops = new List<IOperand> { new Z80RegisterOperand(op1), new Z80RegisterOperand(op2) };
-        var instruction = new Instruction(address, mnemonic, ops, instructionBytes, State.Clone());
-        instruction.NextAddresses.Add(address + (ulong)size);
-        return DecodeResult.CreateSuccess(instruction, size);
+        var ops = new List<IOperand> { new Z80RegisterOperand(register) };
+        return Success(mnemonic, ops, bytes, address, size);
+    }
+
+    /// <summary>
+    /// Success with mnemonic and single 16-bit register operand
+    /// </summary>
+    private DecodeResult Success(string mnemonic, Z80Register16 register, ReadOnlySpan<byte> bytes, ulong address, int size)
+    {
+        var ops = new List<IOperand> { new Z80Register16Operand(register) };
+        return Success(mnemonic, ops, bytes, address, size);
+    }
+
+    /// <summary>
+    /// Success with mnemonic and two register operands
+    /// </summary>
+    private DecodeResult Success(string mnemonic, Z80Register reg1, Z80Register reg2, ReadOnlySpan<byte> bytes, ulong address, int size)
+    {
+        var ops = new List<IOperand> { new Z80RegisterOperand(reg1), new Z80RegisterOperand(reg2) };
+        return Success(mnemonic, ops, bytes, address, size);
+    }
+
+    /// <summary>
+    /// Success with mnemonic, 8-bit register and immediate value
+    /// </summary>
+    private DecodeResult Success(string mnemonic, Z80Register register, ulong value, ReadOnlySpan<byte> bytes, ulong address, int size)
+    {
+        var ops = new List<IOperand> { new Z80RegisterOperand(register), new Z80ImmediateOperand(value, 1) };
+        return Success(mnemonic, ops, bytes, address, size);
+    }
+
+    /// <summary>
+    /// Success with mnemonic, 16-bit register and immediate value
+    /// </summary>
+    private DecodeResult Success(string mnemonic, Z80Register16 register, ulong value, ReadOnlySpan<byte> bytes, ulong address, int size)
+    {
+        var ops = new List<IOperand> { new Z80Register16Operand(register), new Z80ImmediateOperand(value, 2) };
+        return Success(mnemonic, ops, bytes, address, size);
     }
 
     private void AddNextAddresses(Instruction instruction, ReadOnlySpan<byte> bytes, ulong address, int size, bool isBranch, bool isTerminator)

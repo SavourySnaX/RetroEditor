@@ -48,7 +48,11 @@ public class Plugins
         }
         finally
         {
-            Directory.Delete(settings.RetroCoreFolder, true);
+            try
+            {
+                Directory.Delete(settings.ProjectLocation, true);
+            }
+            catch { }
         }
     }
 
