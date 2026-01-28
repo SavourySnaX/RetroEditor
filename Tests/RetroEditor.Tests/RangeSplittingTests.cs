@@ -23,32 +23,33 @@ namespace RetroEditor.Tests
                 return linearAddress;
             }
 
-            public ulong MapCpuToRegion(ulong cpuAddress, out Source.Internals.ReverseEngineering.Platform.MemoryRegion region)
+            public ulong MapCpuToRegion(ulong cpuAddress, out MemoryRegionKey region)
             {
-                region = Source.Internals.ReverseEngineering.Platform.MemoryRegion.ROM;
+                region = new MemoryRegionKey((uint)MemoryInformationRegion.ROM);
                 return cpuAddress;
             }
 
-            public ulong MapCpuToHardwareAddress(ulong address, out Source.Internals.ReverseEngineering.Platform.MemoryRegion region)
+            public ulong MapCpuToHardwareAddress(ulong address, out MemoryRegionKey region)
             {
-                region = Source.Internals.ReverseEngineering.Platform.MemoryRegion.ROM;
+                region = new MemoryRegionKey((uint)MemoryInformationRegion.ROM);
                 return address;
             }
-
         }
 
         class DummyMemoryInformation : IMemoryInformation
         {
             public string MameViewName { get; }
             public string DisplayName { get; }
+            public MemoryRegionKey RegionKey { get; }
             public bool HasPhysicalData => true;
             public (UInt64 Start, UInt64 End) AddressRange { get; }
 
-            public DummyMemoryInformation(string name, string displayName = null)
+            public DummyMemoryInformation(string name, MemoryRegionKey regionKey, string displayName = null)
             {
                 MameViewName = name;
                 DisplayName = displayName ?? name;
                 AddressRange = (0, UInt64.MaxValue);
+                RegionKey = regionKey;
             }
 
             public IMemoryRegionDataProvider CreateDataProvider()
@@ -61,8 +62,8 @@ namespace RetroEditor.Tests
         {
             public IEnumerable<IMemoryInformation> GetMemoryRegions()
             {
-                yield return new DummyMemoryInformation("Cartridge");
-                yield return new DummyMemoryInformation("RAM");
+                yield return new DummyMemoryInformation("Cartridge", new MemoryRegionKey((uint)MemoryInformationRegion.ROM));
+                yield return new DummyMemoryInformation("RAM", new MemoryRegionKey((uint)MemoryInformationRegion.RAM));
             }
         }
 
@@ -70,9 +71,9 @@ namespace RetroEditor.Tests
         public void TestCodeSplit()
         {
             var mapper = new DummyMapper();
-            var memInfo = new DummyMemoryInformation("Cartridge");
+            var memInfo = new DummyMemoryInformation("Cartridge", new MemoryRegionKey((uint)MemoryInformationRegion.ROM));
             var dataProvider = memInfo.CreateDataProvider();
-            var romDataParser = new RomDataParser("Cartridge", memInfo, (IMemoryRegionDataProvider)dataProvider);
+            var romDataParser = new RomDataParser(memInfo, (IMemoryRegionDataProvider)dataProvider);
             romDataParser.LoadRomData([0x69, 0x42, 0x12, 0x69, 0x42, 0x12, 0x69, 0x42, 0x12, 0x69, 0x42, 0x12]);
             var disassembler = new SNES65816Disassembler();
             var state = (SNES65816State)disassembler.State;
@@ -93,9 +94,9 @@ namespace RetroEditor.Tests
         [Fact]
         public void VerifyDataNextAddress()
         {
-            var memInfo = new DummyMemoryInformation("Cartridge");
+            var memInfo = new DummyMemoryInformation("Cartridge", new MemoryRegionKey((uint)MemoryInformationRegion.ROM));
             var dataProvider = memInfo.CreateDataProvider();
-            var romDataParser = new RomDataParser("Cartridge", memInfo, (IMemoryRegionDataProvider)dataProvider);
+            var romDataParser = new RomDataParser(memInfo, dataProvider);
             romDataParser.LoadRomData(
                 [0x69, 0x42, 0x12, 0x69, 
                  0x42, 0x12, 0x69, 0x42, 

@@ -748,13 +748,11 @@ internal class RomDataParser : IRomDataParser
     private IMemoryRegionDataProvider dataProvider;
     private SymbolProvider symbolProvider;
     private UInt64 minAddress, maxAddress;
-    private string regionName;
     private IMemoryInformation memoryInfo;
 
     public IMemoryInformation MemoryInformation => memoryInfo;
-    public RomDataParser(string regionName, IMemoryInformation memInfo, IMemoryRegionDataProvider provider)
+    public RomDataParser(IMemoryInformation memInfo, IMemoryRegionDataProvider provider)
     {
-        this.regionName = regionName;
         this.memoryInfo = memInfo;
         this.dataProvider = provider;
         this.ranges = new RangeCollection<IRegionInfo>();
@@ -891,7 +889,7 @@ internal class RomDataParser : IRomDataParser
         }
         else
         {
-            throw new InvalidOperationException($"Region {regionName} does not support direct data loading");
+            throw new InvalidOperationException($"Region does not support direct data loading");
         }
     }
 
@@ -960,7 +958,6 @@ internal class RomDataParser : IRomDataParser
         
         var data = new
         {
-            RegionName = regionName,
             Ranges = regionData,
             SymbolProvider = serializableSymbols
         };
@@ -992,40 +989,6 @@ internal class RomDataParser : IRomDataParser
         if (root.TryGetProperty("Ranges", out var rangesElem))
         {
             foreach (var rangeElem in rangesElem.EnumerateArray())
-            {
-                var rangeDict = rangeElem.Deserialize<Dictionary<string, object>>();
-                if (rangeDict != null)
-                {
-                    var range = IRegionInfo.Load(rangeDict, this);
-                    ranges.AddRange(range);
-                }
-            }
-        }
-        // Backward compatibility: try loading old format with MemoryRegions dictionary
-        else if (root.TryGetProperty("MemoryRegions", out var regionsElem))
-        {
-            foreach (var prop in regionsElem.EnumerateObject())
-            {
-                // Load data from matching region name in the saved file
-                if (prop.Name == regionName)
-                {
-                    foreach (var rangeElem in prop.Value.EnumerateArray())
-                    {
-                        var rangeDict = rangeElem.Deserialize<Dictionary<string, object>>();
-                        if (rangeDict != null)
-                        {
-                            var range = IRegionInfo.Load(rangeDict, this);
-                            ranges.AddRange(range);
-                        }
-                    }
-                    break;
-                }
-            }
-        }
-        // Backward compatibility: try loading old RomRanges/RamRanges format
-        else if (root.TryGetProperty("RomRanges", out var romRangesElem))
-        {
-            foreach (var rangeElem in romRangesElem.EnumerateArray())
             {
                 var rangeDict = rangeElem.Deserialize<Dictionary<string, object>>();
                 if (rangeDict != null)
