@@ -688,7 +688,8 @@ internal class CodeRegion : IRegionInfo
     public override LineInfo GetRegionLineInfo(ulong index)
     {
         var I = instructions.ElementAt((int)index);
-        var bytesAtMemory =BytesForLine(I.Value.Address, I.Value.Address+(ulong)I.Value.Bytes.Length-1);
+        var address = I.Key;
+        var bytesAtMemory =BytesForLine(address, address+(ulong)I.Value.Bytes.Length-1);
         var bytesForSpan = BytesForSpan(I.Value.Bytes);
 
         return new LineInfo($"{I.Key:X8}", $" {I.Value.Address:X8} {bytesAtMemory} | {bytesForSpan}", I.Value.InstructionText(Parent.SymbolProvider), $"; {I.Value.cpuState}");

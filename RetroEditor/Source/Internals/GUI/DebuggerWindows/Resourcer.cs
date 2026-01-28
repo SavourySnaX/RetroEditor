@@ -673,7 +673,7 @@ internal class Resourcer : IWindow
                 var mappedAddress = memoryMapper.MapCpuToRegion(autoPC, out var region);
                 //if (region == RetroEditor.Source.Internals.ReverseEngineering.Platform.MemoryRegion.ROM)
                 {
-                    var codeRegionName = GetRegionNameForMemoryType(RetroEditor.Source.Internals.ReverseEngineering.Platform.MemoryRegion.ROM);
+                    var codeRegionName = GetRegionNameForMemoryType(RetroEditor.Source.Internals.ReverseEngineering.Platform.MemoryInformationRegion.ROM);
                     if (!string.IsNullOrEmpty(codeRegionName))
                     {
                         var ranges = romDataParsers[codeRegionName].GetRanges();
@@ -834,17 +834,17 @@ internal class Resourcer : IWindow
         }
     }
 
-    private string GetRegionNameForMemoryType(RetroEditor.Source.Internals.ReverseEngineering.Platform.MemoryRegion memoryRegion)
+    private string GetRegionNameForMemoryType(RetroEditor.Source.Internals.ReverseEngineering.Platform.MemoryInformationRegion memoryRegion)
     {
         // Map platform MemoryRegion enum to actual region names using property-based lookup
         var regions = memoryInformationProvider.GetMemoryRegions().ToList();
         
         switch (memoryRegion)
         {
-            case RetroEditor.Source.Internals.ReverseEngineering.Platform.MemoryRegion.ROM:
+            case RetroEditor.Source.Internals.ReverseEngineering.Platform.MemoryInformationRegion.ROM:
                 // Find first region with physical data (typically ROM/Cartridge)
                 return regions.FirstOrDefault(r => r.HasPhysicalData)?.MameViewName ?? regions.FirstOrDefault()?.MameViewName ?? string.Empty;
-            case RetroEditor.Source.Internals.ReverseEngineering.Platform.MemoryRegion.RAM:
+            case RetroEditor.Source.Internals.ReverseEngineering.Platform.MemoryInformationRegion.RAM:
                 // Find first region without physical data (typically RAM/WRAM)
                 return regions.FirstOrDefault(r => !r.HasPhysicalData)?.MameViewName ?? string.Empty;
             default:
@@ -858,7 +858,7 @@ internal class Resourcer : IWindow
         disassembler.State = entry.CpuState;
 
         // Add this location as code
-        var codeRegionName = GetRegionNameForMemoryType(RetroEditor.Source.Internals.ReverseEngineering.Platform.MemoryRegion.ROM);
+        var codeRegionName = GetRegionNameForMemoryType(RetroEditor.Source.Internals.ReverseEngineering.Platform.MemoryInformationRegion.ROM);
         if (!string.IsNullOrEmpty(codeRegionName))
         {
             romDataParsers[codeRegionName].AddCodeRange((DisassemblerBase)disassembler, entry.Address, out var i, memoryMapper);

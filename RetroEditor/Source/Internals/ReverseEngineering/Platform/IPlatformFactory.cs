@@ -18,7 +18,7 @@ internal interface IPlatformFactory
 /// <summary>
 /// Memory region types that can be mapped
 /// </summary>
-internal enum MemoryRegion
+internal enum MemoryInformationRegion
 {
     ROM,
     RAM,
@@ -27,15 +27,18 @@ internal enum MemoryRegion
     Invalid
 }
 
+
+internal record MemoryRegionKey(UInt32 Key);
 /// <summary>
-/// Interface for mapping between CPU addresses and ROM addresses
+/// Interface for mapping between CPU addresses and memory regions (e.g. rom,ram,io)
+/// need a way to tie the memory  regions to those used in IMemoryInformationProvider
 /// </summary>
 internal interface IMemoryMapper
 {
-    UInt64 MapCpuToRegion(UInt64 cpuAddress, out MemoryRegion region);
+    UInt64 MapCpuToRegion(UInt64 cpuAddress, out MemoryRegionKey region);
     UInt64 MapRomToCpu(UInt64 romAddress);
     UInt64 MapHardwareAddressToCpu(UInt64 linearAddress);
-    UInt64 MapCpuToHardwareAddress(UInt64 address, out MemoryRegion region);
+    UInt64 MapCpuToHardwareAddress(UInt64 address, out MemoryRegionKey region);
 }
 
 /// <summary>
@@ -144,6 +147,11 @@ internal interface IMemoryInformation
     /// </summary>
     string DisplayName => MameViewName;
     
+    /// <summary>
+    /// Region Key, used to identify this region uniquely for this platform
+    /// </summary>
+    MemoryRegionKey RegionKey { get; }
+
     /// <summary>
     /// Whether this region contains physical data (true for ROM) or virtual data (false for RAM)
     /// Used to determine if data can be read directly

@@ -22,17 +22,26 @@ public class Disassembler_Z80_Tests
         DecodeResult result,
         string mnemonic,
         int bytesConsumed,
+        byte[] expectedBytes,
         int operandCount = 0,
         string[] operandText = null,
         bool isBranch = false,
         bool isTerminator = false,
-        List<ulong> nextAddresses = null)
+        List<ulong> nextAddresses = null
+        )
     {
         Assert.IsTrue(result.Success);
         
         var instruction = result.Instruction;
         Assert.AreEqual(mnemonic, instruction.Mnemonic);
         Assert.AreEqual(bytesConsumed, result.BytesConsumed);
+        
+        // Verify the bytes match
+        if (expectedBytes != null)
+        {
+            Assert.AreEqual(bytesConsumed, instruction.Bytes.Length, "Instruction bytes length mismatch");
+            CollectionAssert.AreEqual(expectedBytes, instruction.Bytes, "Instruction bytes mismatch");
+        }
         
         var operands = instruction.Operands;
         Assert.AreEqual(operandCount, operands.Count);
@@ -78,6 +87,13 @@ public class Disassembler_Z80_Tests
             actualOutput = actualOutput.Substring("00000000: ".Length);
         }
         
+        // Verify the bytes match
+        if (bytes != null)
+        {
+            Assert.AreEqual(bytes.Length, result.Instruction.Bytes.Length, "Instruction bytes length mismatch");
+            CollectionAssert.AreEqual(bytes, result.Instruction.Bytes, "Instruction bytes mismatch");
+        }
+        
         // Trim trailing spaces
         actualOutput = actualOutput.Trim();
         
@@ -88,301 +104,342 @@ public class Disassembler_Z80_Tests
     [TestMethod]
     public void TestZ80_NOP()
     {
-        var result = _disassembler.DecodeNext(new byte[] { 0x00 }, 0x0000);
-        AssertInstruction(result, "NOP", 1);
+        var bytes = new byte[] { 0x00 };
+        var result = _disassembler.DecodeNext(bytes, 0x0000);
+        AssertInstruction(result, "NOP", 1, bytes);
     }
 
     [TestMethod]
     public void TestZ80_HALT()
     {
-        var result = _disassembler.DecodeNext(new byte[] { 0x76 }, 0x0000);
-        AssertInstruction(result, "HALT", 1, isTerminator: true);
+        var bytes = new byte[] { 0x76 };
+        var result = _disassembler.DecodeNext(bytes, 0x0000);
+        AssertInstruction(result, "HALT", 1, bytes, isTerminator: true);
     }
 
     [TestMethod]
     public void TestZ80_EX_DE_HL()
     {
-        var result = _disassembler.DecodeNext(new byte[] { 0xEB }, 0x0000);
-        AssertInstruction(result, "EX", 1, 2, new[] { "DE", "HL" });
+        var bytes = new byte[] { 0xEB };
+        var result = _disassembler.DecodeNext(bytes, 0x0000);
+        AssertInstruction(result, "EX", 1, bytes, 2, new[] { "DE", "HL" });
     }
 
     // Test 8-bit register loads
     [TestMethod]
     public void TestZ80_LD_B_Immediate()
     {
-        var result = _disassembler.DecodeNext(new byte[] { 0x06, 0x42 }, 0x0000);
-        AssertInstruction(result, "LD", 2, 2, new[] { "B", "#42" });
+        var bytes = new byte[] { 0x06, 0x42 };
+        var result = _disassembler.DecodeNext(bytes, 0x0000);
+        AssertInstruction(result, "LD", 2, bytes, 2, new[] { "B", "#42" });
     }
 
     [TestMethod]
     public void TestZ80_LD_A_Immediate()
     {
-        var result = _disassembler.DecodeNext(new byte[] { 0x3E, 0xFF }, 0x0000);
-        AssertInstruction(result, "LD", 2, 2, new[] { "A", "#FF" });
+        var bytes = new byte[] { 0x3E, 0xFF };
+        var result = _disassembler.DecodeNext(bytes, 0x0000);
+        AssertInstruction(result, "LD", 2, bytes, 2, new[] { "A", "#FF" });
     }
 
     [TestMethod]
     public void TestZ80_LD_HL_Memory_Immediate()
     {
-        var result = _disassembler.DecodeNext(new byte[] { 0x36, 0x02 }, 0x0000);
-        AssertInstruction(result, "LD", 2, 2, new[] { "(HL)", "#02" });
+        var bytes = new byte[] { 0x36, 0x02 };
+        var result = _disassembler.DecodeNext(bytes, 0x0000);
+        AssertInstruction(result, "LD", 2, bytes, 2, new[] { "(HL)", "#02" });
     }
 
     [TestMethod]
     public void TestZ80_LD_B_C()
     {
-        var result = _disassembler.DecodeNext(new byte[] { 0x41 }, 0x0000);
-        AssertInstruction(result, "LD", 1, 2, new[] { "B", "C" });
+        var bytes = new byte[] { 0x41 };
+        var result = _disassembler.DecodeNext(bytes, 0x0000);
+        AssertInstruction(result, "LD", 1, bytes, 2, new[] { "B", "C" });
     }
 
     // Test 16-bit register loads
     [TestMethod]
     public void TestZ80_LD_BC_Immediate()
     {
-        var result = _disassembler.DecodeNext(new byte[] { 0x01, 0x34, 0x12 }, 0x0000);
-        AssertInstruction(result, "LD", 3, 2, new[] { "BC", "#1234" });
+        var bytes = new byte[] { 0x01, 0x34, 0x12 };
+        var result = _disassembler.DecodeNext(bytes, 0x0000);
+        AssertInstruction(result, "LD", 3, bytes, 2, new[] { "BC", "#1234" });
     }
 
     [TestMethod]
     public void TestZ80_LD_HL_Immediate()
     {
-        var result = _disassembler.DecodeNext(new byte[] { 0x21, 0xAB, 0xCD }, 0x0000);
-        AssertInstruction(result, "LD", 3, 2, new[] { "HL", "#CDAB" });
+        var bytes = new byte[] { 0x21, 0xAB, 0xCD };
+        var result = _disassembler.DecodeNext(bytes, 0x0000);
+        AssertInstruction(result, "LD", 3, bytes, 2, new[] { "HL", "#CDAB" });
     }
 
     // Test arithmetic operations
     [TestMethod]
     public void TestZ80_ADD_A_B()
     {
-        var result = _disassembler.DecodeNext(new byte[] { 0x80 }, 0x0000);
-        AssertInstruction(result, "ADD", 1, 2, new[] { "A", "B" });
+        var bytes = new byte[] { 0x80 };
+        var result = _disassembler.DecodeNext(bytes, 0x0000);
+        AssertInstruction(result, "ADD", 1, bytes, 2, new[] { "A", "B" });
     }
 
     [TestMethod]
     public void TestZ80_ADD_A_Immediate()
     {
-        var result = _disassembler.DecodeNext(new byte[] { 0xC6, 0x20 }, 0x0000);
-        AssertInstruction(result, "ADD", 2, 2, new[] { "A", "#20" });
+        var bytes = new byte[] { 0xC6, 0x20 };
+        var result = _disassembler.DecodeNext(bytes, 0x0000);
+        AssertInstruction(result, "ADD", 2, bytes, 2, new[] { "A", "#20" });
     }
 
     [TestMethod]
     public void TestZ80_SUB_A_C()
     {
-        var result = _disassembler.DecodeNext(new byte[] { 0x91 }, 0x0000);
-        AssertInstruction(result, "SUB", 1, 2, new[] { "A", "C" });
+        var bytes = new byte[] { 0x91 };
+        var result = _disassembler.DecodeNext(bytes, 0x0000);
+        AssertInstruction(result, "SUB", 1, bytes, 2, new[] { "A", "C" });
     }
 
     [TestMethod]
     public void TestZ80_CP_A_D()
     {
-        var result = _disassembler.DecodeNext(new byte[] { 0xBA }, 0x0000);
-        AssertInstruction(result, "CP", 1, 2, new[] { "A", "D" });
+        var bytes = new byte[] { 0xBA };
+        var result = _disassembler.DecodeNext(bytes, 0x0000);
+        AssertInstruction(result, "CP", 1, bytes, 2, new[] { "A", "D" });
     }
 
     // Test increment/decrement
     [TestMethod]
     public void TestZ80_INC_A()
     {
-        var result = _disassembler.DecodeNext(new byte[] { 0x3C }, 0x0000);
-        AssertInstruction(result, "INC", 1, 1, new[] { "A" });
+        var bytes = new byte[] { 0x3C };
+        var result = _disassembler.DecodeNext(bytes, 0x0000);
+        AssertInstruction(result, "INC", 1, bytes, 1, new[] { "A" });
     }
 
     [TestMethod]
     public void TestZ80_DEC_B()
     {
-        var result = _disassembler.DecodeNext(new byte[] { 0x05 }, 0x0000);
-        AssertInstruction(result, "DEC", 1, 1, new[] { "B" });
+        var bytes = new byte[] { 0x05 };
+        var result = _disassembler.DecodeNext(bytes, 0x0000);
+        AssertInstruction(result, "DEC", 1, bytes, 1, new[] { "B" });
     }
 
     [TestMethod]
     public void TestZ80_INC_HL_Memory()
     {
-        var result = _disassembler.DecodeNext(new byte[] { 0x34 }, 0x0000);
-        AssertInstruction(result, "INC", 1, 1, new[] { "(HL)" });
+        var bytes = new byte[] { 0x34 };
+        var result = _disassembler.DecodeNext(bytes, 0x0000);
+        AssertInstruction(result, "INC", 1, bytes, 1, new[] { "(HL)" });
     }
 
     [TestMethod]
     public void TestZ80_DEC_HL_Memory()
     {
-        var result = _disassembler.DecodeNext(new byte[] { 0x35 }, 0x0000);
-        AssertInstruction(result, "DEC", 1, 1, new[] { "(HL)" });
+        var bytes = new byte[] { 0x35 };
+        var result = _disassembler.DecodeNext(bytes, 0x0000);
+        AssertInstruction(result, "DEC", 1, bytes, 1, new[] { "(HL)" });
     }
 
     [TestMethod]
     public void TestZ80_INC_BC()
     {
-        var result = _disassembler.DecodeNext(new byte[] { 0x03 }, 0x0000);
-        AssertInstruction(result, "INC", 1, 1, new[] { "BC" });
+        var bytes = new byte[] { 0x03 };
+        var result = _disassembler.DecodeNext(bytes, 0x0000);
+        AssertInstruction(result, "INC", 1, bytes, 1, new[] { "BC" });
     }
 
     // Test rotates
     [TestMethod]
     public void TestZ80_RLCA()
     {
-        var result = _disassembler.DecodeNext(new byte[] { 0x07 }, 0x0000);
-        AssertInstruction(result, "RLCA", 1);
+        var bytes = new byte[] { 0x07 };
+        var result = _disassembler.DecodeNext(bytes, 0x0000);
+        AssertInstruction(result, "RLCA", 1, bytes);
     }
 
     [TestMethod]
     public void TestZ80_RRCA()
     {
-        var result = _disassembler.DecodeNext(new byte[] { 0x0F }, 0x0000);
-        AssertInstruction(result, "RRCA", 1);
+        var bytes = new byte[] { 0x0F };
+        var result = _disassembler.DecodeNext(bytes, 0x0000);
+        AssertInstruction(result, "RRCA", 1, bytes);
     }
 
     // Test jumps
     [TestMethod]
     public void TestZ80_JP_Absolute()
     {
-        var result = _disassembler.DecodeNext(new byte[] { 0xC3, 0x00, 0x20 }, 0x0000);
-        AssertInstruction(result, "JP", 3, 1, new[] { "$2000" }, isBranch: true, isTerminator: true);
+        var bytes = new byte[] { 0xC3, 0x00, 0x20 };
+        var result = _disassembler.DecodeNext(bytes, 0x0000);
+        AssertInstruction(result, "JP", 3, bytes, 1, new[] { "$2000" }, isBranch: true, isTerminator: true);
     }
 
     [TestMethod]
     public void TestZ80_JR_Relative()
     {
-        var result = _disassembler.DecodeNext(new byte[] { 0x18, 0x10 }, 0x1000);
-        AssertInstruction(result, "JR", 2, 1, isBranch: true);
+        var bytes = new byte[] { 0x18, 0x10 };
+        var result = _disassembler.DecodeNext(bytes, 0x1000);
+        AssertInstruction(result, "JR", 2, bytes, 1, isBranch: true);
     }
 
     [TestMethod]
     public void TestZ80_DJNZ()
     {
-        var result = _disassembler.DecodeNext(new byte[] { 0x10, 0x05 }, 0x0000);
-        AssertInstruction(result, "DJNZ", 2, 1, isBranch: true);
+        var bytes = new byte[] { 0x10, 0x05 };
+        var result = _disassembler.DecodeNext(bytes, 0x0000);
+        AssertInstruction(result, "DJNZ", 2, bytes, 1, isBranch: true);
     }
 
     // Test calls
     [TestMethod]
     public void TestZ80_CALL_Absolute()
     {
-        var result = _disassembler.DecodeNext(new byte[] { 0xCD, 0x50, 0x10 }, 0x0000);
-        AssertInstruction(result, "CALL", 3, 1, new[] { "$1050" }, isBranch: true);
+        var bytes = new byte[] { 0xCD, 0x50, 0x10 };
+        var result = _disassembler.DecodeNext(bytes, 0x0000);
+        AssertInstruction(result, "CALL", 3, bytes, 1, new[] { "$1050" }, isBranch: true);
     }
 
     [TestMethod]
     public void TestZ80_RET()
     {
-        var result = _disassembler.DecodeNext(new byte[] { 0xC9 }, 0x0000);
-        AssertInstruction(result, "RET", 1, isTerminator: true);
+        var bytes = new byte[] { 0xC9 };
+        var result = _disassembler.DecodeNext(bytes, 0x0000);
+        AssertInstruction(result, "RET", 1, bytes, isTerminator: true);
     }
 
     // Test RST (Restart)
     [TestMethod]
     public void TestZ80_RST_00()
     {
-        var result = _disassembler.DecodeNext(new byte[] { 0xC7 }, 0x0000);
-        AssertInstruction(result, "RST", 1, 1, new[] { "$0000" }, isBranch: true, isTerminator: true);
+        var bytes = new byte[] { 0xC7 };
+        var result = _disassembler.DecodeNext(bytes, 0x0000);
+        AssertInstruction(result, "RST", 1, bytes, 1, new[] { "$0000" }, isBranch: true, isTerminator: true);
     }
 
     [TestMethod]
     public void TestZ80_RST_38()
     {
-        var result = _disassembler.DecodeNext(new byte[] { 0xFF }, 0x0000);
-        AssertInstruction(result, "RST", 1, 1, new[] { "$0038" }, isBranch: true, isTerminator: true);
+        var bytes = new byte[] { 0xFF };
+        var result = _disassembler.DecodeNext(bytes, 0x0000);
+        AssertInstruction(result, "RST", 1, bytes, 1, new[] { "$0038" }, isBranch: true, isTerminator: true);
     }
 
     // Test push/pop
     [TestMethod]
     public void TestZ80_PUSH_BC()
     {
-        var result = _disassembler.DecodeNext(new byte[] { 0xC5 }, 0x0000);
-        AssertInstruction(result, "PUSH", 1, 1, new[] { "BC" });
+        var bytes = new byte[] { 0xC5 };
+        var result = _disassembler.DecodeNext(bytes, 0x0000);
+        AssertInstruction(result, "PUSH", 1, bytes, 1, new[] { "BC" });
     }
 
     [TestMethod]
     public void TestZ80_POP_HL()
     {
-        var result = _disassembler.DecodeNext(new byte[] { 0xE1 }, 0x0000);
-        AssertInstruction(result, "POP", 1, 1, new[] { "HL" });
+        var bytes = new byte[] { 0xE1 };
+        var result = _disassembler.DecodeNext(bytes, 0x0000);
+        AssertInstruction(result, "POP", 1, bytes, 1, new[] { "HL" });
     }
 
     // Test I/O
     [TestMethod]
     public void TestZ80_IN_A_Port()
     {
-        var result = _disassembler.DecodeNext(new byte[] { 0xDB, 0x50 }, 0x0000);
-        AssertInstruction(result, "IN", 2, 2, new[] { "A", "#50" });
+        var bytes = new byte[] { 0xDB, 0x50 };
+        var result = _disassembler.DecodeNext(bytes, 0x0000);
+        AssertInstruction(result, "IN", 2, bytes, 2, new[] { "A", "#50" });
     }
 
     [TestMethod]
     public void TestZ80_OUT_Port_A()
     {
-        var result = _disassembler.DecodeNext(new byte[] { 0xD3, 0xFE }, 0x0000);
-        AssertInstruction(result, "OUT", 2, 2, new[] { "#FE", "A" });
+        var bytes = new byte[] { 0xD3, 0xFE };
+        var result = _disassembler.DecodeNext(bytes, 0x0000);
+        AssertInstruction(result, "OUT", 2, bytes, 2, new[] { "#FE", "A" });
     }
 
     // Test control
     [TestMethod]
     public void TestZ80_DI()
     {
-        var result = _disassembler.DecodeNext(new byte[] { 0xF3 }, 0x0000);
-        AssertInstruction(result, "DI", 1);
+        var bytes = new byte[] { 0xF3 };
+        var result = _disassembler.DecodeNext(bytes, 0x0000);
+        AssertInstruction(result, "DI", 1, bytes);
     }
 
     [TestMethod]
     public void TestZ80_EI()
     {
-        var result = _disassembler.DecodeNext(new byte[] { 0xFB }, 0x0000);
-        AssertInstruction(result, "EI", 1);
+        var bytes = new byte[] { 0xFB };
+        var result = _disassembler.DecodeNext(bytes, 0x0000);
+        AssertInstruction(result, "EI", 1, bytes);
     }
 
     [TestMethod]
     public void TestZ80_LD_SP_HL()
     {
-        var result = _disassembler.DecodeNext(new byte[] { 0xF9 }, 0x0000);
-        AssertInstruction(result, "LD", 1, 2, new[] { "SP", "HL" });
+        var bytes = new byte[] { 0xF9 };
+        var result = _disassembler.DecodeNext(bytes, 0x0000);
+        AssertInstruction(result, "LD", 1, bytes, 2, new[] { "SP", "HL" });
     }
 
     // Test CB-prefixed bit manipulation
     [TestMethod]
     public void TestZ80_BIT_0_A()
     {
-        var result = _disassembler.DecodeNext(new byte[] { 0xCB, 0x47 }, 0x0000);
-        AssertInstruction(result, "BIT", 2, 2, new[] { "0", "A" });
+        var bytes = new byte[] { 0xCB, 0x47 };
+        var result = _disassembler.DecodeNext(bytes, 0x0000);
+        AssertInstruction(result, "BIT", 2, bytes, 2, new[] { "0", "A" });
     }
 
     [TestMethod]
     public void TestZ80_SET_3_B()
     {
-        var result = _disassembler.DecodeNext(new byte[] { 0xCB, 0xD8 }, 0x0000);
-        AssertInstruction(result, "SET", 2, 2, new[] { "3", "B" });
+        var bytes = new byte[] { 0xCB, 0xD8 };
+        var result = _disassembler.DecodeNext(bytes, 0x0000);
+        AssertInstruction(result, "SET", 2, bytes, 2, new[] { "3", "B" });
     }
 
     [TestMethod]
     public void TestZ80_RES_5_C()
     {
-        var result = _disassembler.DecodeNext(new byte[] { 0xCB, 0xA9 }, 0x0000);
-        AssertInstruction(result, "RES", 2, 2, new[] { "5", "C" });
+        var bytes = new byte[] { 0xCB, 0xA9 };
+        var result = _disassembler.DecodeNext(bytes, 0x0000);
+        AssertInstruction(result, "RES", 2, bytes, 2, new[] { "5", "C" });
     }
 
     [TestMethod]
     public void TestZ80_RLC_D()
     {
-        var result = _disassembler.DecodeNext(new byte[] { 0xCB, 0x02 }, 0x0000);
-        AssertInstruction(result, "RLC", 2, 1, new[] { "D" });
+        var bytes = new byte[] { 0xCB, 0x02 };
+        var result = _disassembler.DecodeNext(bytes, 0x0000);
+        AssertInstruction(result, "RLC", 2, bytes, 1, new[] { "D" });
     }
 
     // Test ED-prefixed extended instructions
     [TestMethod]
     public void TestZ80_NEG()
     {
-        var result = _disassembler.DecodeNext(new byte[] { 0xED, 0x44 }, 0x0000);
-        AssertInstruction(result, "NEG", 2);
+        var bytes = new byte[] { 0xED, 0x44 };
+        var result = _disassembler.DecodeNext(bytes, 0x0000);
+        AssertInstruction(result, "NEG", 2, bytes);
     }
 
     [TestMethod]
     public void TestZ80_LDI()
     {
-        var result = _disassembler.DecodeNext(new byte[] { 0xED, 0xA0 }, 0x0000);
-        AssertInstruction(result, "LDI", 2);
+        var bytes = new byte[] { 0xED, 0xA0 };
+        var result = _disassembler.DecodeNext(bytes, 0x0000);
+        AssertInstruction(result, "LDI", 2, bytes);
     }
 
     [TestMethod]
     public void TestZ80_LDIR()
     {
-        var result = _disassembler.DecodeNext(new byte[] { 0xED, 0xB0 }, 0x0000);
-        AssertInstruction(result, "LDIR", 2, isTerminator: true);
+        var bytes = new byte[] { 0xED, 0xB0 };
+        var result = _disassembler.DecodeNext(bytes, 0x0000);
+        AssertInstruction(result, "LDIR", 2, bytes, isTerminator: true);
     }
 
     // Test edge cases
@@ -412,8 +469,9 @@ public class Disassembler_Z80_Tests
     public void TestZ80_NextAddresses_RegularInstruction()
     {
         // Regular instruction should have fall-through address only
-        var result = _disassembler.DecodeNext(new byte[] { 0xF3 }, 0x1000);  // DI
-        AssertInstruction(result, "DI", 1, 
+        var bytes = new byte[] { 0xF3 };  // DI
+        var result = _disassembler.DecodeNext(bytes, 0x1000);  // DI
+        AssertInstruction(result, "DI", 1, bytes,
             nextAddresses: new List<ulong> { 0x1001 });
     }
     
@@ -421,10 +479,11 @@ public class Disassembler_Z80_Tests
     public void TestZ80_NextAddresses_ConditionalJump()
     {
         // Conditional jump should have both fall-through and target addresses
-        var result = _disassembler.DecodeNext(new byte[] { 0xC2, 0x00, 0x20 }, 0x1000);  // JP NZ,$2000
+        var bytes = new byte[] { 0xC2, 0x00, 0x20 };
+        var result = _disassembler.DecodeNext(bytes, 0x1000);  // JP NZ,$2000
         var fallThrough = 0x1000UL + 3;  // Address after instruction
         var target = 0x2000UL; // Jump target
-        AssertInstruction(result, "JP", 3, 2, new[] { "NZ", "$2000" }, isBranch: true, 
+        AssertInstruction(result, "JP", 3, bytes, 2, new[] { "NZ", "$2000" }, isBranch: true, 
             nextAddresses: new List<ulong> { fallThrough, target });
     }
     
@@ -432,10 +491,11 @@ public class Disassembler_Z80_Tests
     public void TestZ80_NextAddresses_ConditionalCall()
     {
         // Conditional call should have both fall-through and target addresses
-        var result = _disassembler.DecodeNext(new byte[] { 0xC4, 0x00, 0x30 }, 0x2000);  // CALL NZ,$3000
+        var bytes = new byte[] { 0xC4, 0x00, 0x30 };
+        var result = _disassembler.DecodeNext(bytes, 0x2000);  // CALL NZ,$3000
         var fallThrough = 0x2000UL + 3;  // Address after instruction
         var target = 0x3000UL; // Call target
-        AssertInstruction(result, "CALL", 3, 2, new[] { "NZ", "$3000" }, isBranch: true, 
+        AssertInstruction(result, "CALL", 3, bytes, 2, new[] { "NZ", "$3000" }, isBranch: true, 
             nextAddresses: new List<ulong> { fallThrough, target });
     }
     
@@ -443,9 +503,10 @@ public class Disassembler_Z80_Tests
     public void TestZ80_NextAddresses_ConditionalReturn()
     {
         // Conditional return should have both fall-through and no target (unknown)
-        var result = _disassembler.DecodeNext(new byte[] { 0xC0 }, 0x3000);  // RET NZ
+        var bytes = new byte[] { 0xC0 };
+        var result = _disassembler.DecodeNext(bytes, 0x3000);  // RET NZ
         var fallThrough = 0x3000UL + 1;  // Address after instruction
-        AssertInstruction(result, "RET", 1, 1, new[] { "NZ" }, isBranch: true, 
+        AssertInstruction(result, "RET", 1, bytes, 1, new[] { "NZ" }, isBranch: true, 
             nextAddresses: new List<ulong> { fallThrough });
     }
     
@@ -453,10 +514,11 @@ public class Disassembler_Z80_Tests
     public void TestZ80_NextAddresses_ConditionalRelativeJump()
     {
         // Conditional relative jump should have both fall-through and target addresses
-        var result = _disassembler.DecodeNext(new byte[] { 0x20, 0x10 }, 0x4000);  // JR NZ,+16
+        var bytes = new byte[] { 0x20, 0x10 };
+        var result = _disassembler.DecodeNext(bytes, 0x4000);  // JR NZ,+16
         var fallThrough = 0x4000UL + 2;  // Address after instruction
         var target = 0x4000UL + 2 + 0x10; // Relative jump target
-        AssertInstruction(result, "JR", 2, 2, isBranch: true, 
+        AssertInstruction(result, "JR", 2, bytes, 2, isBranch: true, 
             nextAddresses: new List<ulong> { fallThrough, target });
     }
     
@@ -464,10 +526,11 @@ public class Disassembler_Z80_Tests
     public void TestZ80_NextAddresses_DJNZ()
     {
         // DJNZ should have both fall-through and target addresses
-        var result = _disassembler.DecodeNext(new byte[] { 0x10, 0x08 }, 0x5000);  // DJNZ +8
+        var bytes = new byte[] { 0x10, 0x08 };
+        var result = _disassembler.DecodeNext(bytes, 0x5000);  // DJNZ +8
         var fallThrough = 0x5000UL + 2;  // Address after instruction
         var target = 0x5000UL + 2 + 0x08; // DJNZ target
-        AssertInstruction(result, "DJNZ", 2, 1, isBranch: true, 
+        AssertInstruction(result, "DJNZ", 2, bytes, 1, isBranch: true, 
             nextAddresses: new List<ulong> { fallThrough, target });
     }
     
@@ -475,8 +538,9 @@ public class Disassembler_Z80_Tests
     public void TestZ80_NextAddresses_UnconditionalJump()
     {
         // Unconditional jump should have target address only
-        var result = _disassembler.DecodeNext(new byte[] { 0xC3, 0x00, 0x80 }, 0x6000);  // JP $8000
-        AssertInstruction(result, "JP", 3, 1, new[] { "$8000" }, isBranch: true, isTerminator: true,
+        var bytes = new byte[] { 0xC3, 0x00, 0x80 };
+        var result = _disassembler.DecodeNext(bytes, 0x6000);  // JP $8000
+        AssertInstruction(result, "JP", 3, bytes, 1, new[] { "$8000" }, isBranch: true, isTerminator: true,
             nextAddresses: new List<ulong> { 0x8000 });
     }
     
@@ -484,9 +548,10 @@ public class Disassembler_Z80_Tests
     public void TestZ80_NextAddresses_UnconditionalRelativeJump()
     {
         // Unconditional relative jump should have target address only
-        var result = _disassembler.DecodeNext(new byte[] { 0x18, 0x20 }, 0x7000);  // JR +32
+        var bytes = new byte[] { 0x18, 0x20 };
+        var result = _disassembler.DecodeNext(bytes, 0x7000);  // JR +32
         var target = 0x7000UL + 2 + 0x20; // Relative jump target
-        AssertInstruction(result, "JR", 2, 1, isBranch: true, 
+        AssertInstruction(result, "JR", 2, bytes, 1, isBranch: true, 
             nextAddresses: new List<ulong> { target, 0x7002 });
     }
     
@@ -494,8 +559,9 @@ public class Disassembler_Z80_Tests
     public void TestZ80_NextAddresses_UnconditionalCall()
     {
         // Unconditional call should have target address only
-        var result = _disassembler.DecodeNext(new byte[] { 0xCD, 0x00, 0x90 }, 0x8000);  // CALL $9000
-        AssertInstruction(result, "CALL", 3, 1, new[] { "$9000" }, isBranch: true,
+        var bytes = new byte[] { 0xCD, 0x00, 0x90 };
+        var result = _disassembler.DecodeNext(bytes, 0x8000);  // CALL $9000
+        AssertInstruction(result, "CALL", 3, bytes, 1, new[] { "$9000" }, isBranch: true,
             nextAddresses: new List<ulong> { 0x9000, 0x8003 });
     }
     
@@ -503,8 +569,9 @@ public class Disassembler_Z80_Tests
     public void TestZ80_NextAddresses_Return()
     {
         // Return should have no next addresses
-        var result = _disassembler.DecodeNext(new byte[] { 0xC9 }, 0x9000);  // RET
-        AssertInstruction(result, "RET", 1, isTerminator: true,
+        var bytes = new byte[] { 0xC9 };
+        var result = _disassembler.DecodeNext(bytes, 0x9000);  // RET
+        AssertInstruction(result, "RET", 1, bytes, isTerminator: true,
             nextAddresses: new List<ulong>());
     }
     
@@ -512,8 +579,9 @@ public class Disassembler_Z80_Tests
     public void TestZ80_NextAddresses_HALT()
     {
         // HALT should have no next addresses
-        var result = _disassembler.DecodeNext(new byte[] { 0x76 }, 0xA000);  // HALT
-        AssertInstruction(result, "HALT", 1, isTerminator: true,
+        var bytes = new byte[] { 0x76 };
+        var result = _disassembler.DecodeNext(bytes, 0xA000);  // HALT
+        AssertInstruction(result, "HALT", 1, bytes, isTerminator: true,
             nextAddresses: new List<ulong>());
     }
     
@@ -521,8 +589,9 @@ public class Disassembler_Z80_Tests
     public void TestZ80_NextAddresses_RST()
     {
         // RST should have target address only
-        var result = _disassembler.DecodeNext(new byte[] { 0xC7 }, 0xB000);  // RST $0000
-        AssertInstruction(result, "RST", 1, 1, new[] { "$0000" }, isBranch: true, isTerminator: true,
+        var bytes = new byte[] { 0xC7 };
+        var result = _disassembler.DecodeNext(bytes, 0xB000);  // RST $0000
+        AssertInstruction(result, "RST", 1, bytes, 1, new[] { "$0000" }, isBranch: true, isTerminator: true,
             nextAddresses: new List<ulong> { 0x0000 });
     }
     
@@ -530,8 +599,9 @@ public class Disassembler_Z80_Tests
     public void TestZ80_NextAddresses_LDIR()
     {
         // LDIR should have no next addresses (it's a terminator)
-        var result = _disassembler.DecodeNext(new byte[] { 0xED, 0xB0 }, 0xC000);  // LDIR
-        AssertInstruction(result, "LDIR", 2, isTerminator: true,
+        var bytes = new byte[] { 0xED, 0xB0 };
+        var result = _disassembler.DecodeNext(bytes, 0xC000);  // LDIR
+        AssertInstruction(result, "LDIR", 2, bytes, isTerminator: true,
             nextAddresses: new List<ulong>());
     }
 

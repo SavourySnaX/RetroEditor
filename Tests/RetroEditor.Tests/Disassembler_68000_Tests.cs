@@ -17,16 +17,18 @@ public class Disassembler_68000_Tests
     {
         _disassembler = new Megadrive68000Disassembler();
     }
-    
+
     private void AssertInstruction(
         DecodeResult result,
         string mnemonic,
         int bytesConsumed,
+        byte[] expectedBytes,
         int operandCount = 0,
         string[] operandText = null,
         bool isBranch = false,
         bool isTerminator = false,
-        List<ulong> nextAddresses = null)
+        List<ulong> nextAddresses = null
+        )
     {
         Assert.IsTrue(result.Success);
         
@@ -34,6 +36,11 @@ public class Disassembler_68000_Tests
         Assert.AreEqual(mnemonic, instruction.Mnemonic);
         Assert.AreEqual(bytesConsumed, result.BytesConsumed);
         
+        // Verify the bytes match
+        Assert.IsNotNull(expectedBytes);
+        Assert.AreEqual(bytesConsumed, instruction.Bytes.Length, "Instruction bytes length mismatch");
+        CollectionAssert.AreEqual(expectedBytes, instruction.Bytes, "Instruction bytes mismatch");
+
         var operands = instruction.Operands;
         Assert.AreEqual(operandCount, operands.Count);
         
@@ -72,7 +79,7 @@ public class Disassembler_68000_Tests
         // MOVE.L D0,D1
         byte[] bytes = { 0x22, 0x00 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "MOVE.L", 2, 2, new[] { "D0", "D1" });
+        AssertInstruction(result, "MOVE.L", 2, bytes, 2, new[] { "D0", "D1" });
     }
     
     [TestMethod]
@@ -81,7 +88,7 @@ public class Disassembler_68000_Tests
         // MOVE.W #$1234,D0
         byte[] bytes = { 0x30, 0x3C, 0x12, 0x34 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "MOVE.W", 4, 2, new[] { "#$1234", "D0" });
+        AssertInstruction(result, "MOVE.W", 4, bytes, 2, new[] { "#$1234", "D0" });
     }
     
     [TestMethod]
@@ -90,7 +97,7 @@ public class Disassembler_68000_Tests
         // MOVE.L $FF0000,D0
         byte[] bytes = { 0x20, 0x39, 0x00, 0xFF, 0x00, 0x00 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "MOVE.L", 6, 2, new[] { "$00FF0000.L", "D0" });
+        AssertInstruction(result, "MOVE.L", 6, bytes, 2, new[] { "$00FF0000.L", "D0" });
     }
     
     // Test arithmetic instructions
@@ -100,7 +107,7 @@ public class Disassembler_68000_Tests
         // ADD.L D1,D0
         byte[] bytes = { 0xD0, 0x81 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "ADD.L", 2, 2, new[] { "D1", "D0" });
+        AssertInstruction(result, "ADD.L", 2, bytes, 2, new[] { "D1", "D0" });
     }
     
     [TestMethod]
@@ -109,7 +116,7 @@ public class Disassembler_68000_Tests
         // ADDI.W #$10,D0
         byte[] bytes = { 0x06, 0x40, 0x00, 0x10 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "ADDI.W", 4, 2, new[] { "#$0010", "D0" });
+        AssertInstruction(result, "ADDI.W", 4, bytes, 2, new[] { "#$0010", "D0" });
     }
     
     [TestMethod]
@@ -118,7 +125,7 @@ public class Disassembler_68000_Tests
         // ADDQ.L #1,D0
         byte[] bytes = { 0x52, 0x80 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "ADDQ.L", 2, 2, new[] { "#$01", "D0" });
+        AssertInstruction(result, "ADDQ.L", 2, bytes, 2, new[] { "#$01", "D0" });
     }
     
     [TestMethod]
@@ -127,7 +134,7 @@ public class Disassembler_68000_Tests
         // SUB.L D1,D0
         byte[] bytes = { 0x90, 0x81 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "SUB.L", 2, 2, new[] { "D1", "D0" });
+        AssertInstruction(result, "SUB.L", 2, bytes, 2, new[] { "D1", "D0" });
     }
     
     [TestMethod]
@@ -136,7 +143,7 @@ public class Disassembler_68000_Tests
         // SUBQ.L #1,D0
         byte[] bytes = { 0x53, 0x80 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "SUBQ.L", 2, 2, new[] { "#$01", "D0" });
+        AssertInstruction(result, "SUBQ.L", 2, bytes, 2, new[] { "#$01", "D0" });
     }
     
     // Test logical instructions
@@ -146,7 +153,7 @@ public class Disassembler_68000_Tests
         // AND.L D1,D0
         byte[] bytes = { 0xC0, 0x81 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "AND.L", 2, 2, new[] { "D1", "D0" });
+        AssertInstruction(result, "AND.L", 2, bytes, 2, new[] { "D1", "D0" });
     }
     
     [TestMethod]
@@ -155,7 +162,7 @@ public class Disassembler_68000_Tests
         // OR.L D1,D0
         byte[] bytes = { 0x80, 0x81 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "OR.L", 2, 2, new[] { "D1", "D0" });
+        AssertInstruction(result, "OR.L", 2, bytes, 2, new[] { "D1", "D0" });
     }
     
     [TestMethod]
@@ -164,7 +171,7 @@ public class Disassembler_68000_Tests
         // EOR.L D0,D1
         byte[] bytes = { 0xB1, 0x81 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "EOR.L", 2, 2, new[] { "D0", "D1" });
+        AssertInstruction(result, "EOR.L", 2, bytes, 2, new[] { "D0", "D1" });
     }
     
     [TestMethod]
@@ -173,7 +180,7 @@ public class Disassembler_68000_Tests
         // NOT.L D0
         byte[] bytes = { 0x46, 0x80 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "NOT.L", 2, 1, new[] { "D0" });
+        AssertInstruction(result, "NOT.L", 2, bytes, 1, new[] { "D0" });
     }
     
     // Test compare instructions
@@ -183,7 +190,7 @@ public class Disassembler_68000_Tests
         // CMP.L D1,D0
         byte[] bytes = { 0xB0, 0x81 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "CMP.L", 2, 2, new[] { "D1", "D0" });
+        AssertInstruction(result, "CMP.L", 2, bytes, 2, new[] { "D1", "D0" });
     }
     
     [TestMethod]
@@ -192,7 +199,7 @@ public class Disassembler_68000_Tests
         // CMPI.L #$1234,D0
         byte[] bytes = { 0x0C, 0x80, 0x00, 0x00, 0x12, 0x34 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "CMPI.L", 6, 2, new[] { "#$00001234", "D0" });
+        AssertInstruction(result, "CMPI.L", 6, bytes, 2, new[] { "#$00001234", "D0" });
     }
     
     [TestMethod]
@@ -201,7 +208,7 @@ public class Disassembler_68000_Tests
         // TST.L D0
         byte[] bytes = { 0x4A, 0x80 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "TST.L", 2, 1, new[] { "D0" });
+        AssertInstruction(result, "TST.L", 2, bytes, 1, new[] { "D0" });
     }
     
     // Test branch instructions
@@ -211,7 +218,7 @@ public class Disassembler_68000_Tests
         // BRA.S $10 (relative)
         byte[] bytes = { 0x60, 0x10 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "BRA", 2, 1, new[] { "$001012.L" }, isBranch: true, isTerminator: true);
+        AssertInstruction(result, "BRA", 2, bytes, 1, new[] { "$001012.L" }, isBranch: true, isTerminator: true);
     }
     
     [TestMethod]
@@ -220,7 +227,7 @@ public class Disassembler_68000_Tests
         // BRA.W $1234 (relative)
         byte[] bytes = { 0x60, 0x00, 0x12, 0x34 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "BRA", 4, 1, new[] { "$002236.L" }, isBranch: true, isTerminator: true);
+        AssertInstruction(result, "BRA", 4, bytes, 1, new[] { "$002236.L" }, isBranch: true, isTerminator: true);
     }
     
     [TestMethod]
@@ -229,7 +236,7 @@ public class Disassembler_68000_Tests
         // BEQ.S $10 (relative)
         byte[] bytes = { 0x67, 0x10 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "BEQ", 2, 1, new[] { "$001012.L" }, isBranch: true, isTerminator: false);
+        AssertInstruction(result, "BEQ", 2, bytes, 1, new[] { "$001012.L" }, isBranch: true, isTerminator: false);
     }
     
     [TestMethod]
@@ -238,7 +245,7 @@ public class Disassembler_68000_Tests
         // BNE.S $10 (relative)
         byte[] bytes = { 0x66, 0x10 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "BNE", 2, 1, new[] { "$001012.L" }, isBranch: true, isTerminator: false);
+        AssertInstruction(result, "BNE", 2, bytes, 1, new[] { "$001012.L" }, isBranch: true, isTerminator: false);
     }
     
     [TestMethod]
@@ -247,7 +254,7 @@ public class Disassembler_68000_Tests
         // BSR.S $10 (relative)
         byte[] bytes = { 0x61, 0x10 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "BSR", 2, 1, new[] { "$001012.L" }, isBranch: true, isTerminator: false);
+        AssertInstruction(result, "BSR", 2, bytes, 1, new[] { "$001012.L" }, isBranch: true, isTerminator: false);
     }
     
     // Test DBcc instructions - all condition codes
@@ -257,7 +264,7 @@ public class Disassembler_68000_Tests
         // DBT D0,$10 (condition = 0000 - True, never terminates normally)
         byte[] bytes = { 0x50, 0xC8, 0x00, 0x10 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "DBT", 4, 2, new[] { "D0", "$001012.L" }, isBranch: true, isTerminator: false);
+        AssertInstruction(result, "DBT", 4, bytes, 2, new[] { "D0", "$001012.L" }, isBranch: true, isTerminator: false);
     }
     
     [TestMethod]
@@ -266,7 +273,7 @@ public class Disassembler_68000_Tests
         // DBF D0,$10 (condition = 0001 - False/Always, also known as DBRA)
         byte[] bytes = { 0x51, 0xC8, 0x00, 0x10 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "DBF", 4, 2, new[] { "D0", "$001012.L" }, isBranch: true, isTerminator: false);
+        AssertInstruction(result, "DBF", 4, bytes, 2, new[] { "D0", "$001012.L" }, isBranch: true, isTerminator: false);
     }
     
     [TestMethod]
@@ -275,7 +282,7 @@ public class Disassembler_68000_Tests
         // DBHI D1,$20 (condition = 0010 - High)
         byte[] bytes = { 0x52, 0xC9, 0x00, 0x20 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "DBHI", 4, 2, new[] { "D1", "$001022.L" }, isBranch: true, isTerminator: false);
+        AssertInstruction(result, "DBHI", 4, bytes, 2, new[] { "D1", "$001022.L" }, isBranch: true, isTerminator: false);
     }
     
     [TestMethod]
@@ -284,7 +291,7 @@ public class Disassembler_68000_Tests
         // DBLS D2,$30 (condition = 0011 - Low or Same)
         byte[] bytes = { 0x53, 0xCA, 0x00, 0x30 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "DBLS", 4, 2, new[] { "D2", "$001032.L" }, isBranch: true, isTerminator: false);
+        AssertInstruction(result, "DBLS", 4, bytes, 2, new[] { "D2", "$001032.L" }, isBranch: true, isTerminator: false);
     }
     
     [TestMethod]
@@ -293,7 +300,7 @@ public class Disassembler_68000_Tests
         // DBCC D3,$40 (condition = 0100 - Carry Clear)
         byte[] bytes = { 0x54, 0xCB, 0x00, 0x40 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "DBCC", 4, 2, new[] { "D3", "$001042.L" }, isBranch: true, isTerminator: false);
+        AssertInstruction(result, "DBCC", 4, bytes, 2, new[] { "D3", "$001042.L" }, isBranch: true, isTerminator: false);
     }
     
     [TestMethod]
@@ -302,7 +309,7 @@ public class Disassembler_68000_Tests
         // DBCS D4,$50 (condition = 0101 - Carry Set)
         byte[] bytes = { 0x55, 0xCC, 0x00, 0x50 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "DBCS", 4, 2, new[] { "D4", "$001052.L" }, isBranch: true, isTerminator: false);
+        AssertInstruction(result, "DBCS", 4, bytes, 2, new[] { "D4", "$001052.L" }, isBranch: true, isTerminator: false);
     }
     
     [TestMethod]
@@ -311,7 +318,7 @@ public class Disassembler_68000_Tests
         // DBNE D5,$60 (condition = 0110 - Not Equal)
         byte[] bytes = { 0x56, 0xCD, 0x00, 0x60 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "DBNE", 4, 2, new[] { "D5", "$001062.L" }, isBranch: true, isTerminator: false);
+        AssertInstruction(result, "DBNE", 4, bytes, 2, new[] { "D5", "$001062.L" }, isBranch: true, isTerminator: false);
     }
     
     [TestMethod]
@@ -320,7 +327,7 @@ public class Disassembler_68000_Tests
         // DBEQ D6,$70 (condition = 0111 - Equal)
         byte[] bytes = { 0x57, 0xCE, 0x00, 0x70 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "DBEQ", 4, 2, new[] { "D6", "$001072.L" }, isBranch: true, isTerminator: false);
+        AssertInstruction(result, "DBEQ", 4, bytes, 2, new[] { "D6", "$001072.L" }, isBranch: true, isTerminator: false);
     }
     
     [TestMethod]
@@ -329,7 +336,7 @@ public class Disassembler_68000_Tests
         // DBVC D7,$80 (condition = 1000 - Overflow Clear)
         byte[] bytes = { 0x58, 0xCF, 0x00, 0x80 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "DBVC", 4, 2, new[] { "D7", "$001082.L" }, isBranch: true, isTerminator: false);
+        AssertInstruction(result, "DBVC", 4, bytes, 2, new[] { "D7", "$001082.L" }, isBranch: true, isTerminator: false);
     }
     
     [TestMethod]
@@ -338,7 +345,7 @@ public class Disassembler_68000_Tests
         // DBVS D0,$90 (condition = 1001 - Overflow Set)
         byte[] bytes = { 0x59, 0xC8, 0x00, 0x90 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "DBVS", 4, 2, new[] { "D0", "$001092.L" }, isBranch: true, isTerminator: false);
+        AssertInstruction(result, "DBVS", 4, bytes, 2, new[] { "D0", "$001092.L" }, isBranch: true, isTerminator: false);
     }
     
     [TestMethod]
@@ -347,7 +354,7 @@ public class Disassembler_68000_Tests
         // DBPL D1,$A0 (condition = 1010 - Plus)
         byte[] bytes = { 0x5A, 0xC9, 0x00, 0xA0 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "DBPL", 4, 2, new[] { "D1", "$0010A2.L" }, isBranch: true, isTerminator: false);
+        AssertInstruction(result, "DBPL", 4, bytes, 2, new[] { "D1", "$0010A2.L" }, isBranch: true, isTerminator: false);
     }
     
     [TestMethod]
@@ -356,7 +363,7 @@ public class Disassembler_68000_Tests
         // DBMI D2,$B0 (condition = 1011 - Minus)
         byte[] bytes = { 0x5B, 0xCA, 0x00, 0xB0 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "DBMI", 4, 2, new[] { "D2", "$0010B2.L" }, isBranch: true, isTerminator: false);
+        AssertInstruction(result, "DBMI", 4, bytes, 2, new[] { "D2", "$0010B2.L" }, isBranch: true, isTerminator: false);
     }
     
     [TestMethod]
@@ -365,7 +372,7 @@ public class Disassembler_68000_Tests
         // DBGE D3,$C0 (condition = 1100 - Greater or Equal)
         byte[] bytes = { 0x5C, 0xCB, 0x00, 0xC0 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "DBGE", 4, 2, new[] { "D3", "$0010C2.L" }, isBranch: true, isTerminator: false);
+        AssertInstruction(result, "DBGE", 4, bytes, 2, new[] { "D3", "$0010C2.L" }, isBranch: true, isTerminator: false);
     }
     
     [TestMethod]
@@ -374,7 +381,7 @@ public class Disassembler_68000_Tests
         // DBLT D4,$D0 (condition = 1101 - Less Than)
         byte[] bytes = { 0x5D, 0xCC, 0x00, 0xD0 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "DBLT", 4, 2, new[] { "D4", "$0010D2.L" }, isBranch: true, isTerminator: false);
+        AssertInstruction(result, "DBLT", 4, bytes, 2, new[] { "D4", "$0010D2.L" }, isBranch: true, isTerminator: false);
     }
     
     [TestMethod]
@@ -383,7 +390,7 @@ public class Disassembler_68000_Tests
         // DBGT D5,$E0 (condition = 1110 - Greater Than)
         byte[] bytes = { 0x5E, 0xCD, 0x00, 0xE0 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "DBGT", 4, 2, new[] { "D5", "$0010E2.L" }, isBranch: true, isTerminator: false);
+        AssertInstruction(result, "DBGT", 4, bytes, 2, new[] { "D5", "$0010E2.L" }, isBranch: true, isTerminator: false);
     }
     
     [TestMethod]
@@ -392,7 +399,7 @@ public class Disassembler_68000_Tests
         // DBLE D6,$F0 (condition = 1111 - Less or Equal)
         byte[] bytes = { 0x5F, 0xCE, 0x00, 0xF0 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "DBLE", 4, 2, new[] { "D6", "$0010F2.L" }, isBranch: true, isTerminator: false);
+        AssertInstruction(result, "DBLE", 4, bytes, 2, new[] { "D6", "$0010F2.L" }, isBranch: true, isTerminator: false);
     }
     
     // Test jump instructions
@@ -402,7 +409,7 @@ public class Disassembler_68000_Tests
         // JMP $1234.L
         byte[] bytes = { 0x4E, 0xF9, 0x00, 0x00, 0x12, 0x34 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "JMP", 6, 1, new[] { "$00001234.L" }, isBranch: true, isTerminator: true);
+        AssertInstruction(result, "JMP", 6, bytes, 1, new[] { "$00001234.L" }, isBranch: true, isTerminator: true);
     }
     
     [TestMethod]
@@ -411,7 +418,7 @@ public class Disassembler_68000_Tests
         // JSR $1234.L
         byte[] bytes = { 0x4E, 0xB9, 0x00, 0x00, 0x12, 0x34 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "JSR", 6, 1, new[] { "$00001234.L" }, isBranch: true, isTerminator: true, new List<ulong> { 0x00001234 });
+        AssertInstruction(result, "JSR", 6, bytes, 1, new[] { "$00001234.L" }, isBranch: true, isTerminator: true, new List<ulong> { 0x00001234 });
     }
     
     [TestMethod]
@@ -420,7 +427,7 @@ public class Disassembler_68000_Tests
         // JSR 4(PC,D0.W)
         byte[] bytes = { 0x4E, 0xBB, 0x00, 0x04 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "JSR", 4, 1, new[] { "4(PC,D0.W)" }, isBranch: true, isTerminator: true);
+        AssertInstruction(result, "JSR", 4, bytes, 1, new[] { "4(PC,D0.W)" }, isBranch: true, isTerminator: true);
     }
     
     [TestMethod]
@@ -429,7 +436,7 @@ public class Disassembler_68000_Tests
         // JSR 10(PC,A1.L)
         byte[] bytes = { 0x4E, 0xBB, 0x98, 0x0A };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "JSR", 4, 1, new[] { "10(PC,A1.L)" }, isBranch: true, isTerminator: true);
+        AssertInstruction(result, "JSR", 4, bytes, 1, new[] { "10(PC,A1.L)" }, isBranch: true, isTerminator: true);
     }
     
     [TestMethod]
@@ -438,7 +445,7 @@ public class Disassembler_68000_Tests
         // JMP 8(PC,D1.W)
         byte[] bytes = { 0x4E, 0xFB, 0x10, 0x08 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "JMP", 4, 1, new[] { "8(PC,D1.W)" }, isBranch: true, isTerminator: true);
+        AssertInstruction(result, "JMP", 4, bytes, 1, new[] { "8(PC,D1.W)" }, isBranch: true, isTerminator: true);
     }
     
     // Test return instructions
@@ -448,7 +455,7 @@ public class Disassembler_68000_Tests
         // RTS
         byte[] bytes = { 0x4E, 0x75 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "RTS", 2, 0, null, isTerminator: true);
+        AssertInstruction(result, "RTS", 2, bytes, 0, null, isTerminator: true);
     }
     
     [TestMethod]
@@ -457,7 +464,7 @@ public class Disassembler_68000_Tests
         // RTE
         byte[] bytes = { 0x4E, 0x73 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "RTE", 2, 0, null, isTerminator: true);
+        AssertInstruction(result, "RTE", 2, bytes, 0, null, isTerminator: true);
     }
     
     [TestMethod]
@@ -466,7 +473,7 @@ public class Disassembler_68000_Tests
         // RTR
         byte[] bytes = { 0x4E, 0x77 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "RTR", 2, 0, null, isTerminator: true);
+        AssertInstruction(result, "RTR", 2, bytes, 0, null, isTerminator: true);
     }
     
     // Test shift/rotate instructions
@@ -476,7 +483,7 @@ public class Disassembler_68000_Tests
         // LSL.L #1,D0
         byte[] bytes = { 0xE3, 0x88 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "LSL.L", 2, 2, new[] { "#$01", "D0" });
+        AssertInstruction(result, "LSL.L", 2, bytes, 2, new[] { "#$01", "D0" });
     }
     
     [TestMethod]
@@ -485,7 +492,7 @@ public class Disassembler_68000_Tests
         // LSR.L #1,D0
         byte[] bytes = { 0xE2, 0x88 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "LSR.L", 2, 2, new[] { "#$01", "D0" });
+        AssertInstruction(result, "LSR.L", 2, bytes, 2, new[] { "#$01", "D0" });
     }
     
     [TestMethod]
@@ -494,7 +501,7 @@ public class Disassembler_68000_Tests
         // ASL.L #1,D0
         byte[] bytes = { 0xE3, 0x80 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "ASL.L", 2, 2, new[] { "#$01", "D0" });
+        AssertInstruction(result, "ASL.L", 2, bytes, 2, new[] { "#$01", "D0" });
     }
     
     [TestMethod]
@@ -503,7 +510,7 @@ public class Disassembler_68000_Tests
         // ASR.L #1,D0
         byte[] bytes = { 0xE2, 0x80 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "ASR.L", 2, 2, new[] { "#$01", "D0" });
+        AssertInstruction(result, "ASR.L", 2, bytes, 2, new[] { "#$01", "D0" });
     }
     
     // Test multiply and divide
@@ -513,7 +520,7 @@ public class Disassembler_68000_Tests
         // MULU.W D1,D0
         byte[] bytes = { 0xC0, 0xC1 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "MULU", 2, 2, new[] { "D1", "D0" });
+        AssertInstruction(result, "MULU", 2, bytes, 2, new[] { "D1", "D0" });
     }
     
     [TestMethod]
@@ -522,7 +529,7 @@ public class Disassembler_68000_Tests
         // MULS.W D1,D0
         byte[] bytes = { 0xC1, 0xC1 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "MULS", 2, 2, new[] { "D1", "D0" });
+        AssertInstruction(result, "MULS", 2, bytes, 2, new[] { "D1", "D0" });
     }
     
     [TestMethod]
@@ -531,7 +538,7 @@ public class Disassembler_68000_Tests
         // DIVU.W D1,D0
         byte[] bytes = { 0x80, 0xC1 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "DIVU", 2, 2, new[] { "D1", "D0" });
+        AssertInstruction(result, "DIVU", 2, bytes, 2, new[] { "D1", "D0" });
     }
     
     [TestMethod]
@@ -540,7 +547,7 @@ public class Disassembler_68000_Tests
         // DIVS.W D1,D0
         byte[] bytes = { 0x81, 0xC1 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "DIVS", 2, 2, new[] { "D1", "D0" });
+        AssertInstruction(result, "DIVS", 2, bytes, 2, new[] { "D1", "D0" });
     }
     
     // Test addressing modes
@@ -550,7 +557,7 @@ public class Disassembler_68000_Tests
         // MOVE.L (A0),D0
         byte[] bytes = { 0x20, 0x10 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "MOVE.L", 2, 2, new[] { "(A0)", "D0" });
+        AssertInstruction(result, "MOVE.L", 2, bytes, 2, new[] { "(A0)", "D0" });
     }
     
     [TestMethod]
@@ -559,7 +566,7 @@ public class Disassembler_68000_Tests
         // MOVE.L (A0)+,D0
         byte[] bytes = { 0x20, 0x18 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "MOVE.L", 2, 2, new[] { "(A0)+", "D0" });
+        AssertInstruction(result, "MOVE.L", 2, bytes, 2, new[] { "(A0)+", "D0" });
     }
     
     [TestMethod]
@@ -568,7 +575,7 @@ public class Disassembler_68000_Tests
         // MOVE.L -(A0),D0
         byte[] bytes = { 0x20, 0x20 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "MOVE.L", 2, 2, new[] { "-(A0)", "D0" });
+        AssertInstruction(result, "MOVE.L", 2, bytes, 2, new[] { "-(A0)", "D0" });
     }
     
     [TestMethod]
@@ -577,7 +584,7 @@ public class Disassembler_68000_Tests
         // MOVE.L $10(A0),D0
         byte[] bytes = { 0x20, 0x28, 0x00, 0x10 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "MOVE.L", 4, 2, new[] { "16(A0)", "D0" });
+        AssertInstruction(result, "MOVE.L", 4, bytes, 2, new[] { "16(A0)", "D0" });
     }
     
     [TestMethod]
@@ -586,7 +593,7 @@ public class Disassembler_68000_Tests
         // MOVE.L 0(A0,D0.W),D1
         byte[] bytes = { 0x22, 0x30, 0x00, 0x00 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "MOVE.L", 4, 2, new[] { "0(A0,D0.W)", "D1" });
+        AssertInstruction(result, "MOVE.L", 4, bytes, 2, new[] { "0(A0,D0.W)", "D1" });
     }
     
     [TestMethod]
@@ -595,7 +602,7 @@ public class Disassembler_68000_Tests
         // MOVE.L 20(A1,A2.L),D3
         byte[] bytes = { 0x26, 0x31, 0xA8, 0x14 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "MOVE.L", 4, 2, new[] { "20(A1,A2.L)", "D3" });
+        AssertInstruction(result, "MOVE.L", 4, bytes, 2, new[] { "20(A1,A2.L)", "D3" });
     }
     
     [TestMethod]
@@ -604,7 +611,7 @@ public class Disassembler_68000_Tests
         // MOVE.L $10(PC),D0
         byte[] bytes = { 0x20, 0x3A, 0x00, 0x10 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "MOVE.L", 4, 2, new[] { "16(PC)", "D0" });
+        AssertInstruction(result, "MOVE.L", 4, bytes, 2, new[] { "16(PC)", "D0" });
     }
     
     [TestMethod]
@@ -613,7 +620,7 @@ public class Disassembler_68000_Tests
         // MOVE.L 6(PC,D1.W),D2
         byte[] bytes = { 0x24, 0x3B, 0x10, 0x06 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "MOVE.L", 4, 2, new[] { "6(PC,D1.W)", "D2" });
+        AssertInstruction(result, "MOVE.L", 4, bytes, 2, new[] { "6(PC,D1.W)", "D2" });
     }
     
     [TestMethod]
@@ -622,7 +629,7 @@ public class Disassembler_68000_Tests
         // MOVE.L $1234.W,D0
         byte[] bytes = { 0x20, 0x38, 0x12, 0x34 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "MOVE.L", 4, 2, new[] { "$1234.W", "D0" });
+        AssertInstruction(result, "MOVE.L", 4, bytes, 2, new[] { "$1234.W", "D0" });
     }
     
     // Test miscellaneous instructions
@@ -632,7 +639,7 @@ public class Disassembler_68000_Tests
         // NOP
         byte[] bytes = { 0x4E, 0x71 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "NOP", 2, 0);
+        AssertInstruction(result, "NOP", 2, bytes, 0);
     }
     
     [TestMethod]
@@ -641,7 +648,7 @@ public class Disassembler_68000_Tests
         // MOVEQ #$12,D0
         byte[] bytes = { 0x70, 0x12 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "MOVEQ", 2, 2, new[] { "#$12", "D0" });
+        AssertInstruction(result, "MOVEQ", 2, bytes, 2, new[] { "#$12", "D0" });
     }
     
     [TestMethod]
@@ -650,7 +657,7 @@ public class Disassembler_68000_Tests
         // LEA $1234.L,A0
         byte[] bytes = { 0x41, 0xF9, 0x00, 0x00, 0x12, 0x34 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "LEA", 6, 2, new[] { "$00001234.L", "A0" });
+        AssertInstruction(result, "LEA", 6, bytes, 2, new[] { "$00001234.L", "A0" });
     }
     
     [TestMethod]
@@ -659,7 +666,7 @@ public class Disassembler_68000_Tests
         // CLR.L D0
         byte[] bytes = { 0x42, 0x80 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "CLR.L", 2, 1, new[] { "D0" });
+        AssertInstruction(result, "CLR.L", 2, bytes, 1, new[] { "D0" });
     }
     
     [TestMethod]
@@ -668,7 +675,7 @@ public class Disassembler_68000_Tests
         // NEG.L D0
         byte[] bytes = { 0x44, 0x80 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "NEG.L", 2, 1, new[] { "D0" });
+        AssertInstruction(result, "NEG.L", 2, bytes, 1, new[] { "D0" });
     }
     
     [TestMethod]
@@ -677,7 +684,7 @@ public class Disassembler_68000_Tests
         // EXT.W D0
         byte[] bytes = { 0x48, 0x80 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "EXT.W", 2, 1, new[] { "D0" });
+        AssertInstruction(result, "EXT.W", 2, bytes, 1, new[] { "D0" });
     }
     
     [TestMethod]
@@ -686,7 +693,7 @@ public class Disassembler_68000_Tests
         // EXT.L D0
         byte[] bytes = { 0x48, 0xC0 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "EXT.L", 2, 1, new[] { "D0" });
+        AssertInstruction(result, "EXT.L", 2, bytes, 1, new[] { "D0" });
     }
     
     // Test additional branch conditions
@@ -696,7 +703,7 @@ public class Disassembler_68000_Tests
         // BCC.S $10 (relative)
         byte[] bytes = { 0x64, 0x10 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "BCC", 2, 1, new[] { "$001012.L" }, isBranch: true, isTerminator: false);
+        AssertInstruction(result, "BCC", 2, bytes, 1, new[] { "$001012.L" }, isBranch: true, isTerminator: false);
     }
     
     [TestMethod]
@@ -705,7 +712,7 @@ public class Disassembler_68000_Tests
         // BCS.S $10 (relative)
         byte[] bytes = { 0x65, 0x10 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "BCS", 2, 1, new[] { "$001012.L" }, isBranch: true, isTerminator: false);
+        AssertInstruction(result, "BCS", 2, bytes, 1, new[] { "$001012.L" }, isBranch: true, isTerminator: false);
     }
     
     [TestMethod]
@@ -714,7 +721,7 @@ public class Disassembler_68000_Tests
         // BPL.S $10 (relative)
         byte[] bytes = { 0x6A, 0x10 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "BPL", 2, 1, new[] { "$001012.L" }, isBranch: true, isTerminator: false);
+        AssertInstruction(result, "BPL", 2, bytes, 1, new[] { "$001012.L" }, isBranch: true, isTerminator: false);
     }
     
     [TestMethod]
@@ -723,7 +730,7 @@ public class Disassembler_68000_Tests
         // BMI.S $10 (relative)
         byte[] bytes = { 0x6B, 0x10 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "BMI", 2, 1, new[] { "$001012.L" }, isBranch: true, isTerminator: false);
+        AssertInstruction(result, "BMI", 2, bytes, 1, new[] { "$001012.L" }, isBranch: true, isTerminator: false);
     }
     
     [TestMethod]
@@ -732,7 +739,7 @@ public class Disassembler_68000_Tests
         // BGE.S $10 (relative)
         byte[] bytes = { 0x6C, 0x10 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "BGE", 2, 1, new[] { "$001012.L" }, isBranch: true, isTerminator: false);
+        AssertInstruction(result, "BGE", 2, bytes, 1, new[] { "$001012.L" }, isBranch: true, isTerminator: false);
     }
     
     [TestMethod]
@@ -741,7 +748,7 @@ public class Disassembler_68000_Tests
         // BLT.S $10 (relative)
         byte[] bytes = { 0x6D, 0x10 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "BLT", 2, 1, new[] { "$001012.L" }, isBranch: true, isTerminator: false);
+        AssertInstruction(result, "BLT", 2, bytes, 1, new[] { "$001012.L" }, isBranch: true, isTerminator: false);
     }
     
     [TestMethod]
@@ -750,7 +757,7 @@ public class Disassembler_68000_Tests
         // BGT.S $10 (relative)
         byte[] bytes = { 0x6E, 0x10 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "BGT", 2, 1, new[] { "$001012.L" }, isBranch: true, isTerminator: false);
+        AssertInstruction(result, "BGT", 2, bytes, 1, new[] { "$001012.L" }, isBranch: true, isTerminator: false);
     }
     
     [TestMethod]
@@ -759,7 +766,7 @@ public class Disassembler_68000_Tests
         // BLE.S $10 (relative)
         byte[] bytes = { 0x6F, 0x10 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "BLE", 2, 1, new[] { "$001012.L" }, isBranch: true, isTerminator: false);
+        AssertInstruction(result, "BLE", 2, bytes, 1, new[] { "$001012.L" }, isBranch: true, isTerminator: false);
     }
     
     [TestMethod]
@@ -768,7 +775,7 @@ public class Disassembler_68000_Tests
         // BHI.S $10 (relative)
         byte[] bytes = { 0x62, 0x10 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "BHI", 2, 1, new[] { "$001012.L" }, isBranch: true, isTerminator: false);
+        AssertInstruction(result, "BHI", 2, bytes, 1, new[] { "$001012.L" }, isBranch: true, isTerminator: false);
     }
     
     [TestMethod]
@@ -777,7 +784,7 @@ public class Disassembler_68000_Tests
         // BLS.S $10 (relative)
         byte[] bytes = { 0x63, 0x10 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "BLS", 2, 1, new[] { "$001012.L" }, isBranch: true, isTerminator: false);
+        AssertInstruction(result, "BLS", 2, bytes, 1, new[] { "$001012.L" }, isBranch: true, isTerminator: false);
     }
     
     [TestMethod]
@@ -786,7 +793,7 @@ public class Disassembler_68000_Tests
         // BVC.S $10 (relative)
         byte[] bytes = { 0x68, 0x10 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "BVC", 2, 1, new[] { "$001012.L" }, isBranch: true, isTerminator: false);
+        AssertInstruction(result, "BVC", 2, bytes, 1, new[] { "$001012.L" }, isBranch: true, isTerminator: false);
     }
     
     [TestMethod]
@@ -795,7 +802,7 @@ public class Disassembler_68000_Tests
         // BVS.S $10 (relative)
         byte[] bytes = { 0x69, 0x10 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "BVS", 2, 1, new[] { "$001012.L" }, isBranch: true, isTerminator: false);
+        AssertInstruction(result, "BVS", 2, bytes, 1, new[] { "$001012.L" }, isBranch: true, isTerminator: false);
     }
     
     // Test Scc instructions
@@ -805,7 +812,7 @@ public class Disassembler_68000_Tests
         // SEQ D0
         byte[] bytes = { 0x57, 0xC0 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "SEQ", 2, 1, new[] { "D0" });
+        AssertInstruction(result, "SEQ", 2, bytes, 1, new[] { "D0" });
     }
     
     [TestMethod]
@@ -814,7 +821,7 @@ public class Disassembler_68000_Tests
         // SNE (A0)
         byte[] bytes = { 0x56, 0xD0 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "SNE", 2, 1, new[] { "(A0)" });
+        AssertInstruction(result, "SNE", 2, bytes, 1, new[] { "(A0)" });
     }
     
     // Test MOVEM
@@ -824,7 +831,7 @@ public class Disassembler_68000_Tests
         // MOVEM.L D0-D7/A0-A6,-(A7)
         byte[] bytes = { 0x48, 0xE7, 0xFF, 0xFE };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "MOVEM.L", 4, 2, new[] { "D1/D2/D3/D4/D5/D6/D7/A0/A1/A2/A3/A4/A5/A6/A7", "-(A7)" });
+        AssertInstruction(result, "MOVEM.L", 4, bytes, 2, new[] { "D1/D2/D3/D4/D5/D6/D7/A0/A1/A2/A3/A4/A5/A6/A7", "-(A7)" });
     }
     
     [TestMethod]
@@ -833,7 +840,7 @@ public class Disassembler_68000_Tests
         // MOVEM.L (A7)+,D0-D7/A0-A6
         byte[] bytes = { 0x4C, 0xDF, 0x7F, 0xFF };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "MOVEM.L", 4, 2, new[] { "(A7)+", "D0/D1/D2/D3/D4/D5/D6/D7/A0/A1/A2/A3/A4/A5/A6" });
+        AssertInstruction(result, "MOVEM.L", 4, bytes, 2, new[] { "(A7)+", "D0/D1/D2/D3/D4/D5/D6/D7/A0/A1/A2/A3/A4/A5/A6" });
     }
     
     // Test bit manipulation
@@ -844,7 +851,7 @@ public class Disassembler_68000_Tests
         // BSET D0,D1
         byte[] bytes = { 0x01, 0xC1 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "BSET", 2, 2, new[] { "D0", "D1" });
+        AssertInstruction(result, "BSET", 2, bytes, 2, new[] { "D0", "D1" });
     }
     
     [TestMethod]
@@ -853,7 +860,7 @@ public class Disassembler_68000_Tests
         // BSET #7,D0
         byte[] bytes = { 0x08, 0xC0, 0x00, 0x07 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "BSET", 4, 2, new[] { "#$07", "D0" });
+        AssertInstruction(result, "BSET", 4, bytes, 2, new[] { "#$07", "D0" });
     }
     
     [TestMethod]
@@ -862,7 +869,7 @@ public class Disassembler_68000_Tests
         // BCLR #7,D0
         byte[] bytes = { 0x08, 0x80, 0x00, 0x07 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "BCLR", 4, 2, new[] { "#$07", "D0" });
+        AssertInstruction(result, "BCLR", 4, bytes, 2, new[] { "#$07", "D0" });
     }
     
     [TestMethod]
@@ -871,7 +878,7 @@ public class Disassembler_68000_Tests
         // BCLR D0,D1
         byte[] bytes = { 0x01, 0x81 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "BCLR", 2, 2, new[] { "D0", "D1" });
+        AssertInstruction(result, "BCLR", 2, bytes, 2, new[] { "D0", "D1" });
     }
     
     [TestMethod]
@@ -880,7 +887,7 @@ public class Disassembler_68000_Tests
         // BCHG D0,D1
         byte[] bytes = { 0x01, 0x41 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "BCHG", 2, 2, new[] { "D0", "D1" });
+        AssertInstruction(result, "BCHG", 2, bytes, 2, new[] { "D0", "D1" });
     }
     
     [TestMethod]
@@ -889,7 +896,7 @@ public class Disassembler_68000_Tests
         // BTST D0,D1
         byte[] bytes = { 0x01, 0x01 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "BTST", 2, 2, new[] { "D0", "D1" });
+        AssertInstruction(result, "BTST", 2, bytes, 2, new[] { "D0", "D1" });
     }
     
     [TestMethod]
@@ -898,7 +905,7 @@ public class Disassembler_68000_Tests
         // BTST #7,D0
         byte[] bytes = { 0x08, 0x00, 0x00, 0x07 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "BTST", 4, 2, new[] { "#$07", "D0" });
+        AssertInstruction(result, "BTST", 4, bytes, 2, new[] { "#$07", "D0" });
     }
     
     // Test MOVEA
@@ -908,7 +915,7 @@ public class Disassembler_68000_Tests
         // MOVEA.W D0,A0 - opcode 0x3040
         byte[] bytes = { 0x30, 0x40 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "MOVEA.W", 2, 2, new[] { "D0", "A0" });
+        AssertInstruction(result, "MOVEA.W", 2, bytes, 2, new[] { "D0", "A0" });
     }
     
     [TestMethod]
@@ -917,7 +924,7 @@ public class Disassembler_68000_Tests
         // MOVEA.L D0,A0 - opcode 0x2040
         byte[] bytes = { 0x20, 0x40 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "MOVEA.L", 2, 2, new[] { "D0", "A0" });
+        AssertInstruction(result, "MOVEA.L", 2, bytes, 2, new[] { "D0", "A0" });
     }
     
     // Test ADDA and SUBA
@@ -927,7 +934,7 @@ public class Disassembler_68000_Tests
         // ADDA.W D0,A0
         byte[] bytes = { 0xD0, 0xC0 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "ADDA.W", 2, 2, new[] { "D0", "A0" });
+        AssertInstruction(result, "ADDA.W", 2, bytes, 2, new[] { "D0", "A0" });
     }
     
     [TestMethod]
@@ -936,7 +943,7 @@ public class Disassembler_68000_Tests
         // ADDA.L D0,A0
         byte[] bytes = { 0xD1, 0xC0 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "ADDA.L", 2, 2, new[] { "D0", "A0" });
+        AssertInstruction(result, "ADDA.L", 2, bytes, 2, new[] { "D0", "A0" });
     }
     
     [TestMethod]
@@ -945,7 +952,7 @@ public class Disassembler_68000_Tests
         // SUBA.W D0,A0
         byte[] bytes = { 0x90, 0xC0 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "SUBA.W", 2, 2, new[] { "D0", "A0" });
+        AssertInstruction(result, "SUBA.W", 2, bytes, 2, new[] { "D0", "A0" });
     }
     
     [TestMethod]
@@ -954,7 +961,7 @@ public class Disassembler_68000_Tests
         // SUBA.L D0,A0
         byte[] bytes = { 0x91, 0xC0 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "SUBA.L", 2, 2, new[] { "D0", "A0" });
+        AssertInstruction(result, "SUBA.L", 2, bytes, 2, new[] { "D0", "A0" });
     }
     
     // Test CMPA
@@ -964,7 +971,7 @@ public class Disassembler_68000_Tests
         // CMPA.W D0,A0
         byte[] bytes = { 0xB0, 0xC0 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "CMPA.W", 2, 2, new[] { "D0", "A0" });
+        AssertInstruction(result, "CMPA.W", 2, bytes, 2, new[] { "D0", "A0" });
     }
     
     [TestMethod]
@@ -973,7 +980,7 @@ public class Disassembler_68000_Tests
         // CMPA.L D0,A0
         byte[] bytes = { 0xB1, 0xC0 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "CMPA.L", 2, 2, new[] { "D0", "A0" });
+        AssertInstruction(result, "CMPA.L", 2, bytes, 2, new[] { "D0", "A0" });
     }
     
     // Test PEA
@@ -983,7 +990,7 @@ public class Disassembler_68000_Tests
         // PEA $1234.L
         byte[] bytes = { 0x48, 0x79, 0x00, 0x00, 0x12, 0x34 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "PEA", 6, 1, new[] { "$00001234.L" });
+        AssertInstruction(result, "PEA", 6, bytes, 1, new[] { "$00001234.L" });
     }
     
     // Test ADDX and SUBX
@@ -993,7 +1000,7 @@ public class Disassembler_68000_Tests
         // ADDX.L D1,D0
         byte[] bytes = { 0xD1, 0x81 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "ADDX.L", 2, 2, new[] { "D1", "D0" });
+        AssertInstruction(result, "ADDX.L", 2, bytes, 2, new[] { "D1", "D0" });
     }
     
     [TestMethod]
@@ -1002,7 +1009,7 @@ public class Disassembler_68000_Tests
         // ADDX.L -(A1),-(A0)
         byte[] bytes = { 0xD1, 0x89 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "ADDX.L", 2, 2, new[] { "-(A1)", "-(A0)" });
+        AssertInstruction(result, "ADDX.L", 2, bytes, 2, new[] { "-(A1)", "-(A0)" });
     }
     
     [TestMethod]
@@ -1011,7 +1018,7 @@ public class Disassembler_68000_Tests
         // SUBX.L D1,D0
         byte[] bytes = { 0x91, 0x81 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "SUBX.L", 2, 2, new[] { "D1", "D0" });
+        AssertInstruction(result, "SUBX.L", 2, bytes, 2, new[] { "D1", "D0" });
     }
     
     // Test CMPM
@@ -1021,7 +1028,7 @@ public class Disassembler_68000_Tests
         // CMPM.L (A1)+,(A0)+ - opcode 0xB189
         byte[] bytes = { 0xB1, 0x89 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "CMPM.L", 2, 2, new[] { "(A1)+", "(A0)+" });
+        AssertInstruction(result, "CMPM.L", 2, bytes, 2, new[] { "(A1)+", "(A0)+" });
     }
     
     // Test ABCD and SBCD
@@ -1031,7 +1038,7 @@ public class Disassembler_68000_Tests
         // ABCD D1,D0
         byte[] bytes = { 0xC1, 0x01 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "ABCD", 2, 2, new[] { "D1", "D0" });
+        AssertInstruction(result, "ABCD", 2, bytes, 2, new[] { "D1", "D0" });
     }
     
     [TestMethod]
@@ -1040,7 +1047,7 @@ public class Disassembler_68000_Tests
         // SBCD D1,D0
         byte[] bytes = { 0x81, 0x01 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "SBCD", 2, 2, new[] { "D1", "D0" });
+        AssertInstruction(result, "SBCD", 2, bytes, 2, new[] { "D1", "D0" });
     }
     
     // Test NBCD
@@ -1050,7 +1057,7 @@ public class Disassembler_68000_Tests
         // NBCD D0
         byte[] bytes = { 0x48, 0x00 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "NBCD", 2, 1, new[] { "D0" });
+        AssertInstruction(result, "NBCD", 2, bytes, 1, new[] { "D0" });
     }
     
     // Test CHK
@@ -1060,7 +1067,7 @@ public class Disassembler_68000_Tests
         // CHK D1,D0
         byte[] bytes = { 0x41, 0x81 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "CHK", 2, 2, new[] { "D1", "D0" });
+        AssertInstruction(result, "CHK", 2, bytes, 2, new[] { "D1", "D0" });
     }
     
     // Test TAS
@@ -1070,7 +1077,7 @@ public class Disassembler_68000_Tests
         // TAS D0 - opcode 0x4AC0
         byte[] bytes = { 0x4A, 0xC0 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "TAS", 2, 1, new[] { "D0" });
+        AssertInstruction(result, "TAS", 2, bytes, 1, new[] { "D0" });
     }
     
     // Test NEGX
@@ -1080,7 +1087,7 @@ public class Disassembler_68000_Tests
         // NEGX.L D0
         byte[] bytes = { 0x40, 0x80 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "NEGX.L", 2, 1, new[] { "D0" });
+        AssertInstruction(result, "NEGX.L", 2, bytes, 1, new[] { "D0" });
     }
     
     // Test rotate instructions with register count
@@ -1090,7 +1097,7 @@ public class Disassembler_68000_Tests
         // ROL.L D1,D0
         byte[] bytes = { 0xE3, 0xB8 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "ROL.L", 2, 2, new[] { "D1", "D0" });
+        AssertInstruction(result, "ROL.L", 2, bytes, 2, new[] { "D1", "D0" });
     }
     
     [TestMethod]
@@ -1099,7 +1106,7 @@ public class Disassembler_68000_Tests
         // ROR.L D1,D0
         byte[] bytes = { 0xE2, 0xB8 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "ROR.L", 2, 2, new[] { "D1", "D0" });
+        AssertInstruction(result, "ROR.L", 2, bytes, 2, new[] { "D1", "D0" });
     }
     
     [TestMethod]
@@ -1108,7 +1115,7 @@ public class Disassembler_68000_Tests
         // ROXL.L D1,D0
         byte[] bytes = { 0xE3, 0xB0 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "ROXL.L", 2, 2, new[] { "D1", "D0" });
+        AssertInstruction(result, "ROXL.L", 2, bytes, 2, new[] { "D1", "D0" });
     }
     
     [TestMethod]
@@ -1117,7 +1124,7 @@ public class Disassembler_68000_Tests
         // ROXR.L D1,D0
         byte[] bytes = { 0xE2, 0xB0 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "ROXR.L", 2, 2, new[] { "D1", "D0" });
+        AssertInstruction(result, "ROXR.L", 2, bytes, 2, new[] { "D1", "D0" });
     }
     
     // Test TRAPV and illegal
@@ -1127,7 +1134,7 @@ public class Disassembler_68000_Tests
         // TRAPV
         byte[] bytes = { 0x4E, 0x76 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "TRAPV", 2, 0, null, isBranch: false, isTerminator: false);
+        AssertInstruction(result, "TRAPV", 2, bytes, 0, null, isBranch: false, isTerminator: false);
     }
     
     [TestMethod]
@@ -1136,7 +1143,7 @@ public class Disassembler_68000_Tests
         // ILLEGAL instruction (0x4AFC)
         byte[] bytes = { 0x4A, 0xFC };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "ILLEGAL", 2, 0, null, isBranch: true, isTerminator: true);
+        AssertInstruction(result, "ILLEGAL", 2, bytes, 0, null, isBranch: true, isTerminator: true);
     }
     
     // Test RESET, STOP
@@ -1146,7 +1153,7 @@ public class Disassembler_68000_Tests
         // RESET
         byte[] bytes = { 0x4E, 0x70 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "RESET", 2, 0);
+        AssertInstruction(result, "RESET", 2, bytes, 0);
     }
     
     [TestMethod]
@@ -1155,7 +1162,7 @@ public class Disassembler_68000_Tests
         // STOP #$2700
         byte[] bytes = { 0x4E, 0x72, 0x27, 0x00 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "STOP", 4, 1, new[] { "#$2700" }, isBranch: false, isTerminator: false);
+        AssertInstruction(result, "STOP", 4, bytes, 1, new[] { "#$2700" }, isBranch: false, isTerminator: false);
     }
     
     [TestMethod]
@@ -1164,7 +1171,7 @@ public class Disassembler_68000_Tests
         // SWAP D0
         byte[] bytes = { 0x48, 0x40 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "SWAP", 2, 1, new[] { "D0" });
+        AssertInstruction(result, "SWAP", 2, bytes, 1, new[] { "D0" });
     }
     
     [TestMethod]
@@ -1173,7 +1180,7 @@ public class Disassembler_68000_Tests
         // EXG D0,D1
         byte[] bytes = { 0xC1, 0x41 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "EXG", 2, 2, new[] { "D0", "D1" });
+        AssertInstruction(result, "EXG", 2, bytes, 2, new[] { "D0", "D1" });
     }
     
     [TestMethod]
@@ -1182,7 +1189,7 @@ public class Disassembler_68000_Tests
         // TRAP #0
         byte[] bytes = { 0x4E, 0x40 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "TRAP", 2, 1, new[] { "#$00" }, isBranch: true, isTerminator: false);
+        AssertInstruction(result, "TRAP", 2, bytes, 1, new[] { "#$00" }, isBranch: true, isTerminator: false);
     }
     
     [TestMethod]
@@ -1191,7 +1198,7 @@ public class Disassembler_68000_Tests
         // LINK A6,#-$10
         byte[] bytes = { 0x4E, 0x56, 0xFF, 0xF0 };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "LINK", 4, 2, new[] { "A6", "#$FFF0" });
+        AssertInstruction(result, "LINK", 4, bytes, 2, new[] { "A6", "#$FFF0" });
     }
     
     [TestMethod]
@@ -1200,7 +1207,7 @@ public class Disassembler_68000_Tests
         // UNLK A6
         byte[] bytes = { 0x4E, 0x5E };
         var result = _disassembler.DecodeNext(bytes, 0x1000);
-        AssertInstruction(result, "UNLK", 2, 1, new[] { "A6" });
+        AssertInstruction(result, "UNLK", 2, bytes, 1, new[] { "A6" });
     }
     
     // Test state management
@@ -1227,8 +1234,9 @@ public class Disassembler_68000_Tests
     public void Test68000_NextAddresses_RegularInstruction()
     {
         // Regular instruction should have fall-through address only
-        var result = _disassembler.DecodeNext(new byte[] { 0x42, 0x40 }, 0x1000);  // CLR.W D0
-        AssertInstruction(result, "CLR.W", 2, 1, new[] { "D0" },
+        var bytes = new byte[] { 0x42, 0x40 };
+        var result = _disassembler.DecodeNext(bytes, 0x1000);  // CLR.W D0
+        AssertInstruction(result, "CLR.W", 2, bytes, 1, new[] { "D0" },
             nextAddresses: new List<ulong> { 0x1002 });
     }
     
@@ -1236,10 +1244,11 @@ public class Disassembler_68000_Tests
     public void Test68000_NextAddresses_ConditionalBranch()
     {
         // Conditional branch should have both fall-through and target addresses
-        var result = _disassembler.DecodeNext(new byte[] { 0x67, 0x10 }, 0x2000);  // BEQ +16
+        var bytes = new byte[] { 0x67, 0x10 };
+        var result = _disassembler.DecodeNext(bytes, 0x2000);  // BEQ +16
         var fallThrough = 0x2000UL + 2;  // Address after instruction
         var target = 0x2000UL + 2 + 0x10; // Branch target
-        AssertInstruction(result, "BEQ", 2, 1, isBranch: true,
+        AssertInstruction(result, "BEQ", 2, bytes, 1, isBranch: true,
             nextAddresses: new List<ulong> { fallThrough, target });
     }
     
@@ -1247,10 +1256,11 @@ public class Disassembler_68000_Tests
     public void Test68000_NextAddresses_ConditionalBranch_Negative()
     {
         // Conditional branch with negative offset
-        var result = _disassembler.DecodeNext(new byte[] { 0x65, 0xF0 }, 0x2000);  // BCS -16
+        var bytes = new byte[] { 0x65, 0xF0 };
+        var result = _disassembler.DecodeNext(bytes, 0x2000);  // BCS -16
         var fallThrough = 0x2000UL + 2;  // Address after instruction
         var target = (ulong)((long)(0x2000UL + 2) + unchecked((sbyte)0xF0)); // Branch target (negative)
-        AssertInstruction(result, "BCS", 2, 1, isBranch: true,
+        AssertInstruction(result, "BCS", 2, bytes, 1, isBranch: true,
             nextAddresses: new List<ulong> { fallThrough, target });
     }
     
@@ -1258,9 +1268,10 @@ public class Disassembler_68000_Tests
     public void Test68000_NextAddresses_UnconditionalBranch()
     {
         // Unconditional branch should have target address only
-        var result = _disassembler.DecodeNext(new byte[] { 0x60, 0x20 }, 0x3000);  // BRA +32
+        var bytes = new byte[] { 0x60, 0x20 };
+        var result = _disassembler.DecodeNext(bytes, 0x3000);  // BRA +32
         var target = 0x3000UL + 2 + 0x20; // Branch target
-        AssertInstruction(result, "BRA", 2, 1, isBranch: true, isTerminator: true,
+        AssertInstruction(result, "BRA", 2, bytes, 1, isBranch: true, isTerminator: true,
             nextAddresses: new List<ulong> { target });
     }
     
@@ -1268,9 +1279,10 @@ public class Disassembler_68000_Tests
     public void Test68000_NextAddresses_LongBranch()
     {
         // Long branch should have target address only
-        var result = _disassembler.DecodeNext(new byte[] { 0x60, 0x00, 0x10, 0x00 }, 0x4000);  // BRA.L +4096
+        var bytes = new byte[] { 0x60, 0x00, 0x10, 0x00 };
+        var result = _disassembler.DecodeNext(bytes, 0x4000);  // BRA.L +4096
         var target = 0x4000UL + 2 + 0x1000; // Branch target
-        AssertInstruction(result, "BRA", 4, 1, isBranch: true, isTerminator: true,
+        AssertInstruction(result, "BRA", 4, bytes, 1, isBranch: true, isTerminator: true,
             nextAddresses: new List<ulong> { target });
     }
     
@@ -1278,8 +1290,9 @@ public class Disassembler_68000_Tests
     public void Test68000_NextAddresses_Jump()
     {
         // Jump should have target address only
-        var result = _disassembler.DecodeNext(new byte[] { 0x4E, 0xF9, 0x00, 0x00, 0x80, 0x00 }, 0x5000);  // JMP $8000
-        AssertInstruction(result, "JMP", 6, 1, isBranch: true, isTerminator: true,
+        var bytes = new byte[] { 0x4E, 0xF9, 0x00, 0x00, 0x80, 0x00 };
+        var result = _disassembler.DecodeNext(bytes, 0x5000);  // JMP $8000
+        AssertInstruction(result, "JMP", 6, bytes, 1, isBranch: true, isTerminator: true,
             nextAddresses: new List<ulong> { 0x8000 });
     }
     
@@ -1287,8 +1300,9 @@ public class Disassembler_68000_Tests
     public void Test68000_NextAddresses_Call()
     {
         // Call should have target address only
-        var result = _disassembler.DecodeNext(new byte[] { 0x4E, 0xB9, 0x00, 0x00, 0x90, 0x00 }, 0x6000);  // JSR $9000
-        AssertInstruction(result, "JSR", 6, 1, isBranch: true, isTerminator: true,
+        var bytes = new byte[] { 0x4E, 0xB9, 0x00, 0x00, 0x90, 0x00 };
+        var result = _disassembler.DecodeNext(bytes, 0x6000);  // JSR $9000
+        AssertInstruction(result, "JSR", 6, bytes, 1, isBranch: true, isTerminator: true,
             nextAddresses: new List<ulong> { 0x9000 });
     }
     
@@ -1296,10 +1310,11 @@ public class Disassembler_68000_Tests
     public void Test68000_NextAddresses_DBcc()
     {
         // DBcc should have both fall-through and target addresses
-        var result = _disassembler.DecodeNext(new byte[] { 0x51, 0xC8, 0x00, 0x10 }, 0x7000);  // DBRA D0,+16
+        var bytes = new byte[] { 0x51, 0xC8, 0x00, 0x10 };
+        var result = _disassembler.DecodeNext(bytes, 0x7000);  // DBRA D0,+16
         var fallThrough = 0x7000UL + 4;  // Address after instruction
         var target = 0x7000UL + 2 + 0x10; // Branch target
-        AssertInstruction(result, "DBF", 4, 2, isBranch: true, 
+        AssertInstruction(result, "DBF", 4, bytes, 2, isBranch: true, 
             nextAddresses: new List<ulong> { fallThrough, target });
     }
     
@@ -1307,8 +1322,9 @@ public class Disassembler_68000_Tests
     public void Test68000_NextAddresses_Return()
     {
         // Return should have no next addresses
-        var result = _disassembler.DecodeNext(new byte[] { 0x4E, 0x75 }, 0x8000);  // RTS
-        AssertInstruction(result, "RTS", 2, isTerminator: true,
+        var bytes = new byte[] { 0x4E, 0x75 };
+        var result = _disassembler.DecodeNext(bytes, 0x8000);  // RTS
+        AssertInstruction(result, "RTS", 2, bytes, isTerminator: true,
             nextAddresses: new List<ulong>());
     }
     
@@ -1316,8 +1332,9 @@ public class Disassembler_68000_Tests
     public void Test68000_NextAddresses_ReturnFromException()
     {
         // RTE should have no next addresses
-        var result = _disassembler.DecodeNext(new byte[] { 0x4E, 0x73 }, 0x9000);  // RTE
-        AssertInstruction(result, "RTE", 2, isTerminator: true,
+        byte[] bytes = { 0x4E, 0x73 };
+        var result = _disassembler.DecodeNext(bytes, 0x9000);  // RTE
+        AssertInstruction(result, "RTE", 2, bytes, isTerminator: true,
             nextAddresses: new List<ulong>());
     }
 }

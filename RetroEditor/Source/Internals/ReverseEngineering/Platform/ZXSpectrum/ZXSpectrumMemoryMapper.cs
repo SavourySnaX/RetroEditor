@@ -5,21 +5,21 @@ namespace RetroEditor.Source.Internals.ReverseEngineering.Platform.ZXSpectrum;
 /// </summary>
 internal class ZXSpectrumMemoryMapper : IMemoryMapper
 {
-    public UInt64 MapCpuToRegion(UInt64 cpuAddress, out MemoryRegion region)
+    public UInt64 MapCpuToRegion(UInt64 cpuAddress, out MemoryRegionKey region)
     {
         // 0x0000 - 0x3FFF: ROM (16KB)
         // 0x4000 - 0xFFFF: RAM (48KB)
         if (cpuAddress < 0x4000)
         {
-            region = MemoryRegion.ROM;
+            region = new MemoryRegionKey((UInt32)MemoryInformationRegion.ROM);
             return cpuAddress;
         }
         if (cpuAddress < 0x10000)
         {
-            region = MemoryRegion.RAM;
+            region = new MemoryRegionKey((UInt32)MemoryInformationRegion.RAM);
             return cpuAddress;
         }
-        region = MemoryRegion.Invalid;
+        region = new MemoryRegionKey((UInt32)MemoryInformationRegion.Invalid);
         return 0;
     }
 
@@ -35,7 +35,7 @@ internal class ZXSpectrumMemoryMapper : IMemoryMapper
         return linearAddress;
     }
 
-    public UInt64 MapCpuToHardwareAddress(UInt64 address, out MemoryRegion region)
+    public UInt64 MapCpuToHardwareAddress(UInt64 address, out MemoryRegionKey region)
     {
         // No memory-mapped IO; map to ROM/RAM
         return MapCpuToRegion(address, out region);

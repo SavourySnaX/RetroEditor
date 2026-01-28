@@ -6,35 +6,35 @@ namespace RetroEditor.Source.Internals.ReverseEngineering.Platform.SNES;
 /// </summary>
 internal class SNESMemoryMapper : IMemoryMapper
 {
-    public UInt64 MapCpuToRegion(UInt64 cpuAddress, out MemoryRegion region)
+    public UInt64 MapCpuToRegion(UInt64 cpuAddress, out MemoryRegionKey region)
     {
-        region = MemoryRegion.ROM;
+        region = new MemoryRegionKey((UInt32)MemoryInformationRegion.ROM);
 
         // Check for common RAM areas first
         if (cpuAddress < 0x2000)
         {
-            region = MemoryRegion.RAM;
+            region = new MemoryRegionKey((UInt32)MemoryInformationRegion.RAM);
             return cpuAddress;
         }
 
         // Check for SRAM areas
         if (cpuAddress >= 0x6000 && cpuAddress < 0x8000)
         {
-            region = MemoryRegion.SRAM;
+            region = new MemoryRegionKey((UInt32)MemoryInformationRegion.SRAM);
             return cpuAddress - 0x6000;
         }
 
         // Check for I/O areas
         if (cpuAddress >= 0x2000 && cpuAddress < 0x6000)
         {
-            region = MemoryRegion.IO;
+            region = new MemoryRegionKey((UInt32)MemoryInformationRegion.IO);
             return cpuAddress;
         }
 
         // Handle bank 0x7E and 0x7F (extended RAM)
         if (cpuAddress >= 0x7E0000 && cpuAddress < 0x800000)
         {
-            region = MemoryRegion.RAM;
+            region = new MemoryRegionKey((UInt32)MemoryInformationRegion.RAM);
             return cpuAddress - 0x7E0000;
         }
 
@@ -43,7 +43,7 @@ internal class SNESMemoryMapper : IMemoryMapper
         {
             if ((cpuAddress & 0xFFFF) >= 0x6000 && (cpuAddress & 0xFFFF) < 0x8000)
             {
-                region = MemoryRegion.SRAM;
+                region = new MemoryRegionKey((UInt32)MemoryInformationRegion.SRAM);
                 return (cpuAddress & 0xFFFF) - 0x6000;
             }
         }
@@ -55,7 +55,7 @@ internal class SNESMemoryMapper : IMemoryMapper
         if (offset < 0x8000)
         {
             // Lower half of bank - not ROM in LoROM
-            region = MemoryRegion.Invalid;
+            region = new MemoryRegionKey((UInt32)MemoryInformationRegion.Invalid);
             return 0;
         }
 
@@ -91,15 +91,15 @@ internal class SNESMemoryMapper : IMemoryMapper
         }
     }
     
-    public UInt64 MapCpuToHardwareAddress(UInt64 address, out MemoryRegion region)
+    public UInt64 MapCpuToHardwareAddress(UInt64 address, out MemoryRegionKey region)
     {
-        region = MemoryRegion.ROM;
+        region = new MemoryRegionKey((UInt32)MemoryInformationRegion.ROM);
         var bank = address >> 16;
         var offset = address & 0xFFFF;
 
         if (bank == 0x7E || bank == 0x7F)
         {
-            region = MemoryRegion.RAM;
+            region = new MemoryRegionKey((UInt32)MemoryInformationRegion.RAM);
             return ((bank - 0x7E) << 16) | offset;
         }
         else if (bank == 0xFE || bank == 0xFF)
@@ -107,7 +107,7 @@ internal class SNESMemoryMapper : IMemoryMapper
             if (offset < 0x8000)
             {
                 // SRAM
-                region = MemoryRegion.SRAM;
+                region = new MemoryRegionKey((UInt32)MemoryInformationRegion.SRAM);
                 return ((bank - 0xF0) << 15) | offset;
             }
             else
@@ -122,13 +122,13 @@ internal class SNESMemoryMapper : IMemoryMapper
             if (offset < 0x2000)
             {
                 // Low RAM
-                region = MemoryRegion.RAM;
+                region = new MemoryRegionKey((UInt32)MemoryInformationRegion.RAM);
                 return offset;
             }
             else if (offset < 0x8000)
             {
                 // IO
-                region = MemoryRegion.IO;
+                region = new MemoryRegionKey((UInt32)MemoryInformationRegion.IO);
                 return offset - 0x2000;
             }
             else
@@ -147,7 +147,7 @@ internal class SNESMemoryMapper : IMemoryMapper
             // 70-7D
             if (offset < 0x8000)
             {
-                region = MemoryRegion.SRAM;
+                region = new MemoryRegionKey((UInt32)MemoryInformationRegion.SRAM);
                 return ((bank - 0x70) << 15) | offset;
             }
             else

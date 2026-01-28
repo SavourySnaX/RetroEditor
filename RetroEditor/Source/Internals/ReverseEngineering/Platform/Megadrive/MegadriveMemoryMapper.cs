@@ -5,14 +5,14 @@ namespace RetroEditor.Source.Internals.ReverseEngineering.Platform.Megadrive;
 /// </summary>
 internal class MegadriveMemoryMapper : IMemoryMapper
 {
-    public ulong MapCpuToHardwareAddress(ulong address, out MemoryRegion region)
+    public ulong MapCpuToHardwareAddress(ulong address, out MemoryRegionKey region)
     {
         return MapCpuToRegion(address, out region);
     }
 
-    public UInt64 MapCpuToRegion(UInt64 cpuAddress, out MemoryRegion region)
+    public UInt64 MapCpuToRegion(UInt64 cpuAddress, out MemoryRegionKey region)
     {
-        region = MemoryRegion.ROM;
+        region = new MemoryRegionKey((UInt32)MemoryInformationRegion.ROM);
         
         // Megadrive memory map:
         // 0x000000 - 0x3FFFFF: ROM (4MB)
@@ -28,21 +28,21 @@ internal class MegadriveMemoryMapper : IMemoryMapper
         // Check for RAM
         if (cpuAddress >= 0xFF0000 || (cpuAddress >= 0xE00000 && cpuAddress <= 0xFFFFFF))
         {
-            region = MemoryRegion.RAM;
+            region = new MemoryRegionKey((UInt32)MemoryInformationRegion.RAM);
             return cpuAddress & 0xFFFF; // 64KB RAM, mirrored
         }
         
         // Check for I/O
         if (cpuAddress >= 0xA00000 && cpuAddress < 0xC00000)
         {
-            region = MemoryRegion.IO;
+            region = new MemoryRegionKey((UInt32)MemoryInformationRegion.IO);
             return cpuAddress;
         }
         
         // Check for VDP
         if (cpuAddress >= 0xC00000 && cpuAddress < 0xE00000)
         {
-            region = MemoryRegion.IO;
+            region = new MemoryRegionKey((UInt32)MemoryInformationRegion.IO);
             return cpuAddress;
         }
         
@@ -52,25 +52,25 @@ internal class MegadriveMemoryMapper : IMemoryMapper
         {
             // Could be ROM or SRAM depending on cart configuration
             // For now, treat as ROM
-            region = MemoryRegion.ROM;
+            region = new MemoryRegionKey((UInt32)MemoryInformationRegion.ROM);
             return cpuAddress;
         }
         
         // ROM area (0x000000 - 0x3FFFFF)
         if (cpuAddress < 0x400000)
         {
-            region = MemoryRegion.ROM;
+            region = new MemoryRegionKey((UInt32)MemoryInformationRegion.ROM);
             return cpuAddress;
         }
         
         // Extended ROM area for larger games
         if (cpuAddress >= 0x400000 && cpuAddress < 0x800000)
         {
-            region = MemoryRegion.ROM;
+            region = new MemoryRegionKey((UInt32)MemoryInformationRegion.ROM);
             return cpuAddress;
         }
         
-        region = MemoryRegion.Invalid;
+        region = new MemoryRegionKey((UInt32)MemoryInformationRegion.Invalid);
         return 0;
     }
 

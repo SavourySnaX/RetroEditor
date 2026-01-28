@@ -14,6 +14,7 @@ internal class ZXSpectrumRAMRegion : IMemoryInformation
 {
     public string MameViewName => "Zilog Z80 ':maincpu' program space memory";
     public string DisplayName => "RAM";
+    public MemoryRegionKey RegionKey => new MemoryRegionKey((UInt32)MemoryInformationRegion.RAM);
     public bool HasPhysicalData => true;
     public MemoryRegionType Type => MemoryRegionType.Mixed;
     public (UInt64 Start, UInt64 End) AddressRange => (0x0000, 0xFFFF);

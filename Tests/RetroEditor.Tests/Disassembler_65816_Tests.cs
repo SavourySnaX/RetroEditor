@@ -4,11 +4,11 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace RetroEditor.Tests
 {
-    public class Disassembler_65816_Tests
+    public class _65816_Checker
     {
         private readonly SNES65816Disassembler _disassembler;
 
-        protected Disassembler_65816_Tests()
+        protected _65816_Checker()
         {
             _disassembler = new SNES65816Disassembler();
         }
@@ -27,44 +27,51 @@ namespace RetroEditor.Tests
             _disassembler.State=state;
         }
 
-        internal void TestInAllStates(Action<DecodeResult> testAction, byte[] bytes, ulong address = 0x8000)
+        internal void TestInAllStates(Action<byte[], DecodeResult> testAction, byte[] bytes, ulong address = 0x8000)
         {
             // Test in emulation mode
             SetState(emulation: true, a16bit: false, x16bit: false);
-            testAction(DecodeNext(bytes, address));
+            testAction(bytes, DecodeNext(bytes, address));
 
             // Test in native mode with 8-bit A and X
             SetState(emulation: false, a16bit: false, x16bit: false);
-            testAction(DecodeNext(bytes, address));
+            testAction(bytes, DecodeNext(bytes, address));
 
             // Test in native mode with 16-bit A and 8-bit X
             SetState(emulation: false, a16bit: true, x16bit: false);
-            testAction(DecodeNext(bytes, address));
+            testAction(bytes, DecodeNext(bytes, address));
 
             // Test in native mode with 8-bit A and 16-bit X
             SetState(emulation: false, a16bit: false, x16bit: true);
-            testAction(DecodeNext(bytes, address));
+            testAction(bytes, DecodeNext(bytes, address));
 
             // Test in native mode with 16-bit A and X
             SetState(emulation: false, a16bit: true, x16bit: true);
-            testAction(DecodeNext(bytes, address));
+            testAction(bytes, DecodeNext(bytes, address));
         }
 
         internal void AssertInstruction(
             DecodeResult result,
             string mnemonic,
             int bytesConsumed,
+            byte[] expectedBytes,
             int operandCount = 0,
             string[] operandText = null,
             bool isBranch = false,
             bool isTerminator = false,
-            List<ulong> nextAddresses = null)
+            List<ulong> nextAddresses = null
+            )
         {
             Assert.IsTrue(result.Success);
 
             var instruction = result.Instruction;
             Assert.AreEqual(mnemonic, instruction.Mnemonic);
             Assert.AreEqual(bytesConsumed, result.BytesConsumed);
+            
+            // Verify the bytes match
+            Assert.IsNotNull(expectedBytes);
+            Assert.AreEqual(bytesConsumed, instruction.Bytes.Length, "Instruction bytes length mismatch");
+            CollectionAssert.AreEqual(expectedBytes, instruction.Bytes, "Instruction bytes mismatch");
             
             var operands = instruction.Operands;
             Assert.AreEqual(operandCount, operands.Count);
@@ -101,7 +108,7 @@ namespace RetroEditor.Tests
     }
 
     [TestClass]
-    public class DisassemblerTests : Disassembler_65816_Tests
+    public class Disassembler_65816_Tests : _65816_Checker
     {
         [TestMethod]
         public void Test65816_ADC_Immediate()
@@ -130,6 +137,7 @@ namespace RetroEditor.Tests
                 var result = DecodeNext(testCase.Bytes);
                 AssertInstruction(
                     result,
+                    expectedBytes: testCase.Bytes,
                     mnemonic: "ADC",
                     bytesConsumed: testCase.ExpectedLength,
                     operandCount: 1,
@@ -141,9 +149,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_ADC_Absolute()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes, result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "ADC",
                     bytesConsumed: 3,
                     operandCount: 1,
@@ -156,9 +165,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_ADC_AbsoluteLong()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes, result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "ADC",
                     bytesConsumed: 4,
                     operandCount: 1,
@@ -171,9 +181,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_ADC_DirectPage()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes, result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "ADC",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -186,9 +197,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_ADC_DirectPageIndirect()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes, result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "ADC",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -201,9 +213,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_ADC_DirectPageIndirectLong()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes, result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "ADC",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -216,9 +229,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_ADC_AbsoluteIndexedX()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes, result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "ADC",
                     bytesConsumed: 3,
                     operandCount: 1,
@@ -231,9 +245,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_ADC_AbsoluteLongIndexedX()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes, result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "ADC",
                     bytesConsumed: 4,
                     operandCount: 1,
@@ -246,9 +261,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_ADC_AbsoluteIndexedY()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes, result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "ADC",
                     bytesConsumed: 3,
                     operandCount: 1,
@@ -261,9 +277,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_ADC_DirectPageIndexedX()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes, result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "ADC",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -276,9 +293,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_ADC_DirectPageIndirectX()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes, result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "ADC",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -291,9 +309,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_ADC_DirectPageIndirectIndexedY()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes, result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "ADC",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -306,9 +325,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_ADC_DirectPageIndirectLongIndexedY()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes, result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "ADC",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -321,9 +341,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_ADC_StackRelative()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes, result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "ADC",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -336,9 +357,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_ADC_StackRelativeIndexedY()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes, result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "ADC",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -375,6 +397,7 @@ namespace RetroEditor.Tests
                 var result = DecodeNext(testCase.Bytes);
                 AssertInstruction(
                     result,
+                    expectedBytes: testCase.Bytes,
                     mnemonic: "AND",
                     bytesConsumed: testCase.ExpectedLength,
                     operandCount: 1,
@@ -386,9 +409,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_AND_Absolute()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes, result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "AND",
                     bytesConsumed: 3,
                     operandCount: 1,
@@ -401,9 +425,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_AND_AbsoluteLong()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes, result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "AND",
                     bytesConsumed: 4,
                     operandCount: 1,
@@ -416,9 +441,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_AND_DirectPage()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes, result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "AND",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -431,9 +457,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_AND_DirectPageIndirect()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes, result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "AND",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -446,9 +473,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_AND_DirectPageIndirectLong()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes, result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "AND",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -461,9 +489,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_AND_AbsoluteIndexedX()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes, result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "AND",
                     bytesConsumed: 3,
                     operandCount: 1,
@@ -476,9 +505,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_AND_AbsoluteLongIndexedX()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes, result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: [0x3F, 0x56, 0x34, 0x12],
                     mnemonic: "AND",
                     bytesConsumed: 4,
                     operandCount: 1,
@@ -491,9 +521,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_AND_AbsoluteIndexedY()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes, result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "AND",
                     bytesConsumed: 3,
                     operandCount: 1,
@@ -506,9 +537,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_AND_DirectPageIndexedX()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes, result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "AND",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -521,9 +553,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_AND_DirectPageIndirectX()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes, result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "AND",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -536,9 +569,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_AND_DirectPageIndirectIndexedY()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes, result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "AND",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -551,9 +585,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_AND_DirectPageIndirectLongIndexedY()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes, result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "AND",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -566,9 +601,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_AND_StackRelative()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes, result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "AND",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -581,9 +617,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_AND_StackRelativeIndexedY()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes, result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "AND",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -596,9 +633,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_ASL_Accumulator()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes, result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "ASL",
                     bytesConsumed: 1,
                     operandCount: 0
@@ -610,9 +648,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_ASL_Absolute()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes, result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "ASL",
                     bytesConsumed: 3,
                     operandCount: 1,
@@ -625,9 +664,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_ASL_DirectPage()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes, result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "ASL",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -640,9 +680,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_ASL_AbsoluteIndexedX()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes, result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "ASL",
                     bytesConsumed: 3,
                     operandCount: 1,
@@ -655,9 +696,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_ASL_DirectPageIndexedX()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "ASL",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -670,9 +712,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_BCC_Forward()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "BCC",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -687,9 +730,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_BCC_Backward()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "BCC",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -704,9 +748,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_BCS_Forward()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "BCS",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -721,9 +766,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_BCS_Backward()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "BCS",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -738,9 +784,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_BEQ_Forward()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "BEQ",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -755,9 +802,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_BEQ_Backward()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "BEQ",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -772,9 +820,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_BMI_Forward()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "BMI",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -789,9 +838,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_BMI_Backward()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "BMI",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -806,9 +856,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_BNE_Forward()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "BNE",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -823,9 +874,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_BNE_Backward()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "BNE",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -840,9 +892,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_BPL_Forward()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "BPL",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -857,9 +910,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_BPL_Backward()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "BPL",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -874,9 +928,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_BRA_Forward()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "BRA",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -892,9 +947,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_BRA_Backward()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "BRA",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -910,9 +966,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_BVC_Forward()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "BVC",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -927,9 +984,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_BVC_Backward()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "BVC",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -944,9 +1002,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_BVS_Forward()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "BVS",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -961,9 +1020,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_BVS_Backward()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "BVS",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -978,9 +1038,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_BRL_Forward()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "BRL",
                     bytesConsumed: 3,
                     operandCount: 1,
@@ -996,9 +1057,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_BRL_Backward()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "BRL",
                     bytesConsumed: 3,
                     operandCount: 1,
@@ -1014,9 +1076,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_BRL_LongDistance()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "BRL",
                     bytesConsumed: 3,
                     operandCount: 1,
@@ -1056,6 +1119,7 @@ namespace RetroEditor.Tests
                 var result = DecodeNext(testCase.Bytes);
                 AssertInstruction(
                     result,
+                    expectedBytes: testCase.Bytes,
                     mnemonic: "BIT",
                     bytesConsumed: testCase.ExpectedLength,
                     operandCount: 1,
@@ -1067,9 +1131,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_BIT_Absolute()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "BIT",
                     bytesConsumed: 3,
                     operandCount: 1,
@@ -1082,9 +1147,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_BIT_DirectPage()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "BIT",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -1097,9 +1163,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_BIT_AbsoluteIndexedX()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "BIT",
                     bytesConsumed: 3,
                     operandCount: 1,
@@ -1112,9 +1179,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_BIT_DirectPageIndexedX()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "BIT",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -1127,9 +1195,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_BRK()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "BRK",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -1143,9 +1212,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_COP()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "COP",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -1159,8 +1229,8 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_CLC()
         {
-            TestInAllStates(result => 
-                AssertInstruction(result, "CLC", 1),
+            TestInAllStates((bytes,result) => 
+                AssertInstruction(result, "CLC", 1, [0x18]),
                 [0x18]
             );
         }
@@ -1168,8 +1238,8 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_CLI()
         {
-            TestInAllStates(result => 
-                AssertInstruction(result, "CLI", 1),
+            TestInAllStates((bytes,result) => 
+                AssertInstruction(result, "CLI", 1, [0x58]),
                 [0x58]
             );
         }
@@ -1177,8 +1247,8 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_CLD()
         {
-            TestInAllStates(result => 
-                AssertInstruction(result, "CLD", 1),
+            TestInAllStates((bytes,result) => 
+                AssertInstruction(result, "CLD", 1, [0xD8]),
                 [0xD8]
             );
         }
@@ -1186,8 +1256,8 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_CLV()
         {
-            TestInAllStates(result => 
-                AssertInstruction(result, "CLV", 1),
+            TestInAllStates((bytes,result) => 
+                AssertInstruction(result, "CLV", 1, [0xB8]),
                 [0xB8]
             );
         }
@@ -1196,9 +1266,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_CMP_DirectPage()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "CMP",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -1211,9 +1282,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_CMP_DirectPageIndirect()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "CMP",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -1226,9 +1298,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_CMP_DirectPageIndirectLong()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "CMP",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -1241,9 +1314,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_CMP_AbsoluteIndexedX()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "CMP",
                     bytesConsumed: 3,
                     operandCount: 1,
@@ -1256,9 +1330,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_CMP_AbsoluteLongIndexedX()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "CMP",
                     bytesConsumed: 4,
                     operandCount: 1,
@@ -1271,9 +1346,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_CMP_AbsoluteIndexedY()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "CMP",
                     bytesConsumed: 3,
                     operandCount: 1,
@@ -1286,9 +1362,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_CMP_DirectPageIndexedX()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "CMP",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -1301,9 +1378,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_CMP_DirectPageIndirectX()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "CMP",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -1316,9 +1394,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_CMP_DirectPageIndirectIndexedY()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "CMP",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -1331,9 +1410,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_CMP_DirectPageIndirectLongIndexedY()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "CMP",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -1346,9 +1426,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_CMP_StackRelative()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "CMP",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -1361,9 +1442,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_CMP_StackRelativeIndexedY()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "CMP",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -1402,6 +1484,7 @@ namespace RetroEditor.Tests
                     result,
                     mnemonic: "CPX",
                     bytesConsumed: testCase.ExpectedLength,
+                    expectedBytes: testCase.Bytes,
                     operandCount: 1,
                     operandText: [testCase.ExpectedOperand]
                 );
@@ -1411,9 +1494,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_CPX_Absolute()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "CPX",
                     bytesConsumed: 3,
                     operandCount: 1,
@@ -1426,9 +1510,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_CPX_DirectPage()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "CPX",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -1467,6 +1552,7 @@ namespace RetroEditor.Tests
                     result,
                     mnemonic: "CPY",
                     bytesConsumed: testCase.ExpectedLength,
+                    expectedBytes: testCase.Bytes,
                     operandCount: 1,
                     operandText: [testCase.ExpectedOperand]
                 );
@@ -1476,9 +1562,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_CPY_Absolute()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "CPY",
                     bytesConsumed: 3,
                     operandCount: 1,
@@ -1491,9 +1578,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_CPY_DirectPage()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "CPY",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -1506,9 +1594,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_DEC_Accumulator()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "DEC",
                     bytesConsumed: 1,
                     operandCount: 0
@@ -1523,7 +1612,7 @@ namespace RetroEditor.Tests
         {
             // Regular instruction should have fall-through address only
             var result = DecodeNext(new byte[] { 0x18 }, 0x1000);  // CLC
-            AssertInstruction(result, "CLC", 1, nextAddresses: new List<ulong> { 0x1001 });
+            AssertInstruction(result, "CLC", 1, [0x18], nextAddresses: new List<ulong> { 0x1001 });
         }
         
         [TestMethod]
@@ -1533,7 +1622,7 @@ namespace RetroEditor.Tests
             var result = DecodeNext(new byte[] { 0x90, 0x10 }, 0x2000);  // BCC +16
             var fallThrough = 0x2000UL + 2;  // Address after instruction
             var target = 0x2000UL + 2 + 0x10; // Branch target
-            AssertInstruction(result, "BCC", 2, 1, isBranch: true, 
+            AssertInstruction(result, "BCC", 2, [0x90, 0x10], 1, isBranch: true, 
                 nextAddresses: new List<ulong> { fallThrough, target });
         }
         
@@ -1544,7 +1633,7 @@ namespace RetroEditor.Tests
             var result = DecodeNext(new byte[] { 0xB0, 0xF0 }, 0x2000);  // BCS -16
             var fallThrough = 0x2000UL + 2;  // Address after instruction
             var target = (ulong)((long)(0x2000UL + 2) + unchecked((sbyte)0xF0)); // Branch target (negative)
-            AssertInstruction(result, "BCS", 2, 1, isBranch: true, 
+            AssertInstruction(result, "BCS", 2, [0xB0, 0xF0], 1, isBranch: true, 
                 nextAddresses: new List<ulong> { fallThrough, target });
         }
         
@@ -1554,7 +1643,7 @@ namespace RetroEditor.Tests
             // Unconditional branch should have target address only
             var result = DecodeNext(new byte[] { 0x80, 0x20 }, 0x3000);  // BRA +32
             var target = 0x3000UL + 2 + 0x20; // Branch target
-            AssertInstruction(result, "BRA", 2, 1, isBranch: true, isTerminator: true,
+            AssertInstruction(result, "BRA", 2, [0x80, 0x20], 1, isBranch: true, isTerminator: true,
                 nextAddresses: new List<ulong> { target });
         }
         
@@ -1564,7 +1653,7 @@ namespace RetroEditor.Tests
             // Long branch should have target address only
             var result = DecodeNext(new byte[] { 0x82, 0x00, 0x10 }, 0x4000);  // BRL +4096
             var target = 0x4000UL + 3 + 0x1000; // Branch target
-            AssertInstruction(result, "BRL", 3, 1, isBranch: true, isTerminator: true,
+            AssertInstruction(result, "BRL", 3, [0x82, 0x00, 0x10], 1, isBranch: true, isTerminator: true,
                 nextAddresses: new List<ulong> { target });
         }
         
@@ -1573,7 +1662,7 @@ namespace RetroEditor.Tests
         {
             // Jump should have target address only
             var result = DecodeNext(new byte[] { 0x4C, 0x00, 0x80 }, 0x5000);  // JMP $8000
-            AssertInstruction(result, "JMP", 3, 1, isBranch: true, isTerminator: true,
+            AssertInstruction(result, "JMP", 3, [0x4C, 0x00, 0x80], 1, isBranch: true, isTerminator: true,
                 nextAddresses: new List<ulong> { 0x8000 });
         }
         
@@ -1582,7 +1671,7 @@ namespace RetroEditor.Tests
         {
             // Call should have target address only
             var result = DecodeNext(new byte[] { 0x20, 0x00, 0x90 }, 0x6000);  // JSR $9000
-            AssertInstruction(result, "JSR", 3, 1, isBranch: true, isTerminator: true,
+            AssertInstruction(result, "JSR", 3, [0x20, 0x00, 0x90], 1, isBranch: true, isTerminator: true,
                 nextAddresses: new List<ulong> { 0x9000 });
         }
         
@@ -1591,7 +1680,7 @@ namespace RetroEditor.Tests
         {
             // Return should have no next addresses
             var result = DecodeNext(new byte[] { 0x60 }, 0x7000);  // RTS
-            AssertInstruction(result, "RTS", 1, isTerminator: true,
+            AssertInstruction(result, "RTS", 1, [0x60], isTerminator: true,
                 nextAddresses: new List<ulong>());
         }
         
@@ -1600,16 +1689,17 @@ namespace RetroEditor.Tests
         {
             // Break should have no next addresses
             var result = DecodeNext(new byte[] { 0x00, 0x00 }, 0x8000);  // BRK
-            AssertInstruction(result, "BRK", 2, 1, isTerminator: true,
+            AssertInstruction(result, "BRK", 2, [0x00, 0x00], 1, isTerminator: true,
                 nextAddresses: new List<ulong>());
         }
 
         [TestMethod]
         public void Test65816_DEC_Absolute()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "DEC",
                     bytesConsumed: 3,
                     operandCount: 1,
@@ -1622,9 +1712,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_DEC_DirectPage()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "DEC",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -1637,9 +1728,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_DEC_AbsoluteIndexedX()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "DEC",
                     bytesConsumed: 3,
                     operandCount: 1,
@@ -1652,9 +1744,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_DEC_DirectPageIndexedX()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "DEC",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -1693,6 +1786,7 @@ namespace RetroEditor.Tests
                     result,
                     mnemonic: "EOR",
                     bytesConsumed: testCase.ExpectedLength,
+                    expectedBytes: testCase.Bytes,
                     operandCount: 1,
                     operandText: [testCase.ExpectedOperand]
                 );
@@ -1702,9 +1796,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_EOR_Absolute()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "EOR",
                     bytesConsumed: 3,
                     operandCount: 1,
@@ -1717,9 +1812,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_EOR_AbsoluteLong()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "EOR",
                     bytesConsumed: 4,
                     operandCount: 1,
@@ -1732,9 +1828,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_EOR_DirectPage()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "EOR",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -1747,9 +1844,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_EOR_DirectPageIndirect()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "EOR",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -1762,9 +1860,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_EOR_DirectPageIndirectLong()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "EOR",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -1777,9 +1876,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_EOR_AbsoluteIndexedX()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "EOR",
                     bytesConsumed: 3,
                     operandCount: 1,
@@ -1792,9 +1892,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_EOR_AbsoluteLongIndexedX()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "EOR",
                     bytesConsumed: 4,
                     operandCount: 1,
@@ -1807,9 +1908,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_EOR_AbsoluteIndexedY()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "EOR",
                     bytesConsumed: 3,
                     operandCount: 1,
@@ -1822,9 +1924,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_EOR_DirectPageIndexedX()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "EOR",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -1837,9 +1940,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_EOR_DirectPageIndirectX()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "EOR",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -1852,9 +1956,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_EOR_DirectPageIndirectIndexedY()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "EOR",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -1867,9 +1972,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_EOR_DirectPageIndirectLongIndexedY()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "EOR",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -1882,9 +1988,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_EOR_StackRelative()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "EOR",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -1897,9 +2004,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_EOR_StackRelativeIndexedY()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "EOR",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -1912,9 +2020,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_INC_Accumulator()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "INC",
                     bytesConsumed: 1,
                     operandCount: 0
@@ -1926,9 +2035,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_INC_Absolute()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "INC",
                     bytesConsumed: 3,
                     operandCount: 1,
@@ -1941,9 +2051,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_INC_DirectPage()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "INC",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -1956,9 +2067,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_INC_AbsoluteIndexedX()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "INC",
                     bytesConsumed: 3,
                     operandCount: 1,
@@ -1971,9 +2083,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_INC_DirectPageIndexedX()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "INC",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -1986,9 +2099,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_INX()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "INX",
                     bytesConsumed: 1,
                     operandCount: 0
@@ -2000,9 +2114,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_INY()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "INY",
                     bytesConsumed: 1,
                     operandCount: 0
@@ -2014,9 +2129,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_JMP_Absolute()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "JMP",
                     bytesConsumed: 3,
                     operandCount: 1,
@@ -2032,9 +2148,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_JMP_AbsoluteIndirect()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "JMP",
                     bytesConsumed: 3,
                     operandCount: 1,
@@ -2049,9 +2166,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_JMP_AbsoluteIndirectIndexedX()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "JMP",
                     bytesConsumed: 3,
                     operandCount: 1,
@@ -2066,9 +2184,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_JMP_AbsoluteLong()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "JMP",
                     bytesConsumed: 4,
                     operandCount: 1,
@@ -2084,9 +2203,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_JMP_AbsoluteLongIndirect()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "JMP",
                     bytesConsumed: 3,
                     operandCount: 1,
@@ -2101,9 +2221,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_JSR_Absolute()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "JSR",
                     bytesConsumed: 3,
                     operandCount: 1,
@@ -2119,9 +2240,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_JSR_AbsoluteIndexedX()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "JSR",
                     bytesConsumed: 3,
                     operandCount: 1,
@@ -2136,9 +2258,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_JSL_AbsoluteLong()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "JSL",
                     bytesConsumed: 4,
                     operandCount: 1,
@@ -2178,6 +2301,7 @@ namespace RetroEditor.Tests
                 var result = DecodeNext(testCase.Bytes);
                 AssertInstruction(
                     result,
+                    expectedBytes: testCase.Bytes,
                     mnemonic: "LDA",
                     bytesConsumed: testCase.ExpectedLength,
                     operandCount: 1,
@@ -2189,9 +2313,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_LDA_Absolute()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "LDA",
                     bytesConsumed: 3,
                     operandCount: 1,
@@ -2204,9 +2329,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_LDA_AbsoluteLong()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "LDA",
                     bytesConsumed: 4,
                     operandCount: 1,
@@ -2219,9 +2345,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_LDA_DirectPage()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "LDA",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -2234,9 +2361,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_LDA_DirectPageIndirect()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "LDA",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -2249,9 +2377,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_LDA_DirectPageIndirectLong()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "LDA",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -2264,9 +2393,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_LDA_AbsoluteIndexedX()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "LDA",
                     bytesConsumed: 3,
                     operandCount: 1,
@@ -2279,9 +2409,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_LDA_AbsoluteLongIndexedX()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "LDA",
                     bytesConsumed: 4,
                     operandCount: 1,
@@ -2294,9 +2425,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_LDA_AbsoluteIndexedY()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "LDA",
                     bytesConsumed: 3,
                     operandCount: 1,
@@ -2309,9 +2441,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_LDA_DirectPageIndexedX()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "LDA",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -2324,9 +2457,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_LDA_DirectPageIndirectX()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "LDA",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -2339,9 +2473,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_LDA_DirectPageIndirectIndexedY()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "LDA",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -2354,9 +2489,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_LDA_DirectPageIndirectLongIndexedY()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "LDA",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -2369,9 +2505,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_LDA_StackRelative()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "LDA",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -2384,9 +2521,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_LDA_StackRelativeIndexedY()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "LDA",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -2423,6 +2561,7 @@ namespace RetroEditor.Tests
                 var result = DecodeNext(testCase.Bytes);
                 AssertInstruction(
                     result,
+                    expectedBytes: testCase.Bytes,
                     mnemonic: "LDX",
                     bytesConsumed: testCase.ExpectedLength,
                     operandCount: 1,
@@ -2434,9 +2573,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_LDX_Absolute()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "LDX",
                     bytesConsumed: 3,
                     operandCount: 1,
@@ -2449,9 +2589,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_LDX_DirectPage()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "LDX",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -2464,9 +2605,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_LDX_AbsoluteIndexedY()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "LDX",
                     bytesConsumed: 3,
                     operandCount: 1,
@@ -2479,9 +2621,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_LDX_DirectPageIndexedY()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "LDX",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -2518,6 +2661,7 @@ namespace RetroEditor.Tests
                 var result = DecodeNext(testCase.Bytes);
                 AssertInstruction(
                     result,
+                    expectedBytes: testCase.Bytes,
                     mnemonic: "LDY",
                     bytesConsumed: testCase.ExpectedLength,
                     operandCount: 1,
@@ -2529,9 +2673,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_LDY_Absolute()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "LDY",
                     bytesConsumed: 3,
                     operandCount: 1,
@@ -2544,9 +2689,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_LDY_DirectPage()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "LDY",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -2559,9 +2705,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_LDY_AbsoluteIndexedX()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "LDY",
                     bytesConsumed: 3,
                     operandCount: 1,
@@ -2574,9 +2721,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_LDY_DirectPageIndexedX()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "LDY",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -2589,9 +2737,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_LSR_Accumulator()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "LSR",
                     bytesConsumed: 1,
                     operandCount: 0
@@ -2603,9 +2752,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_LSR_Absolute()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "LSR",
                     bytesConsumed: 3,
                     operandCount: 1,
@@ -2618,9 +2768,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_LSR_DirectPage()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "LSR",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -2633,9 +2784,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_LSR_AbsoluteIndexedX()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "LSR",
                     bytesConsumed: 3,
                     operandCount: 1,
@@ -2648,9 +2800,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_LSR_DirectPageIndexedX()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "LSR",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -2663,9 +2816,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_MVN()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "MVN",
                     bytesConsumed: 3,
                     operandCount: 2,
@@ -2678,9 +2832,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_MVP()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "MVP",
                     bytesConsumed: 3,
                     operandCount: 2,
@@ -2693,9 +2848,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_NOP()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "NOP",
                     bytesConsumed: 1,
                     operandCount: 0
@@ -2731,6 +2887,7 @@ namespace RetroEditor.Tests
                 var result = DecodeNext(testCase.Bytes);
                 AssertInstruction(
                     result,
+                    expectedBytes: testCase.Bytes,
                     mnemonic: "ORA",
                     bytesConsumed: testCase.ExpectedLength,
                     operandCount: 1,
@@ -2742,9 +2899,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_ORA_Absolute()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "ORA",
                     bytesConsumed: 3,
                     operandCount: 1,
@@ -2757,9 +2915,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_ORA_AbsoluteLong()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "ORA",
                     bytesConsumed: 4,
                     operandCount: 1,
@@ -2772,9 +2931,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_ORA_DirectPage()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "ORA",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -2787,9 +2947,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_ORA_DirectPageIndirect()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "ORA",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -2802,9 +2963,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_ORA_DirectPageIndirectLong()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "ORA",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -2817,9 +2979,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_ORA_AbsoluteIndexedX()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "ORA",
                     bytesConsumed: 3,
                     operandCount: 1,
@@ -2832,9 +2995,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_ORA_AbsoluteLongIndexedX()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "ORA",
                     bytesConsumed: 4,
                     operandCount: 1,
@@ -2847,9 +3011,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_ORA_AbsoluteIndexedY()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "ORA",
                     bytesConsumed: 3,
                     operandCount: 1,
@@ -2862,9 +3027,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_ORA_DirectPageIndexedX()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "ORA",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -2877,9 +3043,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_ORA_DirectPageIndirectX()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "ORA",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -2892,9 +3059,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_ORA_DirectPageIndirectIndexedY()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "ORA",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -2907,9 +3075,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_ORA_DirectPageIndirectLongIndexedY()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "ORA",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -2922,9 +3091,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_ORA_StackRelative()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "ORA",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -2937,9 +3107,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_ORA_StackRelativeIndexedY()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "ORA",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -2952,9 +3123,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_PEA()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "PEA",
                     bytesConsumed: 3,
                     operandCount: 1,
@@ -2967,9 +3139,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_PEI()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "PEI",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -2982,9 +3155,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_PER()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "PER",
                     bytesConsumed: 3,
                     operandCount: 1,
@@ -2997,9 +3171,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_PHA()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "PHA",
                     bytesConsumed: 1,
                     operandCount: 0
@@ -3011,9 +3186,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_PHB()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "PHB",
                     bytesConsumed: 1,
                     operandCount: 0
@@ -3025,9 +3201,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_PHD()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "PHD",
                     bytesConsumed: 1,
                     operandCount: 0
@@ -3039,9 +3216,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_PHK()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "PHK",
                     bytesConsumed: 1,
                     operandCount: 0
@@ -3053,9 +3231,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_PHP()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "PHP",
                     bytesConsumed: 1,
                     operandCount: 0
@@ -3067,9 +3246,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_PHX()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "PHX",
                     bytesConsumed: 1,
                     operandCount: 0
@@ -3081,9 +3261,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_PHY()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "PHY",
                     bytesConsumed: 1,
                     operandCount: 0
@@ -3095,9 +3276,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_PLA()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "PLA",
                     bytesConsumed: 1,
                     operandCount: 0
@@ -3109,9 +3291,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_PLB()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "PLB",
                     bytesConsumed: 1,
                     operandCount: 0
@@ -3123,9 +3306,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_PLD()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "PLD",
                     bytesConsumed: 1,
                     operandCount: 0
@@ -3137,9 +3321,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_PLP()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "PLP",
                     bytesConsumed: 1,
                     operandCount: 0
@@ -3151,9 +3336,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_PLX()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "PLX",
                     bytesConsumed: 1,
                     operandCount: 0
@@ -3165,9 +3351,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_PLY()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "PLY",
                     bytesConsumed: 1,
                     operandCount: 0
@@ -3179,9 +3366,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_REP()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "REP",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -3194,9 +3382,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_ROL_Accumulator()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "ROL",
                     bytesConsumed: 1,
                     operandCount: 0
@@ -3208,9 +3397,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_ROL_Absolute()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "ROL",
                     bytesConsumed: 3,
                     operandCount: 1,
@@ -3223,9 +3413,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_ROL_DirectPage()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "ROL",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -3238,9 +3429,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_ROL_AbsoluteIndexedX()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "ROL",
                     bytesConsumed: 3,
                     operandCount: 1,
@@ -3253,9 +3445,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_ROL_DirectPageIndexedX()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "ROL",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -3268,9 +3461,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_ROR_Accumulator()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "ROR",
                     bytesConsumed: 1,
                     operandCount: 0
@@ -3282,9 +3476,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_ROR_Absolute()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "ROR",
                     bytesConsumed: 3,
                     operandCount: 1,
@@ -3297,9 +3492,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_ROR_DirectPage()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "ROR",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -3312,9 +3508,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_ROR_AbsoluteIndexedX()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "ROR",
                     bytesConsumed: 3,
                     operandCount: 1,
@@ -3327,9 +3524,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_ROR_DirectPageIndexedX()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "ROR",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -3342,9 +3540,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_RTI()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "RTI",
                     bytesConsumed: 1,
                     operandCount: 0,
@@ -3357,9 +3556,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_RTS()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "RTS",
                     bytesConsumed: 1,
                     operandCount: 0,
@@ -3372,9 +3572,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_RTL()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "RTL",
                     bytesConsumed: 1,
                     operandCount: 0,
@@ -3411,6 +3612,7 @@ namespace RetroEditor.Tests
                 var result = DecodeNext(testCase.Bytes);
                 AssertInstruction(
                     result,
+                    expectedBytes: testCase.Bytes,
                     mnemonic: "SBC",
                     bytesConsumed: testCase.ExpectedLength,
                     operandCount: 1,
@@ -3422,9 +3624,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_SBC_Absolute()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "SBC",
                     bytesConsumed: 3,
                     operandCount: 1,
@@ -3437,9 +3640,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_SBC_AbsoluteLong()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "SBC",
                     bytesConsumed: 4,
                     operandCount: 1,
@@ -3452,9 +3656,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_SBC_DirectPage()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "SBC",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -3467,9 +3672,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_SBC_DirectPageIndirect()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "SBC",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -3482,9 +3688,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_SBC_DirectPageIndirectLong()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "SBC",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -3497,9 +3704,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_SBC_AbsoluteIndexedX()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "SBC",
                     bytesConsumed: 3,
                     operandCount: 1,
@@ -3512,9 +3720,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_SBC_AbsoluteLongIndexedX()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "SBC",
                     bytesConsumed: 4,
                     operandCount: 1,
@@ -3527,9 +3736,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_SBC_AbsoluteIndexedY()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "SBC",
                     bytesConsumed: 3,
                     operandCount: 1,
@@ -3542,9 +3752,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_SBC_DirectPageIndexedX()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "SBC",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -3557,9 +3768,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_SBC_DirectPageIndirectX()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "SBC",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -3572,9 +3784,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_SBC_DirectPageIndirectIndexedY()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "SBC",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -3587,9 +3800,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_SBC_DirectPageIndirectLongIndexedY()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "SBC",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -3602,9 +3816,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_SBC_StackRelative()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "SBC",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -3617,9 +3832,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_SBC_StackRelativeIndexedY()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "SBC",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -3632,9 +3848,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_SEC()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "SEC",
                     bytesConsumed: 1,
                     operandCount: 0
@@ -3646,9 +3863,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_SED()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "SED",
                     bytesConsumed: 1,
                     operandCount: 0
@@ -3660,9 +3878,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_SEI()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "SEI",
                     bytesConsumed: 1,
                     operandCount: 0
@@ -3674,9 +3893,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_SEP()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "SEP",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -3689,9 +3909,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_STA_Absolute()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "STA",
                     bytesConsumed: 3,
                     operandCount: 1,
@@ -3704,9 +3925,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_STA_AbsoluteLong()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "STA",
                     bytesConsumed: 4,
                     operandCount: 1,
@@ -3719,9 +3941,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_STA_DirectPage()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "STA",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -3734,9 +3957,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_STA_DirectPageIndirect()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "STA",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -3749,9 +3973,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_STA_DirectPageIndirectLong()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "STA",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -3764,9 +3989,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_STA_AbsoluteIndexedX()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "STA",
                     bytesConsumed: 3,
                     operandCount: 1,
@@ -3779,9 +4005,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_STA_AbsoluteLongIndexedX()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "STA",
                     bytesConsumed: 4,
                     operandCount: 1,
@@ -3794,9 +4021,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_STA_AbsoluteIndexedY()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "STA",
                     bytesConsumed: 3,
                     operandCount: 1,
@@ -3809,9 +4037,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_STA_DirectPageIndexedX()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "STA",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -3824,9 +4053,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_STA_DirectPageIndirectX()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "STA",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -3839,9 +4069,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_STA_DirectPageIndirectIndexedY()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "STA",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -3854,9 +4085,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_STA_DirectPageIndirectLongIndexedY()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "STA",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -3869,9 +4101,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_STA_StackRelative()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "STA",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -3884,9 +4117,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_STA_StackRelativeIndexedY()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "STA",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -3899,9 +4133,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_STP()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "STP",
                     bytesConsumed: 1,
                     operandCount: 0,
@@ -3914,9 +4149,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_STX_Absolute()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "STX",
                     bytesConsumed: 3,
                     operandCount: 1,
@@ -3929,9 +4165,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_STX_DirectPage()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "STX",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -3944,9 +4181,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_STX_DirectPageIndexedY()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "STX",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -3959,9 +4197,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_STY_Absolute()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "STY",
                     bytesConsumed: 3,
                     operandCount: 1,
@@ -3974,9 +4213,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_STY_DirectPage()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "STY",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -3989,9 +4229,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_STY_DirectPageIndexedX()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "STY",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -4004,9 +4245,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_STZ_Absolute()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "STZ",
                     bytesConsumed: 3,
                     operandCount: 1,
@@ -4019,9 +4261,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_STZ_DirectPage()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "STZ",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -4034,9 +4277,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_STZ_AbsoluteIndexedX()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "STZ",
                     bytesConsumed: 3,
                     operandCount: 1,
@@ -4049,9 +4293,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_STZ_DirectPageIndexedX()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "STZ",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -4064,9 +4309,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_TAX()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "TAX",
                     bytesConsumed: 1,
                     operandCount: 0
@@ -4078,9 +4324,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_TAY()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "TAY",
                     bytesConsumed: 1,
                     operandCount: 0
@@ -4092,9 +4339,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_TCD()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "TCD",
                     bytesConsumed: 1,
                     operandCount: 0
@@ -4106,9 +4354,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_TCS()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "TCS",
                     bytesConsumed: 1,
                     operandCount: 0
@@ -4120,9 +4369,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_TDC()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "TDC",
                     bytesConsumed: 1,
                     operandCount: 0
@@ -4134,9 +4384,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_TSC()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "TSC",
                     bytesConsumed: 1,
                     operandCount: 0
@@ -4148,9 +4399,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_TSX()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "TSX",
                     bytesConsumed: 1,
                     operandCount: 0
@@ -4162,9 +4414,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_TXA()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "TXA",
                     bytesConsumed: 1,
                     operandCount: 0
@@ -4176,9 +4429,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_TXS()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "TXS",
                     bytesConsumed: 1,
                     operandCount: 0
@@ -4190,9 +4444,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_TXY()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "TXY",
                     bytesConsumed: 1,
                     operandCount: 0
@@ -4204,9 +4459,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_TYA()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "TYA",
                     bytesConsumed: 1,
                     operandCount: 0
@@ -4218,9 +4474,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_TYX()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "TYX",
                     bytesConsumed: 1,
                     operandCount: 0
@@ -4232,9 +4489,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_TRB_Absolute()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "TRB",
                     bytesConsumed: 3,
                     operandCount: 1,
@@ -4247,9 +4505,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_TRB_DirectPage()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "TRB",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -4262,9 +4521,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_TSB_Absolute()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "TSB",
                     bytesConsumed: 3,
                     operandCount: 1,
@@ -4277,9 +4537,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_TSB_DirectPage()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "TSB",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -4292,9 +4553,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_WAI()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "WAI",
                     bytesConsumed: 1,
                     operandCount: 0
@@ -4306,9 +4568,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_WDM()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "WDM",
                     bytesConsumed: 2,
                     operandCount: 1,
@@ -4321,9 +4584,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_XBA()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "XBA",
                     bytesConsumed: 1,
                     operandCount: 0
@@ -4335,9 +4599,10 @@ namespace RetroEditor.Tests
         [TestMethod]
         public void Test65816_XCE()
         {
-            TestInAllStates(result => 
+            TestInAllStates((bytes,result) => 
                 AssertInstruction(
                     result,
+                    expectedBytes: bytes,
                     mnemonic: "XCE",
                     bytesConsumed: 1,
                     operandCount: 0
