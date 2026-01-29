@@ -1521,7 +1521,7 @@ public class Disassembler_68000_Tests
     public void Test68000_MemoryAccesses_MOVE_SourceAndDestination()
     {
         // MOVE.L (A0),$1234.W - both source and destination are memory
-        byte[] bytes = { 0x23, 0xD0, 0x12, 0x34 };
+        byte[] bytes = { 0x21, 0xD0, 0x12, 0x34 };
         var result = _disassembler.DecodeNext(bytes, 0x2000);
         Assert.IsTrue(result.Success);
 

@@ -43,6 +43,8 @@ internal class OM68000_AddressDisplacement : IOperand
     {
         _displacement = displacement;
     }
+
+    public short Displacement => _displacement;
     
     public override string Text() => $"{_displacement}(A{Value})";
     public override string Text(ISymbolProvider symbols) => Text();
@@ -63,6 +65,11 @@ internal class OM68000_AddressIndex : IOperand
         _isLong = isLong;
         _offset = offset;
     }
+
+    public int IndexRegister => _indexReg;
+    public bool IsAddressRegister => _isAddress;
+    public bool IsLong => _isLong;
+    public sbyte Offset => _offset;
     
     public override string Text()
     {
@@ -103,6 +110,8 @@ internal class OM68000_PCDisplacement : IOperand
     {
         _displacement = displacement;
     }
+
+    public short Displacement => _displacement;
     
     public override string Text() => $"{_displacement}(PC)";
     public override string Text(ISymbolProvider symbols) => Text();
@@ -123,6 +132,11 @@ internal class OM68000_PCIndex : IOperand
         _isLong = isLong;
         _offset = offset;
     }
+
+    public int IndexRegister => _indexReg;
+    public bool IsAddressRegister => _isAddress;
+    public bool IsLong => _isLong;
+    public sbyte Offset => _offset;
     
     public override string Text()
     {

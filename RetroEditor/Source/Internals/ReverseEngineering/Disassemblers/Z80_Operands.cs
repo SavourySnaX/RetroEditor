@@ -162,6 +162,8 @@ internal class Z80IndexedOperand : IOperand
         _displacement = displacement;
     }
 
+    public sbyte Displacement => _displacement;
+
     public override string Text()
     {
         if (_displacement >= 0)

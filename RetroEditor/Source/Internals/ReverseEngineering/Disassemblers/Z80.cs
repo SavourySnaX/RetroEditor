@@ -843,6 +843,107 @@ internal class Z80Disassembler : DisassemblerBase
 
     public override List<(ulong address, uint size)> FetchMemoryAccesses(Instruction ins, ICpuRegisterState registers)
     {
-        return new List<(ulong, uint)>();
+        var z80Registers = (Z80RegisterState)registers;
+        var accesses = new List<(ulong address, uint size)>();
+
+        switch (ins.Mnemonic)
+        {
+            case "PUSH":
+            case "POP":
+            case "CALL":
+            case "RET":
+            case "RST":
+                accesses.Add((z80Registers.SP, 2));
+                return accesses;
+            case "LDI":
+            case "LDIR":
+            case "LDD":
+            case "LDDR":
+                accesses.Add((z80Registers.HL, 1));
+                accesses.Add((z80Registers.DE, 1));
+                return accesses;
+            case "CPI":
+            case "CPIR":
+            case "CPD":
+            case "CPDR":
+                accesses.Add((z80Registers.HL, 1));
+                return accesses;
+            case "INI":
+            case "INIR":
+            case "IND":
+            case "INDR":
+            case "OUTI":
+            case "OTIR":
+            case "OUTD":
+            case "OTDR":
+                accesses.Add((z80Registers.HL, 1));
+                return accesses;
+            case "RRD":
+            case "RLD":
+                accesses.Add((z80Registers.HL, 1));
+                return accesses;
+        }
+
+        uint size = DetermineMemoryAccessSize(ins);
+
+        foreach (var operand in ins.Operands)
+        {
+            if (operand is Z80IndirectOperand indirect)
+            {
+                var reg = (Z80Register16)indirect.Value;
+                accesses.Add((GetRegister16Value(z80Registers, reg), size));
+            }
+            else if (operand is Z80RegisterOperand regOperand && (Z80Register)regOperand.Value == Z80Register.IndirectHL)
+            {
+                accesses.Add((z80Registers.HL, size));
+            }
+            else if (operand is Z80IndirectAddressOperand indirectAddress)
+            {
+                accesses.Add((indirectAddress.Value, size));
+            }
+            else if (operand is Z80IndexedOperand indexed)
+            {
+                var indexRegister = (Z80IndexRegister)indexed.Value;
+                var baseAddress = indexRegister == Z80IndexRegister.IX ? z80Registers.IX : z80Registers.IY;
+                var effectiveAddress = (ushort)(baseAddress + indexed.Displacement);
+                accesses.Add((effectiveAddress, size));
+            }
+            else if (operand is Z80SpecialRegisterOperand special)
+            {
+                var name = special.Text();
+                if (name == "(SP)")
+                {
+                    accesses.Add((z80Registers.SP, size));
+                }
+            }
+        }
+
+        return accesses;
+    }
+
+    private static ushort GetRegister16Value(Z80RegisterState registers, Z80Register16 register)
+    {
+        return register switch
+        {
+            Z80Register16.BC => registers.BC,
+            Z80Register16.DE => registers.DE,
+            Z80Register16.HL => registers.HL,
+            Z80Register16.SP => registers.SP,
+            _ => 0
+        };
+    }
+
+    private static uint DetermineMemoryAccessSize(Instruction ins)
+    {
+        if (ins.Mnemonic == "EX" && ins.Operands.Any(o => o is Z80SpecialRegisterOperand special && special.Text() == "(SP)"))
+            return 2;
+
+        if (ins.Operands.Any(o => o is Z80Register16Operand))
+            return 2;
+
+        if (ins.Operands.Any(o => o is Z80SpecialRegisterOperand special && (special.Text() == "IX" || special.Text() == "IY")))
+            return 2;
+
+        return 1;
     }
 }

@@ -100,6 +100,11 @@ public class Disassembler_Z80_Tests
         Assert.AreEqual(expectedOutput, actualOutput);
     }
 
+    internal List<(ulong address, uint size)> FetchMemoryAccesses(Instruction instruction, ICpuRegisterState registers)
+    {
+        return _disassembler.FetchMemoryAccesses(instruction, registers);
+    }
+
     // Test basic instructions
     [TestMethod]
     public void TestZ80_NOP()
@@ -148,6 +153,141 @@ public class Disassembler_Z80_Tests
         var bytes = new byte[] { 0x36, 0x02 };
         var result = _disassembler.DecodeNext(bytes, 0x0000);
         AssertInstruction(result, "LD", 2, bytes, 2, new[] { "(HL)", "#02" });
+    }
+
+    [TestMethod]
+    public void TestZ80_MemoryAccesses_LD_HL_ImmediateToMemory()
+    {
+        var bytes = new byte[] { 0x36, 0x02 }; // LD (HL),#02
+        var result = _disassembler.DecodeNext(bytes, 0x0000);
+        Assert.IsTrue(result.Success);
+
+        var registers = new Z80RegisterState { HL = 0x4000 };
+        var accesses = FetchMemoryAccesses(result.Instruction, registers);
+        Assert.AreEqual(1, accesses.Count);
+        Assert.AreEqual(0x4000ul, accesses[0].address);
+        Assert.AreEqual(1u, accesses[0].size);
+    }
+
+    [TestMethod]
+    public void TestZ80_MemoryAccesses_LD_A_IndirectBC()
+    {
+        var bytes = new byte[] { 0x0A }; // LD A,(BC)
+        var result = _disassembler.DecodeNext(bytes, 0x0000);
+        Assert.IsTrue(result.Success);
+
+        var registers = new Z80RegisterState { BC = 0x1234 };
+        var accesses = FetchMemoryAccesses(result.Instruction, registers);
+        Assert.AreEqual(1, accesses.Count);
+        Assert.AreEqual(0x1234ul, accesses[0].address);
+        Assert.AreEqual(1u, accesses[0].size);
+    }
+
+    [TestMethod]
+    public void TestZ80_MemoryAccesses_LD_Absolute_HL()
+    {
+        var bytes = new byte[] { 0x22, 0x34, 0x12 }; // LD ($1234),HL
+        var result = _disassembler.DecodeNext(bytes, 0x0000);
+        Assert.IsTrue(result.Success);
+
+        var registers = new Z80RegisterState { HL = 0xBEEF };
+        var accesses = FetchMemoryAccesses(result.Instruction, registers);
+        Assert.AreEqual(1, accesses.Count);
+        Assert.AreEqual(0x1234ul, accesses[0].address);
+        Assert.AreEqual(2u, accesses[0].size);
+    }
+
+    [TestMethod]
+    public void TestZ80_MemoryAccesses_LD_Indexed_IY()
+    {
+        var bytes = new byte[] { 0xFD, 0x7E, 0x05 }; // LD A,(IY+5)
+        var result = _disassembler.DecodeNext(bytes, 0x0000);
+        Assert.IsTrue(result.Success);
+
+        var registers = new Z80RegisterState { IY = 0x2000 };
+        var accesses = FetchMemoryAccesses(result.Instruction, registers);
+        Assert.AreEqual(1, accesses.Count);
+        Assert.AreEqual(0x2005ul, accesses[0].address);
+        Assert.AreEqual(1u, accesses[0].size);
+    }
+
+    [TestMethod]
+    public void TestZ80_MemoryAccesses_Push_Pop()
+    {
+        var pushBytes = new byte[] { 0xC5 }; // PUSH BC
+        var pushResult = _disassembler.DecodeNext(pushBytes, 0x0000);
+        Assert.IsTrue(pushResult.Success);
+
+        var registers = new Z80RegisterState { SP = 0xFF00 };
+        var accesses = FetchMemoryAccesses(pushResult.Instruction, registers);
+        Assert.AreEqual(1, accesses.Count);
+        Assert.AreEqual(0xFF00ul, accesses[0].address);
+        Assert.AreEqual(2u, accesses[0].size);
+
+        var popBytes = new byte[] { 0xC1 }; // POP BC
+        var popResult = _disassembler.DecodeNext(popBytes, 0x0000);
+        Assert.IsTrue(popResult.Success);
+
+        accesses = FetchMemoryAccesses(popResult.Instruction, registers);
+        Assert.AreEqual(1, accesses.Count);
+        Assert.AreEqual(0xFF00ul, accesses[0].address);
+        Assert.AreEqual(2u, accesses[0].size);
+    }
+
+    [TestMethod]
+    public void TestZ80_MemoryAccesses_EX_SP_HL()
+    {
+        var bytes = new byte[] { 0xE3 }; // EX (SP),HL
+        var result = _disassembler.DecodeNext(bytes, 0x0000);
+        Assert.IsTrue(result.Success);
+
+        var registers = new Z80RegisterState { SP = 0xFF10 };
+        var accesses = FetchMemoryAccesses(result.Instruction, registers);
+        Assert.AreEqual(1, accesses.Count);
+        Assert.AreEqual(0xFF10ul, accesses[0].address);
+        Assert.AreEqual(2u, accesses[0].size);
+    }
+
+    [TestMethod]
+    public void TestZ80_MemoryAccesses_LDI()
+    {
+        var bytes = new byte[] { 0xED, 0xA0 }; // LDI
+        var result = _disassembler.DecodeNext(bytes, 0x0000);
+        Assert.IsTrue(result.Success);
+
+        var registers = new Z80RegisterState { HL = 0x4000, DE = 0x5000 };
+        var accesses = FetchMemoryAccesses(result.Instruction, registers);
+        Assert.AreEqual(2, accesses.Count);
+        Assert.AreEqual(0x4000ul, accesses[0].address);
+        Assert.AreEqual(1u, accesses[0].size);
+        Assert.AreEqual(0x5000ul, accesses[1].address);
+        Assert.AreEqual(1u, accesses[1].size);
+    }
+
+    [TestMethod]
+    public void TestZ80_MemoryAccesses_RRD()
+    {
+        var bytes = new byte[] { 0xED, 0x67 }; // RRD
+        var result = _disassembler.DecodeNext(bytes, 0x0000);
+        Assert.IsTrue(result.Success);
+
+        var registers = new Z80RegisterState { HL = 0x4100 };
+        var accesses = FetchMemoryAccesses(result.Instruction, registers);
+        Assert.AreEqual(1, accesses.Count);
+        Assert.AreEqual(0x4100ul, accesses[0].address);
+        Assert.AreEqual(1u, accesses[0].size);
+    }
+
+    [TestMethod]
+    public void TestZ80_MemoryAccesses_Immediate_None()
+    {
+        var bytes = new byte[] { 0x3E, 0x12 }; // LD A,#12
+        var result = _disassembler.DecodeNext(bytes, 0x0000);
+        Assert.IsTrue(result.Success);
+
+        var registers = new Z80RegisterState();
+        var accesses = FetchMemoryAccesses(result.Instruction, registers);
+        Assert.AreEqual(0, accesses.Count);
     }
 
     [TestMethod]

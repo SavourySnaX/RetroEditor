@@ -1270,19 +1270,19 @@ internal class Megadrive68000Disassembler : DisassemblerBase
             else if (operand is OM68000_AddressDisplacement disp)
             {
                 // d16(An) - displacement from address register
-                int regNum = (int)(operand.Value >> 16);  // High 16 bits = register
-                int displacement = (short)(operand.Value & 0xFFFF);  // Low 16 bits = displacement (signed)
+                int regNum = (int)disp.Value;
+                int displacement = disp.Displacement;
                 effectiveAddress = (UInt64)((long)registers.AddressRegisters[regNum] + displacement);
                 accesses.Add((effectiveAddress, size));
             }
             else if (operand is OM68000_AddressIndex index)
             {
                 // d8(An,Xn) - displacement + index from address register
-                int regNum = (int)(operand.Value >> 24);  // Bits 24-31 = base register
-                int displacement = (sbyte)((operand.Value >> 16) & 0xFF);  // Bits 16-23 = displacement (signed)
-                int indexReg = (int)((operand.Value >> 8) & 0x0F);  // Bits 8-11 = index register
-                bool useAddressReg = ((operand.Value >> 12) & 1) == 1;  // Bit 12 = A/D flag
-                bool is32Bit = ((operand.Value >> 13) & 1) == 1;  // Bit 13 = L/W flag
+                int regNum = (int)index.Value;
+                int displacement = index.Offset;
+                int indexReg = index.IndexRegister;
+                bool useAddressReg = index.IsAddressRegister;
+                bool is32Bit = index.IsLong;
                 
                 UInt32 indexValue = 0;
                 if (useAddressReg)
@@ -1318,7 +1318,7 @@ internal class Megadrive68000Disassembler : DisassemblerBase
             else if (operand is OM68000_PCDisplacement pcDisp)
             {
                 // d16(PC) - displacement from PC (PC = next instruction address)
-                int displacement = (short)operand.Value;
+                int displacement = pcDisp.Displacement;
                 UInt64 pc = ins.Address + 2;  // PC points to next instruction
                 effectiveAddress = (UInt64)((long)pc + displacement);
                 accesses.Add((effectiveAddress, size));
@@ -1326,10 +1326,10 @@ internal class Megadrive68000Disassembler : DisassemblerBase
             else if (operand is OM68000_PCIndex pcIndex)
             {
                 // d8(PC,Xn) - displacement + index from PC
-                int displacement = (sbyte)((operand.Value >> 16) & 0xFF);  // High byte of value
-                int indexReg = (int)((operand.Value >> 8) & 0x0F);  // Bits 8-11 = index register
-                bool useAddressReg = ((operand.Value >> 12) & 1) == 1;  // Bit 12 = A/D flag
-                bool is32Bit = ((operand.Value >> 13) & 1) == 1;  // Bit 13 = L/W flag
+                int displacement = pcIndex.Offset;
+                int indexReg = pcIndex.IndexRegister;
+                bool useAddressReg = pcIndex.IsAddressRegister;
+                bool is32Bit = pcIndex.IsLong;
                 
                 UInt32 indexValue = 0;
                 if (useAddressReg)
