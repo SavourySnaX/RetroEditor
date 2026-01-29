@@ -18,6 +18,11 @@ namespace RetroEditor.Tests
             return _disassembler.DecodeNext(bytes, address);
         }
 
+        internal List<(ulong address, uint size)> FetchMemoryAccesses(Instruction instruction, ICpuRegisterState registers)
+        {
+            return _disassembler.FetchMemoryAccesses(instruction, registers);
+        }
+
         internal void SetState(bool emulation, bool a16bit, bool x16bit)
         {
             var state = (SNES65816State)_disassembler.State;
@@ -4609,6 +4614,99 @@ namespace RetroEditor.Tests
                 ),
                 [0xFB]
             );
+        }
+
+        // Memory Access Tests
+        [TestMethod]
+        public void Test65816_MemoryAccesses_Absolute_A8()
+        {
+            SetState(emulation: false, a16bit: false, x16bit: false);
+
+            var bytes = new byte[] { 0xAD, 0x34, 0x12 }; // LDA $1234
+            var result = DecodeNext(bytes, 0x8000);
+            Assert.IsTrue(result.Success);
+
+            var registers = new SNES65816RegisterState
+            {
+                DBR = 0x7E,
+                D = 0x0000,
+                X = 0x0000,
+                Y = 0x0000,
+                S = 0x0000
+            };
+
+            var accesses = FetchMemoryAccesses(result.Instruction, registers);
+            Assert.AreEqual(1, accesses.Count);
+            Assert.AreEqual(0x7E1234ul, accesses[0].address);
+            Assert.AreEqual(1u, accesses[0].size);
+        }
+
+        [TestMethod]
+        public void Test65816_MemoryAccesses_DirectPage_WithD_A16()
+        {
+            SetState(emulation: false, a16bit: true, x16bit: false);
+
+            var bytes = new byte[] { 0xA5, 0x20 }; // LDA $20
+            var result = DecodeNext(bytes, 0x8000);
+            Assert.IsTrue(result.Success);
+
+            var registers = new SNES65816RegisterState
+            {
+                DBR = 0x00,
+                D = 0x0100,
+                X = 0x0000,
+                Y = 0x0000,
+                S = 0x0000
+            };
+
+            var accesses = FetchMemoryAccesses(result.Instruction, registers);
+            Assert.AreEqual(1, accesses.Count);
+            Assert.AreEqual(0x0120ul, accesses[0].address);
+            Assert.AreEqual(2u, accesses[0].size);
+        }
+
+        [TestMethod]
+        public void Test65816_MemoryAccesses_Immediate_None()
+        {
+            SetState(emulation: false, a16bit: false, x16bit: false);
+
+            var bytes = new byte[] { 0xA9, 0x42 }; // LDA #$42
+            var result = DecodeNext(bytes, 0x8000);
+            Assert.IsTrue(result.Success);
+
+            var registers = new SNES65816RegisterState
+            {
+                DBR = 0x7E,
+                D = 0x0000,
+                X = 0x0000,
+                Y = 0x0000,
+                S = 0x0000
+            };
+
+            var accesses = FetchMemoryAccesses(result.Instruction, registers);
+            Assert.AreEqual(0, accesses.Count);
+        }
+
+        [TestMethod]
+        public void Test65816_MemoryAccesses_Branch_None()
+        {
+            SetState(emulation: false, a16bit: false, x16bit: false);
+
+            var bytes = new byte[] { 0xD0, 0x10 }; // BNE +$10
+            var result = DecodeNext(bytes, 0x8000);
+            Assert.IsTrue(result.Success);
+
+            var registers = new SNES65816RegisterState
+            {
+                DBR = 0x7E,
+                D = 0x0000,
+                X = 0x0000,
+                Y = 0x0000,
+                S = 0x0000
+            };
+
+            var accesses = FetchMemoryAccesses(result.Instruction, registers);
+            Assert.AreEqual(0, accesses.Count);
         }
     }
 } 
