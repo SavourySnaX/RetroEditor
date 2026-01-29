@@ -18,6 +18,11 @@ public class Disassembler_68000_Tests
         _disassembler = new Megadrive68000Disassembler();
     }
 
+    internal List<(ulong address, uint size)> FetchMemoryAccesses(Instruction instruction, ICpuRegisterState registers)
+    {
+        return _disassembler.FetchMemoryAccesses(instruction, registers);
+    }
+
     private void AssertInstruction(
         DecodeResult result,
         string mnemonic,
@@ -1337,4 +1342,234 @@ public class Disassembler_68000_Tests
         AssertInstruction(result, "RTE", 2, bytes, isTerminator: true,
             nextAddresses: new List<ulong>());
     }
+    
+    // Memory Access Tests
+    [TestMethod]
+    public void Test68000_MemoryAccesses_AddressIndirect()
+    {
+        // MOVE.L (A0),D1
+        byte[] bytes = { 0x22, 0x10 };
+        var result = _disassembler.DecodeNext(bytes, 0x2000);
+        Assert.IsTrue(result.Success);
+
+        var registers = new M68000RegisterState();
+        registers.AddressRegisters[0] = 0x12345678;
+        registers.DataRegisters[1] = 0;
+
+        var accesses = FetchMemoryAccesses(result.Instruction, registers);
+        Assert.AreEqual(1, accesses.Count);
+        Assert.AreEqual(0x12345678ul, accesses[0].address);
+        Assert.AreEqual(4u, accesses[0].size);
+    }
+
+    [TestMethod]
+    public void Test68000_MemoryAccesses_PostIncrement()
+    {
+        // MOVE.W (A1)+,D0
+        byte[] bytes = { 0x30, 0x19 };
+        var result = _disassembler.DecodeNext(bytes, 0x2000);
+        Assert.IsTrue(result.Success);
+
+        var registers = new M68000RegisterState();
+        registers.AddressRegisters[1] = 0x5000;
+        registers.DataRegisters[0] = 0;
+
+        var accesses = FetchMemoryAccesses(result.Instruction, registers);
+        Assert.AreEqual(1, accesses.Count);
+        Assert.AreEqual(0x5000ul, accesses[0].address);
+        Assert.AreEqual(2u, accesses[0].size);
+    }
+
+    [TestMethod]
+    public void Test68000_MemoryAccesses_PreDecrement()
+    {
+        // MOVE.B -(A2),D0
+        byte[] bytes = { 0x10, 0x22 };
+        var result = _disassembler.DecodeNext(bytes, 0x2000);
+        Assert.IsTrue(result.Success);
+
+        var registers = new M68000RegisterState();
+        registers.AddressRegisters[2] = 0x6000;
+        registers.DataRegisters[0] = 0;
+
+        var accesses = FetchMemoryAccesses(result.Instruction, registers);
+        Assert.AreEqual(1, accesses.Count);
+        Assert.AreEqual(0x6000ul, accesses[0].address);
+        Assert.AreEqual(1u, accesses[0].size);
+    }
+
+    [TestMethod]
+    public void Test68000_MemoryAccesses_Displacement_Positive()
+    {
+        // MOVE.L $10(A3),D0
+        byte[] bytes = { 0x20, 0x2B, 0x00, 0x10 };
+        var result = _disassembler.DecodeNext(bytes, 0x2000);
+        Assert.IsTrue(result.Success);
+
+        var registers = new M68000RegisterState();
+        registers.AddressRegisters[3] = 0x4000;
+        registers.DataRegisters[0] = 0;
+
+        var accesses = FetchMemoryAccesses(result.Instruction, registers);
+        Assert.AreEqual(1, accesses.Count);
+        Assert.AreEqual(0x4010ul, accesses[0].address);
+        Assert.AreEqual(4u, accesses[0].size);
+    }
+
+    [TestMethod]
+    public void Test68000_MemoryAccesses_Displacement_Negative()
+    {
+        // MOVE.L $FFF0(A4),D0 (negative displacement)
+        byte[] bytes = { 0x20, 0x2C, 0xFF, 0xF0 };
+        var result = _disassembler.DecodeNext(bytes, 0x2000);
+        Assert.IsTrue(result.Success);
+
+        var registers = new M68000RegisterState();
+        registers.AddressRegisters[4] = 0x4100;
+        registers.DataRegisters[0] = 0;
+
+        var accesses = FetchMemoryAccesses(result.Instruction, registers);
+        Assert.AreEqual(1, accesses.Count);
+        Assert.AreEqual(0x40F0ul, accesses[0].address);
+        Assert.AreEqual(4u, accesses[0].size);
+    }
+
+    [TestMethod]
+    public void Test68000_MemoryAccesses_AbsoluteShort()
+    {
+        // MOVE.L $1234.W,D0
+        byte[] bytes = { 0x20, 0x38, 0x12, 0x34 };
+        var result = _disassembler.DecodeNext(bytes, 0x2000);
+        Assert.IsTrue(result.Success);
+
+        var registers = new M68000RegisterState();
+        registers.DataRegisters[0] = 0;
+
+        var accesses = FetchMemoryAccesses(result.Instruction, registers);
+        Assert.AreEqual(1, accesses.Count);
+        Assert.AreEqual(0x1234ul, accesses[0].address);
+        Assert.AreEqual(4u, accesses[0].size);
+    }
+
+    [TestMethod]
+    public void Test68000_MemoryAccesses_AbsoluteLong()
+    {
+        // MOVE.L $00FF0000.L,D0
+        byte[] bytes = { 0x20, 0x39, 0x00, 0xFF, 0x00, 0x00 };
+        var result = _disassembler.DecodeNext(bytes, 0x2000);
+        Assert.IsTrue(result.Success);
+
+        var registers = new M68000RegisterState();
+        registers.DataRegisters[0] = 0;
+
+        var accesses = FetchMemoryAccesses(result.Instruction, registers);
+        Assert.AreEqual(1, accesses.Count);
+        Assert.AreEqual(0x00FF0000ul, accesses[0].address);
+        Assert.AreEqual(4u, accesses[0].size);
+    }
+
+    [TestMethod]
+    public void Test68000_MemoryAccesses_PCRelativeDisplacement()
+    {
+        // MOVE.L $10(PC),D0
+        byte[] bytes = { 0x20, 0x3A, 0x00, 0x10 };
+        var result = _disassembler.DecodeNext(bytes, 0x2000);
+        Assert.IsTrue(result.Success);
+
+        var registers = new M68000RegisterState();
+        registers.DataRegisters[0] = 0;
+
+        var accesses = FetchMemoryAccesses(result.Instruction, registers);
+        Assert.AreEqual(1, accesses.Count);
+        // PC = 0x2000 + 2 = 0x2002, EA = 0x2002 + 0x10 = 0x2012
+        Assert.AreEqual(0x2012ul, accesses[0].address);
+        Assert.AreEqual(4u, accesses[0].size);
+    }
+
+    [TestMethod]
+    public void Test68000_MemoryAccesses_DataRegisterDirect_None()
+    {
+        // MOVE.L D1,D0 - no memory access
+        byte[] bytes = { 0x20, 0x01 };
+        var result = _disassembler.DecodeNext(bytes, 0x2000);
+        Assert.IsTrue(result.Success);
+
+        var registers = new M68000RegisterState();
+        registers.DataRegisters[0] = 0;
+        registers.DataRegisters[1] = 0x12345678;
+
+        var accesses = FetchMemoryAccesses(result.Instruction, registers);
+        Assert.AreEqual(0, accesses.Count);
+    }
+
+    [TestMethod]
+    public void Test68000_MemoryAccesses_Immediate_None()
+    {
+        // MOVE.W #$1234,D0 - no memory access
+        byte[] bytes = { 0x30, 0x3C, 0x12, 0x34 };
+        var result = _disassembler.DecodeNext(bytes, 0x2000);
+        Assert.IsTrue(result.Success);
+
+        var registers = new M68000RegisterState();
+        registers.DataRegisters[0] = 0;
+
+        var accesses = FetchMemoryAccesses(result.Instruction, registers);
+        Assert.AreEqual(0, accesses.Count);
+    }
+
+    [TestMethod]
+    public void Test68000_MemoryAccesses_MOVE_SourceAndDestination()
+    {
+        // MOVE.L (A0),$1234.W - both source and destination are memory
+        byte[] bytes = { 0x23, 0xD0, 0x12, 0x34 };
+        var result = _disassembler.DecodeNext(bytes, 0x2000);
+        Assert.IsTrue(result.Success);
+
+        var registers = new M68000RegisterState();
+        registers.AddressRegisters[0] = 0x7000;
+
+        var accesses = FetchMemoryAccesses(result.Instruction, registers);
+        Assert.AreEqual(2, accesses.Count);
+        // Source: (A0) = 0x7000
+        Assert.AreEqual(0x7000ul, accesses[0].address);
+        Assert.AreEqual(4u, accesses[0].size);
+        // Destination: $1234.W
+        Assert.AreEqual(0x1234ul, accesses[1].address);
+        Assert.AreEqual(4u, accesses[1].size);
+    }
+
+    [TestMethod]
+    public void Test68000_MemoryAccesses_ByteSize()
+    {
+        // MOVE.B (A0),D0 - byte access
+        byte[] bytes = { 0x10, 0x10 };
+        var result = _disassembler.DecodeNext(bytes, 0x2000);
+        Assert.IsTrue(result.Success);
+
+        var registers = new M68000RegisterState();
+        registers.AddressRegisters[0] = 0x3000;
+
+        var accesses = FetchMemoryAccesses(result.Instruction, registers);
+        Assert.AreEqual(1, accesses.Count);
+        Assert.AreEqual(0x3000ul, accesses[0].address);
+        Assert.AreEqual(1u, accesses[0].size);
+    }
+
+    [TestMethod]
+    public void Test68000_MemoryAccesses_WordSize()
+    {
+        // MOVE.W (A0),D0 - word access
+        byte[] bytes = { 0x30, 0x10 };
+        var result = _disassembler.DecodeNext(bytes, 0x2000);
+        Assert.IsTrue(result.Success);
+
+        var registers = new M68000RegisterState();
+        registers.AddressRegisters[0] = 0x4000;
+
+        var accesses = FetchMemoryAccesses(result.Instruction, registers);
+        Assert.AreEqual(1, accesses.Count);
+        Assert.AreEqual(0x4000ul, accesses[0].address);
+        Assert.AreEqual(2u, accesses[0].size);
+    }
 }
+
