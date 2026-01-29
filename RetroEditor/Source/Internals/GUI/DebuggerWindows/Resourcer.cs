@@ -821,65 +821,43 @@ internal class Resourcer : IWindow
         }
     }
 
-    private string GetRegionNameForMemoryType(RetroEditor.Source.Internals.ReverseEngineering.Platform.MemoryInformationRegion memoryRegion)
-    {
-        // Map platform MemoryRegion enum to actual region names using property-based lookup
-        var regions = memoryInformationProvider.GetMemoryRegions().ToList();
-        
-        switch (memoryRegion)
-        {
-            case RetroEditor.Source.Internals.ReverseEngineering.Platform.MemoryInformationRegion.ROM:
-                // Find first region with physical data (typically ROM/Cartridge)
-                return regions.FirstOrDefault(r => r.HasPhysicalData)?.MameViewName ?? regions.FirstOrDefault()?.MameViewName ?? string.Empty;
-            case RetroEditor.Source.Internals.ReverseEngineering.Platform.MemoryInformationRegion.RAM:
-                // Find first region without physical data (typically RAM/WRAM)
-                return regions.FirstOrDefault(r => !r.HasPhysicalData)?.MameViewName ?? string.Empty;
-            default:
-                return string.Empty;
-        }
-    }
-
     private void ParseTraceEntry(TraceEntry entry)
     {
         // Create a disassembler with the current CPU state
         disassembler.State = entry.CpuState;
 
         // Add this location as code
-        //var codeRegionName = GetRegionNameForMemoryType(RetroEditor.Source.Internals.ReverseEngineering.Platform.MemoryInformationRegion.ROM);
-        //if (!string.IsNullOrEmpty(codeRegionName))
+        memoryMapper.MapCpuToRegion(entry.Address, out var regionKey);
+        romDataParsers[regionKey].AddCodeRange((DisassemblerBase)disassembler, entry.Address, out var i, memoryMapper);
+        if (i.Bytes.Length == 0)
         {
-            memoryMapper.MapCpuToRegion(entry.Address, out var regionKey);
-            romDataParsers[regionKey].AddCodeRange((DisassemblerBase)disassembler, entry.Address, out var i, memoryMapper);
-            if (i.Bytes.Length == 0)
-            {
-                // No bytes, so no code
-                return;
-            }
-            if (i.IsBranch)
-            {
-                return;
-            }
+            // No bytes, so no code
+            return;
+        }
+        if (i.IsBranch)
+        {
+            return;
+        }
 
-            var mem = ((DisassemblerBase)disassembler).FetchMemoryAccesses(i, entry.RegisterState);
-            foreach (var addr in mem)
+        var mem = ((DisassemblerBase)disassembler).FetchMemoryAccesses(i, entry.RegisterState);
+        foreach (var addr in mem)
+        {
+            var regionAddress = memoryMapper.MapCpuToRegion(addr.address, out var memKind);
+
+            if (romDataParsers.ContainsKey(memKind))
             {
-                var regionAddress = memoryMapper.MapCpuToRegion(addr.address, out var memKind);
-                
-                if (romDataParsers.ContainsKey(memKind))
+                if (romDataParsers[memKind].CheckRegionUnknown(regionAddress, regionAddress + addr.size - 1))
                 {
-                    if (romDataParsers[memKind].CheckRegionUnknown(regionAddress, regionAddress + addr.size - 1))
-                    {
-                        romDataParsers[memKind].AddDataRange(regionAddress, regionAddress + addr.size - 1, addr.size);
-                    }
-                    else
-                    {
-                        Console.WriteLine($"Skipping {addr.address:X8} ({regionAddress:X8}) {addr.size} as it is not unknown");
-                    }
+                    romDataParsers[memKind].AddDataRange(regionAddress, regionAddress + addr.size - 1, addr.size);
                 }
                 else
                 {
-                    Console.WriteLine($"No parser for region {memKind}");
+                    Console.WriteLine($"Skipping {addr.address:X8} ({regionAddress:X8}) {addr.size} as it is not unknown");
                 }
+            }
+            else
+            {
+                Console.WriteLine($"No parser for region {memKind}");
             }
         }
     }
