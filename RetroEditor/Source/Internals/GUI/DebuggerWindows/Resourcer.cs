@@ -845,13 +845,10 @@ internal class Resourcer : IWindow
 
             if (romDataParsers.ContainsKey(memKind))
             {
+                // Don't overwrite existing ranges
                 if (romDataParsers[memKind].CheckRegionUnknown(regionAddress, regionAddress + addr.size - 1))
                 {
                     romDataParsers[memKind].AddDataRange(regionAddress, regionAddress + addr.size - 1, addr.size);
-                }
-                else
-                {
-                    Console.WriteLine($"Skipping {addr.address:X8} ({regionAddress:X8}) {addr.size} as it is not unknown");
                 }
             }
             else
