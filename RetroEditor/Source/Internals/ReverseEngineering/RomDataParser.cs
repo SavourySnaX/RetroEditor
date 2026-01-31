@@ -90,6 +90,8 @@ internal abstract class IRegionInfo : IRange
             throw new ArgumentException("Cannot combine non-adjacent ranges");
         AddressEnd = other.AddressEnd;
         Combining((IRegionInfo)other);
+        // Invalidate label cache since address range has changed
+        InvalidateLabelCache();
         if (Above.Count > 0 || Below.Count > 0 || otherRange.Above.Count > 0 || otherRange.Below.Count > 0)
             throw new ArgumentException("Cannot combine non-adjacent ranges with children");
     }
@@ -105,6 +107,12 @@ internal abstract class IRegionInfo : IRange
         var after = Split(position + 1, oldEnd);
         after.Below = this.Below;
         Below = new();
+        // Invalidate label cache since address range has changed
+        InvalidateLabelCache();
+        if (after is IRegionInfo afterRegion)
+        {
+            afterRegion.InvalidateLabelCache();
+        }
         return after;
     }
 
@@ -119,6 +127,12 @@ internal abstract class IRegionInfo : IRange
         var before = Split(oldStart, position - 1);
         before.Above = this.Above;
         Above = new();
+        // Invalidate label cache since address range has changed
+        InvalidateLabelCache();
+        if (before is IRegionInfo beforeRegion)
+        {
+            beforeRegion.InvalidateLabelCache();
+        }
         return before;
     }
 
@@ -145,6 +159,15 @@ internal abstract class IRegionInfo : IRange
 
     public abstract IRegionInfo Split(UInt64 start, UInt64 end);
     public abstract void Combining(IRegionInfo other);
+    
+    /// <summary>
+    /// Invalidates the label cache for this region. This must be called whenever the address range changes.
+    /// </summary>
+    private void InvalidateLabelCache()
+    {
+        labelCacheVersion = -1;
+    }
+    
     private void EnsureLabelCache()
     {
         var provider = Parent.LabelProvider;
