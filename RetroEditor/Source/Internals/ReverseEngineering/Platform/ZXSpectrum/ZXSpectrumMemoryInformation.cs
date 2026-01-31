@@ -23,7 +23,7 @@ internal class ZXSpectrumROMRegion : IMemoryInformation
 
     public IMemoryRegionDataProvider CreateDataProvider()
     {
-        return new DebuggerDataProvider(MameViewName, MameViewName);
+        return new DebuggerDataReadOnlyProvider(MameViewName, MameViewName);
     }
 }
 
@@ -52,6 +52,6 @@ internal class ZXSpectrumRAMRegion : IMemoryInformation
 
     public IMemoryRegionDataProvider CreateDataProvider()
     {
-        return new DebuggerDataProvider(MameViewName, MameViewName);
+        return new DebuggerDataLiveProvider(MameViewName, MameViewName, 0x4000, 0xFFFF);
     }
 }

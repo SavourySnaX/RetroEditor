@@ -910,7 +910,7 @@ internal class RomDataParser : IRomDataParser
         get
         {
             // Return data from this region's provider
-            if (dataProvider is BufferDataProvider bufferProvider && bufferProvider is DebuggerDataProvider debuggerProvider)
+            if (dataProvider is BufferDataProvider bufferProvider && bufferProvider is DebuggerDataReadOnlyProvider debuggerProvider)
             {
                 return debuggerProvider.GetBuffer();
             }

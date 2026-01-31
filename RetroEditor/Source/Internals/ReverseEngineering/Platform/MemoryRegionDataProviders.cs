@@ -136,14 +136,15 @@ internal class VirtualDataProvider : IMemoryRegionDataProvider
 
 /// <summary>
 /// Data provider for debugger-loaded physical memory regions
-/// Handles parsing data from MAME debugger memory views
+/// Handles parsing data from MAME debugger memory views into a read-only buffer
+/// Data is loaded once and cached
 /// </summary>
-internal class DebuggerDataProvider : BufferDataProvider
+internal class DebuggerDataReadOnlyProvider : BufferDataProvider
 {
     private readonly string mameViewName;
     private const int BYTES_PER_LINE = 16;
 
-    public DebuggerDataProvider(string regionName, string mameViewName)
+    public DebuggerDataReadOnlyProvider(string regionName, string mameViewName)
         : base(regionName)
     {
         this.mameViewName = mameViewName;
@@ -339,5 +340,188 @@ internal class DebuggerDataProvider : BufferDataProvider
         tempSpan.CopyTo(bytes);
         return bytes;
         */
+    }
+}
+
+/// <summary>
+/// Data provider that reads live memory directly from the debugger
+/// Does not cache data - each read queries MAME directly
+/// Useful for RAM regions that change dynamically
+/// </summary>
+internal class DebuggerDataLiveProvider : IMemoryRegionDataProvider
+{
+    private const int BYTES_PER_LINE = 16;
+    private const int VIEW_WIDTH = 256;
+    private const int MAX_LINES_PER_CHUNK = 64;
+
+    private readonly string mameViewName;
+    private readonly UInt64 addressStart;
+    private readonly UInt64 addressEnd;
+    private LibMameDebugger? debugger;
+    private int? sourceIndex;
+
+    public string RegionName { get; }
+    public UInt64 DataSize => addressEnd >= addressStart ? addressEnd - addressStart + 1 : 0;
+
+    public DebuggerDataLiveProvider(string regionName, string mameViewName, UInt64 addressStart, UInt64 addressEnd)
+    {
+        RegionName = regionName;
+        this.mameViewName = mameViewName;
+        this.addressStart = addressStart;
+        this.addressEnd = addressEnd;
+    }
+
+    public void LoadFromDebugger(LibMameDebugger debugger)
+    {
+        this.debugger = debugger;
+        sourceIndex = null;
+    }
+
+    public byte GetByte(UInt64 address)
+    {
+        var span = FetchBytes(address, 1);
+        if (span.Length == 0)
+            return 0;
+        return span[0];
+    }
+
+    public ReadOnlySpan<byte> FetchBytes(UInt64 address, UInt64 length)
+    {
+        if (debugger == null || length == 0)
+            return new ReadOnlySpan<byte>();
+
+        if (address < addressStart || address > addressEnd)
+            return new ReadOnlySpan<byte>();
+
+        var maxLength = addressEnd - address + 1;
+        length = Math.Min(length, maxLength);
+
+        var output = new byte[length];
+        ReadBytesFromDebugger(address, output);
+        return output;
+    }
+
+    private void ReadBytesFromDebugger(UInt64 address, byte[] output)
+    {
+        if (debugger == null || output.Length == 0)
+            return;
+
+        int outputOffset = 0;
+        while (outputOffset < output.Length)
+        {
+            int remaining = output.Length - outputOffset;
+            int lines = Math.Min(MAX_LINES_PER_CHUNK, (remaining + BYTES_PER_LINE - 1) / BYTES_PER_LINE);
+
+            var view = new LibMameDebugger.DView(
+                debugger.AllocView(LibMameDebuggerRetroPlugin.debug_view_type.Memory),
+                0, 0, VIEW_WIDTH, lines, "");
+
+            try
+            {
+                EnsureSource(ref view);
+
+                view.view.Expression = $"${address + (UInt64)outputOffset:X}";
+                debugger.SetExpression(ref view);
+                debugger.SetDataFormat(ref view, LibMameDebuggerRetroPlugin.debug_format.DataFormat1ByteHex);
+                debugger.UpdateDView(ref view);
+
+                ParseChunk(view, address + (UInt64)outputOffset, output, outputOffset);
+            }
+            finally
+            {
+                debugger.FreeView(view.view);
+            }
+
+            outputOffset += lines * BYTES_PER_LINE;
+        }
+    }
+
+    private void EnsureSource(ref LibMameDebugger.DView view)
+    {
+        if (debugger == null)
+            return;
+
+        if (!sourceIndex.HasValue)
+        {
+            int sourceCount = debugger.GetSourcesCount(ref view);
+            var sources = debugger.GetSourcesList(ref view);
+
+            int index = -1;
+            for (int i = 0; i < sourceCount; i++)
+            {
+                if (sources[i].Contains(mameViewName))
+                {
+                    index = i;
+                    break;
+                }
+            }
+
+            if (index == -1)
+                throw new Exception($"Could not find memory source for region: {mameViewName}");
+
+            sourceIndex = index;
+        }
+
+        debugger.SetSource(ref view, sourceIndex.Value);
+    }
+
+    private void ParseChunk(LibMameDebugger.DView view, UInt64 chunkStartAddress, byte[] output, int outputOffset)
+    {
+        int bytesPerLine = view.view.W * 2; // Each character is 2 bytes (char + attribute)
+
+        for (int y = 0; y < view.view.H; y++)
+        {
+            int lineStart = y * bytesPerLine;
+            int x = 0;
+
+            // Skip initial spaces
+            while (x < view.view.W && (char)view.state[lineStart + x * 2] == ' ')
+                x++;
+
+            // Parse address
+            StringBuilder addressStr = new StringBuilder();
+            while (x < view.view.W && (char)view.state[lineStart + x * 2] != ' ')
+            {
+                addressStr.Append((char)view.state[lineStart + x * 2]);
+                x++;
+            }
+
+            if (addressStr.Length == 0)
+                break;
+
+            var address = UInt64.Parse(addressStr.ToString(), System.Globalization.NumberStyles.HexNumber);
+
+            // Skip spaces between address and bytes
+            while (x < view.view.W && (char)view.state[lineStart + x * 2] == ' ')
+                x++;
+
+            // Parse bytes
+            for (int byteCount = 0; byteCount < BYTES_PER_LINE && x < view.view.W - 1; byteCount++)
+            {
+                char highNibble = (char)view.state[lineStart + x * 2];
+                char lowNibble = (char)view.state[lineStart + (x + 1) * 2];
+
+                if (char.IsLetterOrDigit(highNibble) && char.IsLetterOrDigit(lowNibble))
+                {
+                    byte value = Convert.ToByte($"{highNibble}{lowNibble}", 16);
+                    var absoluteAddress = address + (UInt64)byteCount;
+                    if (absoluteAddress >= chunkStartAddress)
+                    {
+                        var outputIndex = (long)(absoluteAddress - chunkStartAddress) + outputOffset;
+                        if (outputIndex >= 0 && outputIndex < output.Length)
+                        {
+                            output[outputIndex] = value;
+                        }
+                    }
+                }
+                else
+                {
+                    // Stop parsing this line if we hit invalid data
+                    break;
+                }
+
+                x += 3;
+            }
+        }
     }
 }

@@ -21,7 +21,7 @@ internal class SNESROMRegion : IMemoryInformation
 
     public IMemoryRegionDataProvider CreateDataProvider()
     {
-        return new DebuggerDataProvider(MameViewName, MameViewName);
+        return new DebuggerDataReadOnlyProvider(MameViewName, MameViewName);
     }
 }
 
@@ -51,7 +51,7 @@ internal class SNESWRAMRegion : IMemoryInformation
 
     public IMemoryRegionDataProvider CreateDataProvider()
     {
-        return new DebuggerDataProvider(MameViewName, MameViewName);
+        return new DebuggerDataLiveProvider(MameViewName, MameViewName, 0x7E0000, 0x7FFFFF);
     }
 }
 

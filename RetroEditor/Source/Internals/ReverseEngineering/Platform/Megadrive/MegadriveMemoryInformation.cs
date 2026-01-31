@@ -21,7 +21,7 @@ internal class MegadriveROMRegion : IMemoryInformation
 
     public IMemoryRegionDataProvider CreateDataProvider()
     {
-        return new DebuggerDataProvider(MameViewName, MameViewName);
+        return new DebuggerDataReadOnlyProvider(MameViewName, MameViewName);
     }
 }
 
@@ -36,7 +36,7 @@ internal class MegadriveRAMRegion : IMemoryInformation
 
     public IMemoryRegionDataProvider CreateDataProvider()
     {
-        return new VirtualDataProvider(MameViewName, 0x10000);
+        return new DebuggerDataLiveProvider(MameViewName, MameViewName, 0xFF0000, 0xFFFFFF);
     }
 }
 
