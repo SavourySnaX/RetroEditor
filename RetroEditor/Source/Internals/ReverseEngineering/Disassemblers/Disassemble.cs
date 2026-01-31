@@ -335,6 +335,8 @@ internal interface IDisassembler
     DecodeResult DecodeNext(ReadOnlySpan<byte> bytes, ulong address);
 
     List<(ulong address, uint size)> FetchMemoryAccesses(Instruction ins, ICpuRegisterState registers);
+
+    List<(ulong address, uint size)> FetchIOAccesses(Instruction ins, ICpuRegisterState registers);
 }
 
 /// <summary>
@@ -369,6 +371,11 @@ internal abstract class DisassemblerBase : IDisassembler
     public abstract DecodeResult DecodeNext(ReadOnlySpan<byte> bytes, ulong address);
 
     public abstract List<(ulong address, uint size)> FetchMemoryAccesses(Instruction ins, ICpuRegisterState registers);
+
+    public virtual List<(ulong address, uint size)> FetchIOAccesses(Instruction ins, ICpuRegisterState registers)
+    {
+        return new List<(ulong address, uint size)>();
+    }
 
     /// <summary>
     /// Helper method to read a value from memory in the correct endianness

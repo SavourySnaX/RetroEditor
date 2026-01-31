@@ -974,4 +974,98 @@ public class Disassembler_Z80_Tests
         AssertInstruction("OR A, IYH", new byte[] { 0xFD, 0xB4 });
         AssertInstruction("CP A, IYL", new byte[] { 0xFD, 0xBD });
     }
+
+    internal List<(ulong address, uint size)> FetchIOAccesses(Instruction instruction, ICpuRegisterState registers)
+    {
+        return _disassembler.FetchIOAccesses(instruction, registers);
+    }
+
+    [TestMethod]
+    public void TestZ80_IOAccesses_IN_A_Immediate()
+    {
+        var bytes = new byte[] { 0xDB, 0x42 }; // IN A,(#42)
+        var result = _disassembler.DecodeNext(bytes, 0x0000);
+        Assert.IsTrue(result.Success);
+
+        var registers = new Z80RegisterState();
+        var ioAccesses = FetchIOAccesses(result.Instruction, registers);
+        Assert.AreEqual(1, ioAccesses.Count);
+        Assert.AreEqual(0x42ul, ioAccesses[0].address);
+        Assert.AreEqual(1u, ioAccesses[0].size);
+        
+        var memAccesses = FetchMemoryAccesses(result.Instruction, registers);
+        Assert.AreEqual(0, memAccesses.Count);
+    }
+
+    [TestMethod]
+    public void TestZ80_IOAccesses_OUT_Immediate_A()
+    {
+        var bytes = new byte[] { 0xD3, 0x55 }; // OUT (#55),A
+        var result = _disassembler.DecodeNext(bytes, 0x0000);
+        Assert.IsTrue(result.Success);
+
+        var registers = new Z80RegisterState();
+        var ioAccesses = FetchIOAccesses(result.Instruction, registers);
+        Assert.AreEqual(1, ioAccesses.Count);
+        Assert.AreEqual(0x55ul, ioAccesses[0].address);
+        Assert.AreEqual(1u, ioAccesses[0].size);
+        
+        var memAccesses = FetchMemoryAccesses(result.Instruction, registers);
+        Assert.AreEqual(0, memAccesses.Count);
+    }
+
+    [TestMethod]
+    public void TestZ80_IOAccesses_IN_C()
+    {
+        var bytes = new byte[] { 0xED, 0x48 }; // IN C,(C)
+        var result = _disassembler.DecodeNext(bytes, 0x0000);
+        Assert.IsTrue(result.Success);
+
+        var registers = new Z80RegisterState { BC = 0x1234 };
+        var ioAccesses = FetchIOAccesses(result.Instruction, registers);
+        Assert.AreEqual(1, ioAccesses.Count);
+        Assert.AreEqual(0x1234ul, ioAccesses[0].address);
+        Assert.AreEqual(1u, ioAccesses[0].size);
+        
+        var memAccesses = FetchMemoryAccesses(result.Instruction, registers);
+        Assert.AreEqual(0, memAccesses.Count);
+    }
+
+    [TestMethod]
+    public void TestZ80_IOAccesses_OUTI()
+    {
+        var bytes = new byte[] { 0xED, 0xA3 }; // OUTI
+        var result = _disassembler.DecodeNext(bytes, 0x0000);
+        Assert.IsTrue(result.Success);
+
+        var registers = new Z80RegisterState { BC = 0x5678, HL = 0x4000 };
+        var ioAccesses = FetchIOAccesses(result.Instruction, registers);
+        Assert.AreEqual(1, ioAccesses.Count);
+        Assert.AreEqual(0x5678ul, ioAccesses[0].address);
+        Assert.AreEqual(1u, ioAccesses[0].size);
+        
+        var memAccesses = FetchMemoryAccesses(result.Instruction, registers);
+        Assert.AreEqual(1, memAccesses.Count);
+        Assert.AreEqual(0x4000ul, memAccesses[0].address);
+        Assert.AreEqual(1u, memAccesses[0].size);
+    }
+
+    [TestMethod]
+    public void TestZ80_IOAccesses_INI()
+    {
+        var bytes = new byte[] { 0xED, 0xA2 }; // INI
+        var result = _disassembler.DecodeNext(bytes, 0x0000);
+        Assert.IsTrue(result.Success);
+
+        var registers = new Z80RegisterState { BC = 0xABCD, HL = 0x3000 };
+        var ioAccesses = FetchIOAccesses(result.Instruction, registers);
+        Assert.AreEqual(1, ioAccesses.Count);
+        Assert.AreEqual(0xABCDul, ioAccesses[0].address);
+        Assert.AreEqual(1u, ioAccesses[0].size);
+        
+        var memAccesses = FetchMemoryAccesses(result.Instruction, registers);
+        Assert.AreEqual(1, memAccesses.Count);
+        Assert.AreEqual(0x3000ul, memAccesses[0].address);
+        Assert.AreEqual(1u, memAccesses[0].size);
+    }
 }

@@ -921,6 +921,44 @@ internal class Z80Disassembler : DisassemblerBase
         return accesses;
     }
 
+    public override List<(ulong address, uint size)> FetchIOAccesses(Instruction ins, ICpuRegisterState registers)
+    {
+        var z80Registers = (Z80RegisterState)registers;
+        var accesses = new List<(ulong address, uint size)>();
+
+        switch (ins.Mnemonic)
+        {
+            case "IN":
+            case "OUT":
+                foreach (var operand in ins.Operands)
+                {
+                    if (operand is Z80ImmediateOperand immediate)
+                    {
+                        accesses.Add((immediate.Value, 1));
+                        return accesses;
+                    }
+                    else if (operand is Z80SpecialRegisterOperand special && special.Text() == "(C)")
+                    {
+                        accesses.Add(((ulong)z80Registers.BC, 1));
+                        return accesses;
+                    }
+                }
+                break;
+            case "INI":
+            case "INIR":
+            case "IND":
+            case "INDR":
+            case "OUTI":
+            case "OTIR":
+            case "OUTD":
+            case "OTDR":
+                accesses.Add(((ulong)z80Registers.BC, 1));
+                return accesses;
+        }
+
+        return accesses;
+    }
+
     private static ushort GetRegister16Value(Z80RegisterState registers, Z80Register16 register)
     {
         return register switch
