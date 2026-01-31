@@ -638,6 +638,22 @@ internal class SymbolProvider : ISymbolProvider
 
     public bool HasSymbol(ulong address, int size) => symbols.ContainsKey((address, size));
     public string GetSymbol(ulong address, int size) => symbols[(address, size)];
+
+    /// <summary>
+    /// Gets all symbols with their memory region context.
+    /// </summary>
+    public List<ExtendedSymbol> GetAllSymbols(MemoryRegionKey regionKey)
+    {
+        var result = new List<ExtendedSymbol>();
+        foreach (var kvp in symbols)
+        {
+            var address = kvp.Key.Item1;
+            var size = kvp.Key.Item2;
+            var name = kvp.Value;
+            result.Add(new ExtendedSymbol(address, size, name, regionKey));
+        }
+        return result;
+    }
 }
 
 internal class CodeRegion : IRegionInfo

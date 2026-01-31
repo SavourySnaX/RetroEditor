@@ -78,7 +78,7 @@ internal interface ITraceParser
 /// </summary>
 internal interface IHardwareSymbolsProvider
 {
-    void InitializeSymbols(IRomDataParser romData);
+    void InitializeSymbols(IRomDataParser romData, MemoryRegionKey regionKey);
 }
 
 /// <summary>

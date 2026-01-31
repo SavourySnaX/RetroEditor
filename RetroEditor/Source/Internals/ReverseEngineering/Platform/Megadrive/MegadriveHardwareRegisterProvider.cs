@@ -5,8 +5,12 @@ namespace RetroEditor.Source.Internals.ReverseEngineering.Platform.Megadrive;
 /// </summary>
 internal class MegadriveHardwareRegisterProvider : IHardwareSymbolsProvider
 {
-    public void InitializeSymbols(IRomDataParser romData)
+    public void InitializeSymbols(IRomDataParser romData, MemoryRegionKey regionKey)
     {
+        // Only add hardware register symbols to the IO region
+        if (regionKey != MegadriveMemoryInformationProvider.IOKey)
+            return;
+            
         // VDP (Video Display Processor) Registers - Data Port
         romData.AddSymbol(0xC00000, 2, "VDP_DATA");
         

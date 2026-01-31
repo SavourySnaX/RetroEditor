@@ -5,8 +5,12 @@ namespace RetroEditor.Source.Internals.ReverseEngineering.Platform.SNES;
 /// </summary>
 internal class SNESHardwareRegisterProvider : IHardwareSymbolsProvider
 {
-    public void InitializeSymbols(IRomDataParser romData)
+    public void InitializeSymbols(IRomDataParser romData, MemoryRegionKey regionKey)
     {
+        // Only add hardware register symbols to the IO region
+        if (regionKey != SNESMemoryInformationProvider.IOKey)
+            return;
+            
         // PPU Registers
         romData.AddSymbol(0x2100, 2, "INIDISP");
         romData.AddSymbol(0x2101, 2, "OBSEL");

@@ -1,6 +1,8 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using RetroEditor.Plugins;
+using RetroEditor.Source.Internals.ReverseEngineering;
+using RetroEditor.Source.Internals.ReverseEngineering.Platform;
 using MyMGui;
 
 internal class LibMameDebugger
@@ -82,7 +84,16 @@ internal class LibMameDebugger
         ImGui.BeginDisabled(!plugin.HasResourcerSupport);
         if (ImGui.MenuItem("Resourcer"))
         {
-            editor.OpenWindow(new Resourcer(this, plugin.GetResourcer()), "Resourcer");
+            var resourcer = new Resourcer(this, plugin.GetResourcer());
+            editor.OpenWindow(resourcer, "Resourcer");
+            
+            // Also open the Symbols window with the Resourcer's data
+            // Note: RomDataParsers needs to be cast from IReadOnlyDictionary to Dictionary
+            if (resourcer is Resourcer r && r.RomDataParsers is Dictionary<MemoryRegionKey, RomDataParser> parsers)
+            {
+                var symbolsWindow = new SymbolsWindow(parsers, resourcer.MemoryInformationProvider);
+                editor.OpenWindow(symbolsWindow, "Symbols");
+            }
         }
         ImGui.EndDisabled();
     }

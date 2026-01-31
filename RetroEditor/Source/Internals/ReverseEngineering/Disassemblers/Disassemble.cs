@@ -9,6 +9,7 @@ internal interface ISymbolProvider
 {
     bool HasSymbol(ulong address, int symbolLength);  // Maybe we need more disambiguation ... TODO
     string GetSymbol(ulong address, int symbolLength);  // Maybe we need more disambiguation ... TODO
+    List<ExtendedSymbol> GetAllSymbols(MemoryRegionKey regionKey);
 }
 
 internal abstract class IOperand

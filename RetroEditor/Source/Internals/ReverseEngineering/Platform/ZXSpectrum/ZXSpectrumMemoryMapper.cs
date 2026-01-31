@@ -13,15 +13,15 @@ internal class ZXSpectrumMemoryMapper : IMemoryMapper
         // 0x4000 - 0xFFFF: RAM (48KB)
         if (cpuAddress < 0x4000)
         {
-            region = new MemoryRegionKey((UInt32)MemoryInformationRegion.ROM);
+            region = ZXSpectrumMemoryInformationProvider.ROMKey;
             return cpuAddress;
         }
         if (cpuAddress < 0x10000)
         {
-            region = new MemoryRegionKey((UInt32)MemoryInformationRegion.RAM);
+            region = ZXSpectrumMemoryInformationProvider.RAMKey;
             return cpuAddress;
         }
-        region = new MemoryRegionKey((UInt32)MemoryInformationRegion.Invalid);
+        region = ZXSpectrumMemoryInformationProvider.InvalidKey;
         return 0;
     }
 

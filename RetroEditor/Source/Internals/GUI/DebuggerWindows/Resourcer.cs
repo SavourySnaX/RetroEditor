@@ -7,6 +7,10 @@ internal class Resourcer : IWindow
     public float UpdateInterval => 1 / 60.0f;
     public bool MinimumSize => false;
     
+    // Public properties for external access (e.g., SymbolsWindow)
+    public IReadOnlyDictionary<MemoryRegionKey, RomDataParser> RomDataParsers => romDataParsers;
+    public IMemoryInformationProvider MemoryInformationProvider => memoryInformationProvider;
+    
     LibMameDebugger debugger;
     Dictionary<MemoryRegionKey, RomDataParser> romDataParsers;
     Dictionary<MemoryRegionKey, IMemoryInformation> memoryRegionInfoCache;
@@ -746,7 +750,7 @@ internal class Resourcer : IWindow
                 foreach (var regionKey in romDataParsers.Keys)
                 {
                     //TODO move hardwareRegisterProvider to memory information ?
-                    hardwareRegisterProvider.InitializeSymbols(romDataParsers[regionKey]);
+                    hardwareRegisterProvider.InitializeSymbols(romDataParsers[regionKey], regionKey);
                 }
             }
 
