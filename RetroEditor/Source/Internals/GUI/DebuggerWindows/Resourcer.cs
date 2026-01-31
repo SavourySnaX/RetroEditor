@@ -576,7 +576,8 @@ internal class Resourcer : IWindow
                         else
                         {
                             // Set Colour based on kind
-                            ImGui.TableSetBgColor(ImGuiTableBgTarget.RowBg1, config.GetColorU32(fetched.Value.Colour));
+                            var colour = lData.IsLabel ? ResourcerConfig.ConfigColour.Label : fetched.Value.Colour;
+                            ImGui.TableSetBgColor(ImGuiTableBgTarget.RowBg1, config.GetColorU32(colour));
                         }
 
                         if (clicked)
@@ -843,6 +844,12 @@ internal class Resourcer : IWindow
         }
         if (i.IsBranch)
         {
+            // Fetch the target address and construct a label there
+            foreach (var target in i.NextAddresses)
+            {
+                var mappedTarget = memoryMapper.MapCpuToRegion(target, out var targetRegionKey);
+                romDataParsers[targetRegionKey].AddLabel(mappedTarget,$"loc_{mappedTarget:X8}");
+            }
             return;
         }
 
