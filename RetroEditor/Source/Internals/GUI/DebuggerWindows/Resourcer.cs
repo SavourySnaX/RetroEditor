@@ -9,6 +9,7 @@ internal class Resourcer : IWindow
     
     LibMameDebugger debugger;
     Dictionary<MemoryRegionKey, RomDataParser> romDataParsers;
+    Dictionary<MemoryRegionKey, IMemoryInformation> memoryRegionInfoCache;
     IPlatformFactory platformFactory;
     IDisassembler disassembler;
     IMemoryMapper memoryMapper;
@@ -38,6 +39,7 @@ internal class Resourcer : IWindow
         this.autoDisassembler = this.platformFactory.CreateDisassembler();
 
         romDataParsers = new Dictionary<MemoryRegionKey, RomDataParser>();
+        memoryRegionInfoCache = new Dictionary<MemoryRegionKey, IMemoryInformation>();
         InitializeRegionParsers();
 
         config = new ResourcerConfig();
@@ -48,6 +50,7 @@ internal class Resourcer : IWindow
         // Create a RomDataParser for each memory region
         foreach (var memInfo in memoryInformationProvider.GetMemoryRegions())
         {
+            memoryRegionInfoCache[memInfo.RegionKey] = memInfo;
             var dataProvider = memInfo.CreateDataProvider();
             var parser = new RomDataParser(memInfo, dataProvider);
             romDataParsers[memInfo.RegionKey] = parser;
@@ -402,19 +405,20 @@ internal class Resourcer : IWindow
                     }
 
                     bool clearSelection = false;
+                    
+                    // Get memory region info for this region from cache
+                    memoryRegionInfoCache.TryGetValue(regionKey, out var regionInfo);
+                    
                     if (ImGui.IsKeyPressed(ImGuiKey.S))
                     {
-                        romDataParsers[regionKey].AddStringRange(minAddress, maxAddress);
+                        romDataParsers[regionKey].AddStringRange(minAddress, maxAddress, regionInfo?.HasPhysicalData ?? true);
                         clearSelection = true;
                     }
                     if (ImGui.IsKeyPressed(ImGuiKey.U))
                     {
-                        romDataParsers[regionKey].AddUnknownRange(minAddress, maxAddress);
+                        romDataParsers[regionKey].AddUnknownRange(minAddress, maxAddress, regionInfo?.HasPhysicalData ?? true);
                         clearSelection = true;
                     }
-                    
-                    // Get memory region info for this region to check if code operations are allowed
-                    var regionInfo = memoryInformationProvider.GetMemoryRegions().First(r => r.RegionKey == regionKey);
                     
                     // Code and data operations only apply to regions with physical data (typically Cartridge/ROM)
                     if (regionInfo != null && regionInfo.HasPhysicalData)
@@ -852,7 +856,8 @@ internal class Resourcer : IWindow
                 var endAddress = regionAddress + access.Size - 1;
                 if (romDataParsers[access.RegionKey].CheckRegionUnknown(regionAddress, endAddress))
                 {
-                    romDataParsers[access.RegionKey].AddDataRange(regionAddress, endAddress, access.Size);
+                    memoryRegionInfoCache.TryGetValue(access.RegionKey, out var accessRegionInfo);
+                    romDataParsers[access.RegionKey].AddDataRange(regionAddress, endAddress, access.Size, accessRegionInfo?.HasPhysicalData ?? true);
                 }
             }
             else
