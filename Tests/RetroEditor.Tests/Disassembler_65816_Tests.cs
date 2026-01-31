@@ -51,6 +51,16 @@ namespace RetroEditor.Tests
                 .ToList();
         }
 
+        internal List<(ulong address, uint size, MemoryAccessDirection direction)> FetchMemoryAccessesWithDirection(Instruction instruction, ICpuRegisterState registers)
+        {
+            return _disassembler
+                .FetchMappedAccesses(instruction, registers, _memoryMapper)
+                .Where(access => access.RegionKey.Key != (uint)MemoryInformationRegion.IO
+                                 && access.RegionKey.Key != (uint)MemoryInformationRegion.Invalid)
+                .Select(access => (access.Address, access.Size, access.Direction))
+                .ToList();
+        }
+
         internal void SetState(bool emulation, bool a16bit, bool x16bit)
         {
             var state = (SNES65816State)_disassembler.State;
@@ -4663,10 +4673,11 @@ namespace RetroEditor.Tests
                 S = 0x0000
             };
 
-            var accesses = FetchMemoryAccesses(result.Instruction, registers);
+            var accesses = FetchMemoryAccessesWithDirection(result.Instruction, registers);
             Assert.AreEqual(1, accesses.Count);
             Assert.AreEqual(0x7E1234ul, accesses[0].address);
             Assert.AreEqual(1u, accesses[0].size);
+            Assert.AreEqual(MemoryAccessDirection.Read, accesses[0].direction);
         }
 
         [TestMethod]
@@ -4687,10 +4698,11 @@ namespace RetroEditor.Tests
                 S = 0x0000
             };
 
-            var accesses = FetchMemoryAccesses(result.Instruction, registers);
+            var accesses = FetchMemoryAccessesWithDirection(result.Instruction, registers);
             Assert.AreEqual(1, accesses.Count);
             Assert.AreEqual(0x0120ul, accesses[0].address);
             Assert.AreEqual(2u, accesses[0].size);
+            Assert.AreEqual(MemoryAccessDirection.Read, accesses[0].direction);
         }
 
         [TestMethod]
@@ -4711,7 +4723,7 @@ namespace RetroEditor.Tests
                 S = 0x0000
             };
 
-            var accesses = FetchMemoryAccesses(result.Instruction, registers);
+            var accesses = FetchMemoryAccessesWithDirection(result.Instruction, registers);
             Assert.AreEqual(0, accesses.Count);
         }
 
@@ -4733,7 +4745,7 @@ namespace RetroEditor.Tests
                 S = 0x0000
             };
 
-            var accesses = FetchMemoryAccesses(result.Instruction, registers);
+            var accesses = FetchMemoryAccessesWithDirection(result.Instruction, registers);
             Assert.AreEqual(0, accesses.Count);
         }
     }

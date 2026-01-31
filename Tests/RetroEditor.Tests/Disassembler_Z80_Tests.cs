@@ -133,6 +133,16 @@ public class Disassembler_Z80_Tests
             .ToList();
     }
 
+    internal List<(ulong address, uint size, MemoryAccessDirection direction)> FetchMemoryAccessesWithDirection(Instruction instruction, ICpuRegisterState registers)
+    {
+        return ((IDisassembler)_disassembler)
+            .FetchMappedAccesses(instruction, registers, _memoryMapper)
+            .Where(access => access.RegionKey.Key != (uint)MemoryInformationRegion.IO
+                             && access.RegionKey.Key != (uint)MemoryInformationRegion.Invalid)
+            .Select(access => (access.Address, access.Size, access.Direction))
+            .ToList();
+    }
+
     // Test basic instructions
     [TestMethod]
     public void TestZ80_NOP()
@@ -247,19 +257,21 @@ public class Disassembler_Z80_Tests
         Assert.IsTrue(pushResult.Success);
 
         var registers = new Z80RegisterState { SP = 0xFF00 };
-        var accesses = FetchMemoryAccesses(pushResult.Instruction, registers);
+        var accesses = FetchMemoryAccessesWithDirection(pushResult.Instruction, registers);
         Assert.AreEqual(1, accesses.Count);
         Assert.AreEqual(0xFF00ul, accesses[0].address);
         Assert.AreEqual(2u, accesses[0].size);
+        Assert.AreEqual(MemoryAccessDirection.Write, accesses[0].direction);
 
         var popBytes = new byte[] { 0xC1 }; // POP BC
         var popResult = _disassembler.DecodeNext(popBytes, 0x0000);
         Assert.IsTrue(popResult.Success);
 
-        accesses = FetchMemoryAccesses(popResult.Instruction, registers);
+        accesses = FetchMemoryAccessesWithDirection(popResult.Instruction, registers);
         Assert.AreEqual(1, accesses.Count);
         Assert.AreEqual(0xFF00ul, accesses[0].address);
         Assert.AreEqual(2u, accesses[0].size);
+        Assert.AreEqual(MemoryAccessDirection.Read, accesses[0].direction);
     }
 
     [TestMethod]
@@ -284,12 +296,14 @@ public class Disassembler_Z80_Tests
         Assert.IsTrue(result.Success);
 
         var registers = new Z80RegisterState { HL = 0x4000, DE = 0x5000 };
-        var accesses = FetchMemoryAccesses(result.Instruction, registers);
+        var accesses = FetchMemoryAccessesWithDirection(result.Instruction, registers);
         Assert.AreEqual(2, accesses.Count);
         Assert.AreEqual(0x4000ul, accesses[0].address);
         Assert.AreEqual(1u, accesses[0].size);
+        Assert.AreEqual(MemoryAccessDirection.Read, accesses[0].direction);
         Assert.AreEqual(0x5000ul, accesses[1].address);
         Assert.AreEqual(1u, accesses[1].size);
+        Assert.AreEqual(MemoryAccessDirection.Write, accesses[1].direction);
     }
 
     [TestMethod]
@@ -300,10 +314,11 @@ public class Disassembler_Z80_Tests
         Assert.IsTrue(result.Success);
 
         var registers = new Z80RegisterState { HL = 0x4100 };
-        var accesses = FetchMemoryAccesses(result.Instruction, registers);
+        var accesses = FetchMemoryAccessesWithDirection(result.Instruction, registers);
         Assert.AreEqual(1, accesses.Count);
         Assert.AreEqual(0x4100ul, accesses[0].address);
         Assert.AreEqual(1u, accesses[0].size);
+        Assert.AreEqual(MemoryAccessDirection.ReadWrite, accesses[0].direction);
     }
 
     [TestMethod]
@@ -1012,6 +1027,15 @@ public class Disassembler_Z80_Tests
             .ToList();
     }
 
+    internal List<(ulong address, uint size, MemoryAccessDirection direction)> FetchIOAccessesWithDirection(Instruction instruction, ICpuRegisterState registers)
+    {
+        return ((IDisassembler)_disassembler)
+            .FetchMappedAccesses(instruction, registers, _memoryMapper)
+            .Where(access => access.RegionKey.Key == (uint)MemoryInformationRegion.IO)
+            .Select(access => (access.Address, access.Size, access.Direction))
+            .ToList();
+    }
+
     [TestMethod]
     public void TestZ80_IOAccesses_IN_A_Immediate()
     {
@@ -1020,10 +1044,11 @@ public class Disassembler_Z80_Tests
         Assert.IsTrue(result.Success);
 
         var registers = new Z80RegisterState();
-        var ioAccesses = FetchIOAccesses(result.Instruction, registers);
+        var ioAccesses = FetchIOAccessesWithDirection(result.Instruction, registers);
         Assert.AreEqual(1, ioAccesses.Count);
         Assert.AreEqual(0x42ul, ioAccesses[0].address);
         Assert.AreEqual(1u, ioAccesses[0].size);
+        Assert.AreEqual(MemoryAccessDirection.Read, ioAccesses[0].direction);
         
         var memAccesses = FetchMemoryAccesses(result.Instruction, registers);
         Assert.AreEqual(0, memAccesses.Count);
@@ -1037,10 +1062,11 @@ public class Disassembler_Z80_Tests
         Assert.IsTrue(result.Success);
 
         var registers = new Z80RegisterState();
-        var ioAccesses = FetchIOAccesses(result.Instruction, registers);
+        var ioAccesses = FetchIOAccessesWithDirection(result.Instruction, registers);
         Assert.AreEqual(1, ioAccesses.Count);
         Assert.AreEqual(0x55ul, ioAccesses[0].address);
         Assert.AreEqual(1u, ioAccesses[0].size);
+        Assert.AreEqual(MemoryAccessDirection.Write, ioAccesses[0].direction);
         
         var memAccesses = FetchMemoryAccesses(result.Instruction, registers);
         Assert.AreEqual(0, memAccesses.Count);
@@ -1054,10 +1080,11 @@ public class Disassembler_Z80_Tests
         Assert.IsTrue(result.Success);
 
         var registers = new Z80RegisterState { BC = 0x1234 };
-        var ioAccesses = FetchIOAccesses(result.Instruction, registers);
+        var ioAccesses = FetchIOAccessesWithDirection(result.Instruction, registers);
         Assert.AreEqual(1, ioAccesses.Count);
         Assert.AreEqual(0x1234ul, ioAccesses[0].address);
         Assert.AreEqual(1u, ioAccesses[0].size);
+        Assert.AreEqual(MemoryAccessDirection.Read, ioAccesses[0].direction);
         
         var memAccesses = FetchMemoryAccesses(result.Instruction, registers);
         Assert.AreEqual(0, memAccesses.Count);
@@ -1071,15 +1098,17 @@ public class Disassembler_Z80_Tests
         Assert.IsTrue(result.Success);
 
         var registers = new Z80RegisterState { BC = 0x5678, HL = 0x4000 };
-        var ioAccesses = FetchIOAccesses(result.Instruction, registers);
+        var ioAccesses = FetchIOAccessesWithDirection(result.Instruction, registers);
         Assert.AreEqual(1, ioAccesses.Count);
         Assert.AreEqual(0x5678ul, ioAccesses[0].address);
         Assert.AreEqual(1u, ioAccesses[0].size);
+        Assert.AreEqual(MemoryAccessDirection.Write, ioAccesses[0].direction);
         
-        var memAccesses = FetchMemoryAccesses(result.Instruction, registers);
+        var memAccesses = FetchMemoryAccessesWithDirection(result.Instruction, registers);
         Assert.AreEqual(1, memAccesses.Count);
         Assert.AreEqual(0x4000ul, memAccesses[0].address);
         Assert.AreEqual(1u, memAccesses[0].size);
+        Assert.AreEqual(MemoryAccessDirection.Read, memAccesses[0].direction);
     }
 
     [TestMethod]
@@ -1090,14 +1119,16 @@ public class Disassembler_Z80_Tests
         Assert.IsTrue(result.Success);
 
         var registers = new Z80RegisterState { BC = 0xABCD, HL = 0x3000 };
-        var ioAccesses = FetchIOAccesses(result.Instruction, registers);
+        var ioAccesses = FetchIOAccessesWithDirection(result.Instruction, registers);
         Assert.AreEqual(1, ioAccesses.Count);
         Assert.AreEqual(0xABCDul, ioAccesses[0].address);
         Assert.AreEqual(1u, ioAccesses[0].size);
+        Assert.AreEqual(MemoryAccessDirection.Read, ioAccesses[0].direction);
         
-        var memAccesses = FetchMemoryAccesses(result.Instruction, registers);
+        var memAccesses = FetchMemoryAccessesWithDirection(result.Instruction, registers);
         Assert.AreEqual(1, memAccesses.Count);
         Assert.AreEqual(0x3000ul, memAccesses[0].address);
         Assert.AreEqual(1u, memAccesses[0].size);
+        Assert.AreEqual(MemoryAccessDirection.Write, memAccesses[0].direction);
     }
 }

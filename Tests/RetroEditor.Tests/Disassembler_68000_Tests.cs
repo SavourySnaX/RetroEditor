@@ -51,6 +51,16 @@ public class Disassembler_68000_Tests
             .ToList();
     }
 
+    internal List<(ulong address, uint size, MemoryAccessDirection direction)> FetchMemoryAccessesWithDirection(Instruction instruction, ICpuRegisterState registers)
+    {
+        return _disassembler
+            .FetchMappedAccesses(instruction, registers, _memoryMapper)
+            .Where(access => access.RegionKey.Key != (uint)MemoryInformationRegion.IO
+                             && access.RegionKey.Key != (uint)MemoryInformationRegion.Invalid)
+            .Select(access => (access.Address, access.Size, access.Direction))
+            .ToList();
+    }
+
     private void AssertInstruction(
         DecodeResult result,
         string mnemonic,
@@ -1384,10 +1394,11 @@ public class Disassembler_68000_Tests
         registers.AddressRegisters[0] = 0x12345678;
         registers.DataRegisters[1] = 0;
 
-        var accesses = FetchMemoryAccesses(result.Instruction, registers);
+        var accesses = FetchMemoryAccessesWithDirection(result.Instruction, registers);
         Assert.AreEqual(1, accesses.Count);
         Assert.AreEqual(0x12345678ul, accesses[0].address);
         Assert.AreEqual(4u, accesses[0].size);
+        Assert.AreEqual(MemoryAccessDirection.ReadWrite, accesses[0].direction);
     }
 
     [TestMethod]
@@ -1402,10 +1413,11 @@ public class Disassembler_68000_Tests
         registers.AddressRegisters[1] = 0x5000;
         registers.DataRegisters[0] = 0;
 
-        var accesses = FetchMemoryAccesses(result.Instruction, registers);
+        var accesses = FetchMemoryAccessesWithDirection(result.Instruction, registers);
         Assert.AreEqual(1, accesses.Count);
         Assert.AreEqual(0x5000ul, accesses[0].address);
         Assert.AreEqual(2u, accesses[0].size);
+        Assert.AreEqual(MemoryAccessDirection.ReadWrite, accesses[0].direction);
     }
 
     [TestMethod]

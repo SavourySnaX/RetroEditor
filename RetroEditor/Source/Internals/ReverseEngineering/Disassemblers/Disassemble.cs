@@ -346,7 +346,7 @@ internal interface IDisassembler
     /// <returns>A result indicating success, need for more bytes, or error</returns>
     DecodeResult DecodeNext(ReadOnlySpan<byte> bytes, ulong address);
 
-    List<MemoryAccess> FetchMappedAccesses(Instruction ins, ICpuRegisterState registers, IMemoryMapper memoryMapper);
+    IEnumerable<MemoryAccess> FetchMappedAccesses(Instruction ins, ICpuRegisterState registers, IMemoryMapper memoryMapper);
 }
 
 /// <summary>
@@ -380,7 +380,7 @@ internal abstract class DisassemblerBase : IDisassembler
     /// </summary>
     public abstract DecodeResult DecodeNext(ReadOnlySpan<byte> bytes, ulong address);
 
-    public abstract List<MemoryAccess> FetchMappedAccesses(Instruction ins, ICpuRegisterState registers, IMemoryMapper memoryMapper);
+    public abstract IEnumerable<MemoryAccess> FetchMappedAccesses(Instruction ins, ICpuRegisterState registers, IMemoryMapper memoryMapper);
 
     /// <summary>
     /// Helper method to read a value from memory in the correct endianness

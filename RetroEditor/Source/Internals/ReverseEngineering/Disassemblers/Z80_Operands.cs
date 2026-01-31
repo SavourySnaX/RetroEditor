@@ -61,7 +61,7 @@ internal class Z80ImmediateOperand : IOperand
 {
     private readonly int _size;
 
-    public Z80ImmediateOperand(ulong value, int size = 1) : base(true, true, value)
+    public Z80ImmediateOperand(ulong value, int size = 1) : base(false, false, value)
     {
         _size = size;
     }
@@ -112,7 +112,7 @@ internal class Z80DisplacementOperand : IOperand
 {
     private readonly sbyte _displacement;
 
-    public Z80DisplacementOperand(sbyte displacement) : base(true, true, 0)
+    public Z80DisplacementOperand(sbyte displacement) : base(false, false, 0)
     {
         _displacement = displacement;
     }
@@ -126,7 +126,7 @@ internal class Z80DisplacementOperand : IOperand
 /// </summary>
 internal class Z80LiteralOperand : IOperand
 {
-    public Z80LiteralOperand(ulong value) : base(true, true, value)
+    public Z80LiteralOperand(ulong value) : base(false, false, value)
     {
     }
 
@@ -182,7 +182,7 @@ internal class Z80ConditionOperand : IOperand
 {
     private static readonly string[] ConditionNames = { "NZ", "Z", "NC", "C", "PO", "PE", "P", "M" };
 
-    public Z80ConditionOperand(int condition) : base(true, true, (ulong)condition)
+    public Z80ConditionOperand(int condition) : base(false, false, (ulong)condition)
     {
     }
 
@@ -228,7 +228,7 @@ internal class Z80SpecialRegisterOperand : IOperand
 /// </summary>
 internal class Z80RelativeOperand : IOperand
 {
-    public Z80RelativeOperand(ulong targetAddress) : base(true, true, targetAddress)
+    public Z80RelativeOperand(ulong targetAddress) : base(false, false, targetAddress)
     {
     }
 

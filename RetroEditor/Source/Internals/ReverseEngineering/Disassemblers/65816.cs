@@ -760,11 +760,10 @@ internal class SNES65816Disassembler : DisassemblerBase
         return DecodeResult.CreateSuccess(instruction, baseLength);
     }
 
-    public override List<MemoryAccess> FetchMappedAccesses(Instruction ins, ICpuRegisterState registerState, IMemoryMapper memoryMapper)
+    public override IEnumerable<MemoryAccess> FetchMappedAccesses(Instruction ins, ICpuRegisterState registerState, IMemoryMapper memoryMapper)
     {
         SNES65816RegisterState registers = (SNES65816RegisterState)registerState;
         SNES65816State state = (SNES65816State)ins.cpuState;
-        var accesses = new List<MemoryAccess>();
 
         var X = registers.X;
         var Y = registers.Y;
@@ -772,6 +771,17 @@ internal class SNES65816Disassembler : DisassemblerBase
         {
             X &= 0xFF;
             Y &= 0xFF;
+        }
+
+        static MemoryAccessDirection? GetDirection(IOperand operand)
+        {
+            if (operand.IsSource && operand.IsDestination)
+                return MemoryAccessDirection.ReadWrite;
+            if (operand.IsSource)
+                return MemoryAccessDirection.Read;
+            if (operand.IsDestination)
+                return MemoryAccessDirection.Write;
+            return null;
         }
 
         uint fetchSize = state.Accumulator8Bit ? 1u : 2u;
@@ -800,7 +810,7 @@ internal class SNES65816Disassembler : DisassemblerBase
                 effectiveAddress = registers.DBR;
                 effectiveAddress <<= 16;
                 effectiveAddress |= operand.Value;
-                effectiveAddress += X;
+                effectiveAddress += Y;
                 hasAccess = true;
             }
             else if (operand is O65816_AbsoluteLong absoluteLong)
@@ -858,6 +868,7 @@ internal class SNES65816Disassembler : DisassemblerBase
                 effectiveAddress = directPageIndirectLongY.Value;
                 effectiveAddress += registers.D;
                 effectiveAddress &= 0xFFFF;
+                effectiveAddress += Y;
                 fetchSize = 3;
                 hasAccess = true;
             }
@@ -874,13 +885,15 @@ internal class SNES65816Disassembler : DisassemblerBase
 
             if (hasAccess)
             {
+                var direction = GetDirection(operand);
+                if (!direction.HasValue)
+                    continue;
                 var mappedAddress = memoryMapper.MapCpuToRegion(effectiveAddress, out var regionKey);
                 if (regionKey.Key != (uint)MemoryInformationRegion.Invalid)
                 {
-                    accesses.Add(new MemoryAccess(mappedAddress, fetchSize, MemoryAccessDirection.ReadWrite, regionKey));
+                    yield return new MemoryAccess(mappedAddress, fetchSize, direction.Value, regionKey);
                 }
             }
         }
-        return accesses;
     }
 }

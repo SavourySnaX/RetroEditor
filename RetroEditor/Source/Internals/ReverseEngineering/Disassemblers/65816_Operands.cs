@@ -1,14 +1,14 @@
 
 internal class O65816_ImmediateByteOperand : IOperand
 {
-    public O65816_ImmediateByteOperand(ulong value) : base(true, false, value) { }
+    public O65816_ImmediateByteOperand(ulong value) : base(false, false, value) { }
     public override string Text() => $"#${Value:X2}";
     public override string Text(ISymbolProvider symbols) => symbols.HasSymbol(Value, 1) ? $"#{symbols.GetSymbol(Value, 1)}" : Text();
 }
 
 internal class O65816_ImmediateWordOperand : IOperand
 {
-    public O65816_ImmediateWordOperand(ulong value) : base(true, false, value) { }
+    public O65816_ImmediateWordOperand(ulong value) : base(false, false, value) { }
     public override string Text() => $"#${Value:X4}";
     public override string Text(ISymbolProvider symbols) => symbols.HasSymbol(Value, 2) ? $"#{symbols.GetSymbol(Value, 2)}" : Text();
 }
@@ -148,7 +148,7 @@ internal class O65816_BlockMove : IOperand
 
 internal class O65816_PCRelative : IOperand
 {
-    public O65816_PCRelative(ulong value) : base(true, false, value) { }
+    public O65816_PCRelative(ulong value) : base(false, false, value) { }
     public override string Text() => $"${Value:X4}";
     public override string Text(ISymbolProvider symbols) => symbols.HasSymbol(Value, 2) ? $"{symbols.GetSymbol(Value, 2)}" : Text();
 }

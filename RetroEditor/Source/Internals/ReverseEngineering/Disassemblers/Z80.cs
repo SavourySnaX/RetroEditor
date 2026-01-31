@@ -842,51 +842,82 @@ internal class Z80Disassembler : DisassemblerBase
         return arr;
     }
 
-    public override List<MemoryAccess> FetchMappedAccesses(Instruction ins, ICpuRegisterState registers, IMemoryMapper memoryMapper)
+    public override IEnumerable<MemoryAccess> FetchMappedAccesses(Instruction ins, ICpuRegisterState registers, IMemoryMapper memoryMapper)
     {
         var z80Registers = (Z80RegisterState)registers;
-        var accesses = new List<MemoryAccess>();
-        var memoryAccesses = new List<(ulong address, uint size)>();
 
+        static MemoryAccessDirection? GetDirection(IOperand operand)
+        {
+            if (operand.IsSource && operand.IsDestination)
+                return MemoryAccessDirection.ReadWrite;
+            if (operand.IsSource)
+                return MemoryAccessDirection.Read;
+            if (operand.IsDestination)
+                return MemoryAccessDirection.Write;
+            return null;
+        }
+
+        bool handled = false;
+        MemoryRegionKey regionKey;
         switch (ins.Mnemonic)
         {
             case "PUSH":
+                yield return new MemoryAccess(memoryMapper.MapCpuToRegion(z80Registers.SP, out regionKey), 2, MemoryAccessDirection.Write, regionKey);
+                handled = true;
+                break;
             case "POP":
+                yield return new MemoryAccess(memoryMapper.MapCpuToRegion(z80Registers.SP, out regionKey), 2, MemoryAccessDirection.Read, regionKey);
+                handled = true;
+                break;
             case "CALL":
+                yield return new MemoryAccess(memoryMapper.MapCpuToRegion(z80Registers.SP, out regionKey), 2, MemoryAccessDirection.Write, regionKey);
+                handled = true;
+                break;
             case "RET":
+                yield return new MemoryAccess(memoryMapper.MapCpuToRegion(z80Registers.SP, out regionKey), 2, MemoryAccessDirection.Read, regionKey);
+                handled = true;
+                break;
             case "RST":
-                memoryAccesses.Add((z80Registers.SP, 2));
+                yield return new MemoryAccess(memoryMapper.MapCpuToRegion(z80Registers.SP, out regionKey), 2, MemoryAccessDirection.Write, regionKey);
+                handled = true;
                 break;
             case "LDI":
             case "LDIR":
             case "LDD":
             case "LDDR":
-                memoryAccesses.Add((z80Registers.HL, 1));
-                memoryAccesses.Add((z80Registers.DE, 1));
+                yield return new MemoryAccess(memoryMapper.MapCpuToRegion(z80Registers.HL, out regionKey), 1, MemoryAccessDirection.Read, regionKey);
+                yield return new MemoryAccess(memoryMapper.MapCpuToRegion(z80Registers.DE, out regionKey), 1, MemoryAccessDirection.Write, regionKey);
+                handled = true;
                 break;
             case "CPI":
             case "CPIR":
             case "CPD":
             case "CPDR":
-                memoryAccesses.Add((z80Registers.HL, 1));
+                yield return new MemoryAccess(memoryMapper.MapCpuToRegion(z80Registers.HL, out regionKey), 1, MemoryAccessDirection.Read, regionKey);
+                handled = true;
                 break;
             case "INI":
             case "INIR":
             case "IND":
             case "INDR":
+                yield return new MemoryAccess(memoryMapper.MapCpuToRegion(z80Registers.HL, out regionKey), 1, MemoryAccessDirection.Write, regionKey);
+                handled = true;
+                break;
             case "OUTI":
             case "OTIR":
             case "OUTD":
             case "OTDR":
-                memoryAccesses.Add((z80Registers.HL, 1));
+                yield return new MemoryAccess(memoryMapper.MapCpuToRegion(z80Registers.HL, out regionKey), 1, MemoryAccessDirection.Read, regionKey);
+                handled = true;
                 break;
             case "RRD":
             case "RLD":
-                memoryAccesses.Add((z80Registers.HL, 1));
+                yield return new MemoryAccess(memoryMapper.MapCpuToRegion(z80Registers.HL, out regionKey), 1, MemoryAccessDirection.ReadWrite, regionKey);
+                handled = true;
                 break;
         }
 
-        if (memoryAccesses.Count == 0)
+        if (!handled)
         {
             uint size = DetermineMemoryAccessSize(ins);
 
@@ -894,46 +925,50 @@ internal class Z80Disassembler : DisassemblerBase
             {
                 if (operand is Z80IndirectOperand indirect)
                 {
+                    var direction = GetDirection(operand);
+                    if (!direction.HasValue)
+                        continue;
                     var reg = (Z80Register16)indirect.Value;
-                    memoryAccesses.Add((GetRegister16Value(z80Registers, reg), size));
+                    yield return new MemoryAccess(memoryMapper.MapCpuToRegion(GetRegister16Value(z80Registers, reg), out regionKey), size, direction.Value, regionKey);
                 }
                 else if (operand is Z80RegisterOperand regOperand && (Z80Register)regOperand.Value == Z80Register.IndirectHL)
                 {
-                    memoryAccesses.Add((z80Registers.HL, size));
+                    var direction = GetDirection(operand);
+                    if (!direction.HasValue)
+                        continue;
+                    yield return new MemoryAccess(memoryMapper.MapCpuToRegion(z80Registers.HL, out regionKey), size, direction.Value, regionKey);
                 }
                 else if (operand is Z80IndirectAddressOperand indirectAddress)
                 {
-                    memoryAccesses.Add((indirectAddress.Value, size));
+                    var direction = GetDirection(operand);
+                    if (!direction.HasValue)
+                        continue;
+                    yield return new MemoryAccess(memoryMapper.MapCpuToRegion(indirectAddress.Value, out regionKey), size, direction.Value, regionKey);
                 }
                 else if (operand is Z80IndexedOperand indexed)
                 {
+                    var direction = GetDirection(operand);
+                    if (!direction.HasValue)
+                        continue;
                     var indexRegister = (Z80IndexRegister)indexed.Value;
                     var baseAddress = indexRegister == Z80IndexRegister.IX ? z80Registers.IX : z80Registers.IY;
                     var effectiveAddress = (ushort)(baseAddress + indexed.Displacement);
-                    memoryAccesses.Add((effectiveAddress, size));
+                    yield return new MemoryAccess(memoryMapper.MapCpuToRegion(effectiveAddress, out regionKey), size, direction.Value, regionKey);
                 }
                 else if (operand is Z80SpecialRegisterOperand special)
                 {
                     var name = special.Text();
                     if (name == "(SP)")
                     {
-                        memoryAccesses.Add((z80Registers.SP, size));
+                        var direction = GetDirection(operand);
+                        if (!direction.HasValue)
+                            continue;
+                        yield return new MemoryAccess(memoryMapper.MapCpuToRegion(z80Registers.SP, out regionKey), size, direction.Value, regionKey);
                     }
                 }
             }
         }
 
-        foreach (var mem in memoryAccesses)
-        {
-            var mappedAddress = memoryMapper.MapCpuToRegion(mem.address, out var regionKey);
-            if (regionKey.Key == (uint)MemoryInformationRegion.Invalid)
-            {
-                continue;
-            }
-            accesses.Add(new MemoryAccess(mappedAddress, mem.size, MemoryAccessDirection.ReadWrite, regionKey));
-        }
-
-        var ioAccesses = new List<(ulong address, uint size, MemoryAccessDirection direction)>();
         switch (ins.Mnemonic)
         {
             case "IN":
@@ -941,12 +976,12 @@ internal class Z80Disassembler : DisassemblerBase
                 {
                     if (operand is Z80ImmediateOperand immediate)
                     {
-                        ioAccesses.Add((immediate.Value, 1, MemoryAccessDirection.Read));
+                        yield return new MemoryAccess(immediate.Value, 1, MemoryAccessDirection.Read, new MemoryRegionKey((uint)MemoryInformationRegion.IO));
                         break;
                     }
                     if (operand is Z80SpecialRegisterOperand special && special.Text() == "(C)")
                     {
-                        ioAccesses.Add(((ulong)z80Registers.BC, 1, MemoryAccessDirection.Read));
+                        yield return new MemoryAccess((ulong)z80Registers.BC, 1, MemoryAccessDirection.Read, new MemoryRegionKey((uint)MemoryInformationRegion.IO));
                         break;
                     }
                 }
@@ -956,12 +991,12 @@ internal class Z80Disassembler : DisassemblerBase
                 {
                     if (operand is Z80ImmediateOperand immediate)
                     {
-                        ioAccesses.Add((immediate.Value, 1, MemoryAccessDirection.Write));
+                        yield return new MemoryAccess(immediate.Value, 1, MemoryAccessDirection.Write, new MemoryRegionKey((uint)MemoryInformationRegion.IO));
                         break;
                     }
                     if (operand is Z80SpecialRegisterOperand special && special.Text() == "(C)")
                     {
-                        ioAccesses.Add(((ulong)z80Registers.BC, 1, MemoryAccessDirection.Write));
+                        yield return new MemoryAccess((ulong)z80Registers.BC, 1, MemoryAccessDirection.Write, new MemoryRegionKey((uint)MemoryInformationRegion.IO));
                         break;
                     }
                 }
@@ -970,26 +1005,15 @@ internal class Z80Disassembler : DisassemblerBase
             case "INIR":
             case "IND":
             case "INDR":
-                ioAccesses.Add(((ulong)z80Registers.BC, 1, MemoryAccessDirection.Read));
+                yield return new MemoryAccess((ulong)z80Registers.BC, 1, MemoryAccessDirection.Read, new MemoryRegionKey((uint)MemoryInformationRegion.IO));
                 break;
             case "OUTI":
             case "OTIR":
             case "OUTD":
             case "OTDR":
-                ioAccesses.Add(((ulong)z80Registers.BC, 1, MemoryAccessDirection.Write));
+                yield return new MemoryAccess((ulong)z80Registers.BC, 1, MemoryAccessDirection.Write, new MemoryRegionKey((uint)MemoryInformationRegion.IO));
                 break;
         }
-
-        if (ioAccesses.Count > 0)
-        {
-            var ioRegion = new MemoryRegionKey((uint)MemoryInformationRegion.IO);
-            foreach (var io in ioAccesses)
-            {
-                accesses.Add(new MemoryAccess(io.address, io.size, io.direction, ioRegion));
-            }
-        }
-
-        return accesses;
     }
 
     private static ushort GetRegister16Value(Z80RegisterState registers, Z80Register16 register)

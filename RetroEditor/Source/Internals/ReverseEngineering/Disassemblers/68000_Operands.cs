@@ -97,7 +97,7 @@ internal class OM68000_AbsoluteLong : IOperand
 
 internal class OM68000_BranchTarget : IOperand
 {
-    public OM68000_BranchTarget(ulong address) : base(true, true, address) { }
+    public OM68000_BranchTarget(ulong address) : base(false, false, address) { }
     public override string Text() => $"${Value:X6}.L";
     public override string Text(ISymbolProvider symbols) => symbols.HasSymbol(Value, 3) ? symbols.GetSymbol(Value, 3) : Text();
 }
@@ -152,7 +152,7 @@ internal class OM68000_Immediate : IOperand
 {
     private SizeCode _size;
     
-    public OM68000_Immediate(ulong value, SizeCode size) : base(true, false, value)
+    public OM68000_Immediate(ulong value, SizeCode size) : base(false, false, value)
     {
         _size = size;
     }

@@ -1234,10 +1234,20 @@ internal class Megadrive68000Disassembler : DisassemblerBase
         return result;
     }
 
-    public override List<MemoryAccess> FetchMappedAccesses(Instruction ins, ICpuRegisterState registerState, IMemoryMapper memoryMapper)
+    public override IEnumerable<MemoryAccess> FetchMappedAccesses(Instruction ins, ICpuRegisterState registerState, IMemoryMapper memoryMapper)
     {
         M68000RegisterState registers = (M68000RegisterState)registerState;
-        var accesses = new List<MemoryAccess>();
+
+        static MemoryAccessDirection? GetDirection(IOperand operand)
+        {
+            if (operand.IsSource && operand.IsDestination)
+                return MemoryAccessDirection.ReadWrite;
+            if (operand.IsSource)
+                return MemoryAccessDirection.Read;
+            if (operand.IsDestination)
+                return MemoryAccessDirection.Write;
+            return null;
+        }
         
         // Extract the size from the mnemonic (e.g., "MOVE.L" -> 4 bytes)
         uint size = ExtractSizeFromMnemonic(ins.Mnemonic);
@@ -1333,15 +1343,16 @@ internal class Megadrive68000Disassembler : DisassemblerBase
 
             if (hasAccess)
             {
+                var direction = GetDirection(operand);
+                if (!direction.HasValue)
+                    continue;
                 var mappedAddress = memoryMapper.MapCpuToRegion(effectiveAddress, out var regionKey);
                 if (regionKey.Key != (uint)MemoryInformationRegion.Invalid)
                 {
-                    accesses.Add(new MemoryAccess(mappedAddress, size, MemoryAccessDirection.ReadWrite, regionKey));
+                    yield return new MemoryAccess(mappedAddress, size, direction.Value, regionKey);
                 }
             }
         }
-        
-        return accesses;
     }
     
     private uint ExtractSizeFromMnemonic(string mnemonic)
