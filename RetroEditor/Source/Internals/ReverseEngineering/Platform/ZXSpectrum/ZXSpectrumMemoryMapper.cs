@@ -5,8 +5,10 @@ namespace RetroEditor.Source.Internals.ReverseEngineering.Platform.ZXSpectrum;
 /// </summary>
 internal class ZXSpectrumMemoryMapper : IMemoryMapper
 {
+    // TODO - what about ports
     public UInt64 MapCpuToRegion(UInt64 cpuAddress, out MemoryRegionKey region)
     {
+        // ZX Specutrm 48K memory map
         // 0x0000 - 0x3FFF: ROM (16KB)
         // 0x4000 - 0xFFFF: RAM (48KB)
         if (cpuAddress < 0x4000)

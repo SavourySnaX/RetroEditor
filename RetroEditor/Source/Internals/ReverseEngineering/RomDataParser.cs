@@ -905,7 +905,7 @@ internal class RomDataParser : IRomDataParser
         maxAddress = end;
     }
 
-    public byte[] GetRomData
+    public ReadOnlySpan<byte> GetRomData
     {
         get
         {
@@ -914,7 +914,7 @@ internal class RomDataParser : IRomDataParser
             {
                 return debuggerProvider.GetBuffer();
             }
-            return new byte[0];
+            return new ReadOnlySpan<byte>();
         }
     }
 

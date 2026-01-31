@@ -329,12 +329,15 @@ internal class DebuggerDataProvider : BufferDataProvider
     /// <summary>
     /// Returns the internal buffer (for backward compatibility with GetRomData)
     /// </summary>
-    public byte[] GetBuffer()
+    public ReadOnlySpan<byte> GetBuffer()
     {
         // Access the protected buffer field through the property
+        return FetchBytes(0, DataSize);
+        /*
         var tempSpan = FetchBytes(0, DataSize);
         var bytes = new byte[tempSpan.Length];
         tempSpan.CopyTo(bytes);
         return bytes;
+        */
     }
 }
