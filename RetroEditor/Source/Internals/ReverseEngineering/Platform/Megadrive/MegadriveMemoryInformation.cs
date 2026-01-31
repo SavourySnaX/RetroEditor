@@ -6,6 +6,7 @@ internal class MegadriveMemoryInformationProvider : IMemoryInformationProvider
     {
         yield return new MegadriveROMRegion();
         yield return new MegadriveRAMRegion();
+        yield return new MegadriveIORegion();
     }
 }
 
@@ -36,6 +37,21 @@ internal class MegadriveRAMRegion : IMemoryInformation
     public IMemoryRegionDataProvider CreateDataProvider()
     {
         return new VirtualDataProvider(MameViewName, 0x10000);
+    }
+}
+
+internal class MegadriveIORegion : IMemoryInformation
+{
+    public string MameViewName => "Megadrive IO";
+    public string DisplayName => "IO";
+    public MemoryRegionKey RegionKey => new MemoryRegionKey((UInt32)MemoryInformationRegion.IO);
+    public bool HasPhysicalData => false;
+    public MemoryRegionType Type => MemoryRegionType.Data;
+    public (UInt64 Start, UInt64 End) AddressRange => (0xA00000, 0xDFFFFF);
+
+    public IMemoryRegionDataProvider CreateDataProvider()
+    {
+        return new VirtualDataProvider(DisplayName, 0x400000);
     }
 }
 

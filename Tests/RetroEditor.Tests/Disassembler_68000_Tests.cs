@@ -1,6 +1,8 @@
 using System.Collections.Generic;
+using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using RetroEditor.Plugins;
+using RetroEditor.Source.Internals.ReverseEngineering.Platform;
 
 namespace RetroEditor.Tests;
 
@@ -11,16 +13,42 @@ namespace RetroEditor.Tests;
 public class Disassembler_68000_Tests
 {
     private Megadrive68000Disassembler _disassembler;
+    private IMemoryMapper _memoryMapper;
     
     [TestInitialize]
     public void Setup()
     {
         _disassembler = new Megadrive68000Disassembler();
+        _memoryMapper = new PassthroughMemoryMapper();
+    }
+
+    private sealed class PassthroughMemoryMapper : IMemoryMapper
+    {
+        public ulong MapCpuToRegion(ulong cpuAddress, out MemoryRegionKey region)
+        {
+            region = new MemoryRegionKey((uint)MemoryInformationRegion.ROM);
+            return cpuAddress;
+        }
+
+        public ulong MapRomToCpu(ulong romAddress) => romAddress;
+
+        public ulong MapHardwareAddressToCpu(ulong linearAddress) => linearAddress;
+
+        public ulong MapCpuToHardwareAddress(ulong address, out MemoryRegionKey region)
+        {
+            region = new MemoryRegionKey((uint)MemoryInformationRegion.ROM);
+            return address;
+        }
     }
 
     internal List<(ulong address, uint size)> FetchMemoryAccesses(Instruction instruction, ICpuRegisterState registers)
     {
-        return _disassembler.FetchMemoryAccesses(instruction, registers);
+        return _disassembler
+            .FetchMappedAccesses(instruction, registers, _memoryMapper)
+            .Where(access => access.RegionKey.Key != (uint)MemoryInformationRegion.IO
+                             && access.RegionKey.Key != (uint)MemoryInformationRegion.Invalid)
+            .Select(access => (access.Address, access.Size))
+            .ToList();
     }
 
     private void AssertInstruction(

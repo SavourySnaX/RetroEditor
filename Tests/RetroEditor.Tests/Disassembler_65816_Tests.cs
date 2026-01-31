@@ -1,16 +1,39 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using RetroEditor.Source.Internals.ReverseEngineering.Platform;
 
 namespace RetroEditor.Tests
 {
     public class _65816_Checker
     {
         private readonly SNES65816Disassembler _disassembler;
+        private readonly IMemoryMapper _memoryMapper;
 
         protected _65816_Checker()
         {
             _disassembler = new SNES65816Disassembler();
+            _memoryMapper = new PassthroughMemoryMapper();
+        }
+
+        private sealed class PassthroughMemoryMapper : IMemoryMapper
+        {
+            public ulong MapCpuToRegion(ulong cpuAddress, out MemoryRegionKey region)
+            {
+                region = new MemoryRegionKey((uint)MemoryInformationRegion.ROM);
+                return cpuAddress;
+            }
+
+            public ulong MapRomToCpu(ulong romAddress) => romAddress;
+
+            public ulong MapHardwareAddressToCpu(ulong linearAddress) => linearAddress;
+
+            public ulong MapCpuToHardwareAddress(ulong address, out MemoryRegionKey region)
+            {
+                region = new MemoryRegionKey((uint)MemoryInformationRegion.ROM);
+                return address;
+            }
         }
 
         internal DecodeResult DecodeNext(byte[] bytes, ulong address = 0x8000)
@@ -20,7 +43,12 @@ namespace RetroEditor.Tests
 
         internal List<(ulong address, uint size)> FetchMemoryAccesses(Instruction instruction, ICpuRegisterState registers)
         {
-            return _disassembler.FetchMemoryAccesses(instruction, registers);
+            return _disassembler
+                .FetchMappedAccesses(instruction, registers, _memoryMapper)
+                .Where(access => access.RegionKey.Key != (uint)MemoryInformationRegion.IO
+                                 && access.RegionKey.Key != (uint)MemoryInformationRegion.Invalid)
+                .Select(access => (access.Address, access.Size))
+                .ToList();
         }
 
         internal void SetState(bool emulation, bool a16bit, bool x16bit)

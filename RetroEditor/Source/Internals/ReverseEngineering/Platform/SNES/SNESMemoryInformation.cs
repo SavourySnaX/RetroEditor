@@ -6,6 +6,7 @@ internal class SNESMemoryInformationProvider : IMemoryInformationProvider
     {
         yield return new SNESROMRegion();
         yield return new SNESWRAMRegion();
+        yield return new SNESIORegion();
     }
 }
 
@@ -21,6 +22,21 @@ internal class SNESROMRegion : IMemoryInformation
     public IMemoryRegionDataProvider CreateDataProvider()
     {
         return new DebuggerDataProvider(MameViewName, MameViewName);
+    }
+}
+
+internal class SNESIORegion : IMemoryInformation
+{
+    public string MameViewName => "SNES IO";
+    public string DisplayName => "IO";
+    public MemoryRegionKey RegionKey => new MemoryRegionKey((UInt32)MemoryInformationRegion.IO);
+    public bool HasPhysicalData => false;
+    public MemoryRegionType Type => MemoryRegionType.Data;
+    public (UInt64 Start, UInt64 End) AddressRange => (0x2000, 0x5FFF);
+
+    public IMemoryRegionDataProvider CreateDataProvider()
+    {
+        return new VirtualDataProvider(DisplayName, 0x4000);
     }
 }
 

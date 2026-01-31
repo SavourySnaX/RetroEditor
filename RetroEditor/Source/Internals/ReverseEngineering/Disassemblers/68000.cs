@@ -1,5 +1,6 @@
 using System.Text.Json;
 using RetroEditor.Plugins;
+using RetroEditor.Source.Internals.ReverseEngineering.Platform;
 /// <summary>
 /// Represents the addressing modes supported by the 68000 CPU
 /// </summary>
@@ -1233,10 +1234,10 @@ internal class Megadrive68000Disassembler : DisassemblerBase
         return result;
     }
 
-    public override List<(UInt64 address, uint size)> FetchMemoryAccesses(Instruction ins, ICpuRegisterState registerState)
+    public override List<MemoryAccess> FetchMappedAccesses(Instruction ins, ICpuRegisterState registerState, IMemoryMapper memoryMapper)
     {
         M68000RegisterState registers = (M68000RegisterState)registerState;
-        var accesses = new List<(UInt64 address, uint size)>();
+        var accesses = new List<MemoryAccess>();
         
         // Extract the size from the mnemonic (e.g., "MOVE.L" -> 4 bytes)
         uint size = ExtractSizeFromMnemonic(ins.Mnemonic);
@@ -1245,116 +1246,99 @@ internal class Megadrive68000Disassembler : DisassemblerBase
         foreach (var operand in ins.Operands)
         {
             UInt64 effectiveAddress = 0;
+            bool hasAccess = false;
             
-            if (operand is OM68000_AddressIndirect indirect)
+            if (operand is OM68000_AddressIndirect)
             {
-                // (An) - memory at address register
                 int regNum = (int)operand.Value;
                 effectiveAddress = registers.AddressRegisters[regNum];
-                accesses.Add((effectiveAddress, size));
+                hasAccess = true;
             }
-            else if (operand is OM68000_AddressPostInc postInc)
+            else if (operand is OM68000_AddressPostInc)
             {
-                // (An)+ - memory at address register
                 int regNum = (int)operand.Value;
                 effectiveAddress = registers.AddressRegisters[regNum];
-                accesses.Add((effectiveAddress, size));
+                hasAccess = true;
             }
-            else if (operand is OM68000_AddressPreDec preDec)
+            else if (operand is OM68000_AddressPreDec)
             {
-                // -(An) - memory at address register
                 int regNum = (int)operand.Value;
                 effectiveAddress = registers.AddressRegisters[regNum];
-                accesses.Add((effectiveAddress, size));
+                hasAccess = true;
             }
             else if (operand is OM68000_AddressDisplacement disp)
             {
-                // d16(An) - displacement from address register
                 int regNum = (int)disp.Value;
                 int displacement = disp.Displacement;
                 effectiveAddress = (UInt64)((long)registers.AddressRegisters[regNum] + displacement);
-                accesses.Add((effectiveAddress, size));
+                hasAccess = true;
             }
             else if (operand is OM68000_AddressIndex index)
             {
-                // d8(An,Xn) - displacement + index from address register
                 int regNum = (int)index.Value;
                 int displacement = index.Offset;
                 int indexReg = index.IndexRegister;
                 bool useAddressReg = index.IsAddressRegister;
                 bool is32Bit = index.IsLong;
                 
-                UInt32 indexValue = 0;
-                if (useAddressReg)
-                {
-                    indexValue = registers.AddressRegisters[indexReg];
-                }
-                else
-                {
-                    indexValue = registers.DataRegisters[indexReg];
-                }
+                UInt32 indexValue = useAddressReg
+                    ? registers.AddressRegisters[indexReg]
+                    : registers.DataRegisters[indexReg];
                 
-                // Use only lower 16 bits if 16-bit index
                 if (!is32Bit)
                 {
                     indexValue = (UInt16)indexValue;
                 }
                 
                 effectiveAddress = (UInt64)((long)registers.AddressRegisters[regNum] + displacement + indexValue);
-                accesses.Add((effectiveAddress, size));
+                hasAccess = true;
             }
-            else if (operand is OM68000_AbsoluteShort absShort)
+            else if (operand is OM68000_AbsoluteShort)
             {
-                // xxxx.W - absolute short (16-bit address, sign-extended)
                 effectiveAddress = (UInt16)operand.Value;
-                accesses.Add((effectiveAddress, size));
+                hasAccess = true;
             }
-            else if (operand is OM68000_AbsoluteLong absLong)
+            else if (operand is OM68000_AbsoluteLong)
             {
-                // xxxxxxxx.L - absolute long (32-bit address)
                 effectiveAddress = operand.Value;
-                accesses.Add((effectiveAddress, size));
+                hasAccess = true;
             }
             else if (operand is OM68000_PCDisplacement pcDisp)
             {
-                // d16(PC) - displacement from PC (PC = next instruction address)
                 int displacement = pcDisp.Displacement;
-                UInt64 pc = ins.Address + 2;  // PC points to next instruction
+                UInt64 pc = ins.Address + 2;
                 effectiveAddress = (UInt64)((long)pc + displacement);
-                accesses.Add((effectiveAddress, size));
+                hasAccess = true;
             }
             else if (operand is OM68000_PCIndex pcIndex)
             {
-                // d8(PC,Xn) - displacement + index from PC
                 int displacement = pcIndex.Offset;
                 int indexReg = pcIndex.IndexRegister;
                 bool useAddressReg = pcIndex.IsAddressRegister;
                 bool is32Bit = pcIndex.IsLong;
                 
-                UInt32 indexValue = 0;
-                if (useAddressReg)
-                {
-                    indexValue = registers.AddressRegisters[indexReg];
-                }
-                else
-                {
-                    indexValue = registers.DataRegisters[indexReg];
-                }
+                UInt32 indexValue = useAddressReg
+                    ? registers.AddressRegisters[indexReg]
+                    : registers.DataRegisters[indexReg];
                 
-                // Use only lower 16 bits if 16-bit index
                 if (!is32Bit)
                 {
                     indexValue = (UInt16)indexValue;
                 }
                 
-                UInt64 pc = ins.Address + 2;  // PC points to next instruction
+                UInt64 pc = ins.Address + 2;
                 effectiveAddress = (UInt64)((long)pc + displacement + indexValue);
-                accesses.Add((effectiveAddress, size));
+                hasAccess = true;
             }
-            // Skip non-memory addressing modes:
-            // OM68000_DataRegister, OM68000_AddressRegister, OM68000_Immediate, 
-            // OM68000_StatusRegister, OM68000_ConditionCodeRegister, OM68000_UserStackPointer,
-            // OM68000_BranchTarget (not a memory access), OM68000_RegisterList
+
+            if (hasAccess)
+            {
+                var mappedAddress = memoryMapper.MapCpuToRegion(effectiveAddress, out var regionKey);
+                if (regionKey.Key != (uint)MemoryInformationRegion.Invalid)
+                {
+                    accesses.Add(new MemoryAccess(mappedAddress, size, MemoryAccessDirection.ReadWrite, regionKey));
+                }
+            }
         }
         
         return accesses;

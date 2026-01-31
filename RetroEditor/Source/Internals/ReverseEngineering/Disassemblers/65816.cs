@@ -1,5 +1,6 @@
 using System.Text.Json;
 using RetroEditor.Plugins;
+using RetroEditor.Source.Internals.ReverseEngineering.Platform;
 
 /// <summary>
 /// Represents the addressing modes supported by the 65816 CPU
@@ -759,107 +760,126 @@ internal class SNES65816Disassembler : DisassemblerBase
         return DecodeResult.CreateSuccess(instruction, baseLength);
     }
 
-    public override List<(UInt64 address, uint size)> FetchMemoryAccesses(Instruction ins, ICpuRegisterState registerState)
+    public override List<MemoryAccess> FetchMappedAccesses(Instruction ins, ICpuRegisterState registerState, IMemoryMapper memoryMapper)
     {
         SNES65816RegisterState registers = (SNES65816RegisterState)registerState;
         SNES65816State state = (SNES65816State)ins.cpuState;
-        var accesses = new List<(UInt64 address, uint size)>();
+        var accesses = new List<MemoryAccess>();
 
         var X = registers.X;
         var Y = registers.Y;
         if (state.Index8Bit)
         {
-            X&=0xFF;
-            Y&=0xFF;
+            X &= 0xFF;
+            Y &= 0xFF;
         }
 
         uint fetchSize = state.Accumulator8Bit ? 1u : 2u;
         foreach (var operand in ins.Operands)
         {
-            UInt64 EffectiveAddress = 0;
+            UInt64 effectiveAddress = 0;
+            bool hasAccess = false;
 
-            if (operand is O65816_Absolute absolute)
+            if (operand is O65816_Absolute)
             {
-                EffectiveAddress = registers.DBR;
-                EffectiveAddress <<= 16;
-                EffectiveAddress |= operand.Value;
+                effectiveAddress = registers.DBR;
+                effectiveAddress <<= 16;
+                effectiveAddress |= operand.Value;
+                hasAccess = true;
             }
-            else if (operand is O65816_AbsoluteX absoluteX)
+            else if (operand is O65816_AbsoluteX)
             {
-                EffectiveAddress = registers.DBR;
-                EffectiveAddress <<= 16;
-                EffectiveAddress |= operand.Value;
-                EffectiveAddress += X;
+                effectiveAddress = registers.DBR;
+                effectiveAddress <<= 16;
+                effectiveAddress |= operand.Value;
+                effectiveAddress += X;
+                hasAccess = true;
             }
-            else if (operand is O65816_AbsoluteY absoluteY)
+            else if (operand is O65816_AbsoluteY)
             {
-                EffectiveAddress = registers.DBR;
-                EffectiveAddress <<= 16;
-                EffectiveAddress |= operand.Value;
-                EffectiveAddress += X;
+                effectiveAddress = registers.DBR;
+                effectiveAddress <<= 16;
+                effectiveAddress |= operand.Value;
+                effectiveAddress += X;
+                hasAccess = true;
             }
             else if (operand is O65816_AbsoluteLong absoluteLong)
             {
-                EffectiveAddress = absoluteLong.Value;
+                effectiveAddress = absoluteLong.Value;
+                hasAccess = true;
             }
             else if (operand is O65816_AbsoluteLongX absoluteLongX)
             {
-                EffectiveAddress = absoluteLongX.Value;
-                EffectiveAddress += X;
+                effectiveAddress = absoluteLongX.Value;
+                effectiveAddress += X;
+                hasAccess = true;
             }
             else if (operand is O65816_DirectPage directPage)
             {
-                EffectiveAddress = directPage.Value;
-                EffectiveAddress += registers.D;
-                EffectiveAddress &= 0xFFFF;
+                effectiveAddress = directPage.Value;
+                effectiveAddress += registers.D;
+                effectiveAddress &= 0xFFFF;
+                hasAccess = true;
             }
             else if (operand is O65816_DirectPageX directPageX)
             {
-                EffectiveAddress = directPageX.Value;
-                EffectiveAddress += registers.D;
-                EffectiveAddress += X;
-                EffectiveAddress &= 0xFFFF;
+                effectiveAddress = directPageX.Value;
+                effectiveAddress += registers.D;
+                effectiveAddress += X;
+                effectiveAddress &= 0xFFFF;
+                hasAccess = true;
             }
             else if (operand is O65816_DirectPageY directPageY)
             {
-                EffectiveAddress = directPageY.Value;
-                EffectiveAddress += registers.D;
-                EffectiveAddress += Y;
-                EffectiveAddress &= 0xFFFF;
+                effectiveAddress = directPageY.Value;
+                effectiveAddress += registers.D;
+                effectiveAddress += Y;
+                effectiveAddress &= 0xFFFF;
+                hasAccess = true;
             }
             else if (operand is O65816_DirectPageIndirect directPageIndirect)
             {
-                EffectiveAddress = directPageIndirect.Value;
-                EffectiveAddress += registers.D;
-                EffectiveAddress &= 0xFFFF;
+                effectiveAddress = directPageIndirect.Value;
+                effectiveAddress += registers.D;
+                effectiveAddress &= 0xFFFF;
                 fetchSize = 2;
+                hasAccess = true;
             }
             else if (operand is O65816_DirectPageIndirectLong directPageIndirectLong)
             {
-                EffectiveAddress = directPageIndirectLong.Value;
-                EffectiveAddress += registers.D;
-                EffectiveAddress &= 0xFFFF;
+                effectiveAddress = directPageIndirectLong.Value;
+                effectiveAddress += registers.D;
+                effectiveAddress &= 0xFFFF;
                 fetchSize = 3;
+                hasAccess = true;
             }
             else if (operand is O65816_DirectPageIndirectLongY directPageIndirectLongY)
             {
-                EffectiveAddress = directPageIndirectLongY.Value;
-                EffectiveAddress += registers.D;
-                EffectiveAddress &= 0xFFFF;
+                effectiveAddress = directPageIndirectLongY.Value;
+                effectiveAddress += registers.D;
+                effectiveAddress &= 0xFFFF;
                 fetchSize = 3;
+                hasAccess = true;
             }
             else if (operand is O65816_ImmediateByteOperand ||
                      operand is O65816_ImmediateWordOperand ||
                      operand is O65816_PCRelative)
             {
-                // Immediate values are not memory accesses
                 continue;
             }
             else
             {
                 Console.WriteLine($"Unsupported operand type: {ins} | {operand.GetType()}");
             }
-            accesses.Add((EffectiveAddress, fetchSize));
+
+            if (hasAccess)
+            {
+                var mappedAddress = memoryMapper.MapCpuToRegion(effectiveAddress, out var regionKey);
+                if (regionKey.Key != (uint)MemoryInformationRegion.Invalid)
+                {
+                    accesses.Add(new MemoryAccess(mappedAddress, fetchSize, MemoryAccessDirection.ReadWrite, regionKey));
+                }
+            }
         }
         return accesses;
     }

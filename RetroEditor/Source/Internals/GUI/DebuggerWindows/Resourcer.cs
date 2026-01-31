@@ -838,22 +838,26 @@ internal class Resourcer : IWindow
             return;
         }
 
-        var mem = ((DisassemblerBase)disassembler).FetchMemoryAccesses(i, entry.RegisterState);
-        foreach (var addr in mem)
+        var accesses = ((DisassemblerBase)disassembler).FetchMappedAccesses(i, entry.RegisterState, memoryMapper);
+        foreach (var access in accesses)
         {
-            var regionAddress = memoryMapper.MapCpuToRegion(addr.address, out var memKind);
-
-            if (romDataParsers.ContainsKey(memKind))
+            if (access.RegionKey.Key == (uint)MemoryInformationRegion.Invalid)
             {
-                // Don't overwrite existing ranges
-                if (romDataParsers[memKind].CheckRegionUnknown(regionAddress, regionAddress + addr.size - 1))
+                continue;
+            }
+
+            if (romDataParsers.ContainsKey(access.RegionKey))
+            {
+                var regionAddress = access.Address;
+                var endAddress = regionAddress + access.Size - 1;
+                if (romDataParsers[access.RegionKey].CheckRegionUnknown(regionAddress, endAddress))
                 {
-                    romDataParsers[memKind].AddDataRange(regionAddress, regionAddress + addr.size - 1, addr.size);
+                    romDataParsers[access.RegionKey].AddDataRange(regionAddress, endAddress, access.Size);
                 }
             }
             else
             {
-                Console.WriteLine($"No parser for region {memKind}");
+                Console.WriteLine($"No parser for region {access.RegionKey}");
             }
         }
     }

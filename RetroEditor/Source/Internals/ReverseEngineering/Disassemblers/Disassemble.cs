@@ -1,6 +1,8 @@
+using System;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using RetroEditor.Plugins;
+using RetroEditor.Source.Internals.ReverseEngineering.Platform;
 
 
 internal interface ISymbolProvider
@@ -219,6 +221,16 @@ internal interface ICpuRegisterState
     public ICpuRegisterState Clone();
 }
 
+[Flags]
+internal enum MemoryAccessDirection
+{
+    Read = 1,
+    Write = 2,
+    ReadWrite = Read | Write
+}
+
+internal record MemoryAccess(ulong Address, uint Size, MemoryAccessDirection Direction, MemoryRegionKey RegionKey);
+
 internal struct EmptyState : ICpuState
 {
     public ICpuState Clone()
@@ -334,9 +346,7 @@ internal interface IDisassembler
     /// <returns>A result indicating success, need for more bytes, or error</returns>
     DecodeResult DecodeNext(ReadOnlySpan<byte> bytes, ulong address);
 
-    List<(ulong address, uint size)> FetchMemoryAccesses(Instruction ins, ICpuRegisterState registers);
-
-    List<(ulong address, uint size)> FetchIOAccesses(Instruction ins, ICpuRegisterState registers);
+    List<MemoryAccess> FetchMappedAccesses(Instruction ins, ICpuRegisterState registers, IMemoryMapper memoryMapper);
 }
 
 /// <summary>
@@ -370,12 +380,7 @@ internal abstract class DisassemblerBase : IDisassembler
     /// </summary>
     public abstract DecodeResult DecodeNext(ReadOnlySpan<byte> bytes, ulong address);
 
-    public abstract List<(ulong address, uint size)> FetchMemoryAccesses(Instruction ins, ICpuRegisterState registers);
-
-    public virtual List<(ulong address, uint size)> FetchIOAccesses(Instruction ins, ICpuRegisterState registers)
-    {
-        return new List<(ulong address, uint size)>();
-    }
+    public abstract List<MemoryAccess> FetchMappedAccesses(Instruction ins, ICpuRegisterState registers, IMemoryMapper memoryMapper);
 
     /// <summary>
     /// Helper method to read a value from memory in the correct endianness

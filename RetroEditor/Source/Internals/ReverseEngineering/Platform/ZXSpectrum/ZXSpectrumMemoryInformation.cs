@@ -8,6 +8,7 @@ internal class ZXSpectrumMemoryInformationProvider : IMemoryInformationProvider
     {
         yield return new ZXSpectrumROMRegion();
         yield return new ZXSpectrumRAMRegion();
+        yield return new ZXSpectrumIORegion();
     }
 }
 
@@ -23,6 +24,21 @@ internal class ZXSpectrumROMRegion : IMemoryInformation
     public IMemoryRegionDataProvider CreateDataProvider()
     {
         return new DebuggerDataProvider(MameViewName, MameViewName);
+    }
+}
+
+internal class ZXSpectrumIORegion : IMemoryInformation
+{
+    public string MameViewName => "Z80 IO Ports";
+    public string DisplayName => "IO";
+    public MemoryRegionKey RegionKey => new MemoryRegionKey((UInt32)MemoryInformationRegion.IO);
+    public bool HasPhysicalData => false;
+    public MemoryRegionType Type => MemoryRegionType.Data;
+    public (UInt64 Start, UInt64 End) AddressRange => (0x0000, 0xFFFF);
+
+    public IMemoryRegionDataProvider CreateDataProvider()
+    {
+        return new VirtualDataProvider(DisplayName, 0x10000);
     }
 }
 internal class ZXSpectrumRAMRegion : IMemoryInformation
