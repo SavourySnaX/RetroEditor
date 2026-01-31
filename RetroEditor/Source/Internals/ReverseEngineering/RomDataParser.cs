@@ -435,7 +435,8 @@ internal class DataRegion : IRegionInfo
     public override void Combining(IRegionInfo other) { }
     public override IRegionInfo Split(ulong start, ulong end)
     {
-        if (size!=end-start+1)
+        var splitSize = end - start + 1;
+        if (splitSize % size != 0)
         {
             throw new ArgumentException($"Cannot split a data region of size {size} into {end-start+1}");
         }

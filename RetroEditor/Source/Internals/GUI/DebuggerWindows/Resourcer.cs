@@ -375,14 +375,13 @@ internal class Resourcer : IWindow
                     foreach (var srow in vars.selectedRows)
                     {
                         var address = regions.FetchAddressForLine(srow);
-                        var lastAddress = regions.FetchAddressForLine(srow + 1);
+                        var endAddress = regions.FetchAddressForLine(srow + 1);
                         if (address < minAddress)
                             minAddress = address;
-                        if (lastAddress>0)
-                            lastAddress--;
-                        address = Math.Max(minAddress, lastAddress);
-                        if (address > maxAddress)
-                            maxAddress = address;
+                        if (endAddress > 0)
+                            endAddress--;
+                        if (endAddress > maxAddress)
+                            maxAddress = endAddress;
                     }
                     if (vars.cursorPosition != null)
                     {
