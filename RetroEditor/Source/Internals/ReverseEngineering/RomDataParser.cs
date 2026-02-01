@@ -877,6 +877,20 @@ internal class SymbolProvider : ISymbolProvider
     public bool HasSymbol(ulong address, int size) => symbols.ContainsKey((address, size));
     public string GetSymbol(ulong address, int size) => symbols[(address, size)];
 
+    public bool RemoveSymbol(ulong address, int size)
+    {
+        return symbols.Remove((address, size));
+    }
+
+    public bool RenameSymbol(ulong address, int size, string newName)
+    {
+        if (!symbols.ContainsKey((address, size)))
+            return false;
+        
+        symbols[(address, size)] = newName;
+        return true;
+    }
+
     /// <summary>
     /// Gets all symbols with their memory region context.
     /// </summary>
@@ -985,6 +999,39 @@ internal class LabelProvider : ILabelProvider
             labels[kvp.Key] = kvp.Value;
         }
         Version++;
+    }
+
+    public bool RemoveLabel(ulong address, string label)
+    {
+        if (labels.TryGetValue(address, out var list))
+        {
+            bool removed = list.Remove(label);
+            if (removed)
+            {
+                if (list.Count == 0)
+                {
+                    labels.Remove(address);
+                }
+                Version++;
+            }
+            return removed;
+        }
+        return false;
+    }
+
+    public bool RenameLabel(ulong address, string oldName, string newName)
+    {
+        if (labels.TryGetValue(address, out var list))
+        {
+            int index = list.IndexOf(oldName);
+            if (index >= 0)
+            {
+                list[index] = newName;
+                Version++;
+                return true;
+            }
+        }
+        return false;
     }
 
     public List<ExtendedLabel> GetAllLabels(MemoryRegionKey regionKey)
@@ -1302,6 +1349,37 @@ internal class RomDataParser : IRomDataParser
     {
         labelProvider.AddLabel(address, label);
         ranges.Recompute();
+    }
+
+    public bool RemoveSymbol(ulong address, int size)
+    {
+        return symbolProvider.RemoveSymbol(address, size);
+    }
+
+    public bool RenameSymbol(ulong address, int size, string newName)
+    {
+        bool result = symbolProvider.RenameSymbol(address, size, newName);
+        return result;
+    }
+
+    public bool RemoveLabel(ulong address, string label)
+    {
+        bool result = labelProvider.RemoveLabel(address, label);
+        if (result)
+        {
+            ranges.Recompute();
+        }
+        return result;
+    }
+
+    public bool RenameLabel(ulong address, string oldName, string newName)
+    {
+        bool result = labelProvider.RenameLabel(address, oldName, newName);
+        if (result)
+        {
+            ranges.Recompute();
+        }
+        return result;
     }
 
     public byte GetByte(UInt64 address)

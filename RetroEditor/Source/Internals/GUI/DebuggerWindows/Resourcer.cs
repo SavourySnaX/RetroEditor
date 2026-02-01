@@ -1,6 +1,7 @@
 using MyMGui;
 using System.Numerics;
 using RetroEditor.Source.Internals.ReverseEngineering.Platform;
+using RetroEditor.Source.Internals.ReverseEngineering;
 
 internal class Resourcer : IWindow
 {
@@ -254,6 +255,14 @@ internal class Resourcer : IWindow
         public HashSet<UInt64> selectedRows = new HashSet<UInt64>();
         public UInt64? cursorPosition = null;
         public UInt64? selectionStart = null;
+        
+        // Rename state
+        public bool showRenameDialog = false;
+        public string renameBuffer = "";
+        public bool isRenamingLabel = false;
+        public ulong renameAddress = 0;
+        public string renameLabelOldName = "";
+        public int renameSymbolSize = 0;
     }
 
     Dictionary<MemoryRegionKey, ScrollViewVars> scrollViewVars = new();
@@ -614,6 +623,60 @@ internal class Resourcer : IWindow
                             }
                         }
 
+                        // Right-click context menu
+                        if (ImGui.IsItemClicked(ImGuiMouseButton.Right))
+                        {
+                            if (lData.IsLabel)
+                            {
+                                // This is a label line - extract label name from address field
+                                var labelName = lData.Address.TrimEnd(':');
+                                var address = fetched.Value.RegionAddressForLine(line);
+                                
+                                vars.isRenamingLabel = true;
+                                vars.renameAddress = address;
+                                vars.renameLabelOldName = labelName;
+                                vars.renameBuffer = labelName;
+                                ImGui.OpenPopup($"RowMenu{actualLine}");
+                            }
+                            else
+                            {
+                                var address = fetched.Value.RegionAddressForLine(line);
+                                vars.renameAddress = address;
+                                vars.isRenamingLabel = false;
+                                ImGui.OpenPopup($"RowMenu{actualLine}");
+                            }
+                        }
+                        
+                        if (ImGui.BeginPopup($"RowMenu{actualLine}"))
+                        {
+                            if (lData.IsLabel)
+                            {
+                                // This is a label line
+                                if (ImGui.MenuItem("Rename Label"))
+                                {
+                                    vars.showRenameDialog = true;
+                                }
+                                
+                                if (ImGui.MenuItem("Delete Label"))
+                                {
+                                    var labelName = lData.Address.TrimEnd(':');
+                                    var address = fetched.Value.RegionAddressForLine(line);
+                                    romDataParsers[regionKey].RemoveLabel(address, labelName);
+                                }
+                            }
+                            else
+                            {
+                                // Regular instruction line
+                                if (ImGui.MenuItem("Add Label"))
+                                {
+                                    var address = fetched.Value.RegionAddressForLine(line);
+                                    romDataParsers[regionKey].AddLabel(address, $"label_{address:X8}");
+                                }
+                            }
+                            
+                            ImGui.EndPopup();
+                        }
+
                         ImGui.TableSetColumnIndex(1);
                         ImGui.Text(lData.Bytes);
                         ImGui.TableSetColumnIndex(2);
@@ -650,6 +713,89 @@ internal class Resourcer : IWindow
                 moved = false;
             }
         }
+        
+        // Rename dialog popup
+        if (vars.showRenameDialog)
+        {
+            ImGui.OpenPopup("Rename##Resourcer");
+        }
+
+        if (ImGui.BeginPopupModal("Rename##Resourcer", ref vars.showRenameDialog, ImGuiWindowFlags.AlwaysAutoResize))
+        {
+            if (vars.isRenamingLabel)
+            {
+                ImGui.Text($"Rename label at 0x{vars.renameAddress:X8}");
+            }
+
+            ImGui.Separator();
+
+            ImGui.Text("New name:");
+            bool enterPressed = ImGui.InputText("##NewName", ref vars.renameBuffer, 256, ImGuiInputTextFlags.EnterReturnsTrue);
+
+            ImGui.Separator();
+
+            if (ImGui.Button("OK", new Vector2(120, 0)) || enterPressed)
+            {
+                // Validate the new name
+                string? validationError = SymbolValidator.ValidateName(vars.renameBuffer);
+                
+                if (validationError != null)
+                {
+                    ImGui.OpenPopup("Error##Resourcer");
+                }
+                else
+                {
+                    // Check for conflicts
+                    string? conflictError = SymbolValidator.CheckAnyConflict(vars.renameBuffer, romDataParsers, vars.renameAddress);
+                    
+                    if (conflictError == null)
+                    {
+                        if (vars.isRenamingLabel)
+                        {
+                            romDataParsers[regionKey].RenameLabel(vars.renameAddress, vars.renameLabelOldName, vars.renameBuffer);
+                        }
+                        vars.showRenameDialog = false;
+                    }
+                    else
+                    {
+                        validationError = conflictError;
+                        ImGui.OpenPopup("Error##Resourcer");
+                    }
+                }
+            }
+
+            ImGui.SameLine();
+
+            if (ImGui.Button("Cancel", new Vector2(120, 0)))
+            {
+                vars.showRenameDialog = false;
+            }
+
+            // Error popup
+            bool errorOpen = true;
+            if (ImGui.BeginPopupModal("Error##Resourcer", ref errorOpen, ImGuiWindowFlags.AlwaysAutoResize))
+            {
+                string? validationError = SymbolValidator.ValidateName(vars.renameBuffer);
+                
+                if (validationError == null)
+                {
+                    validationError = SymbolValidator.CheckAnyConflict(vars.renameBuffer, romDataParsers, vars.renameAddress);
+                }
+
+                ImGui.Text(validationError ?? "Unknown error");
+                ImGui.Separator();
+                
+                if (ImGui.Button("OK", new Vector2(120, 0)))
+                {
+                    ImGui.CloseCurrentPopup();
+                }
+                
+                ImGui.EndPopup();
+            }
+
+            ImGui.EndPopup();
+        }
+        
         ImGui.EndChild();
     }
 

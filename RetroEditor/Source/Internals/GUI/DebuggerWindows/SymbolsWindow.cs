@@ -21,6 +21,15 @@ internal class SymbolsWindow : IWindow
     private int labelSortColumn = 0; // 0=Address, 1=Name, 2=Region
     private bool labelSortAscending = true;
 
+    // Rename state
+    private int selectedSymbolIndex = -1;
+    private int selectedLabelIndex = -1;
+    private bool showRenameDialog = false;
+    private string renameBuffer = "";
+    private bool isRenamingSymbol = false;
+    private ExtendedSymbol? symbolToRename = null;
+    private ExtendedLabel? labelToRename = null;
+
     public SymbolsWindow(Dictionary<MemoryRegionKey, RomDataParser> romDataParsers, IMemoryInformationProvider memoryInformationProvider)
     {
         this.romDataParsers = romDataParsers;
@@ -136,8 +145,9 @@ internal class SymbolsWindow : IWindow
                         ImGui.TableSetupColumn("Region", ImGuiTableColumnFlags.WidthFixed, 80);
 
                         // Display symbols
-                        foreach (var symbol in filteredSymbols)
+                        for (int i = 0; i < filteredSymbols.Count; i++)
                         {
+                            var symbol = filteredSymbols[i];
                             ImGui.TableNextRow();
                             
                             ImGui.TableSetColumnIndex(0);
@@ -147,7 +157,47 @@ internal class SymbolsWindow : IWindow
                             ImGui.Text(symbol.Size.ToString());
                             
                             ImGui.TableSetColumnIndex(2);
+                            
+                            // Make the row selectable for right-click context menu
+                            ImGui.PushID(i);
+                            if (ImGui.Selectable($"##{i}", selectedSymbolIndex == i, ImGuiSelectableFlags.SpanAllColumns))
+                            {
+                                selectedSymbolIndex = i;
+                            }
+                            
+                            // Right-click context menu
+                            if (ImGui.IsItemClicked(ImGuiMouseButton.Right))
+                            {
+                                selectedSymbolIndex = i;
+                                symbolToRename = symbol;
+                                isRenamingSymbol = true;
+                                ImGui.OpenPopup($"SymbolMenu{i}");
+                            }
+                            
+                            if (ImGui.BeginPopup($"SymbolMenu{i}"))
+                            {
+                                if (ImGui.MenuItem("Rename"))
+                                {
+                                    symbolToRename = symbol;
+                                    isRenamingSymbol = true;
+                                    showRenameDialog = true;
+                                    renameBuffer = symbol.Name;
+                                }
+                                if (ImGui.MenuItem("Delete"))
+                                {
+                                    if (romDataParsers.TryGetValue(symbol.RegionKey, out var parser))
+                                    {
+                                        parser.RemoveSymbol(symbol.Address, symbol.Size);
+                                        RefreshSymbols();
+                                    }
+                                }
+                                ImGui.EndPopup();
+                            }
+                            
+                            // Draw the actual text on the same line
+                            ImGui.SameLine(0, 0);
                             ImGui.Text(symbol.Name);
+                            ImGui.PopID();
                             
                             ImGui.TableSetColumnIndex(3);
                             ImGui.Text(symbol.RegionName);
@@ -214,15 +264,55 @@ internal class SymbolsWindow : IWindow
                         ImGui.TableSetupColumn("Name", ImGuiTableColumnFlags.WidthStretch);
                         ImGui.TableSetupColumn("Region", ImGuiTableColumnFlags.WidthFixed, 80);
 
-                        foreach (var label in filteredLabels)
+                        for (int i = 0; i < filteredLabels.Count; i++)
                         {
+                            var label = filteredLabels[i];
                             ImGui.TableNextRow();
 
                             ImGui.TableSetColumnIndex(0);
                             ImGui.Text($"{label.Address:X8}");
 
                             ImGui.TableSetColumnIndex(1);
+                            
+                            // Make the row selectable for right-click context menu
+                            ImGui.PushID(i);
+                            if (ImGui.Selectable($"##{i}", selectedLabelIndex == i, ImGuiSelectableFlags.SpanAllColumns))
+                            {
+                                selectedLabelIndex = i;
+                            }
+                            
+                            // Right-click context menu
+                            if (ImGui.IsItemClicked(ImGuiMouseButton.Right))
+                            {
+                                selectedLabelIndex = i;
+                                labelToRename = label;
+                                ImGui.OpenPopup($"LabelMenu{i}");
+                            }
+                            
+                            if (ImGui.BeginPopup($"LabelMenu{i}"))
+                            {
+                                if (ImGui.MenuItem("Rename"))
+                                {
+                                    labelToRename = label;
+                                    isRenamingSymbol = false;
+                                    showRenameDialog = true;
+                                    renameBuffer = label.Name;
+                                }
+                                if (ImGui.MenuItem("Delete"))
+                                {
+                                    if (romDataParsers.TryGetValue(label.RegionKey, out var parser))
+                                    {
+                                        parser.RemoveLabel(label.Address, label.Name);
+                                        RefreshLabels();
+                                    }
+                                }
+                                ImGui.EndPopup();
+                            }
+                            
+                            // Draw the actual text on the same line
+                            ImGui.SameLine(0, 0);
                             ImGui.Text(label.Name);
+                            ImGui.PopID();
 
                             ImGui.TableSetColumnIndex(2);
                             ImGui.Text(label.RegionName);
@@ -236,6 +326,122 @@ internal class SymbolsWindow : IWindow
 
                 ImGui.EndTabBar();
             }
+
+        // Rename dialog popup
+        if (showRenameDialog)
+        {
+            ImGui.OpenPopup("Rename");
+        }
+
+        if (ImGui.BeginPopupModal("Rename", ref showRenameDialog, ImGuiWindowFlags.AlwaysAutoResize))
+        {
+            if (isRenamingSymbol && symbolToRename != null)
+            {
+                ImGui.Text($"Rename symbol at 0x{symbolToRename.Address:X8}");
+            }
+            else if (!isRenamingSymbol && labelToRename != null)
+            {
+                ImGui.Text($"Rename label at 0x{labelToRename.Address:X8}");
+            }
+
+            ImGui.Separator();
+
+            ImGui.Text("New name:");
+            bool enterPressed = ImGui.InputText("##NewName", ref renameBuffer, 256, ImGuiInputTextFlags.EnterReturnsTrue);
+
+            ImGui.Separator();
+
+            if (ImGui.Button("OK", new Vector2(120, 0)) || enterPressed)
+            {
+                // Validate the new name
+                string? validationError = SymbolValidator.ValidateName(renameBuffer);
+                
+                if (validationError != null)
+                {
+                    // Show error - for now just ignore, in a real scenario we'd show a message
+                    ImGui.OpenPopup("Error");
+                }
+                else
+                {
+                    // Check for conflicts
+                    string? conflictError = null;
+                    
+                    if (isRenamingSymbol && symbolToRename != null)
+                    {
+                        conflictError = SymbolValidator.CheckAnyConflict(renameBuffer, romDataParsers, 
+                            symbolToRename.Address, symbolToRename.Size);
+                        
+                        if (conflictError == null)
+                        {
+                            if (romDataParsers.TryGetValue(symbolToRename.RegionKey, out var parser))
+                            {
+                                parser.RenameSymbol(symbolToRename.Address, symbolToRename.Size, renameBuffer);
+                                RefreshSymbols();
+                                showRenameDialog = false;
+                            }
+                        }
+                    }
+                    else if (!isRenamingSymbol && labelToRename != null)
+                    {
+                        conflictError = SymbolValidator.CheckAnyConflict(renameBuffer, romDataParsers, 
+                            labelToRename.Address);
+                        
+                        if (conflictError == null)
+                        {
+                            if (romDataParsers.TryGetValue(labelToRename.RegionKey, out var parser))
+                            {
+                                parser.RenameLabel(labelToRename.Address, labelToRename.Name, renameBuffer);
+                                RefreshLabels();
+                                showRenameDialog = false;
+                            }
+                        }
+                    }
+                    
+                    if (conflictError != null)
+                    {
+                        validationError = conflictError;
+                        ImGui.OpenPopup("Error");
+                    }
+                }
+            }
+
+            ImGui.SameLine();
+
+            if (ImGui.Button("Cancel", new Vector2(120, 0)))
+            {
+                showRenameDialog = false;
+            }
+
+            // Error popup
+            bool errorOpen = true;
+            if (ImGui.BeginPopupModal("Error", ref errorOpen, ImGuiWindowFlags.AlwaysAutoResize))
+            {
+                string? validationError = SymbolValidator.ValidateName(renameBuffer);
+                
+                if (validationError == null && isRenamingSymbol && symbolToRename != null)
+                {
+                    validationError = SymbolValidator.CheckAnyConflict(renameBuffer, romDataParsers,
+                        symbolToRename.Address, symbolToRename.Size);
+                }
+                else if (validationError == null && !isRenamingSymbol && labelToRename != null)
+                {
+                    validationError = SymbolValidator.CheckAnyConflict(renameBuffer, romDataParsers,
+                        labelToRename.Address);
+                }
+
+                ImGui.Text(validationError ?? "Unknown error");
+                ImGui.Separator();
+                
+                if (ImGui.Button("OK", new Vector2(120, 0)))
+                {
+                    ImGui.CloseCurrentPopup();
+                }
+                
+                ImGui.EndPopup();
+            }
+
+            ImGui.EndPopup();
+        }
 
         return shouldClose;
     }
