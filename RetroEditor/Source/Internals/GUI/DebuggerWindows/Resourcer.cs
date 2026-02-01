@@ -30,7 +30,7 @@ internal class Resourcer : IWindow
     private const int MEMORY_MAP_HEIGHT = 50;
 
     private ResourcerConfig config;
-    private MemoryRegionKey activeRegionKey = new MemoryRegionKey(0); // Track which tab should be active
+    private MemoryRegionKey regionToSwitch=new MemoryRegionKey(0);
     private bool pendingTabSwitch = false; // Flag to activate tab switch only once
 
     public Resourcer(LibMameDebugger debugger, IPlatformFactory platformFactory)
@@ -63,10 +63,6 @@ internal class Resourcer : IWindow
             romDataParsers[memInfo.RegionKey] = parser;
         }
         // Initialize active region to the first one
-        if (romDataParsers.Count > 0)
-        {
-            activeRegionKey = romDataParsers.Keys.First();
-        }
     }
 
     private IEnumerable<string> GetMemoryRegionNames()
@@ -91,7 +87,7 @@ internal class Resourcer : IWindow
     public void NavigateToAddress(MemoryRegionKey regionKey, ulong address)
     {
         // Set the active region to switch to the correct tab
-        activeRegionKey = regionKey;
+        regionToSwitch = regionKey;
         pendingTabSwitch = true; // Mark that we need to switch tabs
         
         if (scrollViewVars.TryGetValue(regionKey, out var vars))
@@ -256,32 +252,23 @@ internal class Resourcer : IWindow
         {
             // If we're pending a tab switch, render the active region's tab first
             var regionsToRender = memoryInformationProvider.GetMemoryRegions().ToList();
-            if (pendingTabSwitch)
-            {
-                // Sort so the active region is first
-                regionsToRender = regionsToRender
-                    .OrderBy(r => r.RegionKey.Key == activeRegionKey.Key ? 0 : 1)
-                    .ToList();
-            }
-            
             foreach (var memInfo in regionsToRender)
             {
                 var regionKey = memInfo.RegionKey;
                 var displayName = memInfo.DisplayName;
                 
                 // Only use SetSelected flag once when navigating
-                bool isActive = (regionKey.Key == activeRegionKey.Key);
+                bool isActive = (regionKey.Key == regionToSwitch.Key);
                 ImGuiTabItemFlags flags = (isActive && pendingTabSwitch) ? ImGuiTabItemFlags.SetSelected : ImGuiTabItemFlags.None;
                 
                 if (ImGui.BeginTabItem(displayName, flags))
                 {
                     // User switched tabs manually or via navigation
-                    activeRegionKey = regionKey;
-                    if (pendingTabSwitch && isActive)
+                    if (flags == ImGuiTabItemFlags.SetSelected)
                     {
                         pendingTabSwitch = false; // Consume the flag only when correct tab is active
                     }
-                    
+
                     var ranges = romDataParsers[regionKey].GetRanges();
                     ScrollableTableView(ranges, regionKey, GetOrCreateScrollViewVars(regionKey));
                     ImGui.EndTabItem();
