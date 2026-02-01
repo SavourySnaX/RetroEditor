@@ -10,6 +10,7 @@ internal class SymbolsWindow : IWindow
 
     private Dictionary<MemoryRegionKey, RomDataParser> romDataParsers;
     private IMemoryInformationProvider memoryInformationProvider;
+    private Resourcer? resourcer;
     private List<ExtendedSymbol> allSymbols = new();
     private List<ExtendedSymbol> filteredSymbols = new();
     private List<ExtendedLabel> allLabels = new();
@@ -30,10 +31,11 @@ internal class SymbolsWindow : IWindow
     private ExtendedSymbol? symbolToRename = null;
     private ExtendedLabel? labelToRename = null;
 
-    public SymbolsWindow(Dictionary<MemoryRegionKey, RomDataParser> romDataParsers, IMemoryInformationProvider memoryInformationProvider)
+    public SymbolsWindow(Dictionary<MemoryRegionKey, RomDataParser> romDataParsers, IMemoryInformationProvider memoryInformationProvider, Resourcer? resourcer = null)
     {
         this.romDataParsers = romDataParsers;
         this.memoryInformationProvider = memoryInformationProvider;
+        this.resourcer = resourcer;
     }
 
     public bool Initialise()
@@ -165,6 +167,12 @@ internal class SymbolsWindow : IWindow
                                 selectedSymbolIndex = i;
                             }
                             
+                            // Double-click to navigate (check while item is hovered)
+                            if (ImGui.IsItemHovered() && ImGui.IsMouseDoubleClicked(ImGuiMouseButton.Left))
+                            {
+                                resourcer?.NavigateToAddress(symbol.RegionKey, symbol.Address);
+                            }
+                            
                             // Right-click context menu
                             if (ImGui.IsItemClicked(ImGuiMouseButton.Right))
                             {
@@ -279,6 +287,12 @@ internal class SymbolsWindow : IWindow
                             if (ImGui.Selectable($"##{i}", selectedLabelIndex == i, ImGuiSelectableFlags.SpanAllColumns))
                             {
                                 selectedLabelIndex = i;
+                            }
+                            
+                            // Double-click to navigate (check while item is hovered)
+                            if (ImGui.IsItemHovered() && ImGui.IsMouseDoubleClicked(ImGuiMouseButton.Left))
+                            {
+                                resourcer?.NavigateToAddress(label.RegionKey, label.Address);
                             }
                             
                             // Right-click context menu

@@ -91,7 +91,7 @@ internal class LibMameDebugger
             // Note: RomDataParsers needs to be cast from IReadOnlyDictionary to Dictionary
             if (resourcer is Resourcer r && r.RomDataParsers is Dictionary<MemoryRegionKey, RomDataParser> parsers)
             {
-                var symbolsWindow = new SymbolsWindow(parsers, resourcer.MemoryInformationProvider);
+                var symbolsWindow = new SymbolsWindow(parsers, resourcer.MemoryInformationProvider, resourcer);
                 editor.OpenWindow(symbolsWindow, "Symbols");
             }
         }

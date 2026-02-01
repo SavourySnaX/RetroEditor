@@ -30,6 +30,8 @@ internal class Resourcer : IWindow
     private const int MEMORY_MAP_HEIGHT = 50;
 
     private ResourcerConfig config;
+    private MemoryRegionKey activeRegionKey = new MemoryRegionKey(0); // Track which tab should be active
+    private bool pendingTabSwitch = false; // Flag to activate tab switch only once
 
     public Resourcer(LibMameDebugger debugger, IPlatformFactory platformFactory)
     {
@@ -60,6 +62,11 @@ internal class Resourcer : IWindow
             var parser = new RomDataParser(memInfo, dataProvider);
             romDataParsers[memInfo.RegionKey] = parser;
         }
+        // Initialize active region to the first one
+        if (romDataParsers.Count > 0)
+        {
+            activeRegionKey = romDataParsers.Keys.First();
+        }
     }
 
     private IEnumerable<string> GetMemoryRegionNames()
@@ -75,6 +82,29 @@ internal class Resourcer : IWindow
         foreach (var (regionKey, parser) in romDataParsers)
         {
             yield return (regionKey, parser.GetRanges());
+        }
+    }
+
+    /// <summary>
+    /// Navigates to the specified address in the Resourcer view.
+    /// </summary>
+    public void NavigateToAddress(MemoryRegionKey regionKey, ulong address)
+    {
+        // Set the active region to switch to the correct tab
+        activeRegionKey = regionKey;
+        pendingTabSwitch = true; // Mark that we need to switch tabs
+        
+        if (scrollViewVars.TryGetValue(regionKey, out var vars))
+        {
+            vars.jumpToAddress = address;
+            vars.jumpPending = true; // Mark that we need to jump/scroll
+            // Also set the cursor position to the address for immediate visibility
+            var parser = romDataParsers[regionKey];
+            var ranges = parser.GetRanges();
+            var line = ranges.FetchLineForAddress(address);
+            vars.selectedRows.Clear();
+            vars.selectedRows.Add(line);
+            vars.cursorPosition = line;
         }
     }
 
@@ -224,13 +254,34 @@ internal class Resourcer : IWindow
 
         if (ImGui.BeginTabBar("ResourcerTabs"))
         {
-            foreach (var memInfo in memoryInformationProvider.GetMemoryRegions())
+            // If we're pending a tab switch, render the active region's tab first
+            var regionsToRender = memoryInformationProvider.GetMemoryRegions().ToList();
+            if (pendingTabSwitch)
+            {
+                // Sort so the active region is first
+                regionsToRender = regionsToRender
+                    .OrderBy(r => r.RegionKey.Key == activeRegionKey.Key ? 0 : 1)
+                    .ToList();
+            }
+            
+            foreach (var memInfo in regionsToRender)
             {
                 var regionKey = memInfo.RegionKey;
                 var displayName = memInfo.DisplayName;
                 
-                if (ImGui.BeginTabItem(displayName))
+                // Only use SetSelected flag once when navigating
+                bool isActive = (regionKey.Key == activeRegionKey.Key);
+                ImGuiTabItemFlags flags = (isActive && pendingTabSwitch) ? ImGuiTabItemFlags.SetSelected : ImGuiTabItemFlags.None;
+                
+                if (ImGui.BeginTabItem(displayName, flags))
                 {
+                    // User switched tabs manually or via navigation
+                    activeRegionKey = regionKey;
+                    if (pendingTabSwitch && isActive)
+                    {
+                        pendingTabSwitch = false; // Consume the flag only when correct tab is active
+                    }
+                    
                     var ranges = romDataParsers[regionKey].GetRanges();
                     ScrollableTableView(ranges, regionKey, GetOrCreateScrollViewVars(regionKey));
                     ImGui.EndTabItem();
@@ -251,6 +302,7 @@ internal class Resourcer : IWindow
     private class ScrollViewVars
     {
         public UInt64 jumpToAddress = 0;
+        public bool jumpPending = false; // Flag to trigger navigation-based jump
         // Selection state
         public HashSet<UInt64> selectedRows = new HashSet<UInt64>();
         public UInt64? cursorPosition = null;
@@ -278,10 +330,17 @@ internal class Resourcer : IWindow
 
     private void ScrollableTableView(RangeCollection<IRegionInfo> regions, MemoryRegionKey regionKey, ScrollViewVars vars)
     {
-        var jump=false;
+        var jump = false;
         if (InputU64ScalarWrapped("Jump to Address", ref vars.jumpToAddress))
         {
             jump = true;
+        }
+        
+        // Also trigger jump if pending from navigation
+        if (vars.jumpPending)
+        {
+            jump = true;
+            vars.jumpPending = false; // Consume the flag
         }
 
         // Start Table and render header
@@ -695,7 +754,10 @@ internal class Resourcer : IWindow
             if (jump)
             {
                 var jumpLine = regions.FetchLineForAddress(vars.jumpToAddress);
-                ImGui.SetScrollY(jumpLine * rowHeight);
+                // Scroll to show a few lines before the target for context (similar to cursor positioning)
+                var jumpVisibleLines = (uint)(contentSize.Y / rowHeight);
+                var scrollOffset = Math.Min(jumpLine, jumpVisibleLines / 3); // Show target ~1/3 down the view
+                ImGui.SetScrollY((jumpLine - scrollOffset) * rowHeight);
                 jump = false;
             }
 
