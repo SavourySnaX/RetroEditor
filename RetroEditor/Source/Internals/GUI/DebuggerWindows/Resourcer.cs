@@ -186,9 +186,9 @@ internal class Resourcer : IWindow
             traceCommandFinished=false;
             traceCommandFinishStarted=false;
             // Set up trace logging
-            debugger.QueueCommand($"trace {traceFile},,noloop,{{tracelog {cpuStateManager.GetTraceFormat()}}}", (s,id)=>{});
+            debugger.QueueCommand($"trace {traceFile},,,{{tracelog {cpuStateManager.GetTraceFormat()}}}", LibMameDebugger.ActionTrigger.Default, (s,id)=>{});
             // Wait for vblank
-            debugger.QueueCommand("gvblank", (s,id)=>{traceCommandInProgress=false;});
+            debugger.QueueCommand("gvblank", LibMameDebugger.ActionTrigger.TriggerOnRunning, (s,id)=>{traceCommandInProgress=false;});
         }
         ImGui.SameLine();
         if (ImGui.Button("Capture 1 Second"))
@@ -203,9 +203,9 @@ internal class Resourcer : IWindow
             traceCommandFinishStarted=false;
 
             // Set up trace logging
-            debugger.QueueCommand($"trace {traceFile},,noloop,{{tracelog {cpuStateManager.GetTraceFormat()}}}",(s,id)=>{});
+            debugger.QueueCommand($"trace {traceFile},,,{{tracelog {cpuStateManager.GetTraceFormat()}}}",LibMameDebugger.ActionTrigger.Default, (s,id)=>{});
             // Wait for vblank
-            debugger.QueueCommand("gtime 1000",(s,id)=>{traceCommandInProgress=false;});
+            debugger.QueueCommand("gtime 1000",LibMameDebugger.ActionTrigger.TriggerOnRunning, (s,id)=>{traceCommandInProgress=false;});
         }
         ImGui.SameLine();
         if (ImGui.Button("Capture Continuous"))
@@ -221,8 +221,8 @@ internal class Resourcer : IWindow
             traceContinue = true;
 
             // Set up trace logging
-            debugger.QueueCommand($"trace {traceFile},,noloop,{{tracelog {cpuStateManager.GetTraceFormat()}}}",(s,id)=>{});
-            debugger.QueueCommand("gtime 500",(s,id)=>{traceCommandInProgress=false;});
+            debugger.QueueCommand($"trace {traceFile},,,{{tracelog {cpuStateManager.GetTraceFormat()}}}",LibMameDebugger.ActionTrigger.Default, (s,id)=>{});
+            debugger.QueueCommand("gtime 500",LibMameDebugger.ActionTrigger.TriggerOnRunning, (s,id)=>{traceCommandInProgress=false;});
         }
         ImGui.SameLine();
         if (traceDisable)
@@ -960,8 +960,7 @@ internal class Resourcer : IWindow
             {
                 traceCommandFinishStarted = true;
                 traceCommandFinished = false;
-                debugger.QueueCommand("traceflush", (s, id) => { });
-                debugger.QueueCommand("trace off", (s, id) => { traceCommandFinished = true; });
+                debugger.QueueCommand("traceflush ; trace off", LibMameDebugger.ActionTrigger.Default, (s, id) => { traceCommandFinished = true; });
             }
             if (debugger.IsStopped && traceCommandFinished)
             {
@@ -991,8 +990,8 @@ internal class Resourcer : IWindow
                     traceCommandFinishStarted = false;
 
                     // Set up trace logging
-                    debugger.QueueCommand($"trace {traceFile},,noloop,{{tracelog {cpuStateManager.GetTraceFormat()}}}", (s, id) => { });
-                    debugger.QueueCommand("gtime 500", (s, id) => { traceCommandInProgress = false; });
+                    debugger.QueueCommand($"trace {traceFile},,,{{tracelog {cpuStateManager.GetTraceFormat()}}}", LibMameDebugger.ActionTrigger.Default, (s, id) => { });
+                    debugger.QueueCommand("gtime 500", LibMameDebugger.ActionTrigger.TriggerOnRunning, (s, id) => { traceCommandInProgress = false; });
                 }
                 else
                 {

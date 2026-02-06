@@ -219,21 +219,38 @@ internal class LibMameDebugger
         }
     }
 
+    public enum ActionTrigger
+    {
+        Default,
+        TriggerOnRunning,
+        TriggerOnPaused,
+    }
+
     private struct ThreadSafeCommand
     {
         public string command;
         public UInt64 id;
+        public ActionTrigger trigger;
         public Action<string,int> cb;
     }
 
+    private struct StateTrigger
+    {
+        public Action<string,int> cb;
+        public UInt64 id;
+    }
+
     Queue<ThreadSafeCommand> commandQueue = new();
+    Queue<StateTrigger> pausedTriggerQueue = new();
+    Queue<StateTrigger> runningTriggerQueue = new();
     private UInt64 commandId = 1;
-    public int QueueCommand(string command, Action<string,int> callback)
+    public int QueueCommand(string command, ActionTrigger trigger, Action<string,int> callback)
     {
         commandQueue.Enqueue(new ThreadSafeCommand {
             command = command,
             id = commandId++,
-            cb = callback
+            cb = callback,
+            trigger = trigger
         });
         return commandQueue.Count;
     }
@@ -244,7 +261,26 @@ internal class LibMameDebugger
         {
             var command = commandQueue.Dequeue();
             var result = SendCommand(command.command);
-            command.cb(result, (int)command.id);
+            if (command.trigger== ActionTrigger.Default)
+                command.cb(result, (int)command.id);
+            else
+            {
+                switch (command.trigger)
+                {
+                    case ActionTrigger.TriggerOnPaused:
+                        pausedTriggerQueue.Enqueue(new StateTrigger {
+                            cb = command.cb,
+                            id = command.id
+                        });
+                        break;
+                    case ActionTrigger.TriggerOnRunning:
+                        runningTriggerQueue.Enqueue(new StateTrigger {
+                            cb = command.cb,
+                            id = command.id
+                        });
+                        break;
+                }
+            }
         }
     }
 
@@ -288,10 +324,20 @@ internal class LibMameDebugger
                 if (notified.stopped!=0)
                 {
                     IsStopped = true;
+                    while (pausedTriggerQueue.Count > 0)
+                    {
+                        var trigger = pausedTriggerQueue.Dequeue();
+                        trigger.cb("Paused", (int)trigger.id);
+                    }
                 }
                 else
                 {
                     IsStopped = false;
+                    while (runningTriggerQueue.Count > 0)
+                    {
+                        var trigger = runningTriggerQueue.Dequeue();
+                        trigger.cb("Running", (int)trigger.id);
+                    }
                 }
                 return 1;
             case 3:
