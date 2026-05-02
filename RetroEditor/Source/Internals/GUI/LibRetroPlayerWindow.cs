@@ -1,6 +1,7 @@
 using Raylib_cs.BleedingEdge;
 using MyMGui;
 using rlImGui_cs;
+using System.Runtime.CompilerServices;
 
 internal class LibRetroPlayerWindow : IWindow
 {
@@ -63,7 +64,25 @@ internal class LibRetroPlayerWindow : IWindow
     public void Update(float seconds)
     {
         plugin.Run();
-        Raylib.UpdateTexture(bitmap, plugin.GetFrameBuffer(out frameWidth, out frameHeight));
+        var fb = plugin.GetFrameBuffer(out frameWidth, out frameHeight);
+        Raylib.UpdateTexture(bitmap, fb);
+        /*
+        unsafe
+        {
+            fixed (byte* ptr = fb)
+            {
+                var image = new Image
+                {
+                    Data = (void*)ptr,
+                    Width = (int)frameWidth,
+                    Height = (int)frameHeight,
+                    Mipmaps = 1,
+                    Format = PixelFormat.UncompressedR8G8B8A8
+                };
+                Raylib.ExportImage(image, "latest.png");
+            }
+        }
+        */
     }
 
     public float UpdateInterval => (float)(1.0 / aVInfo.timing.fps);

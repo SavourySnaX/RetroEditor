@@ -77,4 +77,8 @@ internal class SNES65816StateManager : ICpuStateManager
         return false;
     }
 
+    public string GetCPUArchitecture()
+    {
+        return "Ricoh 5A22 (WDC 65816 core)";
+    }
 }

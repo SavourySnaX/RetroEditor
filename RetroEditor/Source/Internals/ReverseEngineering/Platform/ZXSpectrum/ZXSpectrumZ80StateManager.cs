@@ -46,4 +46,8 @@ internal class ZXSpectrumZ80StateManager : ICpuStateManager
         return instruction.IsBasicBlockTerminator;
     }
 
+    public string GetCPUArchitecture()
+    {
+        return "Zilog Z80";
+    }
 }

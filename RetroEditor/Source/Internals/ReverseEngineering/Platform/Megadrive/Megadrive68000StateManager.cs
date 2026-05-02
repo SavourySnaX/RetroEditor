@@ -59,4 +59,9 @@ internal class Megadrive68000StateManager : ICpuStateManager
         }
         return false;
     }
+
+    public string GetCPUArchitecture()
+    {
+        return "Motorola 68000";
+    }
 }

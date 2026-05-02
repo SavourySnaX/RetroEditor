@@ -53,7 +53,7 @@ internal static class SymbolValidator
     /// <param name="excludeAddress">Optional address to exclude from conflict checking (when renaming existing symbol).</param>
     /// <param name="excludeSize">Optional size to exclude from conflict checking (when renaming existing symbol).</param>
     /// <returns>null if no conflict, or an error message if conflict found.</returns>
-    public static string? CheckSymbolConflict(string name, Dictionary<MemoryRegionKey, RomDataParser> parsers, ulong? excludeAddress = null, int? excludeSize = null)
+    public static string? CheckSymbolConflict(string name, IReadOnlyDictionary<MemoryRegionKey, RomDataParser> parsers, ulong? excludeAddress = null, int? excludeSize = null)
     {
         foreach (var kvp in parsers)
         {
@@ -86,7 +86,7 @@ internal static class SymbolValidator
     /// <param name="parsers">Dictionary of all ROM data parsers by region.</param>
     /// <param name="excludeAddress">Optional address to exclude from conflict checking (when renaming existing label).</param>
     /// <returns>null if no conflict, or an error message if conflict found.</returns>
-    public static string? CheckLabelConflict(string name, Dictionary<MemoryRegionKey, RomDataParser> parsers, ulong? excludeAddress = null)
+    public static string? CheckLabelConflict(string name, IReadOnlyDictionary<MemoryRegionKey, RomDataParser> parsers, ulong? excludeAddress = null)
     {
         foreach (var kvp in parsers)
         {
@@ -119,7 +119,7 @@ internal static class SymbolValidator
     /// <param name="excludeAddress">Optional address to exclude from conflict checking.</param>
     /// <param name="excludeSize">Optional size to exclude from symbol conflict checking.</param>
     /// <returns>null if no conflict, or an error message if conflict found.</returns>
-    public static string? CheckAnyConflict(string name, Dictionary<MemoryRegionKey, RomDataParser> parsers, ulong? excludeAddress = null, int? excludeSize = null)
+    public static string? CheckAnyConflict(string name, IReadOnlyDictionary<MemoryRegionKey, RomDataParser> parsers, ulong? excludeAddress = null, int? excludeSize = null)
     {
         var symbolConflict = CheckSymbolConflict(name, parsers, excludeAddress, excludeSize);
         if (symbolConflict != null)

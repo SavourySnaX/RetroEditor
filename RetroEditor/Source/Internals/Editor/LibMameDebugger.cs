@@ -3,6 +3,7 @@ using System.Runtime.InteropServices;
 using RetroEditor.Plugins;
 using RetroEditor.Source.Internals.ReverseEngineering;
 using RetroEditor.Source.Internals.ReverseEngineering.Platform;
+using RetroEditor.Source.Internals.GUI.DebuggerWindows;
 using MyMGui;
 
 internal class LibMameDebugger
@@ -84,7 +85,7 @@ internal class LibMameDebugger
         ImGui.BeginDisabled(!plugin.HasResourcerSupport);
         if (ImGui.MenuItem("Resourcer"))
         {
-            var resourcer = new Resourcer(this, plugin.GetResourcer());
+            var resourcer = new Resourcer(plugin.SystemName, plugin.MediaName, this, plugin.GetResourcer());
             editor.OpenWindow(resourcer, "Resourcer");
             
             // Also open the Symbols window with the Resourcer's data

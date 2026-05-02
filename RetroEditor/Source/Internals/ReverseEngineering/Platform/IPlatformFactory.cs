@@ -46,6 +46,7 @@ internal interface IMemoryMapper
 /// </summary>
 internal interface ICpuStateManager
 {
+    string GetCPUArchitecture();
     void UpdateStateFromInstruction(ICpuState state, Instruction instruction);
     string GetTraceFormat();
     void RenderUI();

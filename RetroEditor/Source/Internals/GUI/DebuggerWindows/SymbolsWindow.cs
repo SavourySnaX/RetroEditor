@@ -3,6 +3,8 @@ using System.Numerics;
 using RetroEditor.Source.Internals.ReverseEngineering;
 using RetroEditor.Source.Internals.ReverseEngineering.Platform;
 
+namespace RetroEditor.Source.Internals.GUI.DebuggerWindows;
+
 internal class SymbolsWindow : IWindow
 {
     public float UpdateInterval => 1 / 30.0f;

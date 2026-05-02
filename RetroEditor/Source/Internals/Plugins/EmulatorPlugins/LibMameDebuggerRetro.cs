@@ -20,6 +20,10 @@ internal class LibMameDebuggerRetroPlugin : LibRetroPlugin
 
     private string mediaType = "cart";
     private string systemName = "";
+    private string mediaName = "";
+
+    public string SystemName => systemName;
+    public string MediaName => mediaName;
 
     public delegate nint DebuggerCallbackDelegate(int kind, IntPtr data);
 
@@ -28,6 +32,7 @@ internal class LibMameDebuggerRetroPlugin : LibRetroPlugin
 
     protected override void InternalLoad(string path, byte[] data)
     {
+        mediaName = Path.GetFileName(path);
         var justPath = Path.GetDirectoryName(path);
         if (justPath == null)
         {

@@ -975,18 +975,19 @@ internal class LabelProvider : ILabelProvider
             sortedCacheVersion = Version;
         }
 
+        // Since sortedCache is sorted by address, we can do a binary search to find the relevant range
+        int startIndex = sortedCache.BinarySearch(new LabelEntry(start, Array.Empty<string>()), new LabelEntryComparer());
+        if (startIndex < 0) startIndex = ~startIndex;
+        int endIndex = sortedCache.BinarySearch(new LabelEntry(end, Array.Empty<string>()), new LabelEntryComparer());
+        if (endIndex < 0)
+            endIndex = ~endIndex;
+        else
+            endIndex = endIndex + 1;  // Include the entry at exactly `end`
+
         var result = new List<LabelEntry>();
-        foreach (var entry in sortedCache)
+        for (int i = startIndex; i < endIndex; i++)
         {
-            if (entry.Address < start)
-            {
-                continue;
-            }
-            if (entry.Address > end)
-            {
-                break;
-            }
-            result.Add(entry);
+            result.Add(sortedCache[i]);
         }
         return result;
     }
@@ -1045,6 +1046,14 @@ internal class LabelProvider : ILabelProvider
             }
         }
         return result;
+    }
+}
+
+internal class LabelEntryComparer : IComparer<LabelEntry>
+{
+    public int Compare(LabelEntry x, LabelEntry y)
+    {
+        return x.Address.CompareTo(y.Address);
     }
 }
 
