@@ -35,6 +35,10 @@ internal class PlayableRom : IMemoryAccess
         serialisedBlocksRam = new MemoryblockCollection();
         serialisedBlocksRom = new MemoryblockCollection();
         state=Array.Empty<byte>();
+        foreach (var kvp in romInterface.OverrideCoreOptions)
+        {
+            systemPlugin.OverrideCoreOptions[kvp.Key] = kvp.Value;
+        }
     }
 
     internal void LoadMemoryBlocks(ProjectSettings settings)

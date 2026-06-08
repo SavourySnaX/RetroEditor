@@ -218,6 +218,8 @@ internal class LibRetroPlugin : IDisposable
     }
 
     public const int RetroKeyArrayCount = 512;
+    public Dictionary<string, string> OverrideCoreOptions { get; } = new Dictionary<string, string>();
+
     protected IEditorInternal _editor;
     private GCHandle _pinnedEditor;
     internal string DllName { get; private set; }
@@ -645,7 +647,6 @@ internal class LibRetroPlugin : IDisposable
     private int[] keyMap;
 
     protected Dictionary<string, string[]> core_options;
-
 
     private delegate byte retro_environment_t(uint cmd, IntPtr data);
     private delegate void retro_audio_sample_t(short left, short right);
@@ -1191,6 +1192,10 @@ internal class LibRetroPlugin : IDisposable
 
     protected virtual string OverrideVariableValue(string key, string currentValue)
     {
+        if (OverrideCoreOptions.ContainsKey(key))
+        {
+            return OverrideCoreOptions[key];
+        }
         return currentValue;
     }
 

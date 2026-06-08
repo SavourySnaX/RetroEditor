@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace RetroEditor.Plugins
 {
     /// <summary>
@@ -23,6 +25,11 @@ namespace RetroEditor.Plugins
         /// Memory Endianess of the system
         /// </summary>
         MemoryEndian Endian { get; }
+
+        /// <summary>
+        /// Optional list of libretro core options to set when the core is loaded
+        /// </summary>
+        Dictionary<string, string> OverrideCoreOptions => new ();
 
         /// <summary>
         /// Checksum calculation for the system - used to recompute the checksum for systems that require it
